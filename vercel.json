@@ -1,0 +1,19 @@
+{
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api-alanube-sandbox/:path*",
+      "destination": "https://sandbox.alanube.co/:path*"
+    },
+    {
+      "source": "/api-alanube-prod/:path*",
+      "destination": "https://api.alanube.co/:path*"
+    },
+    {
+      "source": "/((?!assets/|api/|favicon.ico|robots.txt|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

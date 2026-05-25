@@ -1,0 +1,336 @@
+import React, { useState } from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Upload, X, ImageIcon, Link, Sparkles } from 'lucide-react';
+// import { removeBackground } from '@imgly/background-removal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+interface ProductImageUploadProps {
+  imageUrl?: string;
+  onImageUpload: (url: string) => void;
+}
+
+export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
+  imageUrl,
+  onImageUpload,
+}) => {
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [externalUrl, setExternalUrl] = useState('');
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const activeImageUrl = localPreviewUrl || imageUrl;
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+
+      const file = event.target.files[0];
+
+      // Validar tamaño (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Imagen demasiado grande",
+          description: "La imagen debe pesar menos de 5MB.",
+        });
+        return;
+      }
+
+      // Proceder directamente con la subida. Si el bucket no existe, 
+      // Supabase devolverá un error claro que ya manejamos en el catch.
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Error subiendo imagen:', uploadError);
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      console.log('✅ Imagen subida, URL pública:', publicUrl);
+
+      // Usar URL local para vista previa instantánea (evita bloqueos de red)
+      const previewUrl = URL.createObjectURL(file);
+      setLocalPreviewUrl(previewUrl);
+
+      onImageUpload(publicUrl);
+      setImageError(false);
+
+      toast({
+        title: "Imagen subida",
+        description: "La imagen se ha subido correctamente.",
+      });
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+
+      let errorMessage = "No se pudo subir la imagen. ";
+
+      if (error.message?.includes('not found')) {
+        errorMessage += "Usa la pestaña 'URL Externa' mientras se configura el storage.";
+      } else if (error.message?.includes('permission')) {
+        errorMessage += "No tienes permisos. Usa la pestaña 'URL Externa'.";
+      } else {
+        errorMessage += "Inténtalo de nuevo o usa URL Externa.";
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // AI Background removal function
+  const handleAIRemoveBackground = async (imageSource: string | File) => {
+    toast({
+      title: "IA no disponible",
+      description: "La remoción de fondo está temporalmente deshabilitada para optimizar el despliegue.",
+      variant: "destructive"
+    });
+  };
+
+  // Intermediate trigger that passes existing state
+  const handleRemoveBgFromCurrent = async () => {
+    if (!activeImageUrl) return;
+    await handleAIRemoveBackground(activeImageUrl);
+  };
+
+  const handleRemoveImage = () => {
+    onImageUpload('');
+    setLocalPreviewUrl(null);
+    setImageError(false);
+    setExternalUrl('');
+  };
+
+  const handleImageError = async (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error('❌ Error cargando imagen del producto:', {
+      activeImageUrl,
+      naturalWidth: e.currentTarget.naturalWidth,
+    });
+    
+    // Si la imagen falla por URL pública, intentamos descargarla por Storage API (Plan B)
+    if (activeImageUrl && activeImageUrl.includes('supabase.co/storage')) {
+      try {
+        console.log('🔄 Iniciando Plan B: Descarga directa por Storage API...');
+        
+        // Extraer el nombre del archivo de la URL
+        const fileName = activeImageUrl.split('/').pop()?.split('?')[0];
+        
+        if (fileName) {
+          const { data: blob, error: downloadError } = await supabase.storage
+            .from('product-images')
+            .download(fileName);
+            
+          if (downloadError) throw downloadError;
+          
+          if (blob && blob.type.startsWith('image/')) {
+            const planBBlobUrl = URL.createObjectURL(blob);
+            console.log('✅ Plan B Exitoso: Usando URL de Blob local:', planBBlobUrl);
+            setLocalPreviewUrl(planBBlobUrl);
+            setImageError(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('❌ Falló el Plan B (Descarga directa):', err);
+      }
+    }
+    
+    setImageError(true);
+  };
+
+  const handleImageLoad = () => {
+    if (activeImageUrl) {
+      console.log('✅ Imagen cargada correctamente:', activeImageUrl);
+      setImageError(false);
+    }
+  };
+
+  const handleExternalUrlSubmit = () => {
+    if (!externalUrl.trim()) {
+      toast({
+        variant: "destructive",
+        title: "URL vacía",
+        description: "Ingresa una URL válida de imagen.",
+      });
+      return;
+    }
+
+    // Validar que sea una URL
+    try {
+      new URL(externalUrl);
+      onImageUpload(externalUrl.trim());
+      setImageError(false);
+      toast({
+        title: "URL guardada",
+        description: "La imagen se mostrará desde la URL externa.",
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "URL inválida",
+        description: "Ingresa una URL válida (debe empezar con http:// o https://)",
+      });
+    }
+  };
+
+  return (
+    <div>
+      <Label>Foto del Producto</Label>
+      {activeImageUrl ? (
+        <div className="mt-2 relative">
+          {imageError ? (
+            <div className="w-full h-48 bg-muted rounded-md flex items-center justify-center">
+              <div className="text-center p-4">
+                <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm font-semibold text-muted-foreground">No se pudo cargar la imagen</p>
+                <p className="text-[10px] text-muted-foreground mt-1 break-all line-clamp-2 px-4 italic opacity-70">
+                  {activeImageUrl}
+                </p>
+                <div className="flex gap-2 justify-center mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[11px]"
+                    onClick={() => {
+                        setImageError(false);
+                    }}
+                  >
+                    Reintentar
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="h-8 text-[11px]"
+                    onClick={handleRemoveImage}
+                  >
+                    Eliminar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <img
+              key={activeImageUrl}
+              src={activeImageUrl}
+              alt="Producto"
+              className="w-full h-48 object-cover rounded-md"
+              onError={handleImageError}
+              onLoad={handleImageLoad}
+              loading="lazy"
+            />
+          )}
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="absolute top-2 right-2"
+            onClick={handleRemoveImage}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="absolute bottom-2 right-2 shadow-md flex items-center gap-1 border border-emerald-500/20 bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
+            disabled={isRemovingBg || uploading}
+            onClick={handleRemoveBgFromCurrent}
+          >
+            <Sparkles className={`h-3.5 w-3.5 ${isRemovingBg ? 'animate-pulse text-emerald-400' : 'text-emerald-300'}`} />
+            {isRemovingBg ? 'Removiendo...' : 'Remover Fondo (IA)'}
+          </Button>
+        </div>
+      ) : (
+        <Tabs defaultValue="upload" className="mt-2">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="upload">
+              <Upload className="h-4 w-4 mr-2" />
+              Subir
+            </TabsTrigger>
+            <TabsTrigger value="url">
+              <Link className="h-4 w-4 mr-2" />
+              URL Externa
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upload">
+            <label htmlFor="image-upload" className="cursor-pointer">
+              <div className="border-2 border-dashed border-border rounded-md p-6 hover:border-primary transition-colors flex flex-col items-center justify-center relative">
+                <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                <span className="text-sm text-muted-foreground">
+                  {uploading ? 'Subiendo...' : 'Click para subir imagen'}
+                </span>
+                <span className="text-xs text-muted-foreground mt-1">
+                  JPG, PNG, GIF (max 5MB)
+                </span>
+                
+                <div className="mt-3 flex items-center text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Puedes remover el fondo después de subirla
+                </div>
+              </div>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={uploading || isRemovingBg}
+              />
+            </label>
+          </TabsContent>
+
+          <TabsContent value="url">
+            <div className="space-y-2">
+              <Input
+                type="url"
+                placeholder="https://ejemplo.com/imagen.jpg"
+                value={externalUrl}
+                onChange={(e) => setExternalUrl(e.target.value)}
+              />
+              <Button
+                onClick={handleExternalUrlSubmit}
+                className="w-full"
+                type="button"
+              >
+                Usar esta URL
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Usa URLs de servicios como Imgur, ImgBB, o Cloudinary
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+};

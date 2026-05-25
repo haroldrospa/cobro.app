@@ -1,0 +1,420 @@
+/* Google Fonts are loaded non-blocking via index.html <link> tags for better performance */
+/* @import removed from CSS to eliminate render-blocking resource */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Mode - Matching White Logo Background */
+    --background: 0 0% 100%;
+    /* Pure White */
+    --foreground: 222.2 84% 4.9%;
+    /* Dark Text (Almost Black) */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* Green Brand Color (Leaf Green) */
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    /* White text on green */
+
+    --secondary: 142 20% 96%;
+    /* Very light tint of green/gray */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 142 20% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    /* Green Shadows/Rings */
+    --ring: 142 76% 36%;
+
+    --radius: 0.5rem;
+
+    /* Chart Colors */
+    --chart-1: 142 76% 36%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    /* Sidebar Variables */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 142 76% 36%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 142 20% 96%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 142 76% 36%;
+  }
+
+  .dark {
+    /* Dark Mode - Darker than #232B2F (L=13%) */
+    --background: 200 15% 13%;
+    --foreground: 0 0% 100%;
+
+    /* Ensure content is visible */
+    color-scheme: dark;
+
+    /* Seamless background */
+    --card: 200 15% 13%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 200 15% 13%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Green Brand Color */
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Slightly lighter for contrast elements */
+    --secondary: 200 15% 18%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 200 15% 18%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 15% 18%;
+    --input: 200 15% 18%;
+
+    /* Green Shadows/Rings */
+    --ring: 142 76% 36%;
+
+    /* Chart Colors Dark */
+    --chart-1: 142 76% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    /* Sidebar Variables Dark */
+    --sidebar-background: 200 15% 13%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 142 76% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 15% 18%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 200 15% 18%;
+    --sidebar-ring: 142 76% 36%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    width: 100%;
+    scroll-padding-bottom: 15vh;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  #root {
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  .sidebar-nav {
+    @apply space-y-1;
+  }
+
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors hover:bg-secondary hover:text-foreground;
+  }
+
+  .sidebar-nav-item.active {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .stat-card {
+    @apply bg-card border border-border rounded-lg p-6 hover:bg-card/80 transition-colors;
+  }
+
+  .pos-button {
+    @apply bg-secondary hover:bg-secondary/80 border border-border rounded-lg p-4 transition-all hover:scale-105;
+  }
+
+  .invoice-type-card {
+    @apply bg-card border border-border rounded-lg p-4 cursor-pointer transition-all hover:bg-accent hover:text-accent-foreground hover:scale-105;
+  }
+
+  .invoice-type-card.selected {
+    @apply bg-accent text-accent-foreground;
+  }
+}
+
+/* Animaciones personalizadas */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Fix para Radix UI Select en móviles - Prevenir overlay oscuro que cubre toda la pantalla */
+[data-radix-select-viewport] {
+  max-height: 320px !important;
+}
+
+/* Asegurar que el contenido del Select sea visible con z-index apropiado */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+/* Asegurar que los portales de Radix tengan el color de fondo correcto */
+[data-radix-portal] {
+  background-color: transparent !important;
+}
+
+/* Forzar el backdrop del select a ser transparente en móviles */
+@media (max-width: 768px) {
+  [data-radix-select-content] {
+    position: fixed !important;
+    background: hsl(var(--popover)) !important;
+  }
+}
+/* Scanning animation */
+@keyframes scan {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ── LoadingLogo animations (moved here to avoid inline <style> crashing React 18 concurrent mode) ── */
+@keyframes logo-gradient {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes logo-subtle-pulse {
+  0%   { transform: scale(0.97); filter: brightness(1); }
+  50%  { transform: scale(1.03); filter: brightness(1.2); }
+  100% { transform: scale(0.97); filter: brightness(1); }
+}
+
+@keyframes logo-expand-progress {
+  0%   { width: 0%;   opacity: 0; }
+  50%  { width: 100%; opacity: 1; box-shadow: 0 0 10px rgba(16,185,129,0.8); }
+  100% { width: 0%;   opacity: 0; }
+}
+
+/* ── Tienda.tsx cart float animation ── */
+@keyframes floatToCart {
+  0%   { opacity: 0; transform: scale(0.5) translateY(0) rotate(-10deg); }
+  15%  { opacity: 1; transform: scale(1.1) translateY(-20px) rotate(5deg); }
+  30%  { opacity: 1; transform: scale(1.2) translateY(-40px) rotate(-5deg); filter: blur(0px); }
+  80%  { opacity: 1; transform: scale(1) translateY(-100px) rotate(0deg); filter: blur(0px); }
+  100% { opacity: 0; transform: scale(0.6) translateY(-140px); filter: blur(4px); }
+}
+.animate-float-cart {
+  animation: floatToCart 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* ── KitchenDisplay.tsx alert blink animations ── */
+@keyframes blink-red {
+  0%, 100% { background-color: rgba(239, 68, 68, 0.08); border-color: rgba(220,38,38,0.6); }
+  50%       { background-color: rgba(220, 38, 38, 0.35); border-color: rgba(220,38,38,1); }
+}
+@keyframes blink-border {
+  0%, 100% { box-shadow: none; }
+  50%       { box-shadow: 0 0 16px 4px rgba(220,38,38,0.5); }
+}
+
+/* Ambient blob pulse - GPU compositable only (transform + opacity) */
+@keyframes blob-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* ── Performance optimizations ── */
+
+/* Smoother scrolling globally */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hint the browser to composite interactive elements */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Prevent layout shift on images */
+img {
+  contain: layout style;
+}
+
+/* ── Global Responsive Improvements ── */
+
+/* Ensure no element causes horizontal overflow */
+.space-y-6 > * {
+  min-width: 0;
+}
+
+/* Responsive table utility */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 640px) {
+  /* Reduce heading sizes on very small screens */
+  h1.text-3xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  /* Ensure buttons don't overflow on mobile */
+  .flex.gap-2 {
+    flex-wrap: wrap;
+  }
+  
+  /* Compact card padding on mobile */
+  .space-y-6 {
+    gap: 1rem;
+  }
+}
+
+/* Smooth page transitions */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Utility to hide scrollbars while keeping scroll functionality */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .will-change-transform {
+    will-change: transform;
+  }
+}
+
+/* ── Mobile-specific performance optimizations ── */
+@media (max-width: 768px) {
+  /* Reduce backdrop-blur intensity on mobile — this is the #1 GPU killer on mid-range phones */
+  .backdrop-blur-2xl { backdrop-filter: blur(8px) !important; }
+  .backdrop-blur-xl  { backdrop-filter: blur(6px) !important; }
+  .backdrop-blur-lg  { backdrop-filter: blur(4px) !important; }
+  .backdrop-blur-md  { backdrop-filter: blur(3px) !important; }
+
+  /* Force GPU compositing on scrollable containers */
+  [data-radix-scroll-area-viewport],
+  .overflow-y-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+
+  /* Reduce animation distance on mobile */
+  .animate-fade-in {
+    animation-duration: 0.15s;
+  }
+}
+
+/* Disable heavy animations on low-end devices (prefers-reduced-motion) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-spin,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+  }
+}
+
+/* Containment hints to limit browser layout work */
+.pos-product-card {
+  contain: layout style;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
+}

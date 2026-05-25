@@ -1,0 +1,8 @@
+
+> vite_react_shadcn_ts@0.0.0 build
+> vite build
+
+plugin-legacy overrode 'build.target'. You should pass 'targets' as an option to this plugin with the list of legacy browsers to support instead.
+vite v5.4.21 building for production...
+transforming...
+✓ 4545 modules transformed.

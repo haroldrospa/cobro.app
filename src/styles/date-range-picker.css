@@ -1,0 +1,63 @@
+/* Enhanced Date Range Picker Styles */
+
+/* Make the start and end dates more prominent */
+.rdp-day_range_start,
+.rdp-day_range_end {
+    font-weight: 700 !important;
+    position: relative;
+}
+
+/* Add a thicker border to start date */
+.rdp-day_range_start button {
+    border: 3px solid hsl(var(--primary)) !important;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary)) !important;
+}
+
+/* Add a thicker border to end date */
+.rdp-day_range_end button {
+    border: 3px solid hsl(var(--primary)) !important;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary)) !important;
+}
+
+/* Make range middle dates slightly transparent */
+.rdp-day_range_middle button {
+    opacity: 0.7;
+}
+
+/* Add "Desde" label to start date */
+.rdp-day_range_start::before {
+    content: 'Desde';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 600;
+    color: hsl(var(--primary));
+    white-space: nowrap;
+}
+
+/* Add "Hasta" label to end date */
+.rdp-day_range_end::after {
+    content: 'Hasta';
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 600;
+    color: hsl(var(--primary));
+    white-space: nowrap;
+}
+
+/* Ensure range is visually clear */
+.rdp-day_range_start button,
+.rdp-day_range_end button {
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Make middle days in range lighter */
+.rdp-day_range_middle button {
+    background-color: hsl(var(--primary) / 0.3) !important;
+}

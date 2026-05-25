@@ -1,0 +1,51 @@
+-- Insertar categorías de supermercado
+INSERT INTO public.categories (name, description, store_id) VALUES
+  ('Frutas y Verduras', 'Productos frescos del campo', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid),
+  ('Lácteos', 'Leche, queso, yogurt y más', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid),
+  ('Carnes', 'Carnes rojas, pollo y pescado', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid),
+  ('Panadería', 'Pan fresco y repostería', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid),
+  ('Limpieza', 'Productos de limpieza del hogar', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid),
+  ('Snacks', 'Botanas y dulces', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid),
+  ('Enlatados', 'Conservas y productos enlatados', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid),
+  ('Higiene Personal', 'Productos de cuidado personal', '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid);
+
+-- Insertar productos de supermercado
+INSERT INTO public.products (name, price, cost, stock, min_stock, category_id, store_id, status, tax_percentage, is_featured, discount_percentage) 
+SELECT 'Manzana Roja (lb)', 85.00, 55.00, 100, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, true, 10 FROM categories WHERE name = 'Frutas y Verduras' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Plátano Maduro (unidad)', 15.00, 8.00, 200, 50, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Frutas y Verduras' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Tomate (lb)', 65.00, 40.00, 80, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Frutas y Verduras' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Cebolla Blanca (lb)', 45.00, 28.00, 120, 25, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Frutas y Verduras' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Aguacate (unidad)', 75.00, 50.00, 60, 10, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, true, 15 FROM categories WHERE name = 'Frutas y Verduras' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Lechuga (unidad)', 55.00, 35.00, 40, 10, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Frutas y Verduras' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Leche Entera 1L', 95.00, 70.00, 150, 30, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, true, 5 FROM categories WHERE name = 'Lácteos' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Queso Cheddar 250g', 185.00, 130.00, 45, 10, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Lácteos' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Yogurt Natural 500g', 125.00, 85.00, 60, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Lácteos' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Mantequilla 250g', 165.00, 115.00, 35, 8, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Lácteos' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Crema de Leche 500ml', 145.00, 100.00, 40, 10, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Lácteos' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Pechuga de Pollo (lb)', 145.00, 100.00, 80, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, true, 0 FROM categories WHERE name = 'Carnes' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Carne Molida (lb)', 195.00, 145.00, 50, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Carnes' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Chuleta de Cerdo (lb)', 175.00, 125.00, 45, 12, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Carnes' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Salchicha 500g', 165.00, 110.00, 60, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 10 FROM categories WHERE name = 'Carnes' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Jamón 250g', 145.00, 95.00, 55, 12, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Carnes' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Pan de Agua (unidad)', 10.00, 5.00, 200, 50, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Panadería' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Pan de Sandwich (bolsa)', 95.00, 60.00, 40, 10, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, true, 0 FROM categories WHERE name = 'Panadería' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Bizcocho (unidad)', 25.00, 12.00, 80, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Panadería' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Croissant (unidad)', 65.00, 35.00, 30, 8, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 0, false, 0 FROM categories WHERE name = 'Panadería' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Detergente Líquido 1L', 225.00, 160.00, 70, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, true, 20 FROM categories WHERE name = 'Limpieza' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Cloro 1L', 85.00, 55.00, 90, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Limpieza' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Jabón de Fregar (unidad)', 45.00, 28.00, 100, 25, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Limpieza' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Suavizante 1L', 195.00, 135.00, 50, 12, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Limpieza' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Desinfectante 500ml', 145.00, 95.00, 65, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Limpieza' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Papas Fritas (bolsa grande)', 125.00, 80.00, 100, 25, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, true, 0 FROM categories WHERE name = 'Snacks' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Galletas de Chocolate', 85.00, 55.00, 80, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Snacks' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Maní Salado 200g', 95.00, 60.00, 60, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Snacks' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Chocolate en Barra', 75.00, 48.00, 90, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 15 FROM categories WHERE name = 'Snacks' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Atún en Aceite 150g', 125.00, 85.00, 100, 25, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, true, 0 FROM categories WHERE name = 'Enlatados' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Salsa de Tomate 400g', 85.00, 55.00, 80, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Enlatados' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Maíz en Grano 400g', 75.00, 48.00, 70, 18, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Enlatados' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Habichuelas Rojas 400g', 85.00, 55.00, 90, 22, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Enlatados' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Jabón de Baño (3 pack)', 145.00, 95.00, 60, 15, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Higiene Personal' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Shampoo 400ml', 225.00, 155.00, 45, 10, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, true, 10 FROM categories WHERE name = 'Higiene Personal' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Pasta Dental 150g', 145.00, 95.00, 80, 20, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Higiene Personal' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Desodorante Roll-on', 185.00, 125.00, 55, 12, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, false, 0 FROM categories WHERE name = 'Higiene Personal' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid UNION ALL
+SELECT 'Papel Higiénico (4 rollos)', 165.00, 110.00, 100, 25, id, '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid, 'active', 18, true, 0 FROM categories WHERE name = 'Higiene Personal' AND store_id = '54d86334-fb76-4c22-98b0-292c739ead6a'::uuid;
