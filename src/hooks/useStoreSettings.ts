@@ -137,9 +137,16 @@ export const useStoreSettings = () => {
     // Load local settings to merge - PER USER AND PER STORE
     let userPersistedSettings = {};
 
-    // Get from Auth User Metadata: read from localStorage-backed cache set by updateUser()
-    // We skip the getUser() fetch here — userId is already resolved by useUserStore
-    // which itself caches the auth session. This eliminates a duplicate auth round-trip.
+    // Get from Auth User Metadata to persist across devices
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.user_metadata?.pos_settings) {
+        userPersistedSettings = session.user.user_metadata.pos_settings;
+      }
+    } catch (e) {
+      console.warn("Could not fetch user metadata for settings", e);
+    }
+
     // 2. Fallback to Local Storage - PER USER AND PER STORE
     let localSettings = {};
     const localKey = userId ? `posSettings_${storeId}_${userId}` : `posSettings_${storeId}`;
@@ -255,8 +262,14 @@ export const useStoreSettings = () => {
       if (!embedded) return undefined;
       // Merge with local overrides (view mode, grid cols, etc.)
       const localKey = userId ? `posSettings_${storeId}_${userId}` : `posSettings_${storeId}`;
+      const localStr = localStorage.getItem(localKey);
+      
+      // If we don't have local settings yet (e.g. new device), return undefined 
+      // to force fetchSettings to run and pull from user_metadata.
+      if (!localStr) return undefined;
+
       try {
-        const local = JSON.parse(localStorage.getItem(localKey) || '{}');
+        const local = JSON.parse(localStr);
         return { ...embedded, ...local } as StoreSettings;
       } catch {
         return embedded as StoreSettings;

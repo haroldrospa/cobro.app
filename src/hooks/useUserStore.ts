@@ -36,7 +36,7 @@ const getCachedStore = (userId: string | undefined): UserStore | null => {
 };
 
 export const useUserStore = () => {
-  const { data: sessionData } = useQuery({
+  const { data: sessionData, isPending: isSessionPending } = useQuery({
     queryKey: ['auth-session'],
     queryFn: async () => {
       try {
@@ -64,7 +64,7 @@ export const useUserStore = () => {
     gcTime: 1000 * 60 * 60 * 24,
     refetchOnWindowFocus: false,  // Don't re-fetch when switching browser tabs
     refetchOnMount: false,         // Use React Query cache on every navigation
-    enabled: !!userId,
+    enabled: !isSessionPending,    // Wait for auth to resolve before determining if we have a user
     initialData: userId ? getCachedStore(userId) || undefined : undefined,
     queryFn: async () => {
       try {

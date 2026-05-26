@@ -237,6 +237,26 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
         if (!activeSession) return;
 
         try {
+            // Verificación de ventas abiertas
+            const { count, error: countError } = await supabase
+                .from('open_orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('store_id', userData?.id)
+                .eq('profile_id', activeSessionUserId)
+                .eq('payment_status', 'pending')
+                .eq('source', 'pos');
+
+            if (countError) throw countError;
+
+            if (count && count > 0) {
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Ventas abiertas pendientes', 
+                    description: `Debes cobrar o cancelar tus ${count} venta(s) abierta(s) antes de cerrar la caja.` 
+                });
+                return;
+            }
+
             await closeSession.mutateAsync({
                 sessionId: activeSession.id,
                 closingData: {
@@ -474,12 +494,33 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
                                                                 if (!confirm(`¿Estás seguro de cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
                                                                 
                                                                 try {
+                                                                    const sessionUserId = session.opener?.id || (typeof session.opened_by === 'object' && session.opened_by !== null ? session.opened_by.id : session.opened_by) || session.user_id;
+                                                                    
+                                                                    const { count, error: countError } = await supabase
+                                                                        .from('open_orders')
+                                                                        .select('id', { count: 'exact', head: true })
+                                                                        .eq('store_id', userData?.id)
+                                                                        .eq('profile_id', sessionUserId)
+                                                                        .eq('payment_status', 'pending')
+                                                                        .eq('source', 'pos');
+                                                                        
+                                                                    if (countError) throw countError;
+                                                                    
+                                                                    if (count && count > 0) {
+                                                                        toast({ 
+                                                                            variant: 'destructive', 
+                                                                            title: 'Ventas abiertas pendientes', 
+                                                                            description: `No se puede cerrar. ${session.opener?.full_name || 'El cajero'} tiene ${count} venta(s) abierta(s).` 
+                                                                        });
+                                                                        return;
+                                                                    }
+
                                                                     const { error } = await supabase
                                                                         .from('cash_sessions')
                                                                         .update({ 
                                                                             status: 'closed', 
                                                                             closed_at: new Date().toISOString(),
-                                                                            closed_by: profile?.id 
+                                                                            closed_by: currentUserProfile?.id 
                                                                         })
                                                                         .eq('id', session.id);
                                                                     
