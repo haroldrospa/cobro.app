@@ -265,7 +265,7 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
             
             <div className="grid grid-cols-1 gap-3">
               {BUSINESS_TYPES.map((type) => {
-                const normalizedType = shopType === 'store' ? 'store' : shopType === 'supermarket' ? 'supermarket' : 'restaurant';
+                const normalizedType = ['store', 'supermarket', 'restaurant'].includes(shopType) ? shopType : 'store';
                 const isSelected = normalizedType === type.id;
                 return (
                   <button

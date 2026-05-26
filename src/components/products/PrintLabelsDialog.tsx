@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import JsBarcode from 'jsbarcode';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface PrintItem {
   product: Product;
@@ -57,6 +58,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   const { data: userStore } = useUserStore();
   const [isPrinting, setIsPrinting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 200);
 
   const savedSettings = useMemo(() => {
     try {
@@ -88,12 +90,16 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   const [priceSize, setPriceSize] = useState<number>(savedSettings.priceSize ?? 16);
   const [barcodeFontSize, setBarcodeFontSize] = useState<number>(savedSettings.barcodeFontSize ?? 14);
 
+  // Persistir settings con debounce — evita escribir localStorage en cada keystroke
   useEffect(() => {
-    localStorage.setItem('cobro_label_settings', JSON.stringify({
-      labelWidth, labelHeight, columns, gapX, gapY,
-      showBusinessName, showProductName, showPrice, showBarcodeText, rotation,
-      bnameSize, pnameSize, priceSize, barcodeFontSize
-    }));
+    const timer = setTimeout(() => {
+      localStorage.setItem('cobro_label_settings', JSON.stringify({
+        labelWidth, labelHeight, columns, gapX, gapY,
+        showBusinessName, showProductName, showPrice, showBarcodeText, rotation,
+        bnameSize, pnameSize, priceSize, barcodeFontSize
+      }));
+    }, 500);
+    return () => clearTimeout(timer);
   }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize]);
 
   // Lista interactiva de impresión
@@ -103,7 +109,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   const [previewId, setPreviewId] = useState<string>(printList[0]?.product.id || '');
 
   // Perfiles predeterminados para facilitar la vida al usuario
-  const applyProfile = (profile: string) => {
+  const applyProfile = useCallback((profile: string) => {
     if (profile === 'thermal') {
       setLabelWidth(50);
       setLabelHeight(30);
@@ -127,7 +133,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
       setGapY(2);
       setRotation(0);
     }
-  };
+  }, []);
 
   const handlePrint = async () => {
     setIsPrinting(true);
@@ -346,15 +352,39 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
     }, 100);
   };
 
-  const selectedItems = printList.filter(item => item.selected && item.quantity > 0);
-  const totalLabelsToPrint = selectedItems.reduce((acc, item) => acc + item.quantity, 0);
-  const maxPreviewLabels = 60; // Límite para el DOM
-  const previewLabels = selectedItems.flatMap(item => Array(item.quantity).fill(item.product)).slice(0, maxPreviewLabels);
-
-  const filteredPrintList = printList.filter(item => 
-    item.product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (item.product.barcode?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+  // ---- Listas derivadas memoizadas (crítico: products puede ser 1638+ items) ----
+  const filteredPrintList = useMemo(() =>
+    printList.filter(item =>
+      item.product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (item.product.barcode?.toLowerCase() || '').includes(debouncedSearch.toLowerCase())
+    ),
+    [printList, debouncedSearch]
   );
+
+  const selectedItems = useMemo(
+    () => printList.filter(item => item.selected && item.quantity > 0),
+    [printList]
+  );
+
+  const totalLabelsToPrint = useMemo(
+    () => selectedItems.reduce((acc, item) => acc + item.quantity, 0),
+    [selectedItems]
+  );
+
+  const maxPreviewLabels = 60; // Límite para el DOM
+  const previewLabels = useMemo(
+    () => selectedItems.flatMap(item => Array(item.quantity).fill(item.product)).slice(0, maxPreviewLabels),
+    [selectedItems]
+  );
+
+  // CSS compartido para la vista previa de barcodes (1 bloque, no 1 por producto)
+  const previewBarcodeStyle = useMemo(() => `
+    .preview-barcode-container svg {
+      max-width: 100%;
+      height: auto;
+      max-height: ${labelHeight * (showProductName ? 0.4 : 0.65)}mm;
+    }
+  `, [labelHeight, showProductName]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -578,6 +608,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
              </div>
              
              <ScrollArea className="flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto">
+                {/* Un solo bloque de estilo compartido para todos los barcodes de la vista previa */}
+                <style dangerouslySetInnerHTML={{ __html: previewBarcodeStyle }} />
                 <div className="p-8 flex items-start justify-center min-w-max min-h-full">
                    {previewLabels.length === 0 ? (
                       <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">
@@ -608,14 +640,6 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                              }}
                            >
                               <div className="relative flex flex-col items-center justify-center text-center overflow-hidden text-black" style={{ width: `${labelWidth}mm`, height: `${labelHeight}mm`, padding: '1.5mm', transform: rotation !== 0 ? `rotate(${rotation}deg)` : 'none', transformOrigin: 'center' }}>
-                                <style dangerouslySetInnerHTML={{ __html: `
-                                  .preview-barcode-${prod.id}-${index} svg {
-                                    max-width: 100%;
-                                    height: auto;
-                                    max-height: ${labelHeight * (showProductName ? 0.4 : 0.65)}mm;
-                                  }
-                                `}} />
-
                                 <div className="flex flex-col items-center justify-center w-full">
                                   {showBusinessName && (
                                     <div className="font-bold uppercase mb-[2px] w-full text-center" style={{ fontSize: `${bnameSize}px`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -633,7 +657,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                                     </div>
                                   )}
                                 </div>
-                                <div className={`w-full flex justify-center items-center flex-shrink-0 preview-barcode-${prod.id}-${index}`}
+                                <div className="w-full flex justify-center items-center flex-shrink-0 preview-barcode-container"
                                   dangerouslySetInnerHTML={{ __html: getCachedBarcodeSvg(prod.barcode, showBarcodeText, barcodeFontSize) }} 
                                 />
 

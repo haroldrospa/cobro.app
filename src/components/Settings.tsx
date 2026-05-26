@@ -129,7 +129,7 @@ const Settings = () => {
     if (companySettingsDB) {
       const dbSettings = {
         name: companySettingsDB.company_name || 'Mi Empresa',
-        rnc: companySettingsDB.rnc || '',
+        rnc: companySettingsDB.rnc || profile?.rnc || '',
         phone: companySettingsDB.phone || '',
         email: companySettingsDB.email || '',
         address: companySettingsDB.address || '',
@@ -147,7 +147,7 @@ const Settings = () => {
       setCompanyInfo(dbSettings);
       setLogoPreview(companySettingsDB.logo_url || null);
     }
-  }, [companySettingsDB]);
+  }, [companySettingsDB, profile?.rnc]);
 
   // Invoice Settings State - synced with storeSettings
   const [invoiceSettings, setInvoiceSettings] = useState({
@@ -2022,134 +2022,7 @@ const Settings = () => {
           <TabsTrigger value="system">Sistema</TabsTrigger>
           <TabsTrigger value="advanced">Avanzado</TabsTrigger>
           <TabsTrigger value="subscription">Suscripción</TabsTrigger>
-          <TabsTrigger value="cobroapp" className="font-semibold text-primary">⚙️ Cobroapp</TabsTrigger>
         </TabsList>
-
-        {/* ─── Configuración Cobroapp ─── */}
-        <TabsContent value="cobroapp" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <LayoutGrid className="h-5 w-5 text-primary" />
-                Configuración de Cobroapp
-              </CardTitle>
-              <CardDescription>
-                Define qué módulos y funciones activas según tu tipo de negocio
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-
-              {/* ── Tipo de Negocio ── */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-base font-semibold flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    Tipo de Negocio
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Elige el tipo que mejor describe tu negocio. Esto determina qué páginas y funciones aparecen.
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {[
-                    { id: 'restaurant', label: 'Restaurante', emoji: '🍽️', desc: 'Mesas, pantalla de cocina, pedidos para llevar y delivery', color: 'orange' },
-                    { id: 'store', label: 'Tienda', emoji: '🛍️', desc: 'Venta directa, inventario, clientes y facturas', color: 'blue' },
-                    { id: 'supermarket', label: 'Supermercado', emoji: '🛒', desc: 'Gran inventario, múltiples categorías y cajas rápidas', color: 'green' },
-                  ].map((type) => {
-                    const raw = shopType;
-                    const normalizedType = raw === 'store' ? 'store' : raw === 'supermarket' ? 'supermarket' : 'restaurant';
-                    const isSelected = normalizedType === type.id;
-                    const ring = { orange: 'ring-orange-500 bg-orange-500/10 border-orange-400/50', blue: 'ring-blue-500 bg-blue-500/10 border-blue-400/50', green: 'ring-green-500 bg-green-500/10 border-green-400/50' }[type.color];
-                    const icon = { orange: 'bg-orange-500/15 text-orange-400', blue: 'bg-blue-500/15 text-blue-400', green: 'bg-green-500/15 text-green-400' }[type.color];
-                    return (
-                      <button
-                        key={type.id}
-                        onClick={async () => {
-                          setShopType(type.id);
-                          await updateStoreSettings({ shop_type: type.id } as any);
-                          toast({ title: `✅ Tipo de negocio actualizado`, description: `Ahora trabajas como: ${type.label}` });
-                        }}
-                        className={`relative flex flex-col items-center text-center gap-3 p-6 rounded-xl border-2 transition-all duration-200 cursor-pointer w-full ${isSelected ? `ring-2 ${ring}` : 'border-border bg-muted/30 hover:bg-muted/60 hover:border-muted-foreground/30'
-                          }`}
-                      >
-                        {isSelected && <CheckCircle2 className="absolute top-3 right-3 h-5 w-5 text-primary" />}
-                        <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-4xl ${icon}`}>{type.emoji}</div>
-                        <div>
-                          <p className={`text-lg font-bold ${isSelected ? 'text-foreground' : 'text-muted-foreground'}`}>{type.label}</p>
-                          <p className="text-xs text-muted-foreground mt-1 leading-snug">{type.desc}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 border border-border/50">
-                  💡 <strong>Restaurante:</strong> activa Pantalla de Cocina y el flujo de pedidos a cocina.
-                  <strong> Tienda / Supermercado:</strong> desactivan esas funciones para mayor velocidad.
-                </p>
-              </div>
-
-              <Separator />
-
-              {/* ── Módulos activos ── */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-base font-semibold flex items-center gap-2">
-                    <LayoutGrid className="h-5 w-5 text-primary" />
-                    Módulos del Sistema
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Activa o desactiva páginas del menú de navegación
-                  </p>
-                </div>
-
-                {/* Delivery toggle */}
-                <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                      <Bike className="h-5 w-5 text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Página de Delivery</p>
-                      <p className="text-xs text-muted-foreground">Muestra la página de gestión de pedidos delivery en el menú</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={storeSettings?.use_delivery !== false}
-                    onCheckedChange={async (checked) => {
-                      await updateStoreSettings({ use_delivery: checked } as any);
-                      toast({ title: checked ? '✅ Delivery activado' : '🚫 Delivery desactivado', description: checked ? 'La página de Delivery aparece en el menú' : 'La página de Delivery fue ocultada del menú' });
-                    }}
-                  />
-                </div>
-
-                {/* Kitchen toggle — functional, only shown for restaurant type */}
-                {shopType === 'restaurant' && (
-                  <div className={`flex items-center justify-between p-4 rounded-xl border bg-muted/30 transition-opacity ${storeSettings?.use_kitchen === false ? 'opacity-50' : ''}`}>
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                        <ChefHat className="h-5 w-5 text-orange-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Pantalla de Cocina</p>
-                        <p className="text-xs text-muted-foreground">
-                          Activa la pantalla de cocina y el flujo de pedidos a cocina
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={storeSettings?.use_kitchen !== false}
-                      onCheckedChange={async (checked) => {
-                        await updateStoreSettings({ use_kitchen: checked } as any);
-                        toast({ title: checked ? '✅ Cocina activada' : '🚫 Cocina desactivada', description: checked ? 'La Pantalla de Cocina aparece en el menú' : 'La Pantalla de Cocina fue ocultada del menú' });
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Subscription Settings */}
         <TabsContent value="subscription">
@@ -2158,6 +2031,64 @@ const Settings = () => {
 
         {/* Store Settings - Mi Tienda */}
         <TabsContent value="store" className="space-y-6">
+          {/* ── Módulos activos ── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <LayoutGrid className="h-5 w-5 text-primary" />
+                Módulos del Sistema
+              </CardTitle>
+              <CardDescription>
+                Activa o desactiva páginas del menú de navegación
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Delivery toggle */}
+              <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                    <Bike className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Página de Delivery</p>
+                    <p className="text-xs text-muted-foreground">Muestra la página de gestión de pedidos delivery en el menú</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={storeSettings?.use_delivery !== false}
+                  onCheckedChange={async (checked) => {
+                    await updateStoreSettings({ use_delivery: checked } as any);
+                    toast({ title: checked ? '✅ Delivery activado' : '🚫 Delivery desactivado', description: checked ? 'La página de Delivery aparece en el menú' : 'La página de Delivery fue ocultada del menú' });
+                  }}
+                />
+              </div>
+
+              {/* Kitchen toggle — functional, only shown for restaurant type */}
+              {shopType === 'restaurant' && (
+                <div className={`flex items-center justify-between p-4 rounded-xl border bg-muted/30 transition-opacity ${storeSettings?.use_kitchen === false ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                      <ChefHat className="h-5 w-5 text-orange-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Pantalla de Cocina</p>
+                      <p className="text-xs text-muted-foreground">
+                        Activa la pantalla de cocina y el flujo de pedidos a cocina
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={storeSettings?.use_kitchen !== false}
+                    onCheckedChange={async (checked) => {
+                      await updateStoreSettings({ use_kitchen: checked } as any);
+                      toast({ title: checked ? '✅ Cocina activada' : '🚫 Cocina desactivada', description: checked ? 'La Pantalla de Cocina aparece en el menú' : 'La Pantalla de Cocina fue ocultada del menú' });
+                    }}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <SettingsStoreSection
             storeLoading={storeLoading}
             userStore={userStore}

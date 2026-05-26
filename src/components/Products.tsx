@@ -1,4 +1,4 @@
-import { useState, useRef, FC, ChangeEvent, useEffect } from 'react';
+import { useState, useRef, FC, ChangeEvent, useEffect, useMemo, useCallback, memo } from 'react';
 import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk } from 'lucide-react';
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { useProductsOffline, useDeleteProductOffline, useUpdateProductOffline } 
 import { useCategories } from '@/hooks/useCategories';
 import { useToast } from '@/hooks/use-toast';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useDebounce } from '@/hooks/useDebounce';
 import { usePlanFeatures } from '@/hooks/usePlanFeatures';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import { ActiveOffersSheet } from '@/components/products/ActiveOffersSheet';
@@ -48,6 +49,7 @@ const Products: FC = () => {
   const { isRestaurant } = useBusinessType();
   const [activeTab, setActiveTab] = useState<ProductsTab>('products');
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 250);
   const [searchType, setSearchType] = useState<SearchType>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -81,8 +83,8 @@ const Products: FC = () => {
   const { hasReachedLimit, getRemainingCount } = usePlanFeatures();
   const recipeAvailability = useRecipeAvailability();
 
-  // Cálculos detallados del valor del inventario
-  const inventoryStats = products.reduce((acc, product) => {
+  // Cálculos detallados del valor del inventario — memoizados para evitar recalcular en cada render
+  const inventoryStats = useMemo(() => products.reduce((acc, product) => {
     let costWithoutTax = product.cost || 0;
     let costWithTax = product.cost || 0;
     const stock = Number(product.stock || 0);
@@ -105,10 +107,10 @@ const Products: FC = () => {
     acc.valorEnPrecio += price * stock;
 
     return acc;
-  }, { costoSinImpuesto: 0, costoConImpuesto: 0, valorEnPrecio: 0 });
-  // Contar productos con stock bajo
-  // Un producto está bajo de stock si su stock actual es menor o igual al mínimo
-  const lowStockProducts = products.filter(p => {
+  }, { costoSinImpuesto: 0, costoConImpuesto: 0, valorEnPrecio: 0 }), [products]);
+
+  // Contar productos con stock bajo — memoizado
+  const lowStockProducts = useMemo(() => products.filter(p => {
     // Excluir productos que no controlan inventario
     if (p.track_inventory === false) return false;
 
@@ -116,7 +118,7 @@ const Products: FC = () => {
     const minStock = p.min_stock || 0;
     // Solo alertar si el producto controla inventario Y tiene stock bajo
     return currentStock <= minStock;
-  });
+  }), [products]);
   const lowStockCount = lowStockProducts.length;
 
   // Función para descargar planilla de ejemplo
@@ -505,7 +507,8 @@ const Products: FC = () => {
     }
   };
 
-  const filteredProducts = products.filter(product => {
+  // filteredProducts memoizado — solo recalcula cuando cambian los filtros (búsqueda con debounce)
+  const filteredProducts = useMemo(() => products.filter(product => {
     // Filtro por stock bajo
     if (showLowStockOnly && !((product.stock || 0) <= (product.min_stock || 0))) {
       return false;
@@ -517,12 +520,12 @@ const Products: FC = () => {
     }
 
     // Si no hay término de búsqueda, mostrar todos (con filtro de categoría aplicado)
-    if (!searchTerm.trim()) {
+    if (!debouncedSearchTerm.trim()) {
       return true;
     }
 
     // Filtro según tipo de búsqueda
-    const searchLower = searchTerm.toLowerCase().trim();
+    const searchLower = debouncedSearchTerm.toLowerCase().trim();
 
     switch (searchType) {
       case 'all': {
@@ -553,17 +556,19 @@ const Products: FC = () => {
       default:
         return true;
     }
-  });
+  }), [products, showLowStockOnly, selectedCategory, debouncedSearchTerm, searchType]);
 
-  // Reset pagination when filters change
+  // Reset pagination when filters change (usar debouncedSearchTerm para consistencia con el filtro)
   useEffect(() => {
     setVisibleCount(50);
-  }, [searchTerm, searchType, selectedCategory, showLowStockOnly]);
+  }, [debouncedSearchTerm, searchType, selectedCategory, showLowStockOnly]);
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = useCallback((product: Product) => {
     setEditingProduct(product);
     setShowForm(true);
-  };
+  }, []);
+
+  const handleOpenLabels = useCallback(() => setShowPrintLabelsDialog(true), []);
 
   const handleDelete = async (product: Product) => {
     if (window.confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?`)) {
@@ -722,7 +727,7 @@ const Products: FC = () => {
                 <Download className="mr-2 h-4 w-4" />
                 Exportar Productos
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setShowPrintLabelsDialog(true)} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
+              <DropdownMenuItem onSelect={handleOpenLabels} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
                 <Printer className="mr-2 h-4 w-4" />
                 Imprimir Etiquetas
               </DropdownMenuItem>
@@ -978,6 +983,7 @@ const Products: FC = () => {
       {/* Lista de productos */}
       <div className="grid grid-cols-1 gap-4">
         {filteredProducts.slice(0, visibleCount).map((product) => (
+          // ProductCard es memoizado — solo re-renderiza si el producto cambia
           <Card key={product.id} className="group overflow-hidden hover:shadow-md transition-all duration-200 border-border/50">
             <CardContent className="p-0">
               <div className="flex flex-col sm:flex-row items-center gap-4 p-4">

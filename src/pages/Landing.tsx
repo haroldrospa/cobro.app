@@ -199,7 +199,7 @@ const Landing = () => {
                   <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform ${isAnnual ? 'left-8' : 'left-1'}`} />
                 </button>
                 <span className={`text-sm font-medium flex items-center gap-1 ${isAnnual ? 'text-white' : 'text-slate-400'}`}>
-                  Pago Anual <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">(Ahorra dinero)</span>
+                  Pago Anual <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">(Ahorra hasta 17%)</span>
                 </span>
               </div>
             </div>
@@ -210,18 +210,42 @@ const Landing = () => {
                 <h3 className="text-2xl font-bold mb-2 text-white">🌱 Plan Emprendedor</h3>
                 <p className="text-slate-400 mb-6 h-12">Ideal para empezar con el pie derecho.</p>
                 <div className="mb-6">
-                  <span className="text-4xl font-extrabold text-white">${isAnnual ? '24' : '29'}</span>
-                  <span className="text-slate-400"> USD / mes</span>
+                  <div>
+                    <span className="text-4xl font-extrabold text-white">${isAnnual ? '24' : '29'}</span>
+                    <span className="text-slate-400"> USD / mes</span>
+                  </div>
+                  {isAnnual && (
+                    <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-2 items-start">
+                      <span className="inline-block text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-400 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-emerald-400/50">
+                        ✨ Ahorras $60 USD / año (17%)
+                      </span>
+                      <span className="text-sm text-slate-400 font-medium">
+                        Pago único de $288 USD
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <ul className="space-y-4 mb-8">
-                  {['1 Caja / Punto de Venta', '1 Sucursal', '100 Facturas electrónicas / mes'].map((feature, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                      <span className="text-sm text-slate-300">{feature}</span>
+                  {[
+                    { text: 'Facturas electrónicas ilimitadas', active: true },
+                    { text: '1 Empleado', active: true },
+                    { text: 'Control de inventario', active: true },
+                    { text: 'Múltiples métodos de pago', active: true },
+                    { text: 'Reportes de ventas', active: true },
+                    { text: 'Soporte estándar', active: true },
+                    { text: 'Gestión de clientes (CRM)', active: true },
+                    { text: 'Mi tienda online', active: false },
+                    { text: 'Nómina', active: false },
+                    { text: 'Contabilidad', active: false },
+                    { text: 'API de integración', active: false },
+                  ].map((feature, i) => (
+                    <li key={i} className={`flex items-start gap-3 ${!feature.active ? 'opacity-50' : ''}`}>
+                      {feature.active ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> : <X className="w-5 h-5 text-slate-400 shrink-0" />}
+                      <span className={`text-sm ${!feature.active ? 'line-through text-slate-400' : 'text-slate-300'}`}>{feature.text}</span>
                     </li>
                   ))}
                 </ul>
-                <Link to="/auth?signup=true&plan=emprendedor">
+                <Link to="/auth?signup=true&plan=basic">
                   <Button variant="outline" className="w-full h-12 border-white/20 text-white hover:bg-white/10">Empezar Prueba</Button>
                 </Link>
               </div>
@@ -234,18 +258,42 @@ const Landing = () => {
                 <h3 className="text-2xl font-bold mb-2">⭐ Plan Negocio</h3>
                 <p className="text-emerald-950/80 mb-6 h-12">Todo lo que necesitas para escalar.</p>
                 <div className="mb-6">
-                  <span className="text-4xl font-extrabold">${isAnnual ? '49' : '59'}</span>
-                  <span className="text-emerald-950/80"> USD / mes</span>
+                  <div>
+                    <span className="text-4xl font-extrabold">${isAnnual ? '49' : '59'}</span>
+                    <span className="text-emerald-950/80"> USD / mes</span>
+                  </div>
+                  {isAnnual && (
+                    <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-2 items-start">
+                      <span className="inline-block text-sm font-extrabold text-yellow-950 bg-yellow-400 px-3 py-1 rounded-full shadow-[0_4px_14px_rgba(250,204,21,0.5)] ring-2 ring-yellow-300/50">
+                        🔥 Ahorras $120 USD / año (17%)
+                      </span>
+                      <span className="text-sm text-emerald-950/80 font-bold">
+                        Pago único de $588 USD
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <ul className="space-y-4 mb-8">
-                  {['Hasta 3 Cajas / Puntos de Venta', 'Hasta 2 Sucursales', '1,000 Facturas electrónicas / mes', 'Módulo de control de mesas'].map((feature, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-950 shrink-0" />
-                      <span className="text-sm font-medium">{feature}</span>
+                  {[
+                    { text: 'Facturas electrónicas ilimitadas', active: true },
+                    { text: 'Hasta 5 Empleados', active: true },
+                    { text: 'Control de inventario avanzado', active: true },
+                    { text: 'Múltiples métodos de pago', active: true },
+                    { text: 'Reportes y analíticas', active: true },
+                    { text: 'Soporte prioritario', active: true },
+                    { text: 'Gestión de clientes (CRM)', active: true },
+                    { text: 'Mi tienda online', active: true },
+                    { text: 'Nómina', active: true },
+                    { text: 'Contabilidad', active: true },
+                    { text: 'API de integración', active: false },
+                  ].map((feature, i) => (
+                    <li key={i} className={`flex items-start gap-3 ${!feature.active ? 'opacity-60' : ''}`}>
+                      {feature.active ? <CheckCircle2 className="w-5 h-5 text-emerald-950 shrink-0" /> : <X className="w-5 h-5 text-emerald-950/60 shrink-0" />}
+                      <span className={`text-sm font-medium ${!feature.active ? 'line-through text-emerald-950/60' : ''}`}>{feature.text}</span>
                     </li>
                   ))}
                 </ul>
-                <Link to="/auth?signup=true&plan=negocio">
+                <Link to="/auth?signup=true&plan=pro">
                   <Button className="w-full h-12 bg-white text-emerald-700 hover:bg-white/90 font-bold">Empezar Prueba</Button>
                 </Link>
               </div>
@@ -253,30 +301,38 @@ const Landing = () => {
               {/* Corporativo */}
               <div className="p-8 rounded-3xl border border-white/10 shadow-sm" style={{ backgroundColor: '#262f38' }}>
                 <h3 className="text-2xl font-bold mb-2 text-white">🏢 Plan Corporativo</h3>
-                <p className="text-slate-400 mb-6 h-12">Potencia ilimitada para grandes operaciones.</p>
-                <div className="mb-6">
-                  <span className="text-4xl font-extrabold text-white">${isAnnual ? '99' : '119'}</span>
-                  <span className="text-slate-400"> USD / mes</span>
+                <p className="text-slate-400 mb-6 h-12">Potencia ilimitada y adaptación exacta a las necesidades de tu negocio.</p>
+                <div className="mb-6 flex items-center h-[38px]">
+                  <span className="text-3xl font-extrabold text-white">Personalizado</span>
                 </div>
                 <ul className="space-y-4 mb-8">
-                  {['Cajas ilimitadas', 'Sucursales ilimitadas', 'Facturas electrónicas ilimitadas', 'Módulo de control de mesas'].map((feature, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                      <span className="text-sm text-slate-300">{feature}</span>
+                  {[
+                    { text: 'Facturas electrónicas ilimitadas', active: true },
+                    { text: 'Empleados ilimitados', active: true },
+                    { text: 'Inventario de alto volumen', active: true },
+                    { text: 'Múltiples métodos de pago', active: true },
+                    { text: 'Reportes personalizados', active: true },
+                    { text: 'Soporte 24/7 y dedicado', active: true },
+                    { text: 'Gestión de clientes (CRM)', active: true },
+                    { text: 'Mi tienda online', active: true },
+                    { text: 'Nómina', active: true },
+                    { text: 'Contabilidad', active: true },
+                    { text: 'API y Webhooks', active: true },
+                    { text: 'Software adaptado a medida', active: true },
+                  ].map((feature, i) => (
+                    <li key={i} className={`flex items-start gap-3 ${!feature.active ? 'opacity-50' : ''}`}>
+                      {feature.active ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> : <X className="w-5 h-5 text-slate-400 shrink-0" />}
+                      <span className={`text-sm ${!feature.active ? 'line-through text-slate-400' : 'text-slate-300'}`}>{feature.text}</span>
                     </li>
                   ))}
                 </ul>
-                <Link to="/auth?signup=true&plan=corporativo">
-                  <Button variant="outline" className="w-full h-12 border-white/20 text-white hover:bg-white/10">Empezar Prueba</Button>
-                </Link>
+                <a href="mailto:hola@cobroapp.com">
+                  <Button variant="outline" className="w-full h-12 border-white/20 text-white hover:bg-white/10">Contáctanos</Button>
+                </a>
               </div>
             </div>
 
-            <div className="text-center mt-12 max-w-2xl mx-auto">
-              <p className="text-slate-400">
-                <span className="text-xl">💡</span> <strong className="text-white">¿Necesitas más capacidad? Flexibilidad total:</strong> Agrega cajas extra a cualquier plan por solo <strong className="text-white">$15 USD/mes</strong>.
-              </p>
-            </div>
+
           </div>
         </section>
 

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Mail, Printer, DollarSign, Calendar, User, FileText, X, ChevronRight, Hash, ReceiptText, Clock, AlertCircle, Wallet, TrendingUp, Filter } from 'lucide-react';
+import { Search, Download, Mail, Printer, DollarSign, Calendar, User, FileText, X, ChevronRight, Hash, ReceiptText, Clock, AlertCircle, Wallet, TrendingUp, Filter, Eye } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -18,6 +18,7 @@ import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import PrintOptionsDialog from './PrintOptionsDialog';
+import InvoicePreviewDialog from '../invoices/InvoicePreviewDialog';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -38,6 +39,13 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
         }
     }, [profile, userFilter]);
     const [selectedActionSale, setSelectedActionSale] = useState<any | null>(null);
+    const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+    const [selectedSaleForPreview, setSelectedSaleForPreview] = useState<any | null>(null);
+
+    const handlePreview = (sale: any) => {
+        setSelectedSaleForPreview(sale);
+        setPreviewDialogOpen(true);
+    };
     const { data: activeSessionCached } = useActiveSession();
     const { data: openSessionsData } = useOpenSessions();
     const { data: sessionHistoryData } = useSessionHistory();
@@ -354,7 +362,7 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                                         </TableHeader>
                                         <TableBody>
                                             {filteredSales.map((sale) => (
-                                                <TableRow key={sale.id} className="border-zinc-900 hover:bg-zinc-900/30 transition-colors">
+                                                <TableRow key={sale.id} className="border-zinc-900 hover:bg-zinc-900/30 transition-colors cursor-pointer" onDoubleClick={() => handlePreview(sale)}>
                                                     <TableCell className="py-3 px-4">
                                                         <div className="flex flex-col">
                                                             <span className="text-xs font-bold text-white tracking-tight">{sale.invoice_number}</span>
@@ -392,6 +400,15 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                                                     </TableCell>
                                                     <TableCell className="px-4 py-3">
                                                         <div className="flex items-center justify-center gap-1.5">
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                onClick={() => handlePreview(sale)}
+                                                                className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary text-zinc-600 transition-colors"
+                                                                title="Vista Previa"
+                                                            >
+                                                                <Eye className="h-3.5 w-3.5" />
+                                                            </Button>
                                                             <Button
                                                                 size="icon"
                                                                 variant="ghost"
@@ -446,6 +463,21 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                     isOpen={true}
                     onClose={() => setSelectedActionSale(null)}
                     saleData={selectedActionSale}
+                />
+            )}
+
+            {selectedSaleForPreview && (
+                <InvoicePreviewDialog
+                    isOpen={previewDialogOpen}
+                    onClose={() => {
+                        setPreviewDialogOpen(false);
+                        setSelectedSaleForPreview(null);
+                    }}
+                    sale={selectedSaleForPreview}
+                    onPrint={() => {
+                        setPreviewDialogOpen(false);
+                        setSelectedActionSale(selectedSaleForPreview);
+                    }}
                 />
             )}
         </>

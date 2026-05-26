@@ -329,7 +329,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <User className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="font-medium max-w-[80px] sm:max-w-[150px] truncate">{profile.full_name || profile.email}</span>
               <span className="text-[10px] sm:text-xs text-muted-foreground">
-                ({settings?.rnc ? `RNC: ${settings.rnc}` : profile.user_number})
+                ({settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : profile.user_number})
               </span>
             </div>
           )}

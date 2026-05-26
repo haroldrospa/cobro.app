@@ -307,7 +307,7 @@ const UserSubscription = () => {
                                 Usuario: {profile?.full_name || '---'}
                             </p>
                             <p className="text-[10px] font-mono text-muted-foreground select-all">
-                                ID: {profile?.id || '---'}
+                                ID: {companySettings?.rnc || profile?.rnc || profile?.user_number || '---'}
                             </p>
                         </div>
                     </div>

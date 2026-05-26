@@ -10,9 +10,10 @@ export interface UserProfile {
   role: string | null;
   is_active: boolean | null;
   avatar_url?: string | null;
+  rnc?: string | null;
 }
 
-const PROFILE_CACHE_KEY = 'cobro_user_profile_cache';
+const PROFILE_CACHE_KEY = 'cobro_user_profile_cache_v2';
 
 // Read synchronously from localStorage — used as initialData so the component
 // renders immediately without a loading state on every navigation.
@@ -88,11 +89,13 @@ const fetchUserProfile = async (): Promise<UserProfile | null> => {
     }
   }
 
-  // Get avatar from auth metadata (no extra fetch needed)
+  // Get avatar and rnc from auth metadata (no extra fetch needed)
   let avatarUrl: string | null = null;
+  let rnc: string | null = null;
   try {
     const { data: { user } } = await supabase.auth.getUser();
     avatarUrl = user?.user_metadata?.avatar_url ?? null;
+    rnc = user?.user_metadata?.rnc ?? null;
   } catch { /* ignore */ }
 
   const profile: UserProfile = {
@@ -104,6 +107,7 @@ const fetchUserProfile = async (): Promise<UserProfile | null> => {
     role: data.role,
     is_active: null,
     avatar_url: avatarUrl,
+    rnc: rnc,
   };
 
   // Persist to localStorage for next boot

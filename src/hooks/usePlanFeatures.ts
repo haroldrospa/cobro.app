@@ -35,9 +35,9 @@ const PLAN_FEATURES: Record<PlanTier, PlanFeatures> = {
     basic: {
         // Limits - Emprendedor
         maxEmployees: 2,
-        maxProducts: 100,
+        maxProducts: 500,
         maxCustomers: 50,
-        maxInvoicesPerMonth: 250,
+        maxInvoicesPerMonth: Infinity,
 
         // Features
         canAccessReports: true,

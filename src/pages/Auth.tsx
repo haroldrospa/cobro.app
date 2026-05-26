@@ -20,6 +20,7 @@ const loginSchema = z.object({
 const signupSchema = z.object({
   fullName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   companyName: z.string().min(2, 'El nombre de la empresa debe tener al menos 2 caracteres'),
+  rnc: z.string().min(9, 'El RNC/Cédula es obligatorio y debe tener mínimo 9 dígitos'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   confirmPassword: z.string()
@@ -29,12 +30,17 @@ const signupSchema = z.object({
 });
 
 const Auth = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const isSignup = searchParams.get('signup') === 'true';
+  const defaultPlan = searchParams.get('plan') || 'basic';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('basic');
+  const [rnc, setRnc] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState(defaultPlan);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -125,7 +131,7 @@ const Auth = () => {
     e.preventDefault();
     setErrors({});
     try {
-      signupSchema.parse({ fullName, companyName, email, password, confirmPassword });
+      signupSchema.parse({ fullName, companyName, rnc, email, password, confirmPassword });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -151,6 +157,7 @@ const Auth = () => {
           data: {
             full_name: fullName,
             company_name: companyName,
+            rnc: rnc,
             plan_id: selectedPlan
           }
         }
@@ -236,7 +243,7 @@ const Auth = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
             <CardContent className="p-4 sm:p-6 relative z-10">
-              <Tabs defaultValue="login" className="w-full">
+              <Tabs defaultValue={isSignup ? "signup" : "login"} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-5 bg-[#162032] border border-white/[0.05] p-1 rounded-2xl shadow-inner relative gap-1 h-auto">
                   <TabsTrigger
                     value="login"
@@ -317,25 +324,24 @@ const Auth = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4 }}
                   >
-                    {/* Nombre + Empresa en 2 columnas */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label htmlFor="signup-name" className="text-[10px] sm:text-xs font-medium text-gray-300">Nombre</Label>
-                        <div className="relative">
-                          <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500" />
-                          <Input
-                            id="signup-name"
-                            type="text"
-                            placeholder="Juan Pérez"
-                            value={fullName}
-                            onChange={e => setFullName(e.target.value)}
-                            disabled={loading}
-                            className="pl-8 h-9 text-xs bg-[#1E293B]/60 border-white/10 text-white placeholder:text-gray-600 focus:bg-[#1E293B] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20 transition-all rounded-xl"
-                          />
-                        </div>
-                        {errors.fullName && <p className="text-[9px] text-red-400">{errors.fullName}</p>}
+                    <div className="space-y-1">
+                      <Label htmlFor="signup-name" className="text-[10px] sm:text-xs font-medium text-gray-300">Nombre Completo</Label>
+                      <div className="relative">
+                        <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500" />
+                        <Input
+                          id="signup-name"
+                          type="text"
+                          placeholder="Juan Pérez"
+                          value={fullName}
+                          onChange={e => setFullName(e.target.value)}
+                          disabled={loading}
+                          className="pl-8 h-9 text-xs bg-[#1E293B]/60 border-white/10 text-white placeholder:text-gray-600 focus:bg-[#1E293B] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20 transition-all rounded-xl"
+                        />
                       </div>
+                      {errors.fullName && <p className="text-[9px] text-red-400">{errors.fullName}</p>}
+                    </div>
 
+                    <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <Label htmlFor="signup-company" className="text-[10px] sm:text-xs font-medium text-gray-300">Empresa</Label>
                         <div className="relative">
@@ -352,6 +358,23 @@ const Auth = () => {
                         </div>
                         {errors.companyName && <p className="text-[9px] text-red-400">{errors.companyName}</p>}
                       </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="signup-rnc" className="text-[10px] sm:text-xs font-medium text-gray-300">RNC o Cédula</Label>
+                        <div className="relative">
+                          <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500" />
+                          <Input
+                            id="signup-rnc"
+                            type="text"
+                            placeholder="132456789"
+                            value={rnc}
+                            onChange={e => setRnc(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                            disabled={loading}
+                            className="pl-8 h-9 text-xs bg-[#1E293B]/60 border-white/10 text-white placeholder:text-gray-600 focus:bg-[#1E293B] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20 transition-all rounded-xl"
+                          />
+                        </div>
+                        {errors.rnc && <p className="text-[9px] text-red-400">{errors.rnc}</p>}
+                      </div>
                     </div>
 
                     {/* Plan selector compacto */}
@@ -359,20 +382,20 @@ const Auth = () => {
                       <Label className="text-[10px] sm:text-xs font-medium text-gray-300">Plan</Label>
                       <div className="grid grid-cols-3 gap-1.5">
                         {[
-                          { id: 'basic', label: 'Básico', price: 'RD$1,500' },
-                          { id: 'pro', label: 'Pro', price: 'RD$3,000' },
-                          { id: 'enterprise', label: 'Empresa', price: 'RD$6,000' },
+                          { id: 'basic', label: 'Emprendedor', price: '$29 USD' },
+                          { id: 'pro', label: 'Negocio', price: '$59 USD' },
+                          { id: 'enterprise', label: 'Corporativo', price: 'Personalizado' },
                         ].map(plan => (
                           <div
                             key={plan.id}
                             onClick={() => setSelectedPlan(plan.id)}
-                            className={`cursor-pointer rounded-xl border p-1.5 text-center transition-all ${selectedPlan === plan.id
+                            className={`cursor-pointer rounded-xl border p-1.5 text-center transition-all flex flex-col justify-center items-center ${selectedPlan === plan.id
                               ? 'border-emerald-500 bg-emerald-500/10'
                               : 'border-white/10 hover:border-white/20 hover:bg-white/5 text-gray-400'
                               }`}
                           >
                             <div className={`text-[10px] font-bold ${selectedPlan === plan.id ? 'text-white' : ''}`}>{plan.label}</div>
-                            <div className="text-[8px] mt-0.5 opacity-70">{plan.price}/mes</div>
+                            <div className="text-[8px] mt-0.5 opacity-70">{plan.price}{plan.price !== 'Personalizado' ? '/mes' : ''}</div>
                           </div>
                         ))}
                       </div>

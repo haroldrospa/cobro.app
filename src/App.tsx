@@ -35,6 +35,7 @@ const StoreSuspended = lazy(() => import("./pages/StoreSuspended"));
 const Delivery = lazy(() => import("./components/Delivery"));
 const Kitchen = lazy(() => import("./components/KitchenDisplay"));
 const Landing = lazy(() => import("./pages/Landing"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -133,6 +134,16 @@ const App = () => {
                   <ProtectedRoute>
                     <Suspense fallback={<PageLoader />}>
                       <Delivery />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/onboarding"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<PageLoader />}>
+                      <Onboarding />
                     </Suspense>
                   </ProtectedRoute>
                 }

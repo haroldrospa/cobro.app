@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Eye, Edit, Trash2, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Eye, Edit, Trash2, CheckCircle, Clock, XCircle, FileText } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sale } from '@/hooks/useSalesManagement';
 import PrintOptionsDialog from '../pos/PrintOptionsDialog';
+import InvoicePreviewDialog from './InvoicePreviewDialog';
 import { Printer } from 'lucide-react';
 
 interface InvoiceTableProps {
@@ -27,6 +28,13 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
 }) => {
   const [printDialogOpen, setPrintDialogOpen] = React.useState(false);
   const [selectedSaleForPrint, setSelectedSaleForPrint] = React.useState<any>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
+  const [selectedSaleForPreview, setSelectedSaleForPreview] = React.useState<Sale | null>(null);
+
+  const handlePreview = (sale: Sale) => {
+    setSelectedSaleForPreview(sale);
+    setPreviewDialogOpen(true);
+  };
 
   const handlePrint = (sale: Sale) => {
     // Map Sale to the format expected by PrintOptionsDialog
@@ -131,7 +139,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
             </TableHeader>
             <TableBody>
               {sales.map((sale) => (
-                <TableRow key={sale.id} className="hover:bg-muted/30 transition-colors">
+                <TableRow key={sale.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onDoubleClick={() => handlePreview(sale)}>
                   <TableCell className="font-bold text-primary">{sale.invoice_number}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
@@ -165,8 +173,11 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                   <TableCell className="text-center">{getStatusBadge(sale)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="sm" onClick={() => onViewDetails(sale)} title="Ver detalles" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
+                      <Button variant="ghost" size="sm" onClick={() => handlePreview(sale)} title="Vista previa" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => onViewDetails(sale)} title="Ver detalles completos" className="h-8 w-8 p-0 hover:bg-muted hover:text-foreground">
+                        <FileText className="h-4 w-4 opacity-60" />
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => onEditSale(sale)} title="Editar" className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600">
                         <Edit className="h-4 w-4" />
@@ -188,7 +199,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
         {/* Mobile View (Cards) */}
         <div className="md:hidden divide-y divide-border">
           {sales.map((sale) => (
-            <div key={sale.id} className="p-4 space-y-4 hover:bg-muted/20 transition-colors">
+            <div key={sale.id} className="p-4 space-y-4 hover:bg-muted/20 transition-colors cursor-pointer" onDoubleClick={() => handlePreview(sale)}>
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -219,9 +230,9 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                   Por: <span className="text-foreground">{sale.profile?.full_name?.split(' ')[0] || 'Sistema'}</span>
                 </p>
                 <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => onViewDetails(sale)} className="h-10 px-4 rounded-xl shadow-sm font-bold gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => handlePreview(sale)} className="h-10 px-4 rounded-xl shadow-sm font-bold gap-2">
                     <Eye className="h-4 w-4" />
-                    Ver
+                    Vista Previa
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => handlePrint(sale)} className="h-10 w-10 rounded-xl shadow-sm hover:text-emerald-600 hover:bg-emerald-50">
                     <Printer className="h-5 w-5" />
@@ -244,6 +255,21 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
           isOpen={printDialogOpen}
           onClose={() => setPrintDialogOpen(false)}
           saleData={selectedSaleForPrint}
+        />
+      )}
+
+      {selectedSaleForPreview && (
+        <InvoicePreviewDialog
+          isOpen={previewDialogOpen}
+          onClose={() => {
+            setPreviewDialogOpen(false);
+            setSelectedSaleForPreview(null);
+          }}
+          sale={selectedSaleForPreview}
+          onPrint={() => {
+            setPreviewDialogOpen(false);
+            handlePrint(selectedSaleForPreview);
+          }}
         />
       )}
     </Card>

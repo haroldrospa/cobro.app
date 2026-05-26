@@ -87,13 +87,55 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           navigate('/store-suspended');
           return;
         }
+
+        // 3. Check Onboarding Status
+        const isOnboarded = session.user.user_metadata?.onboarding_completed;
+        const currentPath = window.location.pathname;
+        if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+          navigate('/onboarding', { replace: true });
+          return;
+        } else if (isOnboarded && currentPath === '/onboarding') {
+          navigate('/app', { replace: true });
+          return;
+        }
         
         setSession(session);
         setProfileMissing(false);
       } else {
-        // User logged in but no profile found
-        console.warn("User has no profile record.");
-        // Only show missing screen if we weren't already rendering with cached state
+        // User logged in but no profile found — try to auto-repair first
+        console.warn("User has no profile record. Attempting auto-repair...");
+        try {
+          const { data: repaired, error: repairError } = await supabase.rpc('auto_repair_profile');
+          if (repaired === true && !repairError) {
+            console.log("Profile auto-repaired successfully. Retrying auth check...");
+            // Retry the profile check after repair
+            const { data: retriedProfiles } = await supabase
+              .from('profiles')
+              .select('is_active, store_id, stores:store_id (is_active)')
+              .eq('id', session.user.id)
+              .limit(1);
+            const retriedProfile = retriedProfiles && retriedProfiles.length > 0 ? retriedProfiles[0] : null;
+            if (retriedProfile) {
+              localStorage.setItem('cobro_last_user_id', session.user.id);
+              
+              // Check onboarding for repaired profiles too
+              const isOnboarded = session.user.user_metadata?.onboarding_completed;
+              const currentPath = window.location.pathname;
+              if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+                navigate('/onboarding', { replace: true });
+                return;
+              }
+
+              setSession(session);
+              setProfileMissing(false);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (repairErr) {
+          console.error("auto_repair_profile failed:", repairErr);
+        }
+        // Only show missing screen if repair failed too
         if (!hasCachedUser) setProfileMissing(true);
       }
 
