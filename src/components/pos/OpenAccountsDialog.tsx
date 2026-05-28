@@ -59,7 +59,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
             tax_percentage,
             tax_amount,
             subtotal,
-            products(cost_includes_tax)
+            cost_includes_tax
           )
         `)
         .eq('store_id', userStore.id)
@@ -68,7 +68,13 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching open orders in OpenAccountsDialog:', error);
+        throw error;
+      }
+      
+      console.log('OpenAccountsDialog fetched data:', data);
+      
       // Excluir los tickets delta de cocina (notas que empiezan con [ACTUALIZADO])
       return (data || []).filter((order: any) => !order.notes?.startsWith('[ACTUALIZADO]'));
 
@@ -182,7 +188,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
       return {
         id: item.product_id, name, price: item.unit_price, quantity: item.quantity,
         tax: (item.tax_percentage || 18) / 100,
-        cost_includes_tax: item.products?.cost_includes_tax || false,
+        cost_includes_tax: item.cost_includes_tax || false,
         comment: comment || undefined
       };
     });
