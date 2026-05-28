@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw } from 'lucide-react';
+import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2 } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
@@ -29,9 +29,10 @@ import { Badge } from '@/components/ui/badge';
 interface CloseDayDialogProps {
     isOpen: boolean;
     onClose: () => void;
+    onGoToPOS?: (orderId: string, customerName: string, orderNumber: string) => void;
 }
 
-const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
+const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoToPOS }) => {
     const [actualCash, setActualCash] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [showCashCount, setShowCashCount] = useState(false);
@@ -674,13 +675,47 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
                                             <Lock className="h-4 w-4 shrink-0" />
                                             <span className="text-xs font-black uppercase tracking-widest">Ventas Pendientes Bloqueando</span>
                                         </div>
-                                        <p className="text-[10px] text-zinc-400 font-medium">Debes cobrar o poner a crédito estos pedidos desde el POS antes de finalizar el día:</p>
-                                        <div className="space-y-1.5 max-h-32 overflow-y-auto no-scrollbar">
+                                        <p className="text-[10px] text-zinc-400 font-medium">Debes cobrar o cancelar estos pedidos antes de finalizar el día:</p>
+                                        <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
                                             {blockingOrders.map(order => (
-                                                <div key={order.id} className="flex justify-between items-center bg-zinc-900/60 border border-white/5 p-2.5 rounded-xl">
-                                                    <div className="flex flex-col min-w-0">
+                                                <div key={order.id} className="flex justify-between items-center bg-zinc-900/60 border border-white/5 p-2.5 rounded-xl gap-2">
+                                                    <div className="flex flex-col min-w-0 flex-1">
                                                         <span className="text-xs font-bold text-white truncate">{order.customer_name || 'Cliente sin nombre'}</span>
-                                                        <span className="text-[9px] text-zinc-500">Monto: RD$ {Number(order.total || 0).toLocaleString()} · #{order.order_number}</span>
+                                                        <span className="text-[9px] text-zinc-500">RD$ {Number(order.total || 0).toLocaleString()} · #{order.order_number}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        {onGoToPOS && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-7 px-2 text-[9px] font-black uppercase text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 gap-1"
+                                                                onClick={() => {
+                                                                    onClose();
+                                                                    onGoToPOS(order.id, order.customer_name, order.order_number);
+                                                                }}
+                                                            >
+                                                                <ShoppingCart className="h-3 w-3" />
+                                                                Cobrar
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-7 px-2 text-[9px] font-black uppercase text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                            onClick={async () => {
+                                                                if (!confirm(`¿Cancelar el pedido "${order.customer_name}" por RD$ ${Number(order.total || 0).toLocaleString()}?`)) return;
+                                                                try {
+                                                                    await supabase.from('open_order_items').delete().eq('order_id', order.id);
+                                                                    await supabase.from('open_orders').delete().eq('id', order.id);
+                                                                    setBlockingOrders(prev => prev.filter(o => o.id !== order.id));
+                                                                    toast({ title: 'Pedido cancelado', description: `"${order.customer_name}" eliminado.` });
+                                                                } catch (err: any) {
+                                                                    toast({ variant: 'destructive', title: 'Error', description: err.message });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}

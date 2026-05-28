@@ -49,45 +49,15 @@ const Auth = () => {
 
   useEffect(() => {
     let redirected = false;
-    const handleRedirect = async (session: any) => {
-      if (!session || redirected) return;
-      
-      try {
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('is_active')
-          .eq('id', session.user.id)
-          .limit(1);
-
-        if (error) {
-          console.error("Error al validar perfil en login:", error);
-        }
-
-        const profile = profiles && profiles.length > 0 ? profiles[0] : null;
-
-        if (profile && profile.is_active === false) {
-          console.log("Usuario inactivo detectado. Cerrando sesión...");
-          await supabase.auth.signOut();
-          localStorage.removeItem('cobro_last_user_id');
-          toast({
-            variant: "destructive",
-            title: "Acceso denegado",
-            description: "Tu usuario ha sido desactivado.",
-          });
-          return;
-        }
-      } catch (e) {
-        console.error("Error en validación de redirección:", e);
+    const handleRedirect = (session: any) => {
+      if (session && !redirected) {
+        redirected = true;
+        navigate('/app', { replace: true });
       }
-
-      redirected = true;
-      navigate('/app', { replace: true });
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && event !== 'SIGNED_OUT') {
-        handleRedirect(session);
-      }
+      if (session) handleRedirect(session);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -95,7 +65,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

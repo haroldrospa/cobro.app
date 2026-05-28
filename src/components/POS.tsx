@@ -1201,6 +1201,50 @@ const POSContent: React.FC = () => {
   const handleShowOpenAccounts = useCallback(() => setShowOpenAccountsDialog(true), []);
   const handleShowWebSales = useCallback(() => setShowWebSalesDialog(true), []);
 
+  // Load a blocking order from CloseDayDialog into the POS cart
+  const handleGoToPOSFromCloseDay = useCallback(async (orderId: string, customerName: string, orderNumber: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('open_orders')
+        .select(`
+          *,
+          open_order_items(
+            id, quantity, unit_price, total, product_name, product_id,
+            tax_percentage, tax_amount, subtotal,
+            products(cost_includes_tax)
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error || !data) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cargar el pedido' });
+        return;
+      }
+
+      const cartItems: CartItem[] = (data.open_order_items || []).map((item: any) => {
+        let name = item.product_name;
+        let comment = '';
+        const match = name?.match(/^(.*) \((.*)\)$/);
+        if (match) { name = match[1]; comment = match[2]; }
+        return {
+          id: item.product_id,
+          name,
+          price: item.unit_price,
+          quantity: item.quantity,
+          tax: (item.tax_percentage || 18) / 100,
+          cost_includes_tax: item.products?.cost_includes_tax || false,
+          comment: comment || undefined,
+        };
+      });
+
+      handleLoadWebOrder(cartItems, orderId, customerName, orderNumber, 'pos', data.notes);
+    } catch (err) {
+      console.error('Error loading order into cart:', err);
+      toast({ variant: 'destructive', title: 'Error', description: 'Error al cargar el pedido' });
+    }
+  }, [toast]);
+
   const handleToggleFullscreen = useCallback(() => {
     if (!isFullscreen) {
       document.documentElement.requestFullscreen?.();
@@ -1490,7 +1534,7 @@ const POSContent: React.FC = () => {
           isOpen={showOpenAccountsDialog}
           onClose={() => setShowOpenAccountsDialog(false)}
           onLoadToCart={handleLoadWebOrder}
-          currentLoadedOrderId={currentWebOrderId}
+          currentLoadedOrderId={cart.length > 0 ? currentWebOrderId : null}
         />
 
         <SaveOrderDialog
@@ -1532,6 +1576,7 @@ const POSContent: React.FC = () => {
         <CloseDayDialog
           isOpen={showCloseDayDialog}
           onClose={() => setShowCloseDayDialog(false)}
+          onGoToPOS={handleGoToPOSFromCloseDay}
         />
 
         {/* Diálogo de selección de cliente para cobros de deuda */}
@@ -1858,6 +1903,7 @@ const POSContent: React.FC = () => {
         <CloseDayDialog
           isOpen={showCloseDayDialog}
           onClose={() => setShowCloseDayDialog(false)}
+          onGoToPOS={handleGoToPOSFromCloseDay}
         />
 
         {/* --- DEBT COLLECTION DIALOGS --- */}

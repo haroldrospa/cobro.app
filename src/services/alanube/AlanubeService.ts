@@ -153,11 +153,8 @@ export class AlanubeService {
           sequenceDueDate: `${new Date().getFullYear() + 1}-12-31`,
           paymentFormsTable: [
             {
-              paymentMethod: mapPaymentMethod(sale.payment_method || 'cash'),
-              paymentAmount: sale.total,
-              ...(sale.payment_method === 'credit' && {
-                paymentDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-              })
+              paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
+              paymentAmount: sale.total
             }
           ]
         },
@@ -230,22 +227,16 @@ export class AlanubeService {
         detalles: itemDetails,
         paymentFormsTable: [
           {
-            paymentMethod: mapPaymentMethod(sale.payment_method || 'cash'),
-            paymentAmount: sale.total,
-            ...(sale.payment_method === 'credit' && {
-              paymentDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-            })
+            paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
+            paymentAmount: sale.total
           }
         ],
         payment: {
           paymentType: sale.payment_method === 'credit' ? 2 : 1,
           paymentFormsTable: [
             {
-              paymentMethod: mapPaymentMethod(sale.payment_method || 'cash'),
-              paymentAmount: sale.total,
-              ...(sale.payment_method === 'credit' && {
-                paymentDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-              })
+              paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
+              paymentAmount: sale.total
             }
           ]
         },
@@ -253,11 +244,8 @@ export class AlanubeService {
           paymentType: sale.payment_method === 'credit' ? 2 : 1,
           paymentFormsTable: [
             {
-              paymentMethod: mapPaymentMethod(sale.payment_method || 'cash'),
-              paymentAmount: sale.total,
-              ...(sale.payment_method === 'credit' && {
-                paymentDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-              })
+              paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
+              paymentAmount: sale.total
             }
           ]
         }

@@ -26,6 +26,15 @@ const Landing = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Redirigir automáticamente si ya hay sesión activa
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate('/app', { replace: true });
+      }
+    });
+  }, [navigate]);
+
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
@@ -61,13 +70,20 @@ const Landing = () => {
             </div>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button 
-            className="md:hidden p-2 text-foreground"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {/* Mobile: Login button + hamburger */}
+          <div className="flex items-center gap-2 md:hidden">
+            <Link to="/auth">
+              <Button variant="ghost" size="sm" className="font-semibold text-sm px-3">
+                Iniciar sesión
+              </Button>
+            </Link>
+            <button 
+              className="p-2 text-foreground"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Nav */}

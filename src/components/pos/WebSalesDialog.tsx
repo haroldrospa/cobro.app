@@ -59,7 +59,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
             tax_percentage,
             tax_amount,
             subtotal,
-            cost_includes_tax
+            products(cost_includes_tax)
           )
         `)
         .eq('store_id', userStore.id)
@@ -164,7 +164,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
       price: item.unit_price,
       quantity: item.quantity,
       tax: (item.tax_percentage || 18) / 100,
-      cost_includes_tax: item.cost_includes_tax || false
+      cost_includes_tax: item.products?.cost_includes_tax || false
     }));
 
     if (onLoadToCart) {

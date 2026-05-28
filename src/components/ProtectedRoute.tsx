@@ -68,17 +68,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       if (profile) {
         // 1. Check User Status
         if (profile.is_active === false) {
-          localStorage.removeItem('cobro_last_user_id');
           await supabase.auth.signOut();
+          localStorage.removeItem('cobro_last_user_id');
           toast({
             variant: "destructive",
             title: "Acceso denegado",
             description: "Tu usuario ha sido desactivado.",
           });
-          if (mounted) {
-            setSession(null);
-            setLoading(false);
-          }
+          setSession(null);
+          setLoading(false);
           return;
         }
 
@@ -137,8 +135,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         } catch (repairErr) {
           console.error("auto_repair_profile failed:", repairErr);
         }
-        // Always show missing screen if repair failed, to prevent loop or crash in app
-        setProfileMissing(true);
+        // Only show missing screen if repair failed too
+        if (!hasCachedUser) setProfileMissing(true);
       }
 
       setLoading(false);
