@@ -105,16 +105,20 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
 
       if (existingOrderId) {
         // 1. Obtenemos estado actual e ítems actuales
-        const { data: currentOrder } = await supabase
+        const { data: currentOrder, error: fetchError } = await supabase
           .from('open_orders')
           .select('order_status, notes, order_number')
           .eq('id', existingOrderId)
           .single();
 
-        const { data: currentItems } = await supabase
-          .from('open_order_items')
-          .select('product_id, quantity')
-          .eq('order_id', existingOrderId);
+        const isOrderMissing = !!fetchError || !currentOrder;
+
+        const { data: currentItems } = !isOrderMissing
+          ? await supabase
+              .from('open_order_items')
+              .select('product_id, quantity')
+              .eq('order_id', existingOrderId)
+          : { data: [] };
 
         let isReopened = false;
         if (
@@ -168,23 +172,66 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
           }
         } else {
           // Ya estaba completada: mantenemos su estado, no la re-enviamos a cocina
-          updatePayload.order_status = currentOrder.order_status;
+          updatePayload.order_status = currentOrder?.order_status || 'preparing';
         }
 
-        // 3. Actualizamos la orden principal (Para que facture completo)
-        const { data: order, error: orderError } = await supabase
-          .from('open_orders')
-          .update(updatePayload)
-          .eq('id', existingOrderId)
-          .select()
-          .single();
+        let orderIdToUse = existingOrderId;
+        let orderNumberToUse = currentOrder?.order_number;
+        let finalOrderResult: any = null;
 
-        if (orderError) throw orderError;
+        if (isOrderMissing) {
+          // Si el pedido no existe (por ejemplo, ya fue cobrado o eliminado), lo creamos como nuevo
+          const { data: orderNumber, error: orderNumberError } = await supabase
+            .rpc('generate_order_number', { order_source: orderSource });
+
+          if (orderNumberError) throw orderNumberError;
+
+          orderNumberToUse = orderNumber;
+          orderIdToUse = crypto.randomUUID();
+
+          const { data: order, error: insertError } = await supabase
+            .from('open_orders')
+            .insert({
+              id: orderIdToUse,
+              order_number: orderNumberToUse,
+              customer_name: customerName || 'Cliente',
+              customer_phone: customerPhone || null,
+              customer_address: customerAddress || null,
+              customer_id: selectedCustomerId || null,
+              payment_method: 'pending',
+              subtotal: parseFloat(totals.subtotal),
+              discount_total: parseFloat(totals.discount),
+              tax_total: parseFloat(totals.tax),
+              total: parseFloat(totals.total),
+              notes: finalNotes,
+              source: orderSource,
+              order_status: isDelivery ? 'shipped' : 'preparing',
+              payment_status: 'pending',
+              profile_id: user?.id || null,
+              store_id: userStore?.id || null
+            })
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          finalOrderResult = order;
+        } else {
+          // 3. Actualizamos la orden principal (Para que facture completo)
+          const { data: order, error: orderError } = await supabase
+            .from('open_orders')
+            .update(updatePayload)
+            .eq('id', existingOrderId)
+            .select()
+            .single();
+
+          if (orderError) throw orderError;
+          finalOrderResult = order;
+        }
 
         const { error: deleteError } = await supabase
           .from('open_order_items')
           .delete()
-          .eq('order_id', existingOrderId);
+          .eq('order_id', orderIdToUse);
 
         if (deleteError) throw deleteError;
 
@@ -204,7 +251,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
           }
 
           return {
-            order_id: existingOrderId,
+            order_id: orderIdToUse,
             product_id: item.id,
             product_name: item.comment ? `${item.name} (${item.comment})` : item.name,
             quantity: item.quantity,
@@ -224,9 +271,8 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
         if (itemsError) throw itemsError;
 
         // 4. Crear Ticket Delta para Cocina
-        if (shouldCreateDeltaOrder && currentOrder) {
-          const deltaNotes = `[ACTUALIZADO]\nPedido actualizado de: ${customerName || 'Cliente'} (#${currentOrder.order_number})\n${finalNotes}`;
-
+        if (shouldCreateDeltaOrder && !isOrderMissing && currentOrder) {
+          const deltaNotes = `[ACTUALIZADO]\nPedido actualizado de: ${customerName || 'Cliente'} (#${orderNumberToUse})\n${finalNotes}`;
 
           const { data: deltaOrder, error: deltaOrderError } = await supabase
             .from('open_orders')
@@ -240,9 +286,8 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
               total: 0,
               notes: deltaNotes,
               source: 'pos',
-
               order_status: 'preparing',
-              payment_status: 'pending',
+              payment_status: 'paid',
               profile_id: user?.id || null,
               store_id: userStore?.id || null
             })
@@ -283,7 +328,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
           await supabase.from('open_order_items').insert(deltaOrderItems);
         }
 
-        return order;
+        return finalOrderResult;
       }
 
       // Create new order with store_id

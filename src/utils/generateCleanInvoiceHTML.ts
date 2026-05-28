@@ -414,7 +414,7 @@ export const generateCleanInvoiceHTML = (
       </div>
     ` : ''}
     
-    ${invoiceData.showBarcode && invoiceData.barcodeDataUrl ? `
+    ${invoiceData.showBarcode && invoiceData.barcodeDataUrl && !invoiceData.isElectronic ? `
       <div class="barcode">
         <img src="${invoiceData.barcodeDataUrl}" alt="Código de Barras NCF">
       </div>

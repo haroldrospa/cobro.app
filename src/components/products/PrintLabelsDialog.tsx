@@ -13,6 +13,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDebounce } from '@/hooks/useDebounce';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 interface PrintItem {
   product: Product;
@@ -22,9 +24,15 @@ interface PrintItem {
 
 // Caché para optimizar la carga de SVGs en listas grandes
 const barcodeSvgCache = new Map<string, string>();
-const getCachedBarcodeSvg = (value: string | undefined | null, showText: boolean, fontSize: number = 14) => {
+const getCachedBarcodeSvg = (
+  value: string | undefined | null, 
+  showText: boolean, 
+  fontSize: number = 14,
+  barHeight: number = 60,
+  barWidth: number = 1.8
+) => {
   if (!value || !value.trim()) return '';
-  const cacheKey = `${value}-${showText}-${fontSize}`;
+  const cacheKey = `${value}-${showText}-${fontSize}-${barHeight}-${barWidth}`;
   if (barcodeSvgCache.has(cacheKey)) return barcodeSvgCache.get(cacheKey)!;
   
   try {
@@ -34,8 +42,8 @@ const getCachedBarcodeSvg = (value: string | undefined | null, showText: boolean
       displayValue: showText,
       fontSize: fontSize,
       margin: 0,
-      height: 60, // Height in px for the barcode lines (SVG internal scale)
-      width: 1.8 // Bar width
+      height: barHeight, // Height in px for the barcode lines (SVG internal scale)
+      width: barWidth // Bar width
     });
     const serializer = new XMLSerializer();
     const result = serializer.serializeToString(svg);
@@ -59,6 +67,21 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   const [isPrinting, setIsPrinting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 200);
+  const { toast } = useToast();
+
+  // Plantillas personalizadas guardadas en localStorage
+  const [customTemplates, setCustomTemplates] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('cobro_label_custom_templates');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Error loading custom templates", e);
+    }
+    return [];
+  });
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+
+
 
   const savedSettings = useMemo(() => {
     try {
@@ -90,17 +113,22 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   const [priceSize, setPriceSize] = useState<number>(savedSettings.priceSize ?? 16);
   const [barcodeFontSize, setBarcodeFontSize] = useState<number>(savedSettings.barcodeFontSize ?? 14);
 
+  // Altura y grosor manual del código de barras
+  const [barHeight, setBarHeight] = useState<number>(savedSettings.barHeight ?? 45); // Altura en px (JsBarcode)
+  const [barWidth, setBarWidth] = useState<number>(savedSettings.barWidth ?? 1.8);  // Grosor en px (JsBarcode)
+
   // Persistir settings con debounce — evita escribir localStorage en cada keystroke
   useEffect(() => {
     const timer = setTimeout(() => {
       localStorage.setItem('cobro_label_settings', JSON.stringify({
         labelWidth, labelHeight, columns, gapX, gapY,
         showBusinessName, showProductName, showPrice, showBarcodeText, rotation,
-        bnameSize, pnameSize, priceSize, barcodeFontSize
+        bnameSize, pnameSize, priceSize, barcodeFontSize,
+        barHeight, barWidth
       }));
     }, 500);
     return () => clearTimeout(timer);
-  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize]);
+  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth]);
 
   // Lista interactiva de impresión
   const [printList, setPrintList] = useState<PrintItem[]>(() => 
@@ -108,16 +136,31 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   );
   const [previewId, setPreviewId] = useState<string>(printList[0]?.product.id || '');
 
+  // Calcular dinámicamente la altura máxima del código de barra según la cantidad de textos habilitados
+  const barcodeMaxHeightMultiplier = useMemo(() => {
+    let activeTextElements = 0;
+    if (showBusinessName) activeTextElements++;
+    if (showProductName) activeTextElements++;
+    if (showPrice) activeTextElements++;
+
+    if (activeTextElements === 3) return 0.28;
+    if (activeTextElements === 2) return 0.38;
+    if (activeTextElements === 1) return 0.48;
+    return 0.6;
+  }, [showBusinessName, showProductName, showPrice]);
+
   // Perfiles predeterminados para facilitar la vida al usuario
-  const applyProfile = useCallback((profile: string) => {
-    if (profile === 'thermal') {
+  const applyProfile = useCallback((profileId: string) => {
+    setSelectedTemplateId(profileId);
+    
+    if (profileId === 'thermal') {
       setLabelWidth(50);
       setLabelHeight(30);
       setColumns(1);
       setGapX(0);
       setGapY(4);
       setRotation(180);
-    } else if (profile === 'thermal_small') {
+    } else if (profileId === 'thermal_small') {
       setLabelWidth(30);
       setLabelHeight(20);
       setColumns(1);
@@ -125,15 +168,89 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
       setGapY(2);
       setShowBusinessName(false);
       setRotation(180);
-    } else if (profile === 'a4_3x10') { // Estilo Avery
+    } else if (profileId === 'a4_3x10') {
       setLabelWidth(66);
       setLabelHeight(25);
       setColumns(3);
       setGapX(2);
       setGapY(2);
       setRotation(0);
+    } else {
+      // Buscar plantilla personalizada
+      const template = customTemplates.find(t => t.id === profileId);
+      if (template) {
+        setLabelWidth(template.labelWidth);
+        setLabelHeight(template.labelHeight);
+        setColumns(template.columns);
+        setGapX(template.gapX);
+        setGapY(template.gapY);
+        setRotation(template.rotation);
+        setShowBusinessName(template.showBusinessName);
+        setShowProductName(template.showProductName);
+        setShowPrice(template.showPrice);
+        setShowBarcodeText(template.showBarcodeText);
+        setBnameSize(template.bnameSize);
+        setPnameSize(template.pnameSize);
+        setPriceSize(template.priceSize);
+        setBarcodeFontSize(template.barcodeFontSize);
+        setBarHeight(template.barHeight);
+        setBarWidth(template.barWidth);
+      }
     }
-  }, []);
+  }, [customTemplates]);
+
+  const handleSaveTemplate = () => {
+    const name = prompt("Introduce el nombre de la planilla de configuración (ej: Rollo 30x20):");
+    if (!name || !name.trim()) return;
+
+    const newTemplate = {
+      id: `template_${Date.now()}`,
+      name: name.trim(),
+      labelWidth,
+      labelHeight,
+      columns,
+      gapX,
+      gapY,
+      showBusinessName,
+      showProductName,
+      showPrice,
+      showBarcodeText,
+      rotation,
+      bnameSize,
+      pnameSize,
+      priceSize,
+      barcodeFontSize,
+      barHeight,
+      barWidth
+    };
+
+    const updated = [...customTemplates, newTemplate];
+    setCustomTemplates(updated);
+    localStorage.setItem('cobro_label_custom_templates', JSON.stringify(updated));
+    setSelectedTemplateId(newTemplate.id);
+    toast({
+      title: "Planilla guardada",
+      description: `Se ha creado la planilla de configuración "${name}" con éxito.`
+    });
+  };
+
+  const handleDeleteTemplate = () => {
+    const template = customTemplates.find(t => t.id === selectedTemplateId);
+    if (!template) return;
+    
+    if (confirm(`¿Estás seguro de eliminar la planilla de configuración "${template.name}"?`)) {
+      const updated = customTemplates.filter(t => t.id !== selectedTemplateId);
+      setCustomTemplates(updated);
+      localStorage.setItem('cobro_label_custom_templates', JSON.stringify(updated));
+      setSelectedTemplateId('');
+      toast({
+        title: "Planilla eliminada",
+        description: `Se ha eliminado la planilla de configuración "${template.name}".`
+      });
+    }
+  };
+
+
 
   const handlePrint = async () => {
     setIsPrinting(true);
@@ -163,7 +280,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
         const printH = isSwapped ? labelWidth : labelHeight;
 
         const labelsHtml = selectedItems.flatMap(item => {
-          const barcodeSvg = getCachedBarcodeSvg(item.product.barcode, showBarcodeText, barcodeFontSize);
+          const barcodeSvg = getCachedBarcodeSvg(item.product.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth);
           
           const labelHtml = `
             <div class="label">
@@ -232,7 +349,14 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                 height: ${labelHeight}mm;
                 padding: 1.5mm;
                 box-sizing: border-box;
+                overflow: hidden;
                 ${rotation !== 0 ? `transform: rotate(${rotation}deg);` : ''}
+              }
+
+              .label-content * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
               }
 
               .label-text {
@@ -283,11 +407,12 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                 align-items: center;
                 flex-shrink: 0;
                 width: 100%;
+                overflow: hidden;
               }
 
               .barcode-container svg {
                 max-width: 100%;
-                max-height: ${labelHeight * (showProductName ? 0.4 : 0.65)}mm; 
+                max-height: ${labelHeight * barcodeMaxHeightMultiplier}mm; 
                 width: auto;
                 height: auto;
                 display: block;
@@ -296,30 +421,52 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
               /* Page rules for thermal continuous vs defined A4 */
               @page {
                 size: ${columns === 1 ? (printW + 'mm ' + printH + 'mm') : 'A4'};
-                margin: 0;
+                margin: 0 !important;
               }
 
               @media print {
                 html, body {
                   width: ${columns === 1 ? printW + 'mm' : '100%'};
-                  margin: 0;
-                  padding: 0;
-                }
-                .label {
-                  page-break-inside: avoid;
-                  break-inside: avoid;
-                  border: none; /* remove cutting borders for clean print */
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  overflow: hidden !important;
+                  background-color: #fff;
                 }
                 
-                /* Adjust for Thermal cuts if single row */
-                .labels-container {
-                   row-gap: ${columns === 1 ? '0mm' : gapY + 'mm'};
-                }
                 ${columns === 1 ? `
-                  .label { 
-                    page-break-after: always; 
+                  .labels-container {
+                    display: block !important;
+                    width: 100% !important;
+                    column-gap: 0 !important;
+                    row-gap: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
                   }
-                ` : ''}
+                  .label {
+                    display: flex !important;
+                    width: ${printW}mm !important;
+                    height: ${printH}mm !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    page-break-after: always !important;
+                    break-after: page !important;
+                    border: none !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    overflow: hidden !important;
+                  }
+                  .label-content {
+                    width: ${labelWidth}mm !important;
+                    height: ${labelHeight}mm !important;
+                    overflow: hidden !important;
+                  }
+                ` : `
+                  .label {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                    border: none;
+                  }
+                `}
               }
 
             </style>
@@ -382,13 +529,13 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
     .preview-barcode-container svg {
       max-width: 100%;
       height: auto;
-      max-height: ${labelHeight * (showProductName ? 0.4 : 0.65)}mm;
+      max-height: ${labelHeight * barcodeMaxHeightMultiplier}mm;
     }
-  `, [labelHeight, showProductName]);
+  `, [labelHeight, barcodeMaxHeightMultiplier]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl h-[90vh] sm:h-[auto] max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-6xl h-[90vh] sm:h-[auto] max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 shrink-0 border-b">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Printer className="h-6 w-6 text-primary" />
@@ -401,21 +548,57 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x">
-          <ScrollArea className="flex-1 px-6 pb-6 md:w-[60%] lg:w-[65%]">
+          <ScrollArea className="flex-1 px-6 pb-6 md:w-[58%] lg:w-[60%]">
             <div className="space-y-6 pt-4">
-              {/* Plantillas rápidas */}
+              {/* Planillas de Configuración de Etiquetas */}
             <div className="space-y-3 bg-secondary/30 p-4 rounded-lg">
-              <Label className="flex items-center gap-2 font-semibold">
-                <Settings className="w-4 h-4" /> Plantillas Rápidas
-              </Label>
-              <Select onValueChange={applyProfile}>
+              <div className="flex justify-between items-center">
+                <Label className="flex items-center gap-2 font-semibold">
+                  <Settings className="w-4 h-4" /> Planillas de Configuración (Medidas y Diseño)
+                </Label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSaveTemplate} 
+                    className="h-7 text-xs px-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                  >
+                    Guardar Planilla Actual
+                  </Button>
+                  {selectedTemplateId && !['thermal', 'thermal_small', 'a4_3x10'].includes(selectedTemplateId) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleDeleteTemplate} 
+                      className="h-7 text-xs px-2 border-rose-500 text-rose-600 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                    >
+                      Eliminar Planilla
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Select value={selectedTemplateId} onValueChange={applyProfile}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar un tipo de papel..." />
+                  <SelectValue placeholder="Seleccionar una planilla de diseño..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="thermal">Impresora Térmica Estandar (50x30mm)</SelectItem>
                   <SelectItem value="thermal_small">Impresora Térmica Pequeña (30x20mm)</SelectItem>
                   <SelectItem value="a4_3x10">Hoja A4 - 3 Columnas (Planilla tipo Avery)</SelectItem>
+                  
+                  {customTemplates.length > 0 && (
+                    <>
+                      <Separator className="my-1" />
+                      <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Mis Planillas Guardadas (Diseños)
+                      </div>
+                      {customTemplates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          ✨ {t.name} ({t.labelWidth}x{t.labelHeight}mm)
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -507,7 +690,42 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                        <Switch id="show_btext" checked={showBarcodeText} onCheckedChange={setShowBarcodeText} />
                     </div>
                   </div>
-                </div>
+
+                  <div className="flex items-center justify-between border-t pt-3 mt-2">
+                    <Label htmlFor="bar_height" className="text-xs font-semibold">Altura del Código (px)</Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        id="bar_height" 
+                        type="number" 
+                        min="10" 
+                        max="150" 
+                        className="w-16 h-8 text-xs" 
+                        value={barHeight} 
+                        onChange={(e) => setBarHeight(Number(e.target.value))} 
+                        title="Altura del código de barras en px"
+                      />
+                      <div className="w-11 shrink-0" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-1">
+                    <Label htmlFor="bar_width" className="text-xs font-semibold">Grosor de Líneas</Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        id="bar_width" 
+                        type="number" 
+                        min="1.0" 
+                        max="4.0" 
+                        step="0.1" 
+                        className="w-16 h-8 text-xs" 
+                        value={barWidth} 
+                        onChange={(e) => setBarWidth(Number(e.target.value))} 
+                        title="Grosor de las líneas del código (1.0 - 4.0)"
+                      />
+                      <div className="w-11 shrink-0" />
+                    </div>
+                  </div>
+                 </div>
               </div>
             </div>
             
@@ -589,33 +807,39 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
             <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md text-xs">
               <p><strong>Truco Térmico:</strong> Si usas impresora térmica continua (1 columna), asegúrate que el navegador no agregue márgenes ni encaboezados propios (Desactiva "Headers/Footers" y pon "Margins: None" en el diálogo de sistema).</p>
             </div>
-          </div>
-          </ScrollArea>
-          
-          <div className="md:w-[45%] lg:w-[45%] flex flex-col overflow-hidden bg-muted/20 border-l">
+           </div>
+           </ScrollArea>
+
+           <div className="md:w-[42%] lg:w-[40%] shrink-0 flex flex-col overflow-hidden bg-muted/20 border-l">
              <div className="p-4 border-b flex justify-between items-center bg-white dark:bg-zinc-950 shrink-0">
-               <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
-                 Vista Previa Completa
-                 <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-bold">
-                   {totalLabelsToPrint} etiquetas
-                 </span>
-               </h4>
-               {totalLabelsToPrint > maxPreviewLabels && (
-                 <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-1 rounded font-medium">
-                   Mostrando primeras {maxPreviewLabels}
-                 </span>
-               )}
+                <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+                  Vista Previa Completa
+                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-bold">
+                    {totalLabelsToPrint} etiquetas
+                  </span>
+                </h4>
+                {totalLabelsToPrint > maxPreviewLabels && (
+                  <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-1 rounded font-medium">
+                    Mostrando primeras {maxPreviewLabels}
+                  </span>
+                )}
              </div>
              
-             <ScrollArea className="flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto">
+             <ScrollArea className="flex-1 bg-zinc-100 dark:bg-zinc-900">
                 {/* Un solo bloque de estilo compartido para todos los barcodes de la vista previa */}
                 <style dangerouslySetInnerHTML={{ __html: previewBarcodeStyle }} />
-                <div className="p-8 flex items-start justify-center min-w-max min-h-full">
-                   {previewLabels.length === 0 ? (
-                      <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">
-                        No hay etiquetas para mostrar
-                      </div>
-                   ) : (
+                 <div className="p-8 flex items-start justify-center min-w-max min-h-full">
+                    {previewLabels.length === 0 ? (
+                       <div className="h-60 flex flex-col items-center justify-center text-muted-foreground gap-3 p-4 text-center">
+                         <Printer className="w-12 h-12 text-muted-foreground/30 animate-pulse" />
+                         <div className="space-y-1">
+                           <p className="text-sm font-medium">No hay etiquetas para previsualizar</p>
+                           <p className="text-xs text-muted-foreground/80 max-w-[240px]">
+                             Selecciona productos en el listado de la izquierda y define una cantidad para ver la vista previa.
+                           </p>
+                         </div>
+                       </div>
+                    ) : (
                       <div 
                         className="bg-white shadow-xl dark:bg-white" // Force white background for the "paper"
                         style={{
@@ -657,9 +881,9 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                                     </div>
                                   )}
                                 </div>
-                                <div className="w-full flex justify-center items-center flex-shrink-0 preview-barcode-container"
-                                  dangerouslySetInnerHTML={{ __html: getCachedBarcodeSvg(prod.barcode, showBarcodeText, barcodeFontSize) }} 
-                                />
+                                 <div className="w-full flex justify-center items-center flex-shrink-0 preview-barcode-container"
+                                   dangerouslySetInnerHTML={{ __html: getCachedBarcodeSvg(prod.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth) }} 
+                                 />
 
                               </div>
                            </div>

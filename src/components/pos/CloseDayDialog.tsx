@@ -36,6 +36,10 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
     const [notes, setNotes] = useState('');
     const [showCashCount, setShowCashCount] = useState(false);
 
+    // States for blocking orders
+    const [blockingOrders, setBlockingOrders] = useState<any[]>([]);
+    const [loadingBlockingOrders, setLoadingBlockingOrders] = useState(false);
+
     // Options
     const [downloadPdf, setDownloadPdf] = useState(true);
     const [sendEmail, setSendEmail] = useState(true);
@@ -45,6 +49,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
     const queryClient = useQueryClient();
     const { data: activeSessionCached } = useActiveSession();
     const { profile: currentUserProfile } = useUserProfile();
+    const { data: userData } = useUserStore();
     const { data: openSessionsData, isLoading: isLoadingOpenSessions, isPending: isPendingOpenSessions } = useOpenSessions();
     const { data: historyData, isLoading: isLoadingHistory, isPending: isPendingHistory } = useSessionHistory();
     const history = historyData || [];
@@ -101,6 +106,39 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
             : (activeSession.opened_by || activeSession.user_id || activeSession.opener?.id);
     }, [activeSession]);
 
+    // Fetch blocking orders when dialog opens or activeSessionUserId updates
+    React.useEffect(() => {
+        if (!isOpen || !userData?.id || !activeSessionUserId) {
+            setBlockingOrders([]);
+            return;
+        }
+        
+        const fetchBlockingOrders = async () => {
+            setLoadingBlockingOrders(true);
+            try {
+                const { data, error: fetchErr } = await supabase
+                    .from('open_orders')
+                    .select('*')
+                    .eq('store_id', userData.id)
+                    .eq('profile_id', activeSessionUserId)
+                    .eq('payment_status', 'pending')
+                    .eq('source', 'pos')
+                    .or('notes.is.null,notes.not.ilike.[ACTUALIZADO]%');
+                if (!fetchErr && data) {
+                    setBlockingOrders(data);
+                } else if (fetchErr) {
+                    console.error('Error fetching blocking orders:', fetchErr);
+                }
+            } catch (err) {
+                console.error('Exception fetching blocking orders:', err);
+            } finally {
+                setLoadingBlockingOrders(false);
+            }
+        };
+        
+        fetchBlockingOrders();
+    }, [isOpen, userData?.id, activeSessionUserId]);
+
     const effectiveStart = useMemo(() => {
         if (!activeSession) return new Date();
         return new Date(activeSession.opened_at);
@@ -119,7 +157,6 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
     
     const { data: movements = [] } = useCashMovements(effectiveStart, activeSession?.opened_by);
     const { companyInfo } = usePrintSettings();
-    const { data: userData } = useUserStore();
     const closeSession = useCloseSession();
     const { toast } = useToast();
 
@@ -237,14 +274,27 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
         if (!activeSession) return;
 
         try {
-            // Verificación de ventas abiertas
+            // 1. Eliminar automáticamente tickets delta de cocina (ventas fantasmas)
+            try {
+                await supabase
+                    .from('open_orders')
+                    .delete()
+                    .eq('store_id', userData?.id)
+                    .eq('profile_id', activeSessionUserId)
+                    .ilike('notes', '[ACTUALIZADO]%');
+            } catch (cleanupErr) {
+                console.error('Error cleaning up delta tickets:', cleanupErr);
+            }
+
+            // Verificación de ventas abiertas (excluyendo tickets delta)
             const { count, error: countError } = await supabase
                 .from('open_orders')
                 .select('id', { count: 'exact', head: true })
                 .eq('store_id', userData?.id)
                 .eq('profile_id', activeSessionUserId)
                 .eq('payment_status', 'pending')
-                .eq('source', 'pos');
+                .eq('source', 'pos')
+                .or('notes.is.null,notes.not.ilike.[ACTUALIZADO]%');
 
             if (countError) throw countError;
 
@@ -254,6 +304,10 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
                     title: 'Ventas abiertas pendientes', 
                     description: `Debes cobrar o cancelar tus ${count} venta(s) abierta(s) antes de cerrar la caja.` 
                 });
+                return;
+            }
+
+            if (!confirm('¿Estás seguro de que deseas cerrar el turno de caja y finalizar el día?')) {
                 return;
             }
 
@@ -496,13 +550,27 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
                                                                 try {
                                                                     const sessionUserId = session.opener?.id || (typeof session.opened_by === 'object' && session.opened_by !== null ? session.opened_by.id : session.opened_by) || session.user_id;
                                                                     
+                                                                    // 1. Eliminar automáticamente tickets delta de cocina (ventas fantasmas)
+                                                                    try {
+                                                                        await supabase
+                                                                            .from('open_orders')
+                                                                            .delete()
+                                                                            .eq('store_id', userData?.id)
+                                                                            .eq('profile_id', sessionUserId)
+                                                                            .ilike('notes', '[ACTUALIZADO]%');
+                                                                    } catch (cleanupErr) {
+                                                                        console.error('Error cleaning up delta tickets:', cleanupErr);
+                                                                    }
+
+                                                                    // Verificación de ventas abiertas (excluyendo tickets delta)
                                                                     const { count, error: countError } = await supabase
                                                                         .from('open_orders')
                                                                         .select('id', { count: 'exact', head: true })
                                                                         .eq('store_id', userData?.id)
                                                                         .eq('profile_id', sessionUserId)
                                                                         .eq('payment_status', 'pending')
-                                                                        .eq('source', 'pos');
+                                                                        .eq('source', 'pos')
+                                                                        .or('notes.is.null,notes.not.ilike.[ACTUALIZADO]%');
                                                                         
                                                                     if (countError) throw countError;
                                                                     
@@ -599,6 +667,26 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose }) => {
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
+
+                                {blockingOrders.length > 0 && (
+                                    <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl space-y-3">
+                                        <div className="flex items-center gap-2 text-red-500">
+                                            <Lock className="h-4 w-4 shrink-0" />
+                                            <span className="text-xs font-black uppercase tracking-widest">Ventas Pendientes Bloqueando</span>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-400 font-medium">Debes cobrar o poner a crédito estos pedidos desde el POS antes de finalizar el día:</p>
+                                        <div className="space-y-1.5 max-h-32 overflow-y-auto no-scrollbar">
+                                            {blockingOrders.map(order => (
+                                                <div key={order.id} className="flex justify-between items-center bg-zinc-900/60 border border-white/5 p-2.5 rounded-xl">
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-xs font-bold text-white truncate">{order.customer_name || 'Cliente sin nombre'}</span>
+                                                        <span className="text-[9px] text-zinc-500">Monto: RD$ {Number(order.total || 0).toLocaleString()} · #{order.order_number}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-1.5">
                                     <div className="flex items-center gap-2 px-1">

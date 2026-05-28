@@ -364,6 +364,14 @@ const POSContent: React.FC = () => {
     }
   }, [savedCartData, cartLoaded, isLoadingSavedCart, toast]);
 
+  // Automatically clear active order reference if the cart becomes empty
+  useEffect(() => {
+    if (cartLoaded && cart.length === 0 && currentWebOrderId !== null) {
+      setCurrentWebOrderId(null);
+      setCurrentOrderInfo(null);
+    }
+  }, [cart.length, currentWebOrderId, cartLoaded]);
+
   // Set default invoice type
   useEffect(() => {
     if (invoiceTypes.length > 0 && !selectedInvoiceType) {
@@ -825,16 +833,20 @@ const POSContent: React.FC = () => {
       const totals = calculateTotals(cartWithOffers, globalDiscount);
 
       // 1. Obtener estado actual e ítems actuales de la orden
-      const { data: currentOrder } = await supabase
+      const { data: currentOrder, error: fetchError } = await supabase
         .from('open_orders')
         .select('order_status, notes, order_number, customer_name')
         .eq('id', currentWebOrderId)
         .single();
 
-      const { data: currentItems } = await supabase
-        .from('open_order_items')
-        .select('product_id, quantity')
-        .eq('order_id', currentWebOrderId);
+      const isOrderMissing = !!fetchError || !currentOrder;
+
+      const { data: currentItems } = !isOrderMissing
+        ? await supabase
+            .from('open_order_items')
+            .select('product_id, quantity')
+            .eq('order_id', currentWebOrderId)
+        : { data: [] };
 
       const isReopened = !!(
         currentOrder &&
@@ -869,43 +881,78 @@ const POSContent: React.FC = () => {
       // 4. Preparar payload de actualización principal
       const isDelivery = posOrderType === 'takeout' && (isStore || isSupermarket);
 
-      const updatePayload: any = {
-        customer_name: currentOrderInfo?.customerName || 'Cliente',
-        subtotal: parseFloat(totals.subtotal),
-        discount_total: parseFloat(totals.discount),
-        tax_total: parseFloat(totals.tax),
-        total: parseFloat(totals.total),
-        notes: finalNotes,
-        updated_at: new Date().toISOString()
-      };
+      let orderIdToUse = currentWebOrderId;
+      let orderNumberToUse = currentOrder?.order_number || currentOrderInfo?.orderNumber;
 
-      if (isDelivery) {
-        // Para supermercados/tiendas, el delivery va directo a despacho (no hay cocina)
-        updatePayload.order_status = 'shipped';
-      } else if (!isReopened) {
-        // Sigue en cocina: solo refrescamos el timer si hay productos nuevos/modificados
-        updatePayload.order_status = 'preparing';
-        if (hasNewOrModifiedItems) {
-          updatePayload.created_at = new Date().toISOString();
-        }
+      if (isOrderMissing) {
+        // Generar un nuevo número de orden y crearla desde cero
+        const { data: orderNumber, error: orderNumberError } = await supabase
+          .rpc('generate_order_number', { order_source: currentOrderSource || 'pos' });
+
+        if (orderNumberError) throw orderNumberError;
+
+        orderNumberToUse = orderNumber;
+        orderIdToUse = crypto.randomUUID();
+
+        const { error: insertError } = await supabase
+          .from('open_orders')
+          .insert({
+            id: orderIdToUse,
+            order_number: orderNumberToUse,
+            customer_name: currentOrderInfo?.customerName || 'Cliente',
+            payment_method: 'pending',
+            subtotal: parseFloat(totals.subtotal),
+            discount_total: parseFloat(totals.discount),
+            tax_total: parseFloat(totals.tax),
+            total: parseFloat(totals.total),
+            notes: finalNotes,
+            source: currentOrderSource || 'pos',
+            order_status: isDelivery ? 'shipped' : 'preparing',
+            payment_status: 'pending',
+            profile_id: profile?.id || null,
+            store_id: store?.id || null
+          });
+
+        if (insertError) throw insertError;
       } else {
-        // Ya estaba completada: conservamos el estado
-        updatePayload.order_status = currentOrder.order_status;
+        const updatePayload: any = {
+          customer_name: currentOrderInfo?.customerName || 'Cliente',
+          subtotal: parseFloat(totals.subtotal),
+          discount_total: parseFloat(totals.discount),
+          tax_total: parseFloat(totals.tax),
+          total: parseFloat(totals.total),
+          notes: finalNotes,
+          updated_at: new Date().toISOString()
+        };
+
+        if (isDelivery) {
+          // Para supermercados/tiendas, el delivery va directo a despacho (no hay cocina)
+          updatePayload.order_status = 'shipped';
+        } else if (!isReopened) {
+          // Sigue en cocina: solo refrescamos el timer si hay productos nuevos/modificados
+          updatePayload.order_status = 'preparing';
+          if (hasNewOrModifiedItems) {
+            updatePayload.created_at = new Date().toISOString();
+          }
+        } else {
+          // Ya estaba completada: conservamos el estado
+          updatePayload.order_status = currentOrder.order_status;
+        }
+
+        // 5. Actualizar la orden principal
+        const { error: orderError } = await supabase
+          .from('open_orders')
+          .update(updatePayload)
+          .eq('id', currentWebOrderId);
+
+        if (orderError) throw orderError;
       }
-
-      // 5. Actualizar la orden principal
-      const { error: orderError } = await supabase
-        .from('open_orders')
-        .update(updatePayload)
-        .eq('id', currentWebOrderId);
-
-      if (orderError) throw orderError;
 
       // 6. Reemplazar ítems de la orden principal
       const { error: deleteError } = await supabase
         .from('open_order_items')
         .delete()
-        .eq('order_id', currentWebOrderId);
+        .eq('order_id', orderIdToUse);
 
       if (deleteError) throw deleteError;
 
@@ -923,7 +970,7 @@ const POSContent: React.FC = () => {
           total = subtotal + taxAmount;
         }
         return {
-          order_id: currentWebOrderId,
+          order_id: orderIdToUse,
           product_id: item.id,
           product_name: item.comment ? `${item.name} (${item.comment})` : item.name,
           quantity: item.quantity,
@@ -943,7 +990,7 @@ const POSContent: React.FC = () => {
       if (itemsError) throw itemsError;
 
       // 7. Crear ticket delta en cocina si hay productos nuevos
-      if (hasNewOrModifiedItems && currentOrder) {
+      if (hasNewOrModifiedItems && !isOrderMissing && currentOrder) {
         const { data: { user } } = await supabase.auth.getUser();
         const refOrderNumber = currentOrder.order_number;
         const refCustomerName = currentOrder.customer_name || currentOrderInfo?.customerName || 'Cliente';
@@ -962,7 +1009,7 @@ const POSContent: React.FC = () => {
             notes: deltaNotes,
             source: 'pos',
             order_status: 'preparing',
-            payment_status: 'pending',
+            payment_status: 'paid',
             profile_id: user?.id || null,
             store_id: store?.id || null
           })
@@ -998,14 +1045,13 @@ const POSContent: React.FC = () => {
         }
       }
 
-
       queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
       queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
 
       toast({
-        title: "Pedido actualizado",
-        description: `${currentOrderInfo?.orderNumber} guardado correctamente${hasNewOrModifiedItems ? ' · Ticket enviado a cocina' : ''}`
+        title: isOrderMissing ? "Pedido guardado como nuevo" : "Pedido actualizado",
+        description: `${orderNumberToUse} guardado correctamente${hasNewOrModifiedItems && !isOrderMissing ? ' · Ticket enviado a cocina' : ''}`
       });
 
       // Reset state

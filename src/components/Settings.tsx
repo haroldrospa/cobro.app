@@ -839,9 +839,11 @@ const Settings = () => {
     });
 
     try {
-      // Generate barcode if needed
+      // Generate barcode if needed (only for NCF)
       let barcodeDataUrl: string | undefined;
-      if (invoiceSettings.showBarcode) {
+      const isElectronic = localBillingMode === 'e-ncf';
+      const showBarcode = isElectronic ? false : invoiceSettings.showBarcode;
+      if (showBarcode) {
         try {
           const canvas = document.createElement('canvas');
           JsBarcode(canvas, 'B0200000001', {
@@ -898,7 +900,7 @@ const Settings = () => {
           currency: invoiceSettings.currency || 'DOP',
           paymentTerms: invoiceSettings.paymentTerms,
           footerText: invoiceSettings.footerText,
-          showBarcode: invoiceSettings.showBarcode,
+          showBarcode: showBarcode,
           barcodeDataUrl: barcodeDataUrl,
           isElectronic: localBillingMode === 'e-ncf',
           encf: localBillingMode === 'e-ncf' ? 'E310000000001' : undefined,
