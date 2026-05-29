@@ -150,7 +150,8 @@ export class AlanubeService {
           incomeType: 1,
           paymentType: sale.payment_method === 'credit' ? 2 : 1,
           paymentDeadline: sale.payment_method === 'credit' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined,
-          sequenceDueDate: `${new Date().getFullYear() + 1}-12-31`,
+          sequenceDueDate: '2028-12-31',
+          fechaVencimientoSecuencia: '2028-12-31',
           paymentFormsTable: [
             {
               paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
@@ -196,14 +197,16 @@ export class AlanubeService {
           razonSocialEmisor: config.razon_social,
           tipoDocumento: alanubeType,
           indicadorMontoGravado: montoGravadoTotal > 0 ? 1 : 0, // 1 si hay ITBIS
-          fechaEmision: new Date().toISOString().split('T')[0] // YYYY-MM-DD
+          fechaEmision: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+          fechaVencimientoSecuencia: '2028-12-31'
         },
         header: {
           rncEmisor: config.rnc_emisor.replace(/[^0-9]/g, ''),
           razonSocialEmisor: config.razon_social,
           tipoDocumento: alanubeType,
           indicadorMontoGravado: montoGravadoTotal > 0 ? 1 : 0,
-          fechaEmision: new Date().toISOString().split('T')[0]
+          fechaEmision: new Date().toISOString().split('T')[0],
+          fechaVencimientoSecuencia: '2028-12-31'
         },
         totales: {
           montoTotal: sale.total,

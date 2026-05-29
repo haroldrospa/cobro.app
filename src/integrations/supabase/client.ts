@@ -16,11 +16,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     detectSessionInUrl: true,
     flowType: 'pkce',
   },
-  global: {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  },
+  // NOTA: No se define Content-Type global aquí.
+  // El cliente de Supabase lo maneja automáticamente por request:
+  // - 'application/json' para las llamadas a la base de datos
+  // - 'multipart/form-data' para los uploads de storage (imágenes, archivos)
   db: {
     schema: 'public'
   }

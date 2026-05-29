@@ -51,20 +51,49 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         return;
       }
 
-      // Proceder directamente con la subida. Si el bucket no existe, 
-      // Supabase devolverá un error claro que ya manejamos en el catch.
-
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
+      // Intentar subir. Si el bucket no existe, intentamos crearlo una vez.
+      let { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          contentType: file.type || 'image/jpeg',
+          upsert: false,
+        });
 
       if (uploadError) {
-        console.error('Error subiendo imagen:', uploadError);
-        throw uploadError;
+        const errMsg = uploadError.message?.toLowerCase() || '';
+        console.warn('[Storage] Error en primer intento:', uploadError.message);
+
+        // Si el bucket no existe, intentar crearlo y reintentar la subida
+        if (errMsg.includes('not found') || errMsg.includes('does not exist') || errMsg.includes('bucket')) {
+          console.log('[Storage] Intentando crear bucket product-images...');
+          const { error: createError } = await supabase.storage.createBucket('product-images', {
+            public: true,
+            fileSizeLimit: 5242880,
+            // Sin restricción de mime types para aceptar cualquier imagen
+          });
+
+          if (createError && !createError.message?.includes('already exists')) {
+            console.error('[Storage] No se pudo crear el bucket:', createError.message);
+            throw new Error(`No se pudo crear el storage: ${createError.message}`);
+          }
+
+          // Reintentar la subida con contentType explícito
+          const { error: retryError } = await supabase.storage
+            .from('product-images')
+            .upload(filePath, file, {
+              contentType: file.type || 'image/jpeg',
+              upsert: false,
+            });
+
+          if (retryError) throw new Error(retryError.message);
+          uploadError = null;
+        } else {
+          throw new Error(uploadError.message);
+        }
       }
 
       const { data: { publicUrl } } = supabase.storage
@@ -85,22 +114,15 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         description: "La imagen se ha subido correctamente.",
       });
     } catch (error: any) {
-      console.error('Error uploading image:', error);
-
-      let errorMessage = "No se pudo subir la imagen. ";
-
-      if (error.message?.includes('not found')) {
-        errorMessage += "Usa la pestaña 'URL Externa' mientras se configura el storage.";
-      } else if (error.message?.includes('permission')) {
-        errorMessage += "No tienes permisos. Usa la pestaña 'URL Externa'.";
-      } else {
-        errorMessage += "Inténtalo de nuevo o usa URL Externa.";
-      }
+      // Mostrar el error exacto de Supabase para facilitar el diagnóstico
+      const exactError = error?.message || error?.error_description || JSON.stringify(error);
+      console.error('[Storage] Error subiendo imagen:', exactError);
 
       toast({
         variant: "destructive",
-        title: "Error",
-        description: errorMessage,
+        title: "Error al subir imagen",
+        description: exactError || "Error desconocido. Revisa la consola del navegador (F12).",
+        duration: 10000,
       });
     } finally {
       setUploading(false);
@@ -130,41 +152,59 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   };
 
   const handleImageError = async (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    console.error('❌ Error cargando imagen del producto:', {
-      activeImageUrl,
-      naturalWidth: e.currentTarget.naturalWidth,
-    });
+    console.error('❌ Error cargando imagen del producto:', { activeImageUrl });
     
-    // Si la imagen falla por URL pública, intentamos descargarla por Storage API (Plan B)
     if (activeImageUrl && activeImageUrl.includes('supabase.co/storage')) {
-      try {
-        console.log('🔄 Iniciando Plan B: Descarga directa por Storage API...');
-        
-        // Extraer el nombre del archivo de la URL
-        const fileName = activeImageUrl.split('/').pop()?.split('?')[0];
-        
-        if (fileName) {
-          const { data: blob, error: downloadError } = await supabase.storage
+      // Extraer el path completo después de /object/public/product-images/
+      const marker = '/object/public/product-images/';
+      const markerIndex = activeImageUrl.indexOf(marker);
+      const filePath = markerIndex !== -1
+        ? activeImageUrl.substring(markerIndex + marker.length).split('?')[0]
+        : activeImageUrl.split('/').pop()?.split('?')[0];
+
+      if (filePath) {
+        // Plan B: URL firmada (funciona con buckets privados si el usuario está autenticado)
+        try {
+          console.log('🔄 Plan B: Generando URL firmada para:', filePath);
+          const { data: signedData, error: signedError } = await supabase.storage
             .from('product-images')
-            .download(fileName);
-            
-          if (downloadError) throw downloadError;
-          
-          if (blob && blob.type.startsWith('image/')) {
-            const planBBlobUrl = URL.createObjectURL(blob);
-            console.log('✅ Plan B Exitoso: Usando URL de Blob local:', planBBlobUrl);
-            setLocalPreviewUrl(planBBlobUrl);
+            .createSignedUrl(filePath, 3600); // válida por 1 hora
+
+          if (!signedError && signedData?.signedUrl) {
+            console.log('✅ Plan B Exitoso: URL firmada generada');
+            setLocalPreviewUrl(signedData.signedUrl);
             setImageError(false);
             return;
           }
+          console.warn('⚠️ Plan B falló:', signedError?.message);
+        } catch (err) {
+          console.warn('⚠️ Plan B excepción:', err);
         }
-      } catch (err) {
-        console.error('❌ Falló el Plan B (Descarga directa):', err);
+
+        // Plan C: Descarga directa como blob
+        try {
+          console.log('🔄 Plan C: Descarga directa del blob...');
+          const { data: blob, error: downloadError } = await supabase.storage
+            .from('product-images')
+            .download(filePath);
+
+          if (!downloadError && blob && blob.size > 0) {
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('✅ Plan C Exitoso: URL de blob creada');
+            setLocalPreviewUrl(blobUrl);
+            setImageError(false);
+            return;
+          }
+          console.warn('⚠️ Plan C falló:', downloadError?.message);
+        } catch (err) {
+          console.warn('⚠️ Plan C excepción:', err);
+        }
       }
     }
     
     setImageError(true);
   };
+
 
   const handleImageLoad = () => {
     if (activeImageUrl) {
