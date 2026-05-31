@@ -170,17 +170,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
       >
         {/* Stoppage propagation: clic dentro del Card NO cierra */}
         <Card
-          className="w-full max-w-md max-h-[90vh] overflow-y-auto"
+          className="w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-card z-10 border-b">
+          <CardHeader className="flex flex-row items-center justify-between bg-card z-10 border-b flex-shrink-0">
             <CardTitle>{product ? 'Editar Producto' : 'Nuevo Producto'}</CardTitle>
             <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
           </CardHeader>
-          <CardContent className="pt-4">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+            <CardContent className="flex-1 overflow-y-auto pt-4 pb-6">
               <ProductFormFields
                 register={register}
                 errors={errors}
@@ -191,12 +192,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
                 extraBarcodes={extraBarcodes}
                 onExtraBarcodesChange={setExtraBarcodes}
               />
+            </CardContent>
+            
+            <div className="p-4 border-t bg-card flex-shrink-0 sticky bottom-0 z-10">
               <ProductFormActions
                 onClose={handleClose}
                 isLoading={isLoading}
               />
-            </form>
-          </CardContent>
+            </div>
+          </form>
         </Card>
       </div>
 

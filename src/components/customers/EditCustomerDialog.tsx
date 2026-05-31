@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,6 +15,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -25,9 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Customer, useUpdateCustomer } from '@/hooks/useCustomers';
+import { Customer, useUpdateCustomer, useCustomers } from '@/hooks/useCustomers';
+import { useEmployees } from '@/hooks/useEmployees';
 import { toast } from 'sonner';
-import { Star } from 'lucide-react';
+import { Star, ShieldAlert } from 'lucide-react';
 
 const customerSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(100),
@@ -40,6 +42,7 @@ const customerSchema = z.object({
   credit_due_date: z.string().optional().or(z.literal('')),
   loyalty_points: z.coerce.number().min(0).optional(),
   validation_code: z.string().max(20).optional().or(z.literal('')),
+  profile_id: z.string().optional().nullable().or(z.literal('')),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;
@@ -56,6 +59,17 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
   onOpenChange,
 }) => {
   const updateCustomer = useUpdateCustomer();
+  const { data: employees = [] } = useEmployees();
+  const { data: allCustomers = [] } = useCustomers();
+
+  // Find profile_ids already linked to other customers
+  const takenProfileIds = useMemo(() => {
+    return new Set(
+      allCustomers
+        .map(c => c.profile_id)
+        .filter(pid => pid && pid !== customer?.profile_id)
+    );
+  }, [allCustomers, customer]);
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -70,6 +84,7 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
       credit_due_date: customer.credit_due_date ? customer.credit_due_date.split('T')[0] : '',
       loyalty_points: (customer as any).loyalty_points ?? 0,
       validation_code: customer.validation_code || '',
+      profile_id: customer.profile_id || 'none',
     } : undefined,
   });
 
@@ -77,6 +92,26 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
     if (!customer) return;
 
     try {
+      const isEmployee = data.profile_id && data.profile_id !== 'none';
+      const newProfileId = isEmployee ? data.profile_id : null;
+
+      // If we are assigning a new profile_id, check if it's already taken and clear it
+      if (newProfileId) {
+        const { data: existingLink } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('profile_id', newProfileId)
+          .neq('id', customer.id)
+          .maybeSingle();
+
+        if (existingLink) {
+          await supabase
+            .from('customers')
+            .update({ profile_id: null, is_employee: false })
+            .eq('id', existingLink.id);
+        }
+      }
+
       await updateCustomer.mutateAsync({
         id: customer.id,
         name: data.name,
@@ -89,6 +124,8 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
         credit_due_date: data.credit_due_date || null,
         loyalty_points: data.loyalty_points ?? 0,
         validation_code: data.validation_code || null,
+        is_employee: isEmployee ? true : false,
+        profile_id: newProfileId,
       } as any);
       toast.success('Cliente actualizado correctamente');
       onOpenChange(false);
@@ -194,6 +231,45 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   <FormControl>
                     <Input placeholder="Dirección completa" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Vincular Empleado Dropdown */}
+            <FormField
+              control={form.control}
+              name="profile_id"
+              render={({ field }) => (
+                <FormItem className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                  <FormLabel className="text-xs uppercase font-bold text-blue-500 flex items-center gap-1.5">
+                    Vinculación de Empleado
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-zinc-900 !text-white border-white/10 font-semibold">
+                        <SelectValue placeholder="No vincular a empleado" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">No vincular a empleado (Cliente Común)</SelectItem>
+                      {employees.map((emp) => {
+                        const isTaken = takenProfileIds.has(emp.id);
+                        return (
+                          <SelectItem 
+                            key={emp.id} 
+                            value={emp.id} 
+                            className="font-semibold"
+                          >
+                            {emp.full_name} ({emp.role}){isTaken ? ' (Reasignar)' : ''}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription className="text-[10px] text-zinc-500 mt-1">
+                    Asocia este cliente a un usuario empleado para identificar compras internas y aplicar deudas o adelantos en nómina.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

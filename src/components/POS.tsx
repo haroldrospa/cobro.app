@@ -25,6 +25,7 @@ import { useAllActiveOffers, calculateBestOffer } from '@/hooks/useProductOffers
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { usePlanFeatures } from '@/hooks/usePlanFeatures';
+import { cn } from '@/lib/utils';
 
 import CartSummary from './pos/CartSummary';
 import PaymentSummary from './pos/PaymentSummary';
@@ -1286,6 +1287,13 @@ const POSContent: React.FC = () => {
           onCloseDay={handleShowCloseDay}
           onDebtSelect={handleShowDebtSelect}
           onLogout={handleLogout}
+          viewMode={storeSettings?.pos_view_mode || 'grid'}
+          onViewModeChange={(mode) => updateSettings({ pos_view_mode: mode })}
+          layoutMode={storeSettings?.pos_layout_mode || 'catalog'}
+          onLayoutModeChange={(mode) => updateSettings({
+            pos_layout_mode: mode,
+            pos_view_mode: mode === 'classic' ? 'list' : 'grid'
+          })}
         />
       );
     }
@@ -1302,7 +1310,7 @@ const POSContent: React.FC = () => {
         onLogout={handleLogout}
       />
     );
-  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate]);
+  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings]);
 
   // Action buttons as a stable React.memo component reference
   const actionButtons = (
@@ -2103,6 +2111,10 @@ interface POSMenuButtonProps {
   onCloseDay: () => void;
   onDebtSelect: () => void;
   onLogout: () => void;
+  viewMode?: 'grid' | 'list';
+  onViewModeChange?: (mode: 'grid' | 'list') => void;
+  layoutMode?: 'classic' | 'catalog';
+  onLayoutModeChange?: (mode: 'classic' | 'catalog') => void;
 }
 
 const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
@@ -2115,6 +2127,10 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
   onCloseDay,
   onDebtSelect,
   onLogout,
+  viewMode,
+  onViewModeChange,
+  layoutMode,
+  onLayoutModeChange,
 }) {
   if (isMobile) {
     return (
@@ -2152,6 +2168,70 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                 </DrawerClose>
               );
             })}
+
+            {/* Diseño y Vista Section for Mobile */}
+            <div className="h-px bg-white/5 my-6 mx-4" />
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-4 mb-3">Diseño y Vista</div>
+            <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl mb-2 space-y-4 mx-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Modo del POS</span>
+                <div className="flex gap-1 bg-zinc-950 p-1 rounded-xl border border-white/5">
+                  <Button
+                    size="sm"
+                    variant={layoutMode === 'classic' ? 'secondary' : 'ghost'}
+                    onClick={() => onLayoutModeChange?.('classic')}
+                    className={cn(
+                      "h-8 text-xs font-bold rounded-lg px-3 transition-all",
+                      layoutMode === 'classic' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
+                    )}
+                  >
+                    Búsqueda
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={layoutMode === 'catalog' ? 'secondary' : 'ghost'}
+                    onClick={() => onLayoutModeChange?.('catalog')}
+                    className={cn(
+                      "h-8 text-xs font-bold rounded-lg px-3 transition-all",
+                      layoutMode === 'catalog' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
+                    )}
+                  >
+                    Catálogo
+                  </Button>
+                </div>
+              </div>
+              
+              {layoutMode === 'catalog' && (
+                <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Vista de Catálogo</span>
+                  <div className="flex gap-1 bg-zinc-950 p-1 rounded-xl border border-white/5">
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      onClick={() => onViewModeChange?.('list')}
+                      className={cn(
+                        "h-8 text-xs font-bold rounded-lg px-3 transition-all",
+                        viewMode === 'list' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
+                      )}
+                    >
+                      Lista
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                      onClick={() => onViewModeChange?.('grid')}
+                      className={cn(
+                        "h-8 text-xs font-bold rounded-lg px-3 transition-all",
+                        viewMode === 'grid' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
+                      )}
+                    >
+                      Cuadros
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="h-px bg-white/5 my-6 mx-4" />
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-4 mb-3">Gestión de Caja</div>
             {[

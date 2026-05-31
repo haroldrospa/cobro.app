@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useCreateCustomer } from '@/hooks/useCustomers';
+import { useCreateCustomer, useCustomers } from '@/hooks/useCustomers';
+import { useEmployees } from '@/hooks/useEmployees';
 import { Loader2, UserPlus, Phone, Mail, MapPin, CreditCard, ShieldCheck } from 'lucide-react';
 
 interface AddCustomerDialogProps {
@@ -27,13 +28,25 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
     address: '',
     customer_type: 'final' as 'final' | 'business',
     credit_limit: '',
-    validation_code: ''
+    validation_code: '',
+    profile_id: ''
   });
 
   const { toast } = useToast();
   const createCustomer = useCreateCustomer();
+  const { data: employees = [] } = useEmployees();
+  const { data: allCustomers = [] } = useCustomers();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Find profile_ids already linked to other customers
+  const takenProfileIds = useMemo(() => {
+    return new Set(
+      allCustomers
+        .map(c => c.profile_id)
+        .filter(pid => !!pid)
+    );
+  }, [allCustomers]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       toast({
@@ -44,34 +57,59 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
       return;
     }
 
-    createCustomer.mutate({
-      ...formData,
-      rnc: formData.rnc.trim() || null,
-      phone: formData.phone.trim() || null,
-      email: formData.email.trim() || null,
-      address: formData.address.trim() || null,
-      validation_code: formData.validation_code.trim() || null,
-      credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : 0,
-      credit_used: 0,
-      total_purchases: 0
-    }, {
-      onSuccess: (data) => {
-        toast({
-          title: "Cliente creado exitosamente",
-          description: `Cliente ${data.name} ha sido agregado.`,
-        });
-        onCustomerAdded(data.id);
-        handleClose();
-      },
-      onError: (error: any) => {
-        console.error('Error creating customer:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "No se pudo crear el cliente. Inténtalo de nuevo.",
-        });
+    const isEmployee = formData.profile_id && formData.profile_id !== 'none';
+    const newProfileId = isEmployee ? formData.profile_id : null;
+
+    try {
+      // If we are assigning a new profile_id, check if it's already taken and clear it
+      if (newProfileId) {
+        const { data: existingLink } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('profile_id', newProfileId)
+          .maybeSingle();
+
+        if (existingLink) {
+          await supabase
+            .from('customers')
+            .update({ profile_id: null, is_employee: false })
+            .eq('id', existingLink.id);
+        }
       }
-    });
+
+      createCustomer.mutate({
+        ...formData,
+        rnc: formData.rnc.trim() || null,
+        phone: formData.phone.trim() || null,
+        email: formData.email.trim() || null,
+        address: formData.address.trim() || null,
+        validation_code: formData.validation_code.trim() || null,
+        credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : 0,
+        credit_used: 0,
+        total_purchases: 0,
+        is_employee: isEmployee ? true : false,
+        profile_id: newProfileId,
+      }, {
+        onSuccess: (data) => {
+          toast({
+            title: "Cliente creado exitosamente",
+            description: `Cliente ${data.name} ha sido agregado.`,
+          });
+          onCustomerAdded(data.id);
+          handleClose();
+        },
+        onError: (error: any) => {
+          console.error('Error creating customer:', error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: error.message || "No se pudo crear el cliente. Inténtalo de nuevo.",
+          });
+        }
+      });
+    } catch (err: any) {
+      console.error('Error handling pre-assignment in creation:', err);
+    }
   };
 
   const handleClose = () => {
@@ -83,7 +121,8 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
       address: '',
       customer_type: 'final',
       credit_limit: '',
-      validation_code: ''
+      validation_code: '',
+      profile_id: ''
     });
     onClose();
   };
@@ -186,6 +225,39 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
               placeholder="Calle..."
               className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
             />
+          </div>
+
+          {/* Vincular Empleado Dropdown */}
+          <div className="space-y-2 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+            <Label htmlFor="profile_id" className="text-[10px] uppercase font-black tracking-widest text-blue-400 flex items-center gap-1.5 mb-2">
+              Vincular a Empleado (Opcional)
+            </Label>
+            <Select
+              value={formData.profile_id || 'none'}
+              onValueChange={(value) =>
+                setFormData({ ...formData, profile_id: value })
+              }
+            >
+              <SelectTrigger className="h-12 !bg-zinc-900 !text-white border-white/5 rounded-xl font-bold">
+                <SelectValue placeholder="No vincular a empleado" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                <SelectItem value="none" className="font-bold">No vincular a empleado</SelectItem>
+                {employees.map((emp) => {
+                  const isTaken = takenProfileIds.has(emp.id);
+                  return (
+                    <SelectItem 
+                      key={emp.id} 
+                      value={emp.id} 
+                      className="font-bold"
+                    >
+                      {emp.full_name} ({emp.role}){isTaken ? ' (Reasignar)' : ''}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <p className="text-[9px] text-zinc-500 italic mt-1">Permite asociar este cliente con un perfil de usuario del sistema.</p>
           </div>
 
           <div className="space-y-2 p-4 bg-zinc-900/50 border border-white/5 rounded-2xl">

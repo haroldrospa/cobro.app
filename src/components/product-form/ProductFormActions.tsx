@@ -12,7 +12,7 @@ export const ProductFormActions: React.FC<ProductFormActionsProps> = ({
   isLoading,
 }) => {
   return (
-    <div className="flex gap-2 pt-4">
+    <div className="flex gap-2">
       <Button
         type="button"
         variant="outline"
