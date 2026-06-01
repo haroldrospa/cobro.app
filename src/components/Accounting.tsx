@@ -66,6 +66,8 @@ function AccountingContent() {
     const { suppliers, createSupplier, deleteSupplier, isLoading: loadingSuppliers } = useSuppliers();
     const { settings: storeSettings, updateSettings } = useStoreSettings();
 
+    console.log("=== VERSION DE DEPURACION DE IA DE LA CONTABILIDAD CARGADA ===");
+
     const handleDeleteSupplier = async (id: string, name: string) => {
         if (confirm(`¿Estás seguro de eliminar el proveedor "${name}"?`)) {
             try {
