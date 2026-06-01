@@ -88,7 +88,17 @@ function AccountingContent() {
     const [apiKeyInput, setApiKeyInput] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [isEditingKey, setIsEditingKey] = useState(false);
-    const isKeyConfigured = !!(import.meta.env.VITE_GROQ_API_KEY || storeSettings?.ai_api_key);
+
+    const cleanKey = (key: string | null | undefined) => {
+        if (!key) return null;
+        const trimmed = key.trim();
+        if (trimmed === 'undefined' || trimmed === 'null' || trimmed === '') return null;
+        return trimmed;
+    };
+
+    const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
+    const userKey = cleanKey(storeSettings?.ai_api_key);
+    const isKeyConfigured = !!(systemKey || userKey);
 
     // Form State
     const [newExpense, setNewExpense] = useState<{
@@ -496,11 +506,15 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         }
     };
 
+    const cleanKey = (key: any) => (key && key !== "null" && key !== "undefined" ? key : null);
+
     const processReceiptImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
-        let apiKey = storeSettings?.ai_api_key || import.meta.env.VITE_GROQ_API_KEY;
+        const userKey = cleanKey(storeSettings?.ai_api_key);
+        const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
+        const apiKey = userKey || systemKey;
 
         if (!apiKey) {
             toast({ title: "Requerido", description: "Primero guarda tu API Key de Groq en la configuración de la ventana.", variant: "destructive" });
