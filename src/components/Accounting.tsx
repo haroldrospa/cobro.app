@@ -516,6 +516,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
         const apiKey = userKey || systemKey;
 
+        console.log("Resolved API Key source:", userKey ? "User custom key (from DB)" : systemKey ? "System fallback key (from env)" : "No key found");
+        console.log("Using API Key (first 10 chars):", apiKey ? apiKey.slice(0, 10) + "..." : "none");
+
         if (!apiKey) {
             toast({ title: "Requerido", description: "Primero guarda tu API Key de Groq en la configuración de la ventana.", variant: "destructive" });
             return;
