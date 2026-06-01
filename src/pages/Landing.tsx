@@ -342,9 +342,21 @@ const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <a href="mailto:hola@cobroapp.com">
-                  <Button variant="outline" className="w-full h-12 border-white/20 text-white hover:bg-white/10">Contáctanos</Button>
-                </a>
+                <div className="flex flex-col gap-2">
+                  <a href="https://wa.me/18099175744?text=Hola!%20Estoy%20interesado%20en%20el%20Plan%20Corporativo%20de%20Cobroapp" target="_blank" rel="noopener noreferrer" className="w-full">
+                    <Button className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-emerald-950 font-bold flex items-center justify-center gap-2 rounded-xl">
+                      <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.835-4.321c1.8.107 3.53.626 5.2.629 5.485 0 9.948-4.414 9.95-9.847.002-2.63-1.018-5.101-2.871-6.958C17.258 1.643 14.778.641 12.01.64c-5.483 0-9.948 4.414-9.95 9.848-.001 2.228.616 4.4 1.783 6.285l-1.013 3.697 3.784-1.026c1.2.68 2.24.966 3.443.992zm12.01-6.126c-.322-.16-.1.897-.483-1.057-.1-.22-.26-.3-.48-.41s-1.48-.73-1.72-.82-.5-.14-.72.19-.84 1.05-1.03 1.27-.38.24-.7.08-1.36-.5-2.58-1.6c-.95-.85-1.59-1.89-1.78-2.21-.19-.32-.02-.5.14-.66.15-.14.32-.38.48-.57.16-.19.22-.32.33-.54.11-.22.05-.41-.03-.57-.08-.16-.72-1.74-.99-2.39-.26-.64-.52-.55-.72-.56l-.61-.01c-.22 0-.58.08-.88.41-.3.33-1.15 1.13-1.15 2.75s1.18 3.19 1.34 3.41c.16.22 2.32 3.54 5.62 4.97 3.3.1.2.33.66.5.9.15.54.49 1.34.81.33.32.33.56.33.74v.02c0 .18-.08.38-.24.54z"/>
+                      </svg>
+                      Contactar por WhatsApp
+                    </Button>
+                  </a>
+                  <a href="https://mail.google.com/mail/?view=cm&fs=1&to=Haroldrospa@gmail.com&su=Plan%20Corporativo%20-%20Cobroapp" target="_blank" rel="noopener noreferrer" className="w-full">
+                    <Button variant="outline" className="w-full h-12 border-white/20 text-white hover:bg-white/10 flex items-center justify-center gap-2 rounded-xl">
+                      ✉️ Escribir por Correo
+                    </Button>
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -395,29 +407,99 @@ const Landing = () => {
       </main>
 
       {/* Footer Personalizado */}
-      <footer className="bg-zinc-950 text-zinc-400 py-16 border-t border-zinc-800/50">
+      <footer className="bg-zinc-950 text-zinc-400 py-20 border-t border-zinc-900">
         <div className="container px-4 mx-auto">
-          <div className="max-w-3xl mx-auto text-center flex flex-col items-center gap-6">
-            <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 mb-2 shadow-lg">
-              <span className="text-3xl">🇩🇴</span>
+          <div className="max-w-4xl mx-auto">
+            {/* Creator Card */}
+            <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 border border-zinc-800/80 rounded-3xl p-8 md:p-10 shadow-2xl overflow-hidden group hover:border-emerald-500/20 transition-all duration-500">
+              {/* Decorative backgrounds */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/10 transition-all duration-500" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-500/10 transition-all duration-500" />
+              
+              <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8">
+                {/* Badge/Flag Column */}
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="relative">
+                    {/* Glowing effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500 to-blue-500 rounded-full blur-md opacity-45 group-hover:opacity-75 transition-opacity duration-500" />
+                    
+                    {/* Flag Container */}
+                    <div className="relative w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border-2 border-zinc-800 shadow-xl overflow-hidden group-hover:scale-105 group-hover:border-emerald-500/50 transition-all duration-500 p-0.5">
+                      {/* Dominican Republic SVG Flag */}
+                      <svg viewBox="0 0 100 100" className="w-full h-full">
+                        <defs>
+                          <clipPath id="circleView">
+                            <circle cx="50" cy="50" r="50" />
+                          </clipPath>
+                        </defs>
+                        <g clipPath="url(#circleView)">
+                          {/* Blue quadrants */}
+                          <rect x="0" y="0" width="45" height="45" fill="#002F6C" />
+                          <rect x="55" y="55" width="45" height="45" fill="#002F6C" />
+                          {/* Red quadrants */}
+                          <rect x="55" y="0" width="45" height="45" fill="#CE1126" />
+                          <rect x="0" y="55" width="45" height="45" fill="#CE1126" />
+                          {/* White cross */}
+                          <rect x="45" y="0" width="10" height="100" fill="#FFFFFF" />
+                          <rect x="0" y="45" width="100" height="10" fill="#FFFFFF" />
+                          {/* Coat of arms representation in the center */}
+                          <g transform="translate(50, 50)">
+                            {/* Shield shape */}
+                            <path d="M-5,-5 L5,-5 L5,1 C5,4 0,7 0,7 C0,7 -5,4 -5,1 Z" fill="#00843D" />
+                            <path d="M-3,-3 L3,-3 L3,1 C3,3 0,5 0,5 C0,5 -3,3 -3,1 Z" fill="#CE1126" />
+                            <rect x="-1.5" y="-1.5" width="3" height="3" fill="#002F6C" rx="0.5" />
+                            <circle cx="0" cy="0" r="0.8" fill="#FFFFFF" />
+                            {/* Mini cross & book detail */}
+                            <rect x="-0.5" y="-0.5" width="1" height="1" fill="#FFCC00" />
+                          </g>
+                          {/* Premium 3D Glossy Dome Overlay */}
+                          <path d="M0,0 Q50,40 100,0 L100,100 L0,100 Z" fill="rgba(255,255,255,0.06)" className="pointer-events-none" />
+                          <path d="M0,0 Q50,30 100,0 Z" fill="rgba(255,255,255,0.15)" className="pointer-events-none" />
+                        </g>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <span className="text-[10px] font-bold tracking-widest text-emerald-400/80 uppercase mt-3">
+                    Orgullo RD
+                  </span>
+                </div>
+                
+                {/* Content Column */}
+                <div className="flex-1 text-center md:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/40 border border-zinc-700/50 text-xs font-semibold text-zinc-300 mb-4">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Creado en República Dominicana
+                  </div>
+                  
+                  <h3 className="text-xl md:text-2xl font-bold text-white mb-3">
+                    Una iniciativa con visión de futuro
+                  </h3>
+                  
+                  <p className="text-zinc-300 leading-relaxed mb-6 text-sm md:text-base">
+                    <strong className="text-white">Cobroapp</strong> es una plataforma creada con pasión por <strong className="text-emerald-400 font-semibold font-sans">Harold Rosado</strong>, un emprendedor dominicano con la firme misión de ayudar financiera y sistemáticamente a los negocios a prosperar en la era digital.
+                  </p>
+                  
+                  {/* Quote block */}
+                  <div className="relative border-l-2 border-emerald-500/50 pl-4 py-1 text-left bg-emerald-500/[0.02] rounded-r-xl">
+                    <p className="text-xs md:text-sm text-zinc-400 italic leading-relaxed">
+                      "Detrás de cada negocio hay una familia y un sueño. Al apoyar y usar Cobroapp, no solo modernizas tu empresa, sino que me ayudas a seguir construyendo herramientas que empoderan a miles de comerciantes como tú. Únete a nuestra comunidad y crezcamos juntos."
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             
-            <p className="text-zinc-300 leading-relaxed text-lg sm:text-xl">
-              <strong className="text-white">Cobroapp</strong> es una iniciativa creada con pasión por <strong className="text-emerald-400">Harold Rosado</strong>, un emprendedor dominicano con la firme misión de ayudar financiera y sistemáticamente a los negocios a prosperar en la era digital.
-            </p>
+            <div className="w-full max-w-xs h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent my-10 mx-auto" />
             
-            <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 mt-2 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-              <p className="text-sm sm:text-base text-zinc-400 italic relative z-10">
-                "Detrás de cada negocio hay una familia y un sueño. Al apoyar y usar Cobroapp, no solo modernizas tu empresa, sino que me ayudas a seguir construyendo herramientas que empoderan a miles de comerciantes como tú. Únete a nuestra comunidad y crezcamos juntos."
+            <div className="text-center">
+              <p className="text-xs text-zinc-600 font-medium tracking-wide">
+                &copy; {new Date().getFullYear()} Cobroapp por Harold Rosado. Todos los derechos reservados.
+              </p>
+              <p className="text-[11px] text-zinc-500 mt-1 flex items-center justify-center gap-1.5 font-semibold">
+                Hecho con orgullo en la República Dominicana 🇩🇴
               </p>
             </div>
-            
-            <div className="w-full max-w-xs h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent my-4" />
-            
-            <p className="text-xs text-zinc-600 font-medium">
-              &copy; {new Date().getFullYear()} Cobroapp por Harold Rosado. Todos los derechos reservados. <br className="sm:hidden" /> Hecho con orgullo en República Dominicana.
-            </p>
           </div>
         </div>
       </footer>

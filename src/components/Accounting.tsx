@@ -55,6 +55,7 @@ function AccountingContent() {
         status: 'pending' | 'scanning' | 'success' | 'error' | 'saved';
         extractedData?: any;
         imageUrl?: string;
+        error?: string;
     };
 
     const [scanQueue, setScanQueue] = useState<QueueItem[]>([]);
@@ -207,7 +208,7 @@ function AccountingContent() {
                     category: data.category || 'Otros'
                 }));
             } else if (item.status === 'error') {
-                toast({ title: "Error", description: "No se pudo leer esta factura. Ingrésala manual.", variant: "destructive" });
+                toast({ title: "Error", description: item.error || "No se pudo leer esta factura. Ingrésala manual.", variant: "destructive" });
                 // Reset form to clean state for manual entry but keep context if needed?
                 // Actually better to clear it to avoid confusion
                 setNewExpense({
@@ -455,8 +456,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         ]
                     }
                 ],
-                temperature: 0.1,
-                response_format: { type: "json_object" }
+                temperature: 0.1
             })
         });
 
@@ -552,7 +552,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             title: "Error de Escaneo", 
                             description: errorMsg.includes("401") ? "API Key inválida o vencida." : 
                                          errorMsg.includes("413") ? "Imagen demasiado grande." : 
-                                         "No se pudo procesar esta factura.", 
+                                         errorMsg, 
                             variant: "destructive" 
                         });
                     }

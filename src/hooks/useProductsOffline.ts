@@ -43,7 +43,7 @@ const SYNC_COOLDOWN = 1000 * 60 * 10; // 10 minutos entre sincronizaciones
 
 export const useProductsOffline = () => {
     const isOnline = useOnlineStatus();
-    const { data: store } = useUserStore();
+    const { data: store, isPending: isStorePending } = useUserStore();
     const storeId = store?.id;
     const queryClient = useQueryClient();
 
@@ -77,8 +77,8 @@ export const useProductsOffline = () => {
 
                 try {
                     const result = await supabase
-                        .from('products')
-                        .select(`
+                         .from('products')
+                         .select(`
                             *,
                             category:categories(name),
                             barcodes:product_barcodes(id, barcode, label)
@@ -193,7 +193,7 @@ export const useProductsOffline = () => {
         ...query,
         // En React Query v5, isPending es true cuando no hay datos (aún si enabled: false).
         // Queremos mostrar la pantalla de carga si no hay storeId o si la query está cargando inicialmente.
-        isLoading: query.isPending || !storeId
+        isLoading: isStorePending || (!!storeId && query.isPending)
     };
 };
 

@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   Plus, Edit, Trash2, Search, ChefHat, Package, AlertTriangle,
   Save, X, ChevronDown, ChevronRight, FlaskConical, Scale, Loader2,
-  BookOpen, ShoppingBag, CheckCircle2, DollarSign
+  BookOpen, ShoppingBag, CheckCircle2, DollarSign, Printer
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -438,6 +438,7 @@ export const RestaurantInventoryControl: React.FC = () => {
   const [tab, setTab] = useState<Tab>('ingredients');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showIngredientDialog, setShowIngredientDialog] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<RestaurantIngredient | null>(null);
   const [recipeProduct, setRecipeProduct] = useState<{ id: string; name: string } | null>(null);
@@ -464,16 +465,97 @@ export const RestaurantInventoryControl: React.FC = () => {
   }, []);
 
   // Stats
-  const lowStockCount = ingredients.filter(i => i.stock <= i.min_stock).length;
+  const lowStockIngredients = useMemo(() => ingredients.filter(i => i.stock <= i.min_stock), [ingredients]);
+  const lowStockCount = lowStockIngredients.length;
   const totalInventoryValue = ingredients.reduce((sum, i) => sum + (i.stock * i.cost_per_unit), 0);
+
+  const handlePrintShoppingList = () => {
+    const businessName = userStore?.store_name || "MI NEGOCIO";
+
+    const date = new Date().toLocaleDateString('es-DO', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Lista de Compras - Ingredientes de Stock Bajo</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+          .header h1 { font-size: 24px; margin-bottom: 5px; }
+          .header p { font-size: 12px; color: #666; }
+          .info { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; }
+          .title { background: #f0f0f0; padding: 10px; text-align: center; font-weight: bold; margin-bottom: 15px; font-size: 16px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; }
+          th { background: #f0f0f0; font-weight: bold; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${businessName}</h1>
+          <p>Control de Inventario - Materia Prima (Restaurante)</p>
+        </div>
+        <div class="info">
+          <div><strong>Fecha:</strong> ${date}</div>
+          <div><strong>Total de ingredientes bajos:</strong> ${lowStockIngredients.length}</div>
+        </div>
+        <div class="title">📋 LISTA DE COMPRAS - INGREDIENTES CON STOCK BAJO</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%">#</th>
+              <th style="width: 45%">Ingrediente</th>
+              <th style="width: 25%">Categoría</th>
+              <th class="text-center" style="width: 15%">Stock Actual</th>
+              <th class="text-center" style="width: 10%">Mínimo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lowStockIngredients.map((ing, index) => `
+              <tr>
+                <td class="text-center">${index + 1}</td>
+                <td><strong>${ing.name}</strong></td>
+                <td>${ing.category || 'General'}</td>
+                <td class="text-center" style="color: red; font-weight: bold;">${ing.stock} ${ing.unit}</td>
+                <td class="text-center">${ing.min_stock} ${ing.unit}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Documento generado el ${new Date().toLocaleString('es-DO')}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => { printWindow.print(); }, 250);
+    }
+  };
 
   const filteredIngredients = useMemo(() => {
     return ingredients.filter(ing => {
       const matchesSearch = !searchTerm || ing.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCat = selectedCategory === 'all' || ing.category === selectedCategory;
-      return matchesSearch && matchesCat;
+      const matchesLowStock = !showLowStockOnly || ing.stock <= ing.min_stock;
+      return matchesSearch && matchesCat && matchesLowStock;
     });
-  }, [ingredients, searchTerm, selectedCategory]);
+  }, [ingredients, searchTerm, selectedCategory, showLowStockOnly]);
 
   const groupedIngredients = useMemo(() => {
     const groups: Record<string, RestaurantIngredient[]> = {};
@@ -556,17 +638,47 @@ export const RestaurantInventoryControl: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm bg-gradient-to-r from-destructive/10 to-orange-500/10">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="p-2 bg-destructive/20 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
+
+        <Card 
+          className={`border-0 shadow-sm cursor-pointer transition-all duration-300 ${
+            showLowStockOnly 
+              ? 'ring-2 ring-destructive bg-destructive/20 shadow-lg shadow-destructive/10' 
+              : 'bg-gradient-to-r from-destructive/10 to-orange-500/10 hover:scale-[1.02]'
+          }`}
+          onClick={() => {
+            setTab('ingredients');
+            setShowLowStockOnly(!showLowStockOnly);
+          }}
+        >
+          <CardContent className="p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-destructive/20 rounded-lg">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Stock Bajo {showLowStockOnly && <span className="text-destructive font-bold text-[9px]">(Filtrado)</span>}
+                </p>
+                <p className="text-xl font-bold text-destructive">{lowStockCount}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Stock Bajo</p>
-              <p className="text-xl font-bold text-destructive">{lowStockCount}</p>
-            </div>
+            {lowStockCount > 0 && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg border-destructive/20 bg-destructive/10 hover:bg-destructive hover:text-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrintShoppingList();
+                }}
+                title="Imprimir lista de compra"
+              >
+                <Printer className="h-4 w-4" />
+              </Button>
+            )}
           </CardContent>
         </Card>
+
         <Card className="border-0 shadow-sm bg-gradient-to-r from-primary/10 to-blue-500/10">
           <CardContent className="p-3 flex items-center gap-3">
             <div className="p-2 bg-primary/20 rounded-lg">
