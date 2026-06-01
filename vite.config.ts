@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'placeholder.svg', 'icon-192.png', 'icon-512.png', 'cobro-logo.png'],
+      includeAssets: ['favicon.ico', 'placeholder.svg', 'icon-192.png', 'icon-512.png', 'cobro-logo.png', 'offline.html'],
       manifest: {
         name: 'Cobro POS',
         short_name: 'Cobro POS',
@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        navigateFallback: '/offline.html',
         runtimeCaching: [
           // ✅ Cache Supabase REST API calls — instant repeat loads
           {
