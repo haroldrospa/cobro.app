@@ -116,7 +116,8 @@ const PLAN_FEATURES: Record<PlanTier, PlanFeatures> = {
 };
 
 export const usePlanFeatures = () => {
-    const { data: subscription, isLoading } = useSubscription();
+    const { data: subscription, isLoading: isSubscriptionLoading } = useSubscription();
+    const isLoading = isSubscriptionLoading || !subscription;
 
     const planTier: PlanTier = useMemo(() => {
         if (!subscription || !subscription.plan_id) return 'basic';
