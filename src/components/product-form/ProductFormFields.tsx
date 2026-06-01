@@ -305,6 +305,62 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
         />
       </div>
 
+      {/* Controlar inventario (Stock) */}
+      <div className="space-y-4 border rounded-lg p-4 bg-card/30">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="track_inventory"
+            checked={trackInventory}
+            onCheckedChange={(checked) => setValue('track_inventory', !!checked)}
+          />
+          <Label htmlFor="track_inventory" className="text-sm font-semibold flex items-center gap-2 cursor-pointer">
+            <Package className="h-4 w-4 text-emerald-600" />
+            Controlar inventario (stock)
+          </Label>
+        </div>
+
+        {trackInventory && (
+          <div className="grid grid-cols-2 gap-4 pt-2 animate-in fade-in slide-in-from-top-2">
+            <div>
+              <Label htmlFor="stock">Stock Actual *</Label>
+              <Input
+                id="stock"
+                type="number"
+                step="any"
+                className="mt-1.5"
+                {...register('stock', { valueAsNumber: true })}
+                placeholder="0"
+              />
+              {errors.stock && (
+                <p className="text-sm text-red-500 mt-1">{errors.stock.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="min_stock">Stock Mínimo *</Label>
+              <Input
+                id="min_stock"
+                type="number"
+                step="any"
+                className="mt-1.5"
+                {...register('min_stock', { valueAsNumber: true })}
+                placeholder="0"
+              />
+              {errors.min_stock && (
+                <p className="text-sm text-red-500 mt-1">{errors.min_stock.message}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!trackInventory && (
+          <div className="p-3 bg-amber-500/5 dark:bg-amber-950/10 rounded-lg border border-amber-500/10 mt-2">
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              ℹ️ Este producto no controla inventario. Ideal para servicios o productos digitales.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Sección de Descuentos y Ofertas */}
       <Separator className="my-4" />
       <div className="space-y-4">
@@ -346,42 +402,7 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
               </Label>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="track_inventory"
-                checked={trackInventory}
-                onCheckedChange={(checked) => setValue('track_inventory', !!checked)}
-              />
-              <Label htmlFor="track_inventory" className="text-sm font-normal flex items-center gap-2">
-                <Package className="h-4 w-4 text-emerald-600" />
-                Controlar inventario (stock)
-              </Label>
-            </div>
 
-            {trackInventory && (
-              <div className="ml-6 pl-2 border-l-2 border-emerald-500/20">
-                <Label htmlFor="stock">Stock Actual *</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  step="any"
-                  className="mt-1.5 max-w-[200px]"
-                  {...register('stock', { valueAsNumber: true })}
-                  placeholder="0"
-                />
-                {errors.stock && (
-                  <p className="text-sm text-red-500 mt-1">{errors.stock.message}</p>
-                )}
-              </div>
-            )}
-
-            {!trackInventory && (
-              <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                <p className="text-xs text-amber-800 dark:text-amber-200">
-                  ℹ️ Este producto no controla inventario. Ideal para servicios o productos digitales.
-                </p>
-              </div>
-            )}
 
             <div>
               <Label htmlFor="discount_percentage">Porcentaje de Descuento (%)</Label>
@@ -507,21 +528,7 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
         </Label>
       </div>
 
-      {trackInventory && (
-        <div>
-          <Label htmlFor="min_stock">Stock Mínimo *</Label>
-          <Input
-            id="min_stock"
-            type="number"
-            step="any"
-            {...register('min_stock', { valueAsNumber: true })}
-            placeholder="0"
-          />
-          {errors.min_stock && (
-            <p className="text-sm text-red-500 mt-1">{errors.min_stock.message}</p>
-          )}
-        </div>
-      )}
+
 
       {/* Ofertas por Cantidad */}
       <Separator className="my-4" />
