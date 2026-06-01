@@ -88,7 +88,7 @@ function AccountingContent() {
     const [apiKeyInput, setApiKeyInput] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [isEditingKey, setIsEditingKey] = useState(false);
-    const isKeyConfigured = !!storeSettings?.ai_api_key;
+    const isKeyConfigured = !!(import.meta.env.VITE_GROQ_API_KEY || storeSettings?.ai_api_key);
 
     // Form State
     const [newExpense, setNewExpense] = useState<{
@@ -980,7 +980,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </DialogDescription>
                     </DialogHeader>
 
-                    {(!isKeyConfigured || isEditingKey) && !import.meta.env.VITE_GROQ_API_KEY && (
+                    {(!isKeyConfigured || isEditingKey) && (
                         <div className="bg-muted/50 p-4 rounded-lg space-y-3 mb-4 border border-destructive/20 relative group">
                             <Label className="text-destructive font-bold flex items-center gap-2">
                                 <AlertCircle className="h-4 w-4" />
@@ -1021,7 +1021,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
                     )}
 
-                    {isKeyConfigured && !isEditingKey && !import.meta.env.VITE_GROQ_API_KEY && (
+                    {isKeyConfigured && !isEditingKey && (
                         <div className="bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/20 mb-4 flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
