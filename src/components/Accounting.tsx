@@ -508,7 +508,6 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         }
     };
 
-    const cleanKey = (key: any) => (key && key !== "null" && key !== "undefined" ? key : null);
 
     const processReceiptImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
