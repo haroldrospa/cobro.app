@@ -500,8 +500,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
-        // Gestión de API Key - Groq
-        let apiKey = import.meta.env.VITE_GROQ_API_KEY || storeSettings?.ai_api_key;
+        let apiKey = storeSettings?.ai_api_key || import.meta.env.VITE_GROQ_API_KEY;
 
         if (!apiKey) {
             toast({ title: "Requerido", description: "Primero guarda tu API Key de Groq en la configuración de la ventana.", variant: "destructive" });
