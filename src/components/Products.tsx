@@ -1,5 +1,5 @@
 import { useState, useRef, FC, ChangeEvent, useEffect, useMemo, useCallback, memo } from 'react';
-import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk } from 'lucide-react';
+import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +15,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useDeleteAllProducts, Product } from '@/hooks/useProducts';
 import { cn } from "@/lib/utils";
-import { useProductsOffline, useDeleteProductOffline, useUpdateProductOffline } from '@/hooks/useProductsOffline';
+import { useProductsOffline, useDeleteProductOffline, useUpdateProductOffline, useCreateProductOffline } from '@/hooks/useProductsOffline';
 import { useCategories } from '@/hooks/useCategories';
 import { useToast } from '@/hooks/use-toast';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDebounce } from '@/hooks/useDebounce';
 import { usePlanFeatures } from '@/hooks/usePlanFeatures';
 import { useBusinessType } from '@/hooks/useBusinessType';
@@ -29,6 +30,8 @@ import { RestaurantInventoryControl } from '@/components/products/RestaurantInve
 import ProductForm from './ProductForm';
 import { LimitReachedDialog } from './subscription/PlanRestrictions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import * as XLSX from 'xlsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRecipeAvailability } from '@/hooks/useRecipeAvailability';
@@ -58,6 +61,33 @@ const Products: FC = () => {
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [showPrintLabelsDialog, setShowPrintLabelsDialog] = useState(false);
 
+  // Carga de Stock con IA State
+  const [isAIStockOpen, setIsAIStockOpen] = useState(false);
+  const [isAIScanning, setIsAIScanning] = useState(false);
+  const [isSavingAIStock, setIsSavingAIStock] = useState(false);
+  const [extractedItems, setExtractedItems] = useState<Array<{
+    id: string;
+    tempName: string;
+    productId: string;
+    quantity: number;
+    cost: number;
+    taxPercentage: number;
+    unitsPerBox: number;
+    originalBoxQty?: number;
+    originalBoxCost?: number;
+    buyMode?: 'box' | 'unit';
+  }>>([]);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickCreateName, setQuickCreateName] = useState('');
+  const [quickCreatePrice, setQuickCreatePrice] = useState(0);
+  const [quickCreateCost, setQuickCreateCost] = useState(0);
+  const [quickCreateTax, setQuickCreateTax] = useState(18);
+  const [quickCreateItemIdx, setQuickCreateItemIdx] = useState<number | null>(null);
+  const aiFileInputRef = useRef<HTMLInputElement>(null);
+  const [openComboIdx, setOpenComboIdx] = useState<number | null>(null);
+  const [aiTaxMessage, setAiTaxMessage] = useState<string | null>(null);
+  const [isConfirmingSummary, setIsConfirmingSummary] = useState(false);
+
   // Quick Stock Edit State
   const [stockEditProduct, setStockEditProduct] = useState<Product | null>(null);
   const [stockEditValue, setStockEditValue] = useState<string>('');
@@ -75,13 +105,395 @@ const Products: FC = () => {
   const { data: categories = [] } = useCategories();
   const deleteProduct = useDeleteProductOffline();
   const updateProduct = useUpdateProductOffline();
+  const createProduct = useCreateProductOffline();
   const deleteAllProducts = useDeleteAllProducts();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { settings: companySettings } = useCompanySettings();
+  const { settings: storeSettings } = useStoreSettings();
   const { hasReachedLimit, getRemainingCount } = usePlanFeatures();
   const recipeAvailability = useRecipeAvailability();
+
+  const cleanKey = (key: string | null | undefined) => {
+    if (!key) return '';
+    return key.trim();
+  };
+
+  const preprocessAIImage = async (file: File): Promise<string> => {
+    let processableFile = file;
+
+    if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      try {
+        const heic2anyModule = await import('heic2any');
+        const heic2anyFn = heic2anyModule.default || heic2anyModule;
+        const convertedBlob = await heic2anyFn({
+          blob: file,
+          toType: "image/jpeg",
+          quality: 0.6
+        });
+        const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+        processableFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), {
+          type: "image/jpeg"
+        });
+      } catch (err) {
+        console.error("Error converting HEIC:", err);
+        throw new Error("Error convirtiendo formato iPhone (HEIC).");
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(processableFile);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const MAX_WIDTH = 1200; 
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        if (!ctx) {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(processableFile);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        
+        if (dataUrl === 'data:,' || dataUrl.length < 100) {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(processableFile);
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+        reader.readAsDataURL(processableFile);
+      };
+      
+      img.src = url;
+    });
+  };
+
+  const handleAIStockUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const userKey = cleanKey(storeSettings?.ai_api_key);
+    const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
+    const apiKey = userKey || systemKey;
+
+    if (!apiKey) {
+      toast({
+        title: "Requerido",
+        description: "Configura primero tu clave de Groq en la sección de Contabilidad.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAIScanning(true);
+    try {
+      const base64DataUrl = await preprocessAIImage(file);
+      const base64Data = base64DataUrl.split(',')[1];
+      const mimeType = base64DataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
+
+      const prompt = `Analiza esta factura e identifica los productos comprados/abastecidos. Extrae estrictamente una lista en formato JSON plano con un arreglo "items" y los totales de la factura.
+Cada item debe contener:
+- name (string, nombre del producto tal como aparece en la factura. IMPORTANTE: Si el nombre contiene comillas dobles, quítalas o escápalas con barra invertida para que el JSON sea válido)
+- quantity (número, cantidad de este producto tal como sale en la factura)
+- cost (número, precio o costo unitario que sale en la factura antes de impuestos)
+- unit (string, unidad de medida que sale en la factura al lado de la cantidad o en la columna de unidad, ej: "CAJA", "PAQUETE", "UNIDAD", "UND", o null si no se especifica)
+- tax_percentage (número, ITBIS o tasa de impuesto aplicable a este producto, por ejemplo: 18, 16, 0, etc.)
+
+Además, debes extraer los totales generales de la factura:
+- invoice_subtotal (número, el subtotal neto de la factura sin impuestos/ITBIS)
+- invoice_tax (número, el total de impuestos/ITBIS de la factura)
+- invoice_total (número, el importe neto o total general final de la factura incluyendo impuestos)
+
+Estructura requerida:
+{
+  "items": [
+    { "name": "Producto A", "quantity": 10, "cost": 42.5, "unit": "CAJA", "tax_percentage": 18 }
+  ],
+  "invoice_subtotal": 1406.8,
+  "invoice_tax": 253.22,
+  "invoice_total": 1660.02
+}
+Responde únicamente con el objeto JSON plano sin texto introductorio ni explicaciones.`;
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "meta-llama/llama-4-scout-17b-16e-instruct",
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
+              ]
+            }
+          ],
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error en API Groq: ${response.status}`);
+      }
+
+      const resData = await response.json();
+      let content = resData.choices?.[0]?.message?.content;
+      if (!content) throw new Error("Respuesta vacía de Groq");
+
+      let clean = content.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        clean = jsonMatch[0];
+      }
+      
+      // Sanitizar comas sobrantes antes de cierres (trailing commas)
+      clean = clean.replace(/,(\s*[\]}])/g, '$1');
+
+      let parsed;
+      try {
+        parsed = JSON.parse(clean);
+      } catch (err) {
+        console.warn("Fallo inicial al parsear JSON, intentando corregir comillas internas...", err);
+        try {
+          const sanitized = clean.replace(/"name"\s*:\s*"([^"]*)"/g, (match, p1) => {
+            const escaped = p1.replace(/"/g, "'");
+            return `"name": "${escaped}"`;
+          });
+          parsed = JSON.parse(sanitized);
+        } catch (innerErr) {
+          throw new Error("La factura fue procesada, pero el formato JSON devuelto contenía errores de formato. Por favor, intenta de nuevo con otra foto.");
+        }
+      }
+      const items = parsed.items || [];
+      const extractedSubtotal = Number(parsed.invoice_subtotal || 0);
+      const extractedTotal = Number(parsed.invoice_total || 0);
+
+      // Calcular la suma de subtotales extraídos
+      const sumSubtotals = items.reduce((acc: number, item: any) => acc + ((item.quantity || 1) * (item.cost || 0)), 0);
+
+      // Validar si la factura incluye impuestos o no
+      let isTaxInclusive = false;
+      if (extractedTotal > 0 && extractedSubtotal > 0) {
+        const diffToTotal = Math.abs(sumSubtotals - extractedTotal);
+        const diffToSubtotal = Math.abs(sumSubtotals - extractedSubtotal);
+        if (diffToTotal < diffToSubtotal) {
+          isTaxInclusive = true;
+        }
+      } else if (extractedTotal > 0) {
+        if (Math.abs(sumSubtotals - extractedTotal) < Math.abs(sumSubtotals * 1.18 - extractedTotal)) {
+          isTaxInclusive = true;
+        }
+      }
+
+      let taxAlertMsg: string | null = null;
+      if (isTaxInclusive) {
+        taxAlertMsg = `✅ Impuestos Incluidos: Los precios de esta factura ya contienen el ITBIS.`;
+      } else {
+        const avgTaxPct = items.length > 0 ? (items.reduce((acc: number, item: any) => acc + (item.tax_percentage !== undefined ? item.tax_percentage : 18), 0) / items.length) : 18;
+        taxAlertMsg = `⚠️ Impuestos Adicionados: Los precios de la factura NO incluyen ITBIS. Se ha sumado automáticamente el ${avgTaxPct.toFixed(0)}% de impuesto al costo de los productos.`;
+      }
+      setAiTaxMessage(taxAlertMsg);
+
+      // Mapear automáticamente los nombres extraídos con los productos existentes
+      const mapped = items.map((item: any) => {
+        const matchingProduct = products.find((p: Product) => 
+          p.name.toLowerCase().trim() === (item.name || '').toLowerCase().trim()
+        );
+        
+        let parsedUnitsPerBox = 1;
+        const nameMatch = (item.name || '').match(/(\d+)\s*\/\s*(\d+(\.\d+)?)/);
+        if (nameMatch) {
+          const val = parseInt(nameMatch[1], 10);
+          if (!isNaN(val) && val > 0) parsedUnitsPerBox = val;
+        }
+
+        const parsedBoxQuantity = item.quantity || 1;
+        const parsedBoxCost = item.cost || 0;
+
+        const extractedUnit = (item.unit || '').toLowerCase().trim();
+        const hasBoxUnit = extractedUnit.includes('caja') || extractedUnit.includes('paquete') || extractedUnit.includes('paq') || extractedUnit.includes('box') || extractedUnit.includes('cj') || extractedUnit.includes('pk');
+        const hasExplicitUnit = extractedUnit.includes('unidad') || extractedUnit.includes('und') || extractedUnit.includes('pieza') || extractedUnit.includes('uni');
+        
+        let buyMode: 'box' | 'unit' = 'unit';
+        if (hasBoxUnit) {
+          buyMode = 'box';
+        } else if (parsedUnitsPerBox > 1 && !hasExplicitUnit) {
+          buyMode = 'box';
+        }
+
+        let unitCost = buyMode === 'box'
+          ? parseFloat((parsedBoxCost / parsedUnitsPerBox).toFixed(2))
+          : parsedBoxCost;
+
+        // Si la factura NO incluye impuestos, se los agregamos al costo
+        const taxPercentage = item.tax_percentage !== undefined ? item.tax_percentage : 18;
+        if (!isTaxInclusive) {
+          unitCost = parseFloat((unitCost * (1 + taxPercentage / 100)).toFixed(2));
+        }
+
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          tempName: item.name || 'Desconocido',
+          productId: matchingProduct?.id || 'new-product',
+          quantity: parsedBoxQuantity,
+          cost: unitCost,
+          taxPercentage: taxPercentage,
+          unitsPerBox: parsedUnitsPerBox,
+          originalBoxQty: parsedBoxQuantity,
+          originalBoxCost: parsedBoxCost,
+          buyMode: buyMode
+        };
+      });
+
+      setExtractedItems(mapped);
+      toast({
+        title: "Lectura de Factura Exitosa",
+        description: `Se detectaron ${mapped.length} productos para revisar.`,
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error al escanear stock",
+        description: err.message || "No se pudo procesar la imagen de la factura.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAIScanning(false);
+      if (aiFileInputRef.current) aiFileInputRef.current.value = '';
+    }
+  };
+
+  const handleQuickCreateProduct = async () => {
+    if (!quickCreateName.trim()) return;
+
+    try {
+      const newProd = await createProduct.mutateAsync({
+        name: quickCreateName.trim(),
+        price: quickCreatePrice,
+        cost: quickCreateCost,
+        tax_percentage: quickCreateTax,
+        stock: 0,
+        min_stock: 0,
+        status: 'active',
+        track_inventory: true
+      });
+
+      if (quickCreateItemIdx !== null && newProd) {
+        setExtractedItems(prev => prev.map((item, idx) => 
+          idx === quickCreateItemIdx ? { ...item, productId: newProd.id } : item
+        ));
+      }
+
+      setIsQuickCreateOpen(false);
+      setQuickCreateName('');
+      setQuickCreatePrice(0);
+      setQuickCreateCost(0);
+      setQuickCreateTax(18);
+      setQuickCreateItemIdx(null);
+
+      toast({
+        title: "Producto Creado",
+        description: "El nuevo producto ha sido agregado al catálogo y seleccionado en la fila.",
+        className: "bg-green-50 text-green-900 border-green-200"
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error al crear",
+        description: err.message || "No se pudo crear el producto.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleConfirmAIStock = async () => {
+    if (extractedItems.length === 0) return;
+
+    const hasUnmapped = extractedItems.some(i => i.productId === 'new-product' || !i.productId);
+    if (hasUnmapped) {
+      toast({
+        title: "Productos no asignados",
+        description: "Asigna todos los productos o regístralos como 'Nuevos' antes de guardar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingAIStock(true);
+    try {
+      let updatedCount = 0;
+
+      for (const item of extractedItems) {
+        const prod = products.find(p => p.id === item.productId);
+        if (prod) {
+          const isBox = (item.buyMode || 'box') === 'box';
+          const addedStock = isBox 
+            ? Number(item.quantity) * Number(item.unitsPerBox || 1)
+            : Number(item.quantity);
+          const currentStock = Number(prod.stock || 0);
+          const newStock = currentStock + addedStock;
+          const unitCost = Number(item.cost);
+          
+          await updateProduct.mutateAsync({
+            ...prod,
+            stock: newStock,
+            cost: unitCost,
+            tax_percentage: Number(item.taxPercentage)
+          });
+          updatedCount++;
+        }
+      }
+
+      toast({
+        title: "Stock Cargado Correctamente",
+        description: `Se actualizaron ${updatedCount} productos con éxito.`,
+        className: "bg-green-50 text-green-900 border-green-200"
+      });
+      setIsAIStockOpen(false);
+      setExtractedItems([]);
+      setIsConfirmingSummary(false);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error al actualizar inventario",
+        description: err.message || "Ocurrió un error al guardar los stocks.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingAIStock(false);
+    }
+  };
 
   // Cálculos detallados del valor del inventario — memoizados para evitar recalcular en cada render
   const inventoryStats = useMemo(() => products.reduce((acc, product) => {
@@ -691,7 +1103,7 @@ const Products: FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl px-4">
+        <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-3xl px-4">
           <Button
             size="lg"
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
@@ -705,6 +1117,15 @@ const Products: FC = () => {
           >
             <Plus className="h-5 w-5" />
             Nuevo Producto
+          </Button>
+
+          <Button
+            size="lg"
+            className="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-blue-500/20 gap-3 transition-all active:scale-95"
+            onClick={() => setIsAIStockOpen(true)}
+          >
+            <Sparkles className="h-5 w-5 text-blue-200" />
+            Stock con IA
           </Button>
 
           <DropdownMenu>
@@ -1258,6 +1679,524 @@ const Products: FC = () => {
           products={filteredProducts}
         />
       )}
+      {/* Diálogo Cargar Stock con IA */}
+      <Dialog open={isAIStockOpen} onOpenChange={(open) => {
+        if (!open) {
+          setExtractedItems([]);
+          setIsAIScanning(false);
+        }
+        setIsAIStockOpen(open);
+      }}>
+        <DialogContent className="max-w-[95vw] lg:max-w-[1150px] w-full max-h-[92vh] overflow-y-auto p-5 sm:p-8 gap-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-blue-500" />
+              Cargar Stock con IA
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            ref={aiFileInputRef}
+            onChange={handleAIStockUpload}
+          />
+
+          {extractedItems.length === 0 && !isAIScanning && (
+            <div 
+              onClick={() => aiFileInputRef.current?.click()}
+              className="flex flex-col items-center justify-center py-12 px-6 border-2 border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 rounded-2xl cursor-pointer text-center group transition-all duration-200"
+            >
+              <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-115 transition-transform shadow-lg shadow-blue-500/20">
+                <Upload className="w-8 h-8 text-blue-500" />
+              </div>
+              <h3 className="font-bold text-lg text-foreground">Subir Foto de Factura</h3>
+              <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+                La IA identificará los productos, cantidades, costos e impuestos (ITBIS) de forma automática para cargarlos a tu stock.
+              </p>
+            </div>
+          )}
+
+          {isAIScanning && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+              <h3 className="font-bold text-lg">Analizando Factura con IA...</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Leyendo productos, cantidades, costos e impuestos de la imagen. Por favor espera.
+              </p>
+            </div>
+          )}
+
+          {extractedItems.length > 0 && !isAIScanning && (
+            <div className="space-y-4">
+              {aiTaxMessage && (
+                <div className="p-3.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm">
+                  <Sparkles className="h-4 w-4 shrink-0 text-blue-500" />
+                  <span>{aiTaxMessage}</span>
+                </div>
+              )}
+
+              {isConfirmingSummary ? (
+                // --- PREVIEW SCREEN ---
+                <div className="space-y-4">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 shrink-0 text-amber-500" />
+                    <span>Revisa la vista previa de los cambios antes de aplicar</span>
+                  </div>
+
+                  <div className="border border-border/80 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto max-h-[50vh]">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-muted text-muted-foreground uppercase tracking-widest text-[10px] font-black border-b border-border/50 sticky top-0">
+                          <tr>
+                            <th className="px-4 py-3">Producto</th>
+                            <th className="px-4 py-3 text-center">Modo</th>
+                            <th className="px-4 py-3 text-center">Stock Actual</th>
+                            <th className="px-4 py-3 text-center">Stock Nuevo</th>
+                            <th className="px-4 py-3 text-right">Costo Actual</th>
+                            <th className="px-4 py-3 text-right">Costo Nuevo</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                          {extractedItems.map((item) => {
+                            const p = products.find(prod => prod.id === item.productId);
+                            const isBox = (item.buyMode || 'box') === 'box';
+                            const addedStock = isBox 
+                              ? Number(item.quantity) * Number(item.unitsPerBox || 1)
+                              : Number(item.quantity);
+                            const currentStock = p ? Number(p.stock || 0) : 0;
+                            const newStock = currentStock + addedStock;
+                            const currentCost = p ? Number(p.cost || 0) : 0;
+                            const newCost = Number(item.cost);
+
+                            return (
+                              <tr key={item.id} className="hover:bg-muted/30 font-semibold">
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-col">
+                                    <span className="text-foreground">{p?.name || 'Nuevo Producto'}</span>
+                                    <span className="text-[10px] text-muted-foreground line-clamp-1">{item.tempName}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                    {isBox ? 'Caja' : 'Unidad'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center text-muted-foreground">
+                                  {currentStock} unds.
+                                </td>
+                                <td className="px-4 py-3 text-center text-emerald-600 font-extrabold">
+                                  {newStock} unds. <span className="text-[10px] text-emerald-500 font-black">(+{addedStock})</span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-muted-foreground">
+                                  ${currentCost.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-right text-blue-600 font-extrabold">
+                                  ${newCost.toFixed(2)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // --- REGULAR INPUTS LIST ---
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-xs font-bold text-muted-foreground uppercase">Items detectados ({extractedItems.length})</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => aiFileInputRef.current?.click()}
+                      className="h-8 text-xs font-semibold"
+                    >
+                      <Upload className="h-3.5 w-3.5 mr-1" />
+                      Escanear Otra
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
+                    {extractedItems.map((item, idx) => (
+                      <div key={item.id} className="p-5 bg-muted/40 border border-border/80 rounded-2xl flex flex-col gap-4 shadow-sm hover:border-border transition-colors duration-200">
+                        {/* Header: Temp name in invoice */}
+                        <div className="flex justify-between items-center pb-2 border-b border-border/40">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs text-muted-foreground/80 font-bold uppercase tracking-wider">Nombre en Factura</span>
+                            <span className="text-base sm:text-lg font-black text-foreground line-clamp-1">{item.tempName}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            {/* Buy Mode Toggle */}
+                            <div className="flex items-center gap-1 bg-background/80 border border-border/60 p-0.5 rounded-xl shadow-inner">
+                              <button
+                                type="button"
+                                onClick={() => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, buyMode: 'box' } : it))}
+                                className={cn(
+                                  "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200",
+                                  (item.buyMode || 'box') === 'box'
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/40"
+                                )}
+                              >
+                                Caja
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, buyMode: 'unit' } : it))}
+                                className={cn(
+                                  "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200",
+                                  item.buyMode === 'unit'
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/40"
+                                )}
+                              >
+                                Unidad
+                              </button>
+                            </div>
+
+                            {/* Quick product creation trigger button */}
+                            {item.productId === 'new-product' && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  setQuickCreateName(item.tempName);
+                                  setQuickCreateCost(item.cost);
+                                  setQuickCreateTax(item.taxPercentage);
+                                  setQuickCreatePrice(parseFloat((item.cost * 1.30).toFixed(2))); // Sugiere +30% por defecto
+                                  setQuickCreateItemIdx(idx);
+                                  setIsQuickCreateOpen(true);
+                                }}
+                                className="h-8 px-3 rounded-lg text-xs font-black uppercase tracking-widest gap-1.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20"
+                              >
+                                <PlusCircle className="h-4 w-4" />
+                                Crear como Nuevo
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                          {/* Product Selector */}
+                          <div className="flex flex-col gap-1.5 md:col-span-2">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Asignar a Producto</label>
+                            <Popover modal={true} open={openComboIdx === idx} onOpenChange={(open) => setOpenComboIdx(open ? idx : null)}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={openComboIdx === idx}
+                                  className="w-full h-11 text-sm justify-between px-4 font-semibold border-border/50 bg-background hover:bg-accent/30 rounded-xl"
+                                >
+                                  <span className="truncate text-left">
+                                    {item.productId === 'new-product' 
+                                      ? '➕ Nuevo Producto (Crear...)' 
+                                      : products.find(p => p.id === item.productId) 
+                                        ? `${products.find(p => p.id === item.productId)?.name} (Stock: ${products.find(p => p.id === item.productId)?.stock || 0})`
+                                        : 'Seleccionar producto...'
+                                    }
+                                  </span>
+                                  <ChevronDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-popover border-border rounded-xl shadow-lg" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Buscar por nombre, código de barras..." className="h-9 text-xs" />
+                                  <CommandList className="max-h-[240px]">
+                                    <CommandEmpty className="p-2 text-xs text-muted-foreground font-bold uppercase tracking-widest text-center">No encontrado</CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem
+                                        value="new-product ➕ nuevo producto crear"
+                                        onSelect={() => {
+                                          setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, productId: 'new-product' } : it));
+                                          setOpenComboIdx(null);
+                                        }}
+                                        className="p-2 cursor-pointer rounded-lg mx-1 my-0.5 text-xs font-bold text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10 flex items-center"
+                                      >
+                                        <Check className={cn("mr-2 h-3.5 w-3.5 text-emerald-600", item.productId === 'new-product' ? "opacity-100" : "opacity-0")} />
+                                        <span>➕ Nuevo Producto (Crear...)</span>
+                                      </CommandItem>
+                                      {products.map((p) => {
+                                        const barcodeSearchString = p.barcode ? ` ${p.barcode}` : '';
+                                        const intCodeSearchString = p.internal_code ? ` ${p.internal_code}` : '';
+                                        const extraBarcodesSearchString = p.barcodes?.map(b => ` ${b.barcode}`).join('') || '';
+                                        const searchString = `${p.name}${barcodeSearchString}${intCodeSearchString}${extraBarcodesSearchString} ${p.id}`.toLowerCase();
+
+                                        return (
+                                          <CommandItem
+                                            key={p.id}
+                                            value={searchString}
+                                            onSelect={() => {
+                                              setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, productId: p.id } : it));
+                                              setOpenComboIdx(null);
+                                            }}
+                                            className="p-2.5 cursor-pointer rounded-lg mx-1 my-0.5 text-xs flex flex-col items-start gap-1"
+                                          >
+                                            <div className="flex items-center w-full">
+                                              <Check className={cn("mr-2 h-3.5 w-3.5 text-primary shrink-0", item.productId === p.id ? "opacity-100" : "opacity-0")} />
+                                              <span className="font-semibold text-foreground truncate flex-1 text-left">{p.name}</span>
+                                              <span className="text-[10px] text-muted-foreground font-mono shrink-0 ml-2">Stock: {p.stock || 0}</span>
+                                            </div>
+                                            {(p.barcode || p.internal_code || (p.barcodes && p.barcodes.length > 0)) && (
+                                              <div className="pl-5 flex flex-wrap gap-1 items-center">
+                                                {p.internal_code && (
+                                                  <span className="text-[8px] bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded font-mono font-bold">Ref: {p.internal_code}</span>
+                                                )}
+                                                {p.barcode && (
+                                                  <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-bold">EAN: {p.barcode}</span>
+                                                )}
+                                                {p.barcodes?.map((extra, eIdx) => (
+                                                  <span key={extra.id || eIdx} className="text-[8px] bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded font-mono font-bold">Extra: {extra.barcode}</span>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          {/* Quantity Input */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
+                              {item.buyMode === 'unit' ? 'Cantidad (Unds.)' : 'Cantidad (Cajas/Paqs)'}
+                            </label>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: parseFloat(e.target.value) || 0 } : it))}
+                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
+                            />
+                            <span className="text-[10px] font-black text-amber-600 uppercase tracking-wider block ml-1">
+                              Total: {parseFloat((item.buyMode === 'unit' ? item.quantity : (item.quantity * (item.unitsPerBox || 1))).toFixed(2))} unds.
+                            </span>
+                          </div>
+
+                          {/* Units Per Box Input */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">Und. x Caja</label>
+                            <Input
+                              type="number"
+                              value={item.unitsPerBox || 1}
+                              onChange={(e) => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, unitsPerBox: parseFloat(e.target.value) || 1 } : it))}
+                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
+                              disabled={item.buyMode === 'unit'}
+                            />
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block ml-1 text-muted-foreground/70">
+                              {item.buyMode === 'unit' ? 'Inactivo (Modo Unidad)' : 'Empaque'}
+                            </span>
+                          </div>
+
+                          {/* Cost Input (Costo Unitario) */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
+                              Costo Unitario ($)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.cost}
+                              onChange={(e) => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, cost: parseFloat(e.target.value) || 0 } : it))}
+                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
+                            />
+                            <div className="text-[10px] font-black uppercase tracking-wider block ml-1 flex flex-col gap-0.5">
+                              {item.buyMode === 'box' && (
+                                <span className="text-blue-500">Costo Caja: ${(item.cost * item.unitsPerBox).toFixed(2)}</span>
+                              )}
+                              <span className="text-emerald-600 font-black">
+                                Subtotal: ${(item.quantity * item.cost * (item.buyMode === 'box' ? item.unitsPerBox : 1)).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* ITBIS Cash Amount Input */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">ITBIS ($)</label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={parseFloat((item.quantity * item.cost * (item.buyMode === 'box' ? item.unitsPerBox : 1) * (item.taxPercentage / 100)).toFixed(2)) || 0}
+                              onChange={(e) => {
+                                const newItbis = parseFloat(e.target.value) || 0;
+                                setExtractedItems(prev => prev.map((it, i) => {
+                                  if (i === idx) {
+                                    const subtotal = it.quantity * it.cost * (it.buyMode === 'box' ? it.unitsPerBox : 1);
+                                    const newPct = subtotal > 0 ? parseFloat(((newItbis / subtotal) * 100).toFixed(2)) : 0;
+                                    return { ...it, taxPercentage: newPct };
+                                  }
+                                  return it;
+                                }));
+                              }}
+                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
+                            />
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block ml-1 text-muted-foreground/70">
+                              Tasa: {item.taxPercentage}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex sm:justify-between items-center border-t pt-4">
+            {isConfirmingSummary ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsConfirmingSummary(false)}
+                  disabled={isSavingAIStock}
+                  className="text-xs"
+                >
+                  Atrás (Editar)
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleConfirmAIStock}
+                  disabled={isSavingAIStock}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold px-5 text-xs shadow-lg transition-all"
+                >
+                  {isSavingAIStock ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                  Sí, Aplicar y Cargar Stock
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsAIStockOpen(false);
+                    setExtractedItems([]);
+                    setIsConfirmingSummary(false);
+                  }}
+                  disabled={isSavingAIStock}
+                  className="text-xs"
+                >
+                  Cancelar
+                </Button>
+
+                {extractedItems.length > 0 && (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const hasUnmapped = extractedItems.some(i => i.productId === 'new-product' || !i.productId);
+                      if (hasUnmapped) {
+                        toast({
+                          title: "Productos no asignados",
+                          description: "Asigna todos los productos o regístralos como 'Nuevos' antes de continuar.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      setIsConfirmingSummary(true);
+                    }}
+                    className="bg-primary hover:bg-primary/90 font-bold px-5 text-xs shadow-lg transition-all"
+                  >
+                    Confirmar y Cargar Stock
+                  </Button>
+                )}
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Creación Rápida de Producto desde IA */}
+      <Dialog open={isQuickCreateOpen} onOpenChange={setIsQuickCreateOpen}>
+        <DialogContent className="sm:max-w-[420px] p-4 sm:p-6 gap-4">
+          <DialogHeader>
+            <DialogTitle className="text-md font-bold flex items-center gap-2">
+              <PlusCircle className="h-5 w-5 text-emerald-500" />
+              Crear Nuevo Producto Rápido
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3.5">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nombre del Producto</label>
+              <Input
+                value={quickCreateName}
+                onChange={(e) => setQuickCreateName(e.target.value)}
+                placeholder="Nombre oficial..."
+                className="h-9"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Costo ($)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={quickCreateCost}
+                  onChange={(e) => {
+                    const costVal = parseFloat(e.target.value) || 0;
+                    setQuickCreateCost(costVal);
+                    setQuickCreatePrice(parseFloat((costVal * 1.30).toFixed(2)));
+                  }}
+                  className="h-9 font-bold"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Precio Venta ($) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={quickCreatePrice}
+                  onChange={(e) => setQuickCreatePrice(parseFloat(e.target.value) || 0)}
+                  className="h-9 font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Impuesto (%)</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={quickCreateTax}
+                onChange={(e) => setQuickCreateTax(parseFloat(e.target.value) || 0)}
+                className="h-9 font-bold"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex sm:justify-end gap-2 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsQuickCreateOpen(false)}
+              className="text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleQuickCreateProduct}
+              disabled={!quickCreateName.trim()}
+              className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs"
+            >
+              Registrar Producto
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 };

@@ -223,6 +223,54 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
             {errors.price && (
               <p className="text-sm text-red-500 mt-1">{errors.price.message}</p>
             )}
+
+            {cost > 0 && (!price || price === 0) && (
+              <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase">Ganancia rápida:</span>
+                {[25, 30, 35].map((pct) => {
+                  const suggestedPrice = parseFloat((cost * (1 + pct / 100)).toFixed(2));
+                  return (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setValue('price', suggestedPrice, { shouldValidate: true })}
+                      className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold transition-colors"
+                    >
+                      {pct}% (${suggestedPrice})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── TAX CONFIGURATION (Moved near Cost/Price) ── */}
+        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-dashed border-border/60">
+          <div>
+            <Label htmlFor="tax_percentage" className="text-xs">Porcentaje de Impuesto (%)</Label>
+            <Input
+              id="tax_percentage"
+              type="number"
+              step="0.01"
+              className="mt-1 h-8 text-xs"
+              {...register('tax_percentage', { valueAsNumber: true })}
+              placeholder="18"
+            />
+            {errors.tax_percentage && (
+              <p className="text-xs text-red-500 mt-1">{errors.tax_percentage.message}</p>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2 pt-5">
+            <Checkbox
+              id="cost_includes_tax"
+              checked={costIncludesTax}
+              onCheckedChange={(checked) => setValue('cost_includes_tax', !!checked)}
+            />
+            <Label htmlFor="cost_includes_tax" className="text-xs font-normal cursor-pointer leading-snug">
+              El costo y precio incluyen impuesto (ITBIS/Tax incluido)
+            </Label>
           </div>
         </div>
 
@@ -501,32 +549,6 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
       <Separator className="my-4" />
 
       {/* Campos menos comunes - Abajo */}
-
-
-      <div>
-        <Label htmlFor="tax_percentage">Porcentaje de Impuesto (%)</Label>
-        <Input
-          id="tax_percentage"
-          type="number"
-          step="0.01"
-          {...register('tax_percentage', { valueAsNumber: true })}
-          placeholder="18"
-        />
-        {errors.tax_percentage && (
-          <p className="text-sm text-red-500 mt-1">{errors.tax_percentage.message}</p>
-        )}
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="cost_includes_tax"
-          checked={costIncludesTax}
-          onCheckedChange={(checked) => setValue('cost_includes_tax', !!checked)}
-        />
-        <Label htmlFor="cost_includes_tax" className="text-sm font-normal">
-          El costo y precio incluyen impuesto (ITBIS/Tax incluido)
-        </Label>
-      </div>
 
 
 

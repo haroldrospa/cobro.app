@@ -985,7 +985,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 }
                 setIsAddExpenseOpen(open);
             }}>
-                <DialogContent className="sm:max-w-[560px]">
+                <DialogContent className="sm:max-w-[560px] p-4 sm:p-6 max-h-[92vh] sm:max-h-[85vh] gap-3 sm:gap-4 overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
                             {scanQueue.length > 0 ? "Gestión de Facturas" : "Registrar Nuevo Gasto"}
@@ -1110,7 +1110,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         <div 
                             onClick={() => !isScanning && fileInputRef.current?.click()}
                             className={cn(
-                                "flex flex-col items-center justify-center py-10 px-6 border-2 border-dashed rounded-3xl transition-all text-center animate-in fade-in cursor-pointer group mb-2 text-balance",
+                                "flex flex-col items-center justify-center py-6 sm:py-10 px-4 sm:px-6 border-2 border-dashed rounded-2xl sm:rounded-3xl transition-all text-center animate-in fade-in cursor-pointer group mb-2 text-balance",
                                 isScanning ? "border-emerald-500/50 bg-emerald-500/5 opacity-80" : "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/50 shadow-sm"
                             )}
                         >
@@ -1248,16 +1248,16 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 </p>
 
                                 {/* ── AMOUNT hero ── */}
-                                <div className="relative rounded-2xl px-4 py-3 border-2 bg-green-500/5 border-green-500/30">
+                                <div className="relative rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 border-2 bg-green-500/5 border-green-500/30">
                                     <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-0.5">Monto</p>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-3xl font-black text-green-400">$</span>
+                                        <span className="text-2xl sm:text-3xl font-black text-green-400">$</span>
                                         <input
                                             id="amount"
                                             type="number"
                                             placeholder="0.00"
                                             step="0.01"
-                                            className="flex-1 bg-transparent text-3xl font-black text-foreground placeholder:text-muted-foreground/30 outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            className="flex-1 bg-transparent text-2xl sm:text-3xl font-black text-foreground placeholder:text-muted-foreground/30 outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             value={newExpense.amount || ''}
                                             onChange={(e) => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) || 0 })}
                                         />
@@ -1265,7 +1265,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 </div>
 
                                 {/* ── CONCEPT + DATE row ── */}
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1">
                                         <label htmlFor="description" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                             <FileText className="h-3 w-3" /> Concepto
@@ -1316,7 +1316,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 </div>
 
                                 {/* ── SUPPLIER + INVOICE row ── */}
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1">
                                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                             <Building2 className="h-3 w-3" /> Proveedor
@@ -1335,7 +1335,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                     <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-[280px] p-0" align="start">
+                                            <PopoverContent className="w-[calc(100vw-32px)] sm:w-[280px] p-0" align="start">
                                                 <Command>
                                                     <CommandInput placeholder="Buscar proveedor..." />
                                                     <CommandList>
