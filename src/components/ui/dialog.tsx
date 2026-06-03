@@ -29,8 +29,11 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideCloseButton?: boolean }
->(({ className, children, hideCloseButton, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { 
+    hideCloseButton?: boolean;
+    centerOnMobile?: boolean;
+  }
+>((({ className, children, hideCloseButton, centerOnMobile, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -38,22 +41,15 @@ const DialogContent = React.forwardRef<
       className={cn(
         // ── Base ──
         "fixed z-50 grid gap-4 border bg-background shadow-lg duration-200",
-        // ── Animaciones Desktop ──
+        // ── Animaciones ──
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        // ── MOBILE: Bottom Sheet ──
-        // Anclado al fondo, ocupa hasta 90dvh, desliza desde abajo
-        "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5",
-        "max-h-[90dvh] overflow-y-auto overflow-x-hidden",
-        "data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4",
-        // ── DESKTOP (sm+): Dialog centrado ──
-        "sm:inset-x-auto sm:left-[50%] sm:bottom-auto sm:top-[50%]",
-        "sm:translate-x-[-50%] sm:translate-y-[-50%]",
-        "sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6",
-        "sm:max-h-[85vh]",
-        "sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=closed]:slide-out-to-left-1/2",
-        "sm:data-[state=open]:slide-in-from-top-[48%] sm:data-[state=closed]:slide-out-to-top-[48%]",
-        "sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95",
+        // ── Layout (Centered on Mobile & Desktop OR Bottom Sheet on Mobile & Centered on Desktop) ──
+        centerOnMobile ? (
+          "inset-x-auto left-[50%] bottom-auto top-[50%] translate-x-[-50%] translate-y-[-50%] w-full rounded-2xl p-5 max-h-[90vh] data-[state=open]:slide-in-from-left-1/2 data-[state=closed]:slide-out-to-left-1/2 data-[state=open]:slide-in-from-top-[48%] data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
+        ) : (
+          "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5 max-h-[90dvh] overflow-y-auto overflow-x-hidden data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4 sm:inset-x-auto sm:left-[50%] sm:bottom-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6 sm:max-h-[85vh] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%] sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95"
+        ),
         className
       )}
       {...props}
@@ -67,7 +63,7 @@ const DialogContent = React.forwardRef<
       )}
     </DialogPrimitive.Content>
   </DialogPortal>
-))
+)))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({
