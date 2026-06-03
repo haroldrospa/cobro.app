@@ -1,5 +1,5 @@
 import { useState, useRef, FC, ChangeEvent, useEffect, useMemo, useCallback, memo } from 'react';
-import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown } from 'lucide-react';
+import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -44,13 +44,19 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
-type ProductsTab = 'products' | 'inventory';
+import { useInventoryMovementsOffline } from '@/hooks/useInventoryMovements';
+
+type ProductsTab = 'products' | 'inventory' | 'history';
 
 type SearchType = 'all' | 'name' | 'id' | 'barcode' | 'category';
 
 const Products: FC = () => {
   const { isRestaurant } = useBusinessType();
   const [activeTab, setActiveTab] = useState<ProductsTab>('products');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyUserSearch, setHistoryUserSearch] = useState('');
+  const [historyStartDate, setHistoryStartDate] = useState('');
+  const [historyEndDate, setHistoryEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 250);
   const [searchType, setSearchType] = useState<SearchType>('all');
@@ -83,11 +89,14 @@ const Products: FC = () => {
   const [quickCreateCost, setQuickCreateCost] = useState(0);
   const [quickCreateTax, setQuickCreateTax] = useState(18);
   const [quickCreateItemIdx, setQuickCreateItemIdx] = useState<number | null>(null);
+  const [quickCreateBarcode, setQuickCreateBarcode] = useState('');
+  const [prefilledFormValues, setPrefilledFormValues] = useState<Partial<Product> | null>(null);
+  const [comboboxSearchTerm, setComboboxSearchTerm] = useState('');
   const aiFileInputRef = useRef<HTMLInputElement>(null);
   const [openComboIdx, setOpenComboIdx] = useState<number | null>(null);
   const [aiTaxMessage, setAiTaxMessage] = useState<string | null>(null);
+  const [aiIsTaxInclusive, setAiIsTaxInclusive] = useState<boolean>(false);
   const [isConfirmingSummary, setIsConfirmingSummary] = useState(false);
-
   // Quick Stock Edit State
   const [stockEditProduct, setStockEditProduct] = useState<Product | null>(null);
   const [stockEditValue, setStockEditValue] = useState<string>('');
@@ -106,6 +115,31 @@ const Products: FC = () => {
   const deleteProduct = useDeleteProductOffline();
   const updateProduct = useUpdateProductOffline();
   const createProduct = useCreateProductOffline();
+  const { data: movements = [], isLoading: isLoadingMovements } = useInventoryMovementsOffline();
+
+  const filteredHistory = useMemo(() => {
+    return movements.filter((mov: any) => {
+      const productName = products.find(p => p.id === mov.product_id)?.name || mov.product_id;
+      const matchProduct = productName.toLowerCase().includes(historySearch.toLowerCase());
+      const matchUser = (mov.user_name || 'Sistema').toLowerCase().includes(historyUserSearch.toLowerCase());
+      
+      let matchDate = true;
+      if (historyStartDate) {
+        const start = new Date(historyStartDate);
+        start.setHours(0, 0, 0, 0);
+        const movDate = new Date(mov.created_at);
+        matchDate = matchDate && movDate >= start;
+      }
+      if (historyEndDate) {
+        const end = new Date(historyEndDate);
+        end.setHours(23, 59, 59, 999);
+        const movDate = new Date(mov.created_at);
+        matchDate = matchDate && movDate <= end;
+      }
+      
+      return matchProduct && matchUser && matchDate;
+    });
+  }, [movements, products, historySearch, historyUserSearch, historyStartDate, historyEndDate]);
   const deleteAllProducts = useDeleteAllProducts();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -114,6 +148,144 @@ const Products: FC = () => {
   const { settings: storeSettings } = useStoreSettings();
   const { hasReachedLimit, getRemainingCount } = usePlanFeatures();
   const recipeAvailability = useRecipeAvailability();
+
+  // State to track inline edits for products assigned in AI Stock Loading modal
+  const [editingProductMap, setEditingProductMap] = useState<Record<string, {
+    productId: string;
+    name: string;
+    stock: number;
+    price: number;
+    cost: number;
+    barcode: string;
+  }>>({});
+
+  const [minimizedProductMap, setMinimizedProductMap] = useState<Record<string, boolean>>({});
+
+  const toggleProductMinimize = (itemId: string) => {
+    setMinimizedProductMap(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
+
+  const updateProductMapField = (itemId: string, field: string, value: any) => {
+    setEditingProductMap(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [field]: value
+      }
+    }));
+  };
+
+  useEffect(() => {
+    setEditingProductMap(prev => {
+      let updated = false;
+      const nextMap = { ...prev };
+      
+      extractedItems.forEach(item => {
+        if (item.productId && item.productId !== 'new-product') {
+          const prod = products.find(p => p.id === item.productId);
+          if (prod) {
+            if (!nextMap[item.id] || nextMap[item.id].productId !== item.productId) {
+              nextMap[item.id] = {
+                productId: item.productId,
+                name: prod.name,
+                stock: prod.stock || 0,
+                price: prod.price || 0,
+                cost: prod.cost || 0,
+                barcode: prod.barcode || ''
+              };
+              updated = true;
+            }
+          }
+        } else if (nextMap[item.id]) {
+          delete nextMap[item.id];
+          updated = true;
+        }
+      });
+      
+      return updated ? nextMap : prev;
+    });
+  }, [extractedItems, products]);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedItems = localStorage.getItem('cobro_app_ai_stock_items');
+      const savedTaxMsg = localStorage.getItem('cobro_app_ai_stock_tax_message');
+      const savedTaxInclusive = localStorage.getItem('cobro_app_ai_stock_tax_inclusive');
+      if (savedItems) {
+        const parsed = JSON.parse(savedItems);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setExtractedItems(parsed);
+        }
+      }
+      if (savedTaxMsg) {
+        setAiTaxMessage(savedTaxMsg);
+      }
+      if (savedTaxInclusive !== null) {
+        setAiIsTaxInclusive(savedTaxInclusive === 'true');
+      }
+    } catch (e) {
+      console.error("Error reading AI stock draft from localStorage:", e);
+    }
+  }, []);
+
+  // Save draft to localStorage when extractedItems, aiTaxMessage or aiIsTaxInclusive changes
+  useEffect(() => {
+    try {
+      if (extractedItems.length > 0) {
+        localStorage.setItem('cobro_app_ai_stock_items', JSON.stringify(extractedItems));
+        if (aiTaxMessage) {
+          localStorage.setItem('cobro_app_ai_stock_tax_message', aiTaxMessage);
+        } else {
+          localStorage.removeItem('cobro_app_ai_stock_tax_message');
+        }
+        localStorage.setItem('cobro_app_ai_stock_tax_inclusive', String(aiIsTaxInclusive));
+      } else {
+        localStorage.removeItem('cobro_app_ai_stock_items');
+        localStorage.removeItem('cobro_app_ai_stock_tax_message');
+        localStorage.removeItem('cobro_app_ai_stock_tax_inclusive');
+      }
+    } catch (e) {
+      console.error("Error saving AI stock draft to localStorage:", e);
+    }
+  }, [extractedItems, aiTaxMessage, aiIsTaxInclusive]);
+
+  const handleSaveProductEdit = async (itemId: string, productId: string) => {
+    const editData = editingProductMap[itemId];
+    const originalProd = products.find(p => p.id === productId);
+    if (!editData || !originalProd) return;
+
+    try {
+      await updateProduct.mutateAsync({
+        ...originalProd,
+        name: editData.name,
+        stock: editData.stock,
+        price: editData.price,
+        cost: editData.cost,
+        barcode: editData.barcode,
+        reason: 'Ajuste manual (Carga AI)'
+      });
+      toast({
+        title: "Producto Actualizado",
+        description: `Los datos de "${editData.name}" se han actualizado en inventario correctamente.`,
+        className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+      });
+      setMinimizedProductMap(prev => ({
+        ...prev,
+        [itemId]: true
+      }));
+    } catch (err) {
+      console.error("Error al actualizar producto desde carga de IA:", err);
+      toast({
+        title: "Error al actualizar",
+        description: "No se pudieron guardar los cambios en el producto.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const cleanKey = (key: string | null | undefined) => {
     if (!key) return '';
@@ -304,17 +476,26 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
 
       // Validar si la factura incluye impuestos o no
       let isTaxInclusive = false;
-      if (extractedTotal > 0 && extractedSubtotal > 0) {
-        const diffToTotal = Math.abs(sumSubtotals - extractedTotal);
-        const diffToSubtotal = Math.abs(sumSubtotals - extractedSubtotal);
+      let cleanSubtotal = extractedSubtotal;
+      let cleanTotal = extractedTotal;
+      if (cleanSubtotal > cleanTotal && cleanTotal > 0) {
+        cleanSubtotal = extractedTotal;
+        cleanTotal = extractedSubtotal;
+      }
+
+      if (cleanTotal > 0 && cleanSubtotal > 0) {
+        const diffToTotal = Math.abs(sumSubtotals - cleanTotal);
+        const diffToSubtotal = Math.abs(sumSubtotals - cleanSubtotal);
         if (diffToTotal < diffToSubtotal) {
           isTaxInclusive = true;
         }
-      } else if (extractedTotal > 0) {
-        if (Math.abs(sumSubtotals - extractedTotal) < Math.abs(sumSubtotals * 1.18 - extractedTotal)) {
+      } else if (cleanTotal > 0) {
+        if (Math.abs(sumSubtotals - cleanTotal) < Math.abs(sumSubtotals * 1.18 - cleanTotal)) {
           isTaxInclusive = true;
         }
       }
+
+      setAiIsTaxInclusive(isTaxInclusive);
 
       let taxAlertMsg: string | null = null;
       if (isTaxInclusive) {
@@ -403,6 +584,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
         price: quickCreatePrice,
         cost: quickCreateCost,
         tax_percentage: quickCreateTax,
+        barcode: quickCreateBarcode.trim() || undefined,
         stock: 0,
         min_stock: 0,
         status: 'active',
@@ -420,6 +602,8 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       setQuickCreatePrice(0);
       setQuickCreateCost(0);
       setQuickCreateTax(18);
+      setQuickCreateBarcode('');
+      setComboboxSearchTerm('');
       setQuickCreateItemIdx(null);
 
       toast({
@@ -469,7 +653,8 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
             ...prod,
             stock: newStock,
             cost: unitCost,
-            tax_percentage: Number(item.taxPercentage)
+            tax_percentage: Number(item.taxPercentage),
+            reason: 'Carga de Stock con IA (Factura)'
           });
           updatedCount++;
         }
@@ -609,7 +794,8 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       // Usar la mutación offline para que actualice de inmediato IndexedDB y el caché de forma optimista
       await updateProduct.mutateAsync({
         ...stockEditProduct,
-        stock: newStock
+        stock: newStock,
+        reason: 'Ajuste rápido de inventario'
       });
 
       toast({
@@ -1012,13 +1198,58 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     }
   };
 
+  const handleToggleTaxInclusive = (newValue: boolean) => {
+    setAiIsTaxInclusive(newValue);
+    
+    // Recalcular los costos de los productos extraídos
+    setExtractedItems(prev => prev.map(item => {
+      // originalBoxCost representa el costo base extraído de la factura (antes de impuesto)
+      const baseCost = item.originalBoxCost || 0;
+      let unitCost = item.buyMode === 'box'
+        ? parseFloat((baseCost / (item.unitsPerBox || 1)).toFixed(2))
+        : baseCost;
+
+      // Si NO es inclusivo de impuestos, se le suma la tasa de impuesto
+      if (!newValue) {
+        const taxPercentage = item.taxPercentage !== undefined ? item.taxPercentage : 18;
+        unitCost = parseFloat((unitCost * (1 + taxPercentage / 100)).toFixed(2));
+      }
+
+      return {
+        ...item,
+        cost: unitCost
+      };
+    }));
+
+    // Actualizar el mensaje de alerta
+    if (newValue) {
+      setAiTaxMessage(`✅ Impuestos Incluidos: Los precios de esta factura ya contienen el ITBIS.`);
+    } else {
+      setAiTaxMessage(`⚠️ Impuestos Adicionados: Los precios de la factura NO incluyen ITBIS. Se ha sumado automáticamente el impuesto al costo de los productos.`);
+    }
+  };
+
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingProduct(null);
+    setPrefilledFormValues(null);
+    setQuickCreateItemIdx(null);
   };
 
   const handleFormSuccess = () => {
     // La query se invalidará automáticamente por el hook
+  };
+
+  const handleProductFormSuccess = (newProduct?: Product) => {
+    if (quickCreateItemIdx !== null && newProduct) {
+      setExtractedItems(prev => prev.map((item, idx) => 
+        idx === quickCreateItemIdx ? { ...item, productId: newProduct.id } : item
+      ));
+      setQuickCreateItemIdx(null);
+      setPrefilledFormValues(null);
+      setComboboxSearchTerm('');
+    }
+    handleFormSuccess();
   };
 
   const handleExportCSV = () => {
@@ -1174,22 +1405,22 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
         </div>
       </div>
 
-      {/* Centered Tab Selector - if restaurant */}
-      {isRestaurant && (
-        <div className="flex justify-center">
-          <div className="inline-flex p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm">
-            <Button
-              variant={activeTab === 'products' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('products')}
-              className={cn(
-                "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest",
-                activeTab === 'products' && "bg-background shadow-lg"
-              )}
-            >
-              <Package className="mr-2 h-3.5 w-3.5" />
-              Catálogo
-            </Button>
+      {/* Centered Tab Selector */}
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm">
+          <Button
+            variant={activeTab === 'products' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('products')}
+            className={cn(
+              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest",
+              activeTab === 'products' && "bg-background shadow-lg"
+            )}
+          >
+            <Package className="mr-2 h-3.5 w-3.5" />
+            Catálogo
+          </Button>
+          {isRestaurant && (
             <Button
               variant={activeTab === 'inventory' ? 'default' : 'ghost'}
               size="sm"
@@ -1202,9 +1433,21 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               <FlaskConical className="mr-2 h-3.5 w-3.5" />
               Materia Prima
             </Button>
-          </div>
+          )}
+          <Button
+            variant={activeTab === 'history' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('history')}
+            className={cn(
+              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest",
+              activeTab === 'history' && "bg-background shadow-lg"
+            )}
+          >
+            <History className="mr-2 h-3.5 w-3.5" />
+            Historial de Cambios
+          </Button>
         </div>
-      )}
+      </div>
 
       {/* ─── Pestaña: Control de Inventario (solo restaurante) ─── */}
       {isRestaurant && activeTab === 'inventory' && (
@@ -1574,12 +1817,204 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
 
         </> /* end products tab */ )}
 
+      {activeTab === 'history' && (
+        <div className="space-y-6">
+          {/* Filtros de búsqueda para Historial */}
+          <Card className="bg-card/60 backdrop-blur-xl border border-border/50 shadow-sm rounded-3xl">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nombre de producto..."
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      className="pl-10 rounded-2xl h-11 border-border/50 focus-visible:ring-primary/20 bg-background/50"
+                    />
+                  </div>
+                  <div className="w-full md:w-[300px] relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Filtrar por usuario..."
+                      value={historyUserSearch}
+                      onChange={(e) => setHistoryUserSearch(e.target.value)}
+                      className="pl-10 rounded-2xl h-11 border-border/50 focus-visible:ring-primary/20 bg-background/50"
+                    />
+                  </div>
+                </div>
+                
+                {/* Filtro de Fecha */}
+                <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 border-t border-border/10">
+                  <div className="w-full sm:w-auto text-[10px] font-black uppercase tracking-widest text-muted-foreground">Filtrar por Fecha:</div>
+                  <div className="grid grid-cols-2 gap-4 w-full sm:w-auto sm:flex sm:items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Desde</span>
+                      <Input
+                        type="date"
+                        value={historyStartDate}
+                        onChange={(e) => setHistoryStartDate(e.target.value)}
+                        className="rounded-xl h-9 text-xs border-border/50 focus-visible:ring-primary/20 bg-background/50 w-full sm:w-[150px]"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Hasta</span>
+                      <Input
+                        type="date"
+                        value={historyEndDate}
+                        onChange={(e) => setHistoryEndDate(e.target.value)}
+                        className="rounded-xl h-9 text-xs border-border/50 focus-visible:ring-primary/20 bg-background/50 w-full sm:w-[150px]"
+                      />
+                    </div>
+                  </div>
+                  {(historyStartDate || historyEndDate) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setHistoryStartDate('');
+                        setHistoryEndDate('');
+                      }}
+                      className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl px-3 h-8 ml-auto sm:ml-4"
+                    >
+                      Limpiar Fechas
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tabla / Lista de movimientos */}
+          {isLoadingMovements ? (
+            <Card className="border border-border/30 bg-card/60 backdrop-blur-md rounded-3xl p-12 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground font-medium">Cargando historial de inventario...</p>
+            </Card>
+          ) : filteredHistory.length === 0 ? (
+            <Card className="border border-border/30 bg-card/60 backdrop-blur-md rounded-3xl p-12 text-center">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                <History className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">No se encontraron registros</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                No hay movimientos de inventario registrados que coincidan con la búsqueda.
+              </p>
+            </Card>
+          ) : (
+            <Card className="border border-border/50 bg-card/60 backdrop-blur-xl rounded-3xl overflow-hidden shadow-sm">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-border/40 bg-muted/20">
+                      <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Producto</th>
+                      <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Usuario</th>
+                      <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Fecha / Hora</th>
+                      <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">Ajuste</th>
+                      <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-right">Anterior</th>
+                      <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-right">Nuevo Stock</th>
+                      <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Detalle / Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/30">
+                    {filteredHistory.map((mov: any) => {
+                      const prod = products.find(p => p.id === mov.product_id);
+                      const productName = prod ? prod.name : 'Producto Eliminado';
+                      const isPositive = mov.quantity_changed > 0;
+                      
+                      return (
+                        <tr key={mov.id} className="hover:bg-muted/10 transition-colors">
+                          <td className="py-4 px-6">
+                            <span className="font-bold text-sm text-foreground">{productName}</span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="text-sm font-medium text-muted-foreground">{mov.user_name || 'Sistema'}</span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(mov.created_at).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <span className={cn(
+                              "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black",
+                              isPositive 
+                                ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
+                                : "bg-destructive/10 text-destructive border border-destructive/20"
+                            )}>
+                              {isPositive ? `+${mov.quantity_changed}` : mov.quantity_changed}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-right font-medium text-muted-foreground">{mov.previous_stock ?? 0}</td>
+                          <td className="py-4 px-6 text-right font-bold text-foreground">{mov.new_stock ?? 0}</td>
+                          <td className="py-4 px-6">
+                            <span className="text-sm font-medium text-foreground">{mov.reason || 'Ajuste manual'}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards View */}
+              <div className="md:hidden divide-y divide-border/30">
+                {filteredHistory.map((mov: any) => {
+                  const prod = products.find(p => p.id === mov.product_id);
+                  const productName = prod ? prod.name : 'Producto Eliminado';
+                  const isPositive = mov.quantity_changed > 0;
+
+                  return (
+                    <div key={mov.id} className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <h4 className="font-bold text-sm text-foreground">{productName}</h4>
+                          <p className="text-xs text-muted-foreground">{mov.user_name || 'Sistema'}</p>
+                        </div>
+                        <span className={cn(
+                          "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black",
+                          isPositive 
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
+                            : "bg-destructive/10 text-destructive border border-destructive/20"
+                        )}>
+                          {isPositive ? `+${mov.quantity_changed}` : mov.quantity_changed}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs py-2 bg-muted/10 rounded-xl px-3 border border-border/20">
+                        <div>
+                          <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">Ant. Stock</span>
+                          <span className="font-semibold text-muted-foreground">{mov.previous_stock ?? 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">Nvo. Stock</span>
+                          <span className="font-bold text-foreground">{mov.new_stock ?? 0}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs pt-1">
+                        <span className="text-muted-foreground">{new Date(mov.created_at).toLocaleString()}</span>
+                        <span className="font-bold text-foreground bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
+                          {mov.reason || 'Ajuste manual'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Modal del formulario */}
-      {showForm && (
+      {showForm && quickCreateItemIdx === null && (
           <ProductForm
             product={editingProduct}
+            prefilledValues={prefilledFormValues || undefined}
             onClose={handleCloseForm}
-            onSuccess={handleFormSuccess}
+            onSuccess={handleProductFormSuccess}
           />
       )}
 
@@ -1682,7 +2117,6 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       {/* Diálogo Cargar Stock con IA */}
       <Dialog open={isAIStockOpen} onOpenChange={(open) => {
         if (!open) {
-          setExtractedItems([]);
           setIsAIScanning(false);
         }
         setIsAIStockOpen(open);
@@ -1732,9 +2166,55 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           {extractedItems.length > 0 && !isAIScanning && (
             <div className="space-y-4">
               {aiTaxMessage && (
-                <div className="p-3.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm">
-                  <Sparkles className="h-4 w-4 shrink-0 text-blue-500" />
-                  <span>{aiTaxMessage}</span>
+                <div className="p-4 bg-card border border-border/80 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm animate-pulse",
+                      aiIsTaxInclusive ? "bg-blue-500/15 text-blue-500" : "bg-amber-500/15 text-amber-600"
+                    )}>
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wider",
+                        aiIsTaxInclusive ? "text-blue-500" : "text-amber-600"
+                      )}>
+                        {aiIsTaxInclusive ? "Impuestos Incluidos en Factura" : "Impuestos Adicionados a Factura"}
+                      </span>
+                      <p className="text-xs text-muted-foreground font-semibold mt-0.5 leading-relaxed">
+                        {aiIsTaxInclusive 
+                          ? "Los precios extraídos ya contienen el ITBIS. El costo registrado será el mismo de la factura."
+                          : "Los precios extraídos no contienen el ITBIS. Se ha sumado el ITBIS automáticamente al costo."
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center bg-muted/65 p-1 rounded-xl shrink-0 self-start md:self-auto border border-border/40">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTaxInclusive(true)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200",
+                        aiIsTaxInclusive 
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Sí, Incluyen ITBIS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTaxInclusive(false)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200",
+                        !aiIsTaxInclusive 
+                          ? "bg-amber-600 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      No, Sumar ITBIS
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1865,12 +2345,23 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                 size="sm"
                                 variant="secondary"
                                 onClick={() => {
-                                  setQuickCreateName(item.tempName);
-                                  setQuickCreateCost(item.cost);
-                                  setQuickCreateTax(item.taxPercentage);
-                                  setQuickCreatePrice(parseFloat((item.cost * 1.30).toFixed(2))); // Sugiere +30% por defecto
+                                  const shouldAutofill = window.confirm(`¿Quieres rellenar la información del nuevo producto con los datos de la factura?\n\nNombre: "${item.tempName}"\nCosto: $${item.cost.toFixed(2)}`);
+                                  let prefill: Partial<Product> = {};
+                                  if (shouldAutofill) {
+                                    prefill = {
+                                      name: item.tempName,
+                                      cost: item.cost,
+                                      tax_percentage: item.taxPercentage,
+                                      price: parseFloat((item.cost * 1.30).toFixed(2))
+                                    };
+                                  }
+                                  if (comboboxSearchTerm && /^\d+$/.test(comboboxSearchTerm.trim())) {
+                                    prefill.barcode = comboboxSearchTerm.trim();
+                                  }
+                                  setPrefilledFormValues(prefill);
                                   setQuickCreateItemIdx(idx);
-                                  setIsQuickCreateOpen(true);
+                                  setEditingProduct(null);
+                                  setShowForm(true);
                                 }}
                                 className="h-8 px-3 rounded-lg text-xs font-black uppercase tracking-widest gap-1.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20"
                               >
@@ -1881,11 +2372,14 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                           {/* Product Selector */}
                           <div className="flex flex-col gap-1.5 md:col-span-2">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Asignar a Producto</label>
-                            <Popover modal={true} open={openComboIdx === idx} onOpenChange={(open) => setOpenComboIdx(open ? idx : null)}>
+                            <Popover modal={true} open={openComboIdx === idx} onOpenChange={(open) => {
+                              setOpenComboIdx(open ? idx : null);
+                              if (!open) setComboboxSearchTerm(''); // Reset search term when closed
+                            }}>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
@@ -1905,16 +2399,49 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-popover border-border rounded-xl shadow-lg" align="start">
-                                <Command>
-                                  <CommandInput placeholder="Buscar por nombre, código de barras..." className="h-9 text-xs" />
+                                <Command filter={(value, search) => {
+                                  const cleanSearch = search.trim().toLowerCase();
+                                  if (!cleanSearch) return 1;
+                                  const cleanValue = value.toLowerCase();
+                                  
+                                  // Substring match avoids fuzzy fragments showing wrong products
+                                  return cleanValue.includes(cleanSearch) ? 1 : 0;
+                                }}>
+                                  <CommandInput 
+                                    placeholder="Buscar por nombre, código de barras..." 
+                                    className="h-9 text-xs"
+                                    value={comboboxSearchTerm}
+                                    onValueChange={setComboboxSearchTerm}
+                                  />
                                   <CommandList className="max-h-[240px]">
-                                    <CommandEmpty className="p-2 text-xs text-muted-foreground font-bold uppercase tracking-widest text-center">No encontrado</CommandEmpty>
+                                    <CommandEmpty className="p-3 text-xs text-muted-foreground font-semibold text-center leading-relaxed">
+                                      Este código o término no está asociado a ningún producto. Búscalo por otro campo o crea uno nuevo.
+                                    </CommandEmpty>
                                     <CommandGroup>
                                       <CommandItem
                                         value="new-product ➕ nuevo producto crear"
                                         onSelect={() => {
                                           setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, productId: 'new-product' } : it));
                                           setOpenComboIdx(null);
+
+                                          // Prompt for auto-fill and open main product form
+                                          const shouldAutofill = window.confirm(`¿Quieres rellenar la información del nuevo producto con los datos de la factura?\n\nNombre: "${item.tempName}"\nCosto: $${item.cost.toFixed(2)}`);
+                                          let prefill: Partial<Product> = {};
+                                          if (shouldAutofill) {
+                                            prefill = {
+                                              name: item.tempName,
+                                              cost: item.cost,
+                                              tax_percentage: item.taxPercentage,
+                                              price: parseFloat((item.cost * 1.30).toFixed(2))
+                                            };
+                                          }
+                                          if (comboboxSearchTerm && /^\d+$/.test(comboboxSearchTerm.trim())) {
+                                            prefill.barcode = comboboxSearchTerm.trim();
+                                          }
+                                          setPrefilledFormValues(prefill);
+                                          setQuickCreateItemIdx(idx);
+                                          setEditingProduct(null);
+                                          setShowForm(true);
                                         }}
                                         className="p-2 cursor-pointer rounded-lg mx-1 my-0.5 text-xs font-bold text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10 flex items-center"
                                       >
@@ -2017,32 +2544,166 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                               </span>
                             </div>
                           </div>
-
-                          {/* ITBIS Cash Amount Input */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">ITBIS ($)</label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={parseFloat((item.quantity * item.cost * (item.buyMode === 'box' ? item.unitsPerBox : 1) * (item.taxPercentage / 100)).toFixed(2)) || 0}
-                              onChange={(e) => {
-                                const newItbis = parseFloat(e.target.value) || 0;
-                                setExtractedItems(prev => prev.map((it, i) => {
-                                  if (i === idx) {
-                                    const subtotal = it.quantity * it.cost * (it.buyMode === 'box' ? it.unitsPerBox : 1);
-                                    const newPct = subtotal > 0 ? parseFloat(((newItbis / subtotal) * 100).toFixed(2)) : 0;
-                                    return { ...it, taxPercentage: newPct };
-                                  }
-                                  return it;
-                                }));
-                              }}
-                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
-                            />
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block ml-1 text-muted-foreground/70">
-                              Tasa: {item.taxPercentage}%
-                            </span>
-                          </div>
                         </div>
+
+                        {item.productId && item.productId !== 'new-product' && products.find(p => p.id === item.productId) && (
+                          (() => {
+                            const selProd = products.find(p => p.id === item.productId)!;
+                            const editVal = editingProductMap[item.id];
+                            if (!editVal) return null;
+                            return (
+                              <div className={cn("mt-2 p-4 bg-background border border-border rounded-xl shadow-inner transition-all", !minimizedProductMap[item.id] ? "space-y-4" : "pb-2")}>
+                                <div className="flex items-center justify-between border-b pb-2">
+                                  <div className="flex items-center gap-2">
+                                    <Pencil className="h-4 w-4 text-primary" />
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                                      Modificar datos en inventario: <span className="text-primary normal-case font-bold">{selProd.name}</span>
+                                    </h4>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] bg-muted px-2 py-0.5 rounded font-mono font-bold text-muted-foreground">
+                                      ID: {selProd.id.slice(0, 8)}
+                                    </span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => toggleProductMinimize(item.id)}
+                                      className="h-6 w-6 rounded-md hover:bg-muted p-0 shrink-0"
+                                      title={minimizedProductMap[item.id] ? "Maximizar panel" : "Minimizar panel"}
+                                    >
+                                      {minimizedProductMap[item.id] ? (
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                      ) : (
+                                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {!minimizedProductMap[item.id] && (
+                                  <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3">
+                                      {/* Nombre */}
+                                      <div className="flex flex-col gap-1 md:col-span-2">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nombre del Producto</label>
+                                        <Input
+                                          value={editVal.name}
+                                          onChange={(e) => updateProductMapField(item.id, 'name', e.target.value)}
+                                          className="h-9 text-xs font-semibold"
+                                        />
+                                      </div>
+
+                                      {/* Código de barras */}
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                          <Barcode className="h-3 w-3" /> Código Barras
+                                        </label>
+                                        <Input
+                                          value={editVal.barcode}
+                                          onChange={(e) => updateProductMapField(item.id, 'barcode', e.target.value)}
+                                          className="h-9 text-xs font-mono"
+                                        />
+                                      </div>
+
+                                      {/* Stock actual */}
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Stock Actual</label>
+                                        <Input
+                                          type="number"
+                                          value={editVal.stock}
+                                          onChange={(e) => updateProductMapField(item.id, 'stock', parseFloat(e.target.value) || 0)}
+                                          className="h-9 text-xs font-semibold"
+                                        />
+                                      </div>
+
+                                      {/* Costo */}
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-0.5">
+                                          <DollarSign className="h-3 w-3 text-blue-600" /> Costo ($)
+                                        </label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          value={editVal.cost}
+                                          onChange={(e) => {
+                                            const newCost = parseFloat(e.target.value) || 0;
+                                            updateProductMapField(item.id, 'cost', newCost);
+                                          }}
+                                          className="h-9 text-xs font-semibold"
+                                        />
+                                      </div>
+
+                                      {/* % Margen */}
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-0.5">% Margen</label>
+                                        <Input
+                                          type="number"
+                                          value={editVal.cost > 0 ? Math.round(((editVal.price - editVal.cost) / editVal.cost) * 100) : 0}
+                                          onChange={(e) => {
+                                            const pct = parseFloat(e.target.value) || 0;
+                                            const newPrice = editVal.cost * (1 + pct / 100);
+                                            updateProductMapField(item.id, 'price', parseFloat(newPrice.toFixed(2)));
+                                          }}
+                                          className="h-9 text-xs font-semibold"
+                                          placeholder="%"
+                                        />
+                                      </div>
+
+                                      {/* Precio Venta */}
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-0.5">
+                                          <DollarSign className="h-3 w-3 text-emerald-600" /> Precio Venta ($)
+                                        </label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          value={editVal.price}
+                                          onChange={(e) => updateProductMapField(item.id, 'price', parseFloat(e.target.value) || 0)}
+                                          className="h-9 text-xs font-semibold"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-2">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          // Reset to original values
+                                          setEditingProductMap(prev => ({
+                                            ...prev,
+                                            [item.id]: {
+                                              productId: item.productId,
+                                              name: selProd.name,
+                                              stock: selProd.stock || 0,
+                                              price: selProd.price || 0,
+                                              cost: selProd.cost || 0,
+                                              barcode: selProd.barcode || ''
+                                            }
+                                          }));
+                                        }}
+                                        className="h-8 px-3 text-xs font-semibold"
+                                      >
+                                        Restaurar
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => handleSaveProductEdit(item.id, item.productId)}
+                                        className="h-8 px-4 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm"
+                                      >
+                                        <Save className="h-3.5 w-3.5" />
+                                        Guardar Cambios
+                                      </Button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2113,6 +2774,15 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               </>
             )}
           </DialogFooter>
+
+          {showForm && quickCreateItemIdx !== null && (
+            <ProductForm
+              product={editingProduct}
+              prefilledValues={prefilledFormValues || undefined}
+              onClose={handleCloseForm}
+              onSuccess={handleProductFormSuccess}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -2173,6 +2843,16 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 value={quickCreateTax}
                 onChange={(e) => setQuickCreateTax(parseFloat(e.target.value) || 0)}
                 className="h-9 font-bold"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Código de Barras</label>
+              <Input
+                value={quickCreateBarcode}
+                onChange={(e) => setQuickCreateBarcode(e.target.value)}
+                placeholder="Código de barras..."
+                className="h-9 font-mono"
               />
             </div>
           </div>

@@ -27,6 +27,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InvoiceSequenceInput } from '@/components/settings/InvoiceSequenceInput';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
+import { LoadingLogo } from '@/components/ui/loading-logo';
 import {
   Building2,
   FileText,
@@ -86,8 +87,8 @@ const Settings = () => {
   // User profile and store hooks
   const { profile } = useUserProfile();
   const { data: userStore, isLoading: storeLoading } = useUserStore();
-  const { settings: companySettingsDB, updateSettings, isUpdating, uploadLogo, isUploadingLogo } = useCompanySettings();
-  const { settings: storeSettings, updateSettings: updateStoreSettings, isUpdating: isUpdatingStoreSettings } = useStoreSettings();
+  const { settings: companySettingsDB, updateSettings, isUpdating, uploadLogo, isUploadingLogo, isLoading: companySettingsLoading } = useCompanySettings();
+  const { settings: storeSettings, updateSettings: updateStoreSettings, isUpdating: isUpdatingStoreSettings, loadingSettings } = useStoreSettings();
 
   // Category hooks
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -101,6 +102,13 @@ const Settings = () => {
   // Alanube Config
   const { config: alanubeConfig } = useAlanubeConfig();
   const [localBillingMode, setLocalBillingMode] = useState<'ncf' | 'e-ncf'>('ncf');
+
+  // Sync billing mode from database config
+  useEffect(() => {
+    if (alanubeConfig) {
+      setLocalBillingMode(alanubeConfig.is_active ? 'e-ncf' : 'ncf');
+    }
+  }, [alanubeConfig]);
 
   // Company Information State - sync with database
   const [companyInfo, setCompanyInfo] = useState({
@@ -128,7 +136,7 @@ const Settings = () => {
   useEffect(() => {
     if (companySettingsDB) {
       const dbSettings = {
-        name: companySettingsDB.company_name || 'Mi Empresa',
+        name: companySettingsDB.company_name || userStore?.store_name || 'Mi Empresa',
         rnc: companySettingsDB.rnc || profile?.rnc || '',
         phone: companySettingsDB.phone || '',
         email: companySettingsDB.email || '',
@@ -146,8 +154,14 @@ const Settings = () => {
       };
       setCompanyInfo(dbSettings);
       setLogoPreview(companySettingsDB.logo_url || null);
+    } else if (userStore) {
+      setCompanyInfo(prev => ({
+        ...prev,
+        name: userStore.store_name || prev.name,
+        rnc: profile?.rnc || prev.rnc,
+      }));
     }
-  }, [companySettingsDB, profile?.rnc]);
+  }, [companySettingsDB, userStore, profile?.rnc]);
 
   // Invoice Settings State - synced with storeSettings
   const [invoiceSettings, setInvoiceSettings] = useState({
@@ -1246,6 +1260,10 @@ const Settings = () => {
         shopType={shopType}
         setShopType={setShopType}
         handleSaveSettings={handleSaveSettings}
+        onSaveBusinessType={async (type) => {
+          setShopType(type);
+          await updateStoreSettings({ shop_type: type } as any);
+        }}
       />
       <Separator />
       <BannerSettingsSection />
@@ -1955,6 +1973,15 @@ const Settings = () => {
       <SubscriptionOverview />
     </div>
   );
+
+  // Loading state
+  if (storeLoading || companySettingsLoading || loadingSettings || sequencesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LoadingLogo text="Cargando configuración..." />
+      </div>
+    );
+  }
 
   // Mobile layout
   if (isMobile) {

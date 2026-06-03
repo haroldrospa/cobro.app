@@ -31,9 +31,9 @@ export const useBusinessType = () => {
     // so existing users don't lose the kitchen screen after updating.
     const raw = settings?.shop_type;
     const businessType: BusinessType = (() => {
-        if (raw === 'store') return 'store';
+        if (raw === 'store' || raw === 'fashion' || raw === 'technology') return 'store';
         if (raw === 'supermarket') return 'supermarket';
-        return 'restaurant'; // 'restaurant', 'default', 'fashion', 'technology', undefined → restaurant
+        return 'restaurant'; // 'restaurant', 'default', undefined → restaurant
     })();
 
     const isRestaurant = businessType === 'restaurant';

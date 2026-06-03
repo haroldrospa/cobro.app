@@ -25,11 +25,12 @@ import { useSyncProductBarcodes } from '@/hooks/useProductBarcodes';
 
 interface ProductFormProps {
   product?: Product;
+  prefilledValues?: Partial<Product>;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (newProduct?: Product) => void;
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }) => {
+const ProductForm: React.FC<ProductFormProps> = ({ product, prefilledValues, onClose, onSuccess }) => {
   const { data: categories = [] } = useCategories();
   const createProduct = useCreateProductOffline();
   const updateProduct = useUpdateProductOffline();
@@ -59,26 +60,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
   const { register, handleSubmit, setValue, watch, formState: { errors, isDirty } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: product?.name || '',
-      price: product?.price || 0,
-      cost: product?.cost || undefined,
-      cost_includes_tax: product ? (product.cost_includes_tax ?? true) : true,
-      tax_percentage: product?.tax_percentage || 18,
-      internal_code: product?.internal_code || '',
-      barcode: product?.barcode || '',
-      category_id: product?.category_id || '',
-      stock: product?.stock || 0,
-      min_stock: product?.min_stock || 0,
-      status: (product?.status === 'low_stock' ? 'active' : product?.status) || 'active',
-      image_url: product?.image_url || '',
-      discount_percentage: product?.discount_percentage || 0,
-      discount_start_date: product?.discount_start_date || '',
-      discount_end_date: product?.discount_end_date || '',
-      is_featured: product?.is_featured || false,
-      is_variable_price: product?.is_variable_price || false,
-      is_variable_quantity: (product as any)?.is_variable_quantity || false,
-      is_visible_in_store: product?.is_visible_in_store ?? true,
-      track_inventory: product?.track_inventory ?? true,
+      name: product?.name || prefilledValues?.name || '',
+      price: product?.price || prefilledValues?.price || 0,
+      cost: product?.cost || prefilledValues?.cost || undefined,
+      cost_includes_tax: product ? (product.cost_includes_tax ?? true) : (prefilledValues?.cost_includes_tax ?? true),
+      tax_percentage: product?.tax_percentage || prefilledValues?.tax_percentage || 18,
+      internal_code: product?.internal_code || prefilledValues?.internal_code || '',
+      barcode: product?.barcode || prefilledValues?.barcode || '',
+      category_id: product?.category_id || prefilledValues?.category_id || '',
+      stock: product?.stock || prefilledValues?.stock || 0,
+      min_stock: product?.min_stock || prefilledValues?.min_stock || 0,
+      status: (product?.status === 'low_stock' ? 'active' : product?.status) || (prefilledValues?.status === 'low_stock' ? 'active' : prefilledValues?.status) || 'active',
+      image_url: product?.image_url || prefilledValues?.image_url || '',
+      discount_percentage: product?.discount_percentage || prefilledValues?.discount_percentage || 0,
+      discount_start_date: product?.discount_start_date || prefilledValues?.discount_start_date || '',
+      discount_end_date: product?.discount_end_date || prefilledValues?.discount_end_date || '',
+      is_featured: product?.is_featured || prefilledValues?.is_featured || false,
+      is_variable_price: product?.is_variable_price || prefilledValues?.is_variable_price || false,
+      is_variable_quantity: (product as any)?.is_variable_quantity || (prefilledValues as any)?.is_variable_quantity || false,
+      is_visible_in_store: product?.is_visible_in_store ?? prefilledValues?.is_visible_in_store ?? true,
+      track_inventory: product?.track_inventory ?? prefilledValues?.track_inventory ?? true,
     },
   });
 
@@ -132,6 +133,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
       };
 
       let savedProductId: string;
+      let createdProductObj: Product | undefined = undefined;
 
       if (product) {
         await updateProduct.mutateAsync({ id: product.id, ...productData });
@@ -140,6 +142,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
       } else {
         const created = await createProduct.mutateAsync(productData);
         savedProductId = (created as any).id;
+        createdProductObj = created as Product;
         toast({ title: "Producto creado", description: "El producto se ha creado correctamente." });
       }
 
@@ -147,7 +150,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
         await syncBarcodes.mutateAsync({ productId: savedProductId, barcodes: extraBarcodes });
       }
 
-      onSuccess();
+      onSuccess(createdProductObj || (product ? { ...product, ...productData } : undefined));
       onClose();
     } catch (error: any) {
       console.error('Error al guardar producto:', error);

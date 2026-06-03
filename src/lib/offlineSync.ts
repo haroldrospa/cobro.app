@@ -398,6 +398,35 @@ class OfflineSyncManager {
                 console.log(`🔢 ${sequences.length} secuencias sincronizadas`);
             }
 
+            // Sincronizar movimientos de inventario (historial de auditoría)
+            let movementsQuery = supabase
+                .from('inventory_movements' as any)
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(500)
+                .abortSignal(signal || null);
+
+            if (storeId) {
+                movementsQuery = movementsQuery.eq('store_id', storeId);
+            }
+
+            const { data: invMovements, error: invMovementsError } = await movementsQuery;
+
+            if (!invMovementsError && invMovements) {
+                const localMovements = await offlineDB.getAll<any>(OfflineStore.INVENTORY_MOVEMENTS);
+                const serverIds = new Set(invMovements.map(m => m.id));
+                
+                const toDelete = localMovements.filter(lm => lm.store_id === storeId && !serverIds.has(lm.id));
+                if (toDelete.length > 0) {
+                    await offlineDB.deleteBulk(OfflineStore.INVENTORY_MOVEMENTS, toDelete.map(item => item.id));
+                }
+
+                if (invMovements.length > 0) {
+                    await offlineDB.putBulk(OfflineStore.INVENTORY_MOVEMENTS, invMovements);
+                }
+                console.log(`📦 ${invMovements.length} movimientos de inventario sincronizados`);
+            }
+
         } catch (error: any) {
             if (!navigator.onLine || error?.message?.includes('Failed to fetch')) {
                 console.warn('Network error syncing from Supabase (offline/unstable):', error?.message);
@@ -410,6 +439,7 @@ class OfflineSyncManager {
 
     // Enviar operaciones pendientes a Supabase
     private async syncToSupabase(signal?: AbortSignal): Promise<void> {
+        await offlineDB.cleanOldSyncedItems();
         const pendingItems = await offlineDB.getPendingSyncItems();
 
         if (pendingItems.length === 0) {
@@ -456,6 +486,9 @@ class OfflineSyncManager {
                 break;
             case OfflineStore.CASH_SESSIONS:
                 await this.syncCashSession(operation, data, signal);
+                break;
+            case OfflineStore.INVENTORY_MOVEMENTS:
+                await this.syncInventoryMovement(operation, data, signal);
                 break;
             default:
                 console.warn('Store no soportado para sincronización:', store);
@@ -854,6 +887,17 @@ class OfflineSyncManager {
                     .eq('id', data.id);
                 if (deleteError) throw deleteError;
                 break;
+        }
+    }
+
+    // Sincronizar movimiento de inventario
+    private async syncInventoryMovement(operation: string, data: any, signal?: AbortSignal): Promise<void> {
+        if (operation === 'CREATE') {
+            const { error } = await supabase
+                .from('inventory_movements' as any)
+                .insert(data)
+                .abortSignal(signal || null);
+            if (error && error.code !== '23505') throw error;
         }
     }
 }

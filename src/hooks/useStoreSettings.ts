@@ -165,9 +165,22 @@ export const useStoreSettings = () => {
     }
 
     // Order of precedence: defaults < DB shared < localStorage < user metadata
-    // We merge them all.
+    // Remove global/shared POS UI preferences to ensure they are strictly per-user
+    const cleanExistingSettings = { ...existingSettings };
+    delete cleanExistingSettings.pos_view_mode;
+    delete cleanExistingSettings.pos_layout_mode;
+    delete cleanExistingSettings.pos_layout_grid_cols;
+
+    // Default UI values for any user that hasn't configured them yet
+    const uiDefaults = {
+      pos_view_mode: 'grid',
+      pos_layout_mode: 'catalog',
+      pos_layout_grid_cols: 4
+    };
+
     const mergedSettings = { 
-      ...existingSettings, 
+      ...uiDefaults,
+      ...cleanExistingSettings, 
       ...localSettings, 
       ...userPersistedSettings 
     };
@@ -352,6 +365,7 @@ export const useStoreSettings = () => {
         logo_width,
         pos_view_mode, // We filter these out from store-wide update if they are just UI choices
         pos_layout_mode,
+        pos_layout_grid_cols, // Filter out layout grid cols too as it's a per-user UI preference
         ...dbPayload
       } = newSettings as any;
 

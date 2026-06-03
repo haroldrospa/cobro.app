@@ -71,19 +71,50 @@ export const useCreateSaleOffline = () => {
             await offlineDB.put(OfflineStore.SALES, completeSale);
             console.log('💾 Venta guardada localmente:', localInvoiceNumber);
 
-            // Actualizar stock local en paralelo (Optimizado con putBulk)
+            // Actualizar stock local en paralelo (Optimizado con putBulk) y registrar movimientos
             const validItems = saleData.items.filter(item => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id));
             if (validItems.length > 0) {
                 const productsToUpdate: any[] = [];
+                const movementsToInsert: any[] = [];
+                const userName = user?.email || 'Sistema';
+
                 for (const item of validItems) {
                     const product = await offlineDB.get<any>(OfflineStore.PRODUCTS, item.id);
                     if (product) {
-                        product.stock = Math.max(0, (product.stock || 0) - item.quantity);
+                        const previousStock = product.stock || 0;
+                        const newStock = Math.max(0, previousStock - item.quantity);
+                        
+                        product.stock = newStock;
                         productsToUpdate.push(product);
+
+                        // Crear movimiento de historial de inventario
+                        const newMovement = {
+                            id: crypto.randomUUID(),
+                            store_id: storeId,
+                            product_id: item.id,
+                            profile_id: user?.id || null,
+                            user_name: userName,
+                            quantity_changed: -item.quantity,
+                            previous_stock: previousStock,
+                            new_stock: newStock,
+                            reason: `Venta #${localInvoiceNumber}`,
+                            created_at: new Date().toISOString(),
+                        };
+                        movementsToInsert.push(newMovement);
+
+                        // Añadir a la cola de sincronización para Supabase
+                        await offlineDB.addToSyncQueue({
+                            store: OfflineStore.INVENTORY_MOVEMENTS,
+                            operation: 'CREATE',
+                            data: newMovement,
+                        });
                     }
                 }
                 if (productsToUpdate.length > 0) {
                     await offlineDB.putBulk(OfflineStore.PRODUCTS, productsToUpdate);
+                }
+                if (movementsToInsert.length > 0) {
+                    await offlineDB.putBulk(OfflineStore.INVENTORY_MOVEMENTS, movementsToInsert);
                 }
             }
 
@@ -174,6 +205,7 @@ export const useCreateSaleOffline = () => {
             // Only invalidate what actually changes from a sale
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['sales'] });
+            queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
         },
     });
 };

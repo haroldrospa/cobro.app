@@ -322,6 +322,7 @@ export const useCreateProductOffline = () => {
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['products', 'offline', storeId] });
+            queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
         },
     });
 };
@@ -356,6 +357,7 @@ export const useUpdateProductOffline = () => {
             is_visible_in_store?: boolean;
             track_inventory?: boolean;
             store_id?: string;
+            reason?: string;
         }) => {
             const actualStoreId = product.store_id || storeId;
 
@@ -382,6 +384,36 @@ export const useUpdateProductOffline = () => {
                 updated_at: new Date().toISOString(),
             };
 
+            // Registrar movimiento de inventario si cambia el stock
+            const oldStock = existing?.stock || 0;
+            const newStock = product.stock || 0;
+            const diff = newStock - oldStock;
+
+            if (existing && diff !== 0) {
+                const { data: { user } } = await supabase.auth.getUser();
+                const userName = user?.email || 'Sistema';
+                
+                const newMovement = {
+                    id: crypto.randomUUID(),
+                    store_id: actualStoreId,
+                    product_id: id,
+                    profile_id: user?.id || null,
+                    user_name: userName,
+                    quantity_changed: diff,
+                    previous_stock: oldStock,
+                    new_stock: newStock,
+                    reason: product.reason || 'Ajuste manual de inventario',
+                    created_at: new Date().toISOString(),
+                };
+                
+                await offlineDB.put(OfflineStore.INVENTORY_MOVEMENTS, newMovement);
+                await offlineDB.addToSyncQueue({
+                    store: OfflineStore.INVENTORY_MOVEMENTS,
+                    operation: 'CREATE',
+                    data: newMovement,
+                });
+            }
+
             // Actualizar en IndexedDB
             await offlineDB.put(OfflineStore.PRODUCTS, updatedProduct);
 
@@ -389,7 +421,7 @@ export const useUpdateProductOffline = () => {
             if (isOnline) {
                 try {
                     // Filtrar propiedades relacionales que no existen en la tabla
-                    const { category, barcodes, created_at, updated_at, ...cleanProduct } = product as any;
+                    const { category, barcodes, created_at, updated_at, reason, ...cleanProduct } = product as any;
 
                     const { error } = await supabase
                         .from('products')
@@ -448,6 +480,7 @@ export const useUpdateProductOffline = () => {
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['products', 'offline', storeId] });
+            queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
         },
     });
 };

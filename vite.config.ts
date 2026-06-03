@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        navigateFallback: '/offline.html',
+        navigateFallback: '/index.html',
         runtimeCaching: [
           // ✅ Cache Supabase REST API calls — instant repeat loads
           {

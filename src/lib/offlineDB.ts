@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'CobroAppOfflineDB';
-const DB_VERSION = 6; // v6: Evitar error de version 4 a 5 cacheada
+const DB_VERSION = 7; // v7: Agregar historial de movimientos de inventario
 
 // Tipos de tiendas (stores) en IndexedDB
 export enum OfflineStore {
@@ -17,6 +17,7 @@ export enum OfflineStore {
     INVOICE_TYPES = 'invoice_types', // Cache de tipos de facturas
     EXPENSES = 'expenses',
     CASH_SESSIONS = 'cash_sessions',
+    INVENTORY_MOVEMENTS = 'inventory_movements',
 }
 
 export interface SyncQueueItem {
@@ -89,6 +90,13 @@ class OfflineDatabase {
                     const cashSessionStore = db.createObjectStore(OfflineStore.CASH_SESSIONS, { keyPath: 'id' });
                     cashSessionStore.createIndex('status', 'status', { unique: false });
                     cashSessionStore.createIndex('store_id', 'store_id', { unique: false });
+                }
+
+                if (!db.objectStoreNames.contains(OfflineStore.INVENTORY_MOVEMENTS)) {
+                    const movementStore = db.createObjectStore(OfflineStore.INVENTORY_MOVEMENTS, { keyPath: 'id' });
+                    movementStore.createIndex('store_id', 'store_id', { unique: false });
+                    movementStore.createIndex('product_id', 'product_id', { unique: false });
+                    movementStore.createIndex('created_at', 'created_at', { unique: false });
                 }
 
                 if (!db.objectStoreNames.contains(OfflineStore.SYNC_QUEUE)) {
@@ -328,22 +336,23 @@ class OfflineDatabase {
         if (item) {
             // Increment retry count (init to 0 if undefined)
             const currentRetries = item.retry_count || 0;
-            item.retry_count = currentRetries + 1;
+            const newRetries = currentRetries + 1;
+            item.retry_count = newRetries;
             item.error = error;
 
-            console.warn(`⚠️ Sync Item ${id} fallo (Intento ${item.retry_count}/5): ${error}`);
+            console.warn(`⚠️ Sync Item ${id} fallo (Intento ${newRetries}/5): ${error}`);
 
             // Max retries reached?
-            if (item.retry_count >= 5) {
-                console.error(`⛔️ Sync Item ${id} falló permanentemente tras 5 intentos. Se ignorará.`);
-                item.synced = 2; // Mark as permanently failed
+            if (newRetries >= 5) {
+                console.error(`⛔️ Sync Item ${id} falló permanentemente tras 5 intentos. Se eliminará de la cola.`);
+                await this.delete(OfflineStore.SYNC_QUEUE, id);
+            } else {
+                await this.put(OfflineStore.SYNC_QUEUE, item);
             }
-
-            await this.put(OfflineStore.SYNC_QUEUE, item);
         }
     }
 
-    // Limpiar items sincronizados antiguos (más de 7 días)
+    // Limpiar items sincronizados antiguos (más de 7 días) o fallidos
     async cleanOldSyncedItems(): Promise<void> {
         if (!this.db) await this.init();
 
@@ -351,7 +360,14 @@ class OfflineDatabase {
         const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
         for (const item of allItems) {
-            if ((item.synced === 1 || item.synced === true as any) && item.timestamp < sevenDaysAgo && item.id) {
+            if (!item.id) continue;
+            
+            // Delete permanently failed or maximum retries reached immediately
+            if (item.synced === 2 || (item.retry_count && item.retry_count >= 5)) {
+                await this.delete(OfflineStore.SYNC_QUEUE, item.id);
+            }
+            // Delete old synced items (older than 7 days)
+            else if ((item.synced === 1 || item.synced === true as any) && item.timestamp < sevenDaysAgo) {
                 await this.delete(OfflineStore.SYNC_QUEUE, item.id);
             }
         }
