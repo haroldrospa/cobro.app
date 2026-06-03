@@ -287,41 +287,47 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <div className={`flex items-center justify-between p-3 border-b border-border bg-card fixed w-full z-40 shadow-md transition-all duration-300 ${shouldAddMargin ? 'top-6' : 'top-0'}`}>
         <div className="flex items-center gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-3 h-10">
-                <Menu className="h-5 w-5" />
-                <span className="font-semibold">{getCurrentPageName()}</span>
-                <ChevronDown className="h-4 w-4 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 bg-popover">
-              {navigation.map(item => {
-                const Icon = item.icon;
-                return (
-                  <DropdownMenuItem key={item.name} asChild>
-                    <Link
-                      to={item.href}
-                      onMouseEnter={() => handlePrefetch(item.href)}
-                      className={`flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-accent text-accent-foreground' : ''
-                        }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                );
-              })}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={handleLogout}
-                className="flex items-center gap-2 px-2 py-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Cerrar Sesión</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Mobile view: simple page title */}
+          <span className="font-semibold text-lg px-3 md:hidden text-foreground">{getCurrentPageName()}</span>
+
+          {/* Desktop view: Dropdown Navigation Menu */}
+          <div className="hidden md:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 px-3 h-10">
+                  <Menu className="h-5 w-5" />
+                  <span className="font-semibold">{getCurrentPageName()}</span>
+                  <ChevronDown className="h-4 w-4 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 bg-popover">
+                {navigation.map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.name} asChild>
+                      <Link
+                        to={item.href}
+                        onMouseEnter={() => handlePrefetch(item.href)}
+                        className={`flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-accent text-accent-foreground' : ''
+                          }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={handleLogout}
+                  className="flex items-center gap-2 px-2 py-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Cerrar Sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
