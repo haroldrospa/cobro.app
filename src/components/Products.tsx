@@ -2122,7 +2122,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
         setIsAIStockOpen(open);
       }}>
         <DialogContent 
-          className="max-w-[95vw] lg:max-w-[1150px] w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 gap-4 sm:gap-6 mx-auto"
+          className="max-w-[95vw] lg:max-w-[1150px] w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 gap-4 sm:gap-6 rounded-2xl inset-x-auto left-[50%] bottom-auto top-[50%] translate-x-[-50%] translate-y-[-50%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogHeader>
