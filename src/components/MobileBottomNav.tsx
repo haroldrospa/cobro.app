@@ -81,7 +81,7 @@ export const MobileBottomNav: React.FC = () => {
       { name: 'POS', href: '/pos', icon: ShoppingCart },
       { name: 'Inicio', href: '/dashboard', icon: Home },
       { name: 'Productos', href: '/products', icon: Package },
-      { name: 'Clientes', href: '/customers', icon: Users },
+      { name: 'Contabilidad', href: '/accounting', icon: FileText },
     ];
   }, [profile, hasKitchenDisplay, hasDelivery, isKitchen, isDelivery]);
 
@@ -95,7 +95,7 @@ export const MobileBottomNav: React.FC = () => {
       ...(hasKitchenDisplay ? [{ name: 'Cocina', href: '/kitchen', icon: ChefHat }] : []),
       { name: 'Facturas', href: '/invoices', icon: FileText },
       { name: 'Reportes', href: '/reports', icon: BarChart },
-      { name: 'Contabilidad', href: '/accounting', icon: FileText },
+      { name: 'Clientes', href: '/customers', icon: Users },
       { name: 'Empleados', href: '/employees', icon: Users },
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
       { name: 'Mi Cuenta', href: '/subscription', icon: User },
