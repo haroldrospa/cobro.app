@@ -24,6 +24,22 @@ const initialState: ThemeProviderState = {
     setScale: () => null,
 }
 
+const safeGetItem = (key: string): string | null => {
+    try {
+        return localStorage.getItem(key);
+    } catch (e) {
+        return null;
+    }
+};
+
+const safeSetItem = (key: string, value: string): void => {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) {
+        // Ignore exception silently
+    }
+};
+
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({
@@ -34,12 +50,12 @@ export function ThemeProvider({
     scaleStorageKey = "vite-ui-scale",
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(
-        () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+        () => (safeGetItem(storageKey) as Theme) || defaultTheme
     )
 
     const [scale, setScale] = useState<number>(
         () => {
-            const storedScale = localStorage.getItem(scaleStorageKey);
+            const storedScale = safeGetItem(scaleStorageKey);
             return storedScale ? parseFloat(storedScale) : defaultScale;
         }
     )
@@ -73,12 +89,12 @@ export function ThemeProvider({
     const value = {
         theme,
         setTheme: (theme: Theme) => {
-            localStorage.setItem(storageKey, theme)
+            safeSetItem(storageKey, theme)
             setTheme(theme)
         },
         scale,
         setScale: (scale: number) => {
-            localStorage.setItem(scaleStorageKey, String(scale))
+            safeSetItem(scaleStorageKey, String(scale))
             setScale(scale)
         }
     }
