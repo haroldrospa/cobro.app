@@ -48,7 +48,7 @@ export const useExpenses = () => {
                     )
                 `)
                 .eq('store_id', userStore.id)
-                .order('date', { ascending: false });
+                .order('created_at', { ascending: false });
 
             if (error) {
                 console.error('Error loading expenses:', error);
@@ -84,7 +84,11 @@ export const useExpenses = () => {
             const uniqueMap = new Map();
             allExpenses.forEach(ex => uniqueMap.set(ex.id, ex));
 
-            return Array.from(uniqueMap.values()).sort((a: any, b: any) => b.date.getTime() - a.date.getTime()) as Expense[];
+            return Array.from(uniqueMap.values()).sort((a: any, b: any) => {
+                const timeA = new Date(a.created_at || a.date || 0).getTime();
+                const timeB = new Date(b.created_at || b.date || 0).getTime();
+                return timeB - timeA;
+            }) as Expense[];
         },
         enabled: !!userStore?.id,
     });

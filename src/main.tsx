@@ -5,6 +5,11 @@ import App from './App.tsx'
 import './index.css'
 import './styles/date-range-picker.css'
 import { registerSW } from 'virtual:pwa-register';
+import { initGlobalKeyboardAvoid } from './hooks/useKeyboardAvoid';
+
+// Activar scroll-into-view global cuando el teclado virtual aparece en móvil
+initGlobalKeyboardAvoid();
+
 
 // Register PWA Service Worker
 const updateSW = registerSW({

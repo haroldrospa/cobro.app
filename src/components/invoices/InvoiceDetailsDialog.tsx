@@ -89,32 +89,95 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
           {/* Productos */}
           <div>
             <h3 className="font-semibold mb-3">Productos</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                  <TableHead>Precio Unit.</TableHead>
-                  <TableHead>Descuento</TableHead>
-                  <TableHead>Subtotal</TableHead>
-                  <TableHead>ITBIS</TableHead>
-                  <TableHead>Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sale.sale_items?.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.product?.name}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>${item.unit_price.toFixed(2)}</TableCell>
-                    <TableCell>{item.discount_percentage || 0}%</TableCell>
-                    <TableCell>${item.subtotal.toFixed(2)}</TableCell>
-                    <TableCell>${item.tax_amount.toFixed(2)}</TableCell>
-                    <TableCell className="font-semibold">${item.total.toFixed(2)}</TableCell>
+            
+            {/* Vista Escritorio */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead className="text-center">Cantidad</TableHead>
+                    <TableHead className="text-right">Precio Unit.</TableHead>
+                    <TableHead className="text-center">Descuento</TableHead>
+                    <TableHead className="text-right">Subtotal</TableHead>
+                    <TableHead className="text-right">ITBIS</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {sale.sale_items?.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {item.product?.image_url ? (
+                            <img
+                              src={item.product.image_url}
+                              alt={item.product.name}
+                              className="w-10 h-10 object-cover rounded-lg border bg-background"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-muted border flex items-center justify-center rounded-lg text-muted-foreground text-[10px] font-bold">
+                              SIN IMG
+                            </div>
+                          )}
+                          <span className="font-semibold text-foreground">
+                            {item.product?.name || 'Producto'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">{item.quantity}</TableCell>
+                      <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                      <TableCell className="text-center">{item.discount_percentage || 0}%</TableCell>
+                      <TableCell className="text-right">${item.subtotal.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${item.tax_amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-semibold">${item.total.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Vista Móvil (Tarjetas) */}
+            <div className="md:hidden space-y-3">
+              {sale.sale_items?.map((item) => (
+                <div key={item.id} className="flex gap-3 p-3 bg-muted/10 border border-border/30 rounded-2xl">
+                  {item.product?.image_url ? (
+                    <img
+                      src={item.product.image_url}
+                      alt={item.product.name}
+                      className="w-16 h-16 object-cover rounded-xl border bg-background shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-muted border flex items-center justify-center rounded-xl text-muted-foreground text-[11px] font-bold shrink-0">
+                      SIN IMG
+                    </div>
+                  )}
+                  <div className="flex-1 flex flex-col justify-between min-w-0">
+                    <div className="space-y-0.5">
+                      <h4 className="font-semibold text-sm text-foreground truncate">{item.product?.name || 'Producto'}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {item.quantity} {item.quantity === 1 ? 'unidad' : 'unidades'} × ${item.unit_price.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-end pt-1">
+                      <div className="flex items-center gap-1.5">
+                        {item.discount_percentage ? (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-red-500/10 text-red-500 hover:bg-red-500/20 border-none">
+                            -{item.discount_percentage}%
+                          </Badge>
+                        ) : null}
+                        <span className="text-[11px] text-muted-foreground font-mono">
+                          ITBIS: ${item.tax_amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <span className="font-black text-sm text-foreground">
+                        ${item.total.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Totales */}

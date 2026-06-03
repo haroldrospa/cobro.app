@@ -19,7 +19,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -36,16 +36,33 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-4 top-[10%] sm:inset-x-auto sm:left-[50%] sm:top-[50%] z-50 grid w-auto sm:w-full max-w-lg sm:translate-x-[-50%] translate-y-0 sm:translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-top-[10%] sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-top-[10%] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%] rounded-xl sm:rounded-lg max-h-[85vh] overflow-y-auto overflow-x-hidden",
+        // ── Base ──
+        "fixed z-50 grid gap-4 border bg-background shadow-lg duration-200",
+        // ── Animaciones Desktop ──
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        // ── MOBILE: Bottom Sheet ──
+        // Anclado al fondo, ocupa hasta 90dvh, desliza desde abajo
+        "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5",
+        "max-h-[90dvh] overflow-y-auto overflow-x-hidden",
+        "data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4",
+        // ── DESKTOP (sm+): Dialog centrado ──
+        "sm:inset-x-auto sm:left-[50%] sm:bottom-auto sm:top-[50%]",
+        "sm:translate-x-[-50%] sm:translate-y-[-50%]",
+        "sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6",
+        "sm:max-h-[85vh]",
+        "sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=closed]:slide-out-to-left-1/2",
+        "sm:data-[state=open]:slide-in-from-top-[48%] sm:data-[state=closed]:slide-out-to-top-[48%]",
+        "sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95",
         className
       )}
       {...props}
     >
       {children}
       {!hideCloseButton && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <DialogPrimitive.Close className="absolute right-4 top-4 z-50 rounded-full p-1 opacity-70 ring-offset-background transition-all hover:opacity-100 hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">Cerrar</span>
         </DialogPrimitive.Close>
       )}
     </DialogPrimitive.Content>
@@ -73,7 +90,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:space-x-2 sm:gap-0",
       className
     )}
     {...props}

@@ -139,7 +139,14 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
             </TableHeader>
             <TableBody>
               {sales.map((sale) => (
-                <TableRow key={sale.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onDoubleClick={() => handlePreview(sale)}>
+                <TableRow 
+                  key={sale.id} 
+                  className="hover:bg-muted/30 transition-colors cursor-pointer" 
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    onViewDetails(sale);
+                  }}
+                >
                   <TableCell className="font-bold text-primary">{sale.invoice_number}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
@@ -199,7 +206,14 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
         {/* Mobile View (Cards) */}
         <div className="md:hidden divide-y divide-border">
           {sales.map((sale) => (
-            <div key={sale.id} className="p-4 space-y-4 hover:bg-muted/20 transition-colors cursor-pointer" onDoubleClick={() => handlePreview(sale)}>
+            <div 
+              key={sale.id} 
+              className="p-4 space-y-4 hover:bg-muted/20 transition-colors cursor-pointer" 
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('button')) return;
+                onViewDetails(sale);
+              }}
+            >
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">

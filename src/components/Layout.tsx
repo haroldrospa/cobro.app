@@ -15,6 +15,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { Badge } from '@/components/ui/badge';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -338,10 +339,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </div>
 
-      {/* Contenido principal */}
-      <main className={`p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto ${shouldAddMargin ? 'pt-28' : 'pt-20'}`}>
+      {/* Contenido principal - padding bottom en mobile para no quedar detrás del bottom nav */}
+      <main className={`p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto pb-20 md:pb-6 lg:pb-8 ${shouldAddMargin ? 'pt-28' : 'pt-20'}`}>
         {children}
       </main>
+
+      {/* Barra de navegación inferior para móviles */}
+      <MobileBottomNav />
     </div>
   );
 };

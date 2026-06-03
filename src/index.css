@@ -418,3 +418,167 @@ img {
   content-visibility: auto;
   contain-intrinsic-size: auto 180px;
 }
+
+/* ══════════════════════════════════════════
+   MOBILE-FIRST IMPROVEMENTS
+   ══════════════════════════════════════════ */
+
+/* 
+ * Bottom Navigation Bar spacing
+ * Asegurar que el contenido no quede detrás del bottom nav en móvil
+ */
+@media (max-width: 767px) {
+  /* Los diálogos/sheets en mobile se posicionan sobre el bottom nav */
+  [data-radix-dialog-content],
+  [data-radix-alert-dialog-content] {
+    /* El max-h ya considera el safe-area en dialog.tsx */
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  /* Tablas: scroll horizontal en mobile */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* Columnas de tabla que pueden truncarse en mobile */
+  .mobile-truncate {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* 
+ * Touch targets mínimos (Apple HIG: 44x44pt, Google: 48x48dp)
+ * Garantiza que todos los elementos interactivos sean tocables cómodamente
+ */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a,
+  select,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Excepciones: badges, chips y elementos inline pequeños */
+  .badge, [data-badge], .chip {
+    min-height: auto;
+    min-width: auto;
+  }
+
+  /* Inputs y textareas: altura mínima cómoda */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    min-height: 44px;
+    /* font-size: 16px ya está en index.html para evitar zoom en iOS */
+  }
+}
+
+/* 
+ * Dialog bottom sheet — handle bar indicator
+ * La línea gris en la parte superior del sheet en mobile
+ */
+@media (max-width: 639px) {
+  /* Indicador visual de que el sheet puede arrastrarse */
+  [data-radix-dialog-content]::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 9999px;
+    margin: 0 auto 0.75rem;
+  }
+}
+
+/* 
+ * Mejorar la legibilidad en móvil de textos pequeños
+ */
+@media (max-width: 640px) {
+  /* Los labels de los formularios son más legibles en mobile */
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  /* Cards en mobile sin padding excesivo */
+  .card, [data-card] {
+    border-radius: 0.75rem;
+  }
+
+  /* Botones en mobile siempre con texto legible */
+  button:not([class*="p-"]):not([class*="size-"]) {
+    font-size: 0.9375rem;
+  }
+
+  /* Reducir gap en grids de métricas del dashboard */
+  .grid.gap-4 {
+    gap: 0.75rem;
+  }
+
+  /* Tabs en mobile: scroll horizontal en lugar de wrap */
+  [role="tablist"]:not(.flex-col) {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  [role="tablist"]:not(.flex-col)::-webkit-scrollbar {
+    display: none;
+  }
+  [role="tab"] {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* 
+ * Prevenir que el body haga scroll cuando un sheet/dialog está abierto
+ * Radix lo maneja automáticamente, pero esto es un refuerzo para iOS
+ */
+body[data-scroll-locked] {
+  /* Radix añade esto: asegurar que funcione en iOS */
+  position: fixed;
+  width: 100%;
+  overflow-y: scroll;
+}
+
+/* 
+ * Select nativo en mobile — mejora visual
+ */
+@media (max-width: 768px) {
+  /* El dropdown de Radix Select en mobile cabe en pantalla */
+  [data-radix-select-content] {
+    max-height: min(40vh, 280px) !important;
+  }
+}
+
+/*
+ * Utility class para formularios responsivos
+ * Uso: className="form-grid"
+ * Desktop: 2 columnas, Mobile: 1 columna
+ */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.form-grid-full {
+  grid-column: 1 / -1;
+}
+

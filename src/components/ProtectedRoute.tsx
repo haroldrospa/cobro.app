@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getSessionSafe, invalidateSessionCache } from '@/lib/authSession';
 import { Session } from '@supabase/supabase-js';
 import { Loader2, AlertCircle, Settings2, RefreshCcw, ServerCrash, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -32,114 +33,121 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     let mounted = true;
 
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        // Usar getSessionSafe para manejar AbortErrors y llamadas concurrentes
+        const session = await getSessionSafe();
 
-      if (!session) {
-        if (mounted) {
-          // Clear the cached user id so next load won't try to optimistically render
-          localStorage.removeItem('cobro_last_user_id');
-          setSession(null);
-          setLoading(false);
-        }
-        return;
-      }
-
-      // OPTIMIZACIÓN: Consulta única usando limit(1) para evitar errores 406 de PostgREST
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select(`
-            is_active, 
-            store_id, 
-            stores:store_id (
-                is_active
-            )
-        `)
-        .eq('id', session.user.id)
-        .limit(1);
-
-      if (error) {
-        console.error("Error checking profile:", error);
-      }
-
-      if (!mounted) return;
-
-      const profile = profiles && profiles.length > 0 ? profiles[0] : null;
-
-      if (profile) {
-        // 1. Check User Status
-        if (profile.is_active === false) {
-          await supabase.auth.signOut();
-          localStorage.removeItem('cobro_last_user_id');
-          toast({
-            variant: "destructive",
-            title: "Acceso denegado",
-            description: "Tu usuario ha sido desactivado.",
-          });
-          setSession(null);
-          setLoading(false);
+        if (!session) {
+          if (mounted) {
+            // Clear the cached user id so next load won't try to optimistically render
+            localStorage.removeItem('cobro_last_user_id');
+            setSession(null);
+            setLoading(false);
+          }
           return;
         }
 
-        // 2. Check Store Status (Optimizado)
-        // @ts-ignore
-        const store = profile.stores;
-        if (store && store.is_active === false) {
-          navigate('/store-suspended');
-          return;
+        // OPTIMIZACIÓN: Consulta única usando limit(1) para evitar errores 406 de PostgREST
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select(`
+              is_active, 
+              store_id, 
+              stores:store_id (
+                  is_active
+              )
+          `)
+          .eq('id', session.user.id)
+          .limit(1);
+
+        if (error) {
+          console.error("Error checking profile:", error);
         }
 
-        // 3. Check Onboarding Status
-        const isOnboarded = session.user.user_metadata?.onboarding_completed;
-        const currentPath = window.location.pathname;
-        if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
-          navigate('/onboarding', { replace: true });
-          return;
-        } else if (isOnboarded && currentPath === '/onboarding') {
-          navigate('/app', { replace: true });
-          return;
-        }
-        
-        setSession(session);
-        setProfileMissing(false);
-      } else {
-        // User logged in but no profile found — try to auto-repair first
-        console.warn("User has no profile record. Attempting auto-repair...");
-        try {
-          const { data: repaired, error: repairError } = await supabase.rpc('auto_repair_profile');
-          if (repaired === true && !repairError) {
-            console.log("Profile auto-repaired successfully. Retrying auth check...");
-            // Retry the profile check after repair
-            const { data: retriedProfiles } = await supabase
-              .from('profiles')
-              .select('is_active, store_id, stores:store_id (is_active)')
-              .eq('id', session.user.id)
-              .limit(1);
-            const retriedProfile = retriedProfiles && retriedProfiles.length > 0 ? retriedProfiles[0] : null;
-            if (retriedProfile) {
-              localStorage.setItem('cobro_last_user_id', session.user.id);
-              
-              // Check onboarding for repaired profiles too
-              const isOnboarded = session.user.user_metadata?.onboarding_completed;
-              const currentPath = window.location.pathname;
-              if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
-                navigate('/onboarding', { replace: true });
+        if (!mounted) return;
+
+        const profile = profiles && profiles.length > 0 ? profiles[0] : null;
+
+        if (profile) {
+          // 1. Check User Status
+          if (profile.is_active === false) {
+            await supabase.auth.signOut();
+            localStorage.removeItem('cobro_last_user_id');
+            toast({
+              variant: "destructive",
+              title: "Acceso denegado",
+              description: "Tu usuario ha sido desactivado.",
+            });
+            setSession(null);
+            setLoading(false);
+            return;
+          }
+
+          // 2. Check Store Status (Optimizado)
+          // @ts-ignore
+          const store = profile.stores;
+          if (store && store.is_active === false) {
+            navigate('/store-suspended');
+            return;
+          }
+
+          // 3. Check Onboarding Status
+          const isOnboarded = session.user.user_metadata?.onboarding_completed;
+          const currentPath = window.location.pathname;
+          if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+            navigate('/onboarding', { replace: true });
+            return;
+          } else if (isOnboarded && currentPath === '/onboarding') {
+            navigate('/app', { replace: true });
+            return;
+          }
+          
+          setSession(session);
+          setProfileMissing(false);
+        } else {
+          // User logged in but no profile found — try to auto-repair first
+          console.warn("User has no profile record. Attempting auto-repair...");
+          try {
+            const { data: repaired, error: repairError } = await supabase.rpc('auto_repair_profile');
+            if (repaired === true && !repairError) {
+              console.log("Profile auto-repaired successfully. Retrying auth check...");
+              // Retry the profile check after repair
+              const { data: retriedProfiles } = await supabase
+                .from('profiles')
+                .select('is_active, store_id, stores:store_id (is_active)')
+                .eq('id', session.user.id)
+                .limit(1);
+              const retriedProfile = retriedProfiles && retriedProfiles.length > 0 ? retriedProfiles[0] : null;
+              if (retriedProfile) {
+                localStorage.setItem('cobro_last_user_id', session.user.id);
+                
+                // Check onboarding for repaired profiles too
+                const isOnboarded = session.user.user_metadata?.onboarding_completed;
+                const currentPath = window.location.pathname;
+                if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+                  navigate('/onboarding', { replace: true });
+                  return;
+                }
+
+                setSession(session);
+                setProfileMissing(false);
+                setLoading(false);
                 return;
               }
-
-              setSession(session);
-              setProfileMissing(false);
-              setLoading(false);
-              return;
             }
+          } catch (repairErr) {
+            console.error("auto_repair_profile failed:", repairErr);
           }
-        } catch (repairErr) {
-          console.error("auto_repair_profile failed:", repairErr);
+          // Only show missing screen if repair failed too
+          if (!hasCachedUser) setProfileMissing(true);
         }
-        // Only show missing screen if repair failed too
-        if (!hasCachedUser) setProfileMissing(true);
+      } catch (err) {
+        console.error("Exception in checkAuth:", err);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-
-      setLoading(false);
     };
 
     checkAuth();
@@ -147,6 +155,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         if (mounted) {
+          invalidateSessionCache(); // Limpiar cache de sesión al cerrar sesión
           localStorage.removeItem('cobro_last_user_id');
           setSession(null);
           setProfileMissing(false);
@@ -154,6 +163,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         }
       } else if (session) {
         if (event === 'SIGNED_IN') {
+          invalidateSessionCache(); // Forzar re-fetch al iniciar sesión
           checkAuth();
         } else {
           if (mounted) setSession(session);

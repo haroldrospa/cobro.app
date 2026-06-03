@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getSessionSafe } from '@/lib/authSession';
 
 export interface UserStore {
   id: string;
@@ -35,25 +36,41 @@ const getCachedStore = (userId: string | undefined): UserStore | null => {
   }
 };
 
+/**
+ * Obtiene el userId de forma segura:
+ * 1. Intenta obtener la sesión real de Supabase (con reintentos ante AbortError)
+ * 2. Fallback al último userId conocido en localStorage
+ */
+const resolveUserId = async (): Promise<string | null> => {
+  // Intentar sesión real primero
+  const session = await getSessionSafe();
+  if (session?.user?.id) return session.user.id;
+
+  // Fallback offline: último userId conocido
+  return localStorage.getItem('cobro_last_user_id');
+};
+
 export const useUserStore = () => {
+  // Query de sesión: usa el helper seguro con deduplicación y reintentos
   const { data: sessionData, isPending: isSessionPending } = useQuery({
     queryKey: ['auth-session'],
     queryFn: async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) return data.session;
-      } catch (e) {
-        console.warn("getSession failed (offline?)");
-      }
+      const session = await getSessionSafe();
+      if (session) return session;
+
+      // Fallback: devolver objeto mínimo con el userId cacheado
       const lastUserId = localStorage.getItem('cobro_last_user_id');
       if (lastUserId) {
-        return { user: { id: lastUserId } };
+        return { user: { id: lastUserId } } as any;
       }
       return null;
     },
-    staleTime: 1000 * 60 * 30, // 30 min — session doesn't expire mid-session
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5,   // 5 min — refrescar la sesión con más frecuencia
+    gcTime: 1000 * 60 * 60,
+    refetchOnMount: true,        // Siempre verificar la sesión al montar
+    refetchOnWindowFocus: true,  // Verificar cuando el usuario vuelve a la pestaña
+    retry: 2,
+    retryDelay: 500,
   });
 
   const userId = sessionData?.user?.id;
@@ -66,9 +83,27 @@ export const useUserStore = () => {
     refetchOnMount: false,         // Use React Query cache on every navigation
     enabled: !isSessionPending,    // Wait for auth to resolve before determining if we have a user
     initialData: userId ? getCachedStore(userId) || undefined : undefined,
+    retry: (failureCount, error: any) => {
+      // Reintentar hasta 2 veces, pero no si es error de validación de datos
+      if (failureCount >= 2) return false;
+      const msg = error?.message ?? '';
+      if (msg.includes('406') || msg.includes('PGRST116')) return false;
+      return true;
+    },
+    retryDelay: 1000,
     queryFn: async () => {
       try {
-        if (!userId) return null;
+        // Si no tenemos userId todavía, intentar resolverlo
+        const effectiveUserId = userId || await resolveUserId();
+        if (!effectiveUserId) return null;
+
+        // Verificar que la sesión sea válida antes de hacer la query
+        const session = await getSessionSafe();
+        if (!session) {
+          // Sin sesión válida, usar cache local
+          console.warn('[useUserStore] Sin sesión válida, usando cache local');
+          return getCachedStore(effectiveUserId);
+        }
 
         const { data, error } = await supabase
           .from('profiles')
@@ -84,18 +119,34 @@ export const useUserStore = () => {
               store_settings (*)
             )
           `)
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
 
         if (error) {
+          // Auth/JWT errors → intentar refrescar sesión y usar cache
+          const isAuthError = error.code === 'PGRST301' ||
+            error.message?.includes('JWT') ||
+            error.message?.includes('not authenticated') ||
+            error.message?.includes('invalid claim') ||
+            (error as any).status === 401;
+
+          if (isAuthError) {
+            console.warn('[useUserStore] Error de autenticación, refrescando sesión...');
+            try {
+              await supabase.auth.refreshSession();
+            } catch { /* ignore */ }
+            return getCachedStore(effectiveUserId);
+          }
+
           if (error.message?.includes('AbortError') || error.code === '20') {
-            return getCachedStore(userId);
+            return getCachedStore(effectiveUserId);
           }
           if (!navigator.onLine || error.message?.includes('Failed to fetch')) {
-            return getCachedStore(userId);
+            return getCachedStore(effectiveUserId);
           }
           console.error('Error loading user store:', error);
-          throw error;
+          // En lugar de throw (que deshabilitaría futuras queries), retornar cache
+          return getCachedStore(effectiveUserId);
         }
 
         if (!data?.store_id || !data?.stores) {
@@ -110,12 +161,12 @@ export const useUserStore = () => {
               owner_id,
               store_settings (*)
             `)
-            .eq('owner_id', userId)
+            .eq('owner_id', effectiveUserId)
             .limit(1);
 
           if (recoveryError) {
             console.error("Recovery failed:", recoveryError);
-            return getCachedStore(userId);
+            return getCachedStore(effectiveUserId);
           }
 
           if (ownedStores && ownedStores.length > 0) {
@@ -123,20 +174,20 @@ export const useUserStore = () => {
             await supabase
               .from('profiles')
               .update({ store_id: storeToLink.id })
-              .eq('id', userId);
+              .eq('id', effectiveUserId);
 
             const storeData = storeToLink as any;
             if (Array.isArray(storeData.store_settings)) {
               storeData.store_settings = storeData.store_settings[0];
             }
             try {
-              localStorage.setItem(`${STORE_CACHE_KEY}_${userId}`, JSON.stringify(storeData));
+              localStorage.setItem(`${STORE_CACHE_KEY}_${effectiveUserId}`, JSON.stringify(storeData));
             } catch (e) {
               console.warn('Failed to cache store:', e);
             }
             return storeData as UserStore;
           }
-          return getCachedStore(userId);
+          return getCachedStore(effectiveUserId);
         }
 
         const storeData = data.stores as any;
@@ -144,14 +195,15 @@ export const useUserStore = () => {
           storeData.store_settings = storeData.store_settings[0];
         }
         try {
-          localStorage.setItem(`${STORE_CACHE_KEY}_${userId}`, JSON.stringify(storeData));
+          localStorage.setItem(`${STORE_CACHE_KEY}_${effectiveUserId}`, JSON.stringify(storeData));
         } catch (e) {
           console.warn('Failed to cache store:', e);
         }
         return storeData as UserStore;
       } catch (err: any) {
         console.error("Exception in userStore query:", err);
-        return getCachedStore(userId);
+        const fallbackId = userId || localStorage.getItem('cobro_last_user_id') || undefined;
+        return getCachedStore(fallbackId);
       }
     },
   });

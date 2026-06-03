@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getSessionSafe } from '@/lib/authSession';
 
 export interface UserProfile {
   id: string;
@@ -30,23 +31,14 @@ const getLastUserId = (): string | null =>
   localStorage.getItem('cobro_last_user_id');
 
 const fetchUserProfile = async (): Promise<UserProfile | null> => {
-  // 1. Resolve current user (try session first, then getUser, then offline fallback)
+  // 1. Resolve current user using the safe session helper (retry + deduplication)
   let userId: string | null = null;
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getSessionSafe();
     userId = session?.user?.id ?? null;
   } catch {
-    console.warn('getSession failed (offline?)');
-  }
-
-  if (!userId) {
-    try {
-      const { data } = await supabase.auth.getUser();
-      userId = data.user?.id ?? null;
-    } catch {
-      console.warn('getUser failed (offline?)');
-    }
+    console.warn('[useUserProfile] getSessionSafe failed');
   }
 
   // Offline recovery: use last known user id
@@ -59,63 +51,68 @@ const fetchUserProfile = async (): Promise<UserProfile | null> => {
   localStorage.setItem('cobro_last_user_id', userId);
 
   // 2. Fetch profile from DB
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, email, user_number, store_id, role')
-    .eq('id', userId)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, user_number, store_id, role')
+      .eq('id', userId)
+      .maybeSingle();
 
-  if (error) {
-    console.error('Error fetching profile:', error);
-    // Return cached version on error rather than null
+    if (error) {
+      console.error('Error fetching profile:', error);
+      // Return cached version on error rather than null
+      return getLocalProfile(userId) ?? null;
+    }
+
+    if (!data) return null;
+
+    let storeId = data.store_id;
+
+    // Recovery: if store_id missing, look up owned store
+    if (!storeId) {
+      const { data: owned } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('owner_id', userId)
+        .limit(1);
+      if (owned && owned.length > 0) {
+        storeId = owned[0].id;
+        // Update in background — don't await (keep startup fast)
+        supabase.from('profiles').update({ store_id: storeId }).eq('id', userId).then();
+      }
+    }
+
+    // Get avatar and rnc from auth metadata (no extra fetch needed)
+    let avatarUrl: string | null = null;
+    let rnc: string | null = null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      avatarUrl = user?.user_metadata?.avatar_url ?? null;
+      rnc = user?.user_metadata?.rnc ?? null;
+    } catch { /* ignore */ }
+
+    const profile: UserProfile = {
+      id: data.id,
+      full_name: data.full_name,
+      email: data.email,
+      user_number: data.user_number,
+      store_id: storeId,
+      role: data.role,
+      is_active: null,
+      avatar_url: avatarUrl,
+      rnc: rnc,
+    };
+
+    // Persist to localStorage for next boot
+    try {
+      localStorage.setItem(`${PROFILE_CACHE_KEY}_${userId}`, JSON.stringify(profile));
+    } catch { /* quota exceeded — ignore */ }
+
+    return profile;
+  } catch (err) {
+    console.error('Exception fetching profile from DB:', err);
     return getLocalProfile(userId) ?? null;
   }
-
-  if (!data) return null;
-
-  let storeId = data.store_id;
-
-  // Recovery: if store_id missing, look up owned store
-  if (!storeId) {
-    const { data: owned } = await supabase
-      .from('stores')
-      .select('id')
-      .eq('owner_id', userId)
-      .limit(1);
-    if (owned && owned.length > 0) {
-      storeId = owned[0].id;
-      // Update in background — don't await (keep startup fast)
-      supabase.from('profiles').update({ store_id: storeId }).eq('id', userId).then();
-    }
-  }
-
-  // Get avatar and rnc from auth metadata (no extra fetch needed)
-  let avatarUrl: string | null = null;
-  let rnc: string | null = null;
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    avatarUrl = user?.user_metadata?.avatar_url ?? null;
-    rnc = user?.user_metadata?.rnc ?? null;
-  } catch { /* ignore */ }
-
-  const profile: UserProfile = {
-    id: data.id,
-    full_name: data.full_name,
-    email: data.email,
-    user_number: data.user_number,
-    store_id: storeId,
-    role: data.role,
-    is_active: null,
-    avatar_url: avatarUrl,
-    rnc: rnc,
-  };
-
-  // Persist to localStorage for next boot
-  try {
-    localStorage.setItem(`${PROFILE_CACHE_KEY}_${userId}`, JSON.stringify(profile));
-  } catch { /* quota exceeded — ignore */ }
-
-  return profile;
 };
 
 export const useUserProfile = () => {
@@ -128,14 +125,14 @@ export const useUserProfile = () => {
     queryFn: fetchUserProfile,
     // Render immediately from localStorage — no loading spinner on navigation
     initialData: cachedProfile ?? undefined,
-    // 30 minutes fresh — profile almost never changes mid-session
-    staleTime: 1000 * 60 * 30,
+    // 5 minutes — refrescar más seguido para capturar tokens renovados
+    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 60 * 24,
-    refetchOnMount: false,
+    refetchOnMount: true,        // Refrescar al montar para capturar sesión actualizada
     refetchOnWindowFocus: false,
-    // Retry once on network errors (not immediately)
-    retry: 1,
-    retryDelay: 2000,
+    // Retry twice on network/abort errors with increasing delay
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * (attempt + 1), 3000),
   });
 
   return {

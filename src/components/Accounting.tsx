@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2 } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +22,7 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
 
 
 const CATEGORIES = [
@@ -110,14 +111,21 @@ function AccountingContent() {
         category: string;
         supplier_name: string;
         invoice_number: string;
+        image_url: string | null;
     }>({
         date: new Date(),
         description: '',
         amount: '',
         category: 'Inventario',
         supplier_name: '',
-        invoice_number: ''
+        invoice_number: '',
+        image_url: null
     });
+
+    const manualFileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploadingManualImage, setIsUploadingManualImage] = useState(false);
+    const [selectedExpenseForDetails, setSelectedExpenseForDetails] = useState<Expense | null>(null);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
     const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
     const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({});
@@ -217,7 +225,8 @@ function AccountingContent() {
                     amount: typeof data.amount === 'number' ? data.amount : (parseFloat(data.amount) || 0),
                     supplier_name: data.supplier_name || '',
                     invoice_number: data.invoice_number || '',
-                    category: data.category || 'Otros'
+                    category: data.category || 'Otros',
+                    image_url: data.image_url || null
                 }));
             } else if (item.status === 'error') {
                 toast({ title: "Error", description: item.error || "No se pudo leer esta factura. Ingrésala manual.", variant: "destructive" });
@@ -229,7 +238,8 @@ function AccountingContent() {
                     amount: '',
                     category: 'Inventario',
                     supplier_name: '',
-                    invoice_number: ''
+                    invoice_number: '',
+                    image_url: null
                 });
             }
         }
@@ -292,7 +302,7 @@ function AccountingContent() {
                 category: newExpense.category || 'Otros',
                 supplier_id: finalSupplierId,
                 invoice_number: newExpense.invoice_number,
-                image_url: null
+                image_url: newExpense.image_url
             });
 
             console.log("Expense created successfully via mutation");
@@ -319,7 +329,8 @@ function AccountingContent() {
                     amount: '',
                     category: 'Inventario',
                     supplier_name: '',
-                    invoice_number: ''
+                    invoice_number: '',
+                    image_url: null
                 });
             }
 
@@ -499,12 +510,102 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
             category: data.category || 'Otros',
             supplier_id: foundSupplier?.id || null,
             invoice_number: data.invoice_number,
-            image_url: null
+            image_url: data.image_url || null
         });
 
         // Notify if supplier is new, just as a warning/info
         if (data.supplier_name && !foundSupplier) {
             console.log(`Proveedor nuevo detectado: ${data.supplier_name}`);
+        }
+    };
+
+    const uploadReceiptImage = async (file: File): Promise<string | null> => {
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${crypto.randomUUID()}.${fileExt}`;
+            const filePath = `expenses/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('product-images')
+                .upload(filePath, file, {
+                    contentType: file.type || 'image/jpeg',
+                    upsert: false,
+                });
+
+            if (uploadError) {
+                console.error('[Storage] Error uploading receipt:', uploadError.message);
+                return null;
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('product-images')
+                .getPublicUrl(filePath);
+
+            return publicUrl;
+        } catch (err) {
+            console.error('[Storage] Exception uploading receipt:', err);
+            return null;
+        }
+    };
+
+
+    const handleManualImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        try {
+            setIsUploadingManualImage(true);
+            const file = files[0];
+            
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${crypto.randomUUID()}.${fileExt}`;
+            const filePath = `expenses/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('product-images')
+                .upload(filePath, file, {
+                    contentType: file.type || 'image/jpeg',
+                    upsert: false,
+                });
+
+            if (uploadError) {
+                throw new Error(uploadError.message);
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('product-images')
+                .getPublicUrl(filePath);
+
+            setNewExpense(prev => ({ ...prev, image_url: publicUrl }));
+            toast({ title: "Comprobante adjuntado", description: "La imagen se ha subido correctamente." });
+        } catch (err: any) {
+            console.error('Error subiendo comprobante manual:', err);
+            toast({
+                variant: "destructive",
+                title: "Error al subir imagen",
+                description: err.message || "Error desconocido al subir el comprobante.",
+            });
+        } finally {
+            setIsUploadingManualImage(false);
+            if (manualFileInputRef.current) manualFileInputRef.current.value = '';
+        }
+    };
+
+    const handleDownloadImage = async (url: string, filename: string) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename || 'factura-comprobante.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Error al descargar la imagen:', error);
+            window.open(url, '_blank');
         }
     };
 
@@ -548,13 +649,18 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 try {
                     console.log(`Scanning item ${item.file.name}...`);
                     const data = await scanInvoice(item.file, apiKey);
+                    
+                    // Subir imagen del comprobante a Supabase Storage
+                    console.log(`Uploading receipt image to storage...`);
+                    const imageUrl = await uploadReceiptImage(item.file);
+                    const dataWithImage = { ...data, image_url: imageUrl };
 
                     if (isMassive) {
-                        await saveExpenseToDb(data);
-                        setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'saved', extractedData: data } : i));
+                        await saveExpenseToDb(dataWithImage);
+                        setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'saved', extractedData: dataWithImage } : i));
                         toast({ title: "Guardado Automático", description: `Factura ${data.invoice_number || ''} guardada.` });
                     } else {
-                        setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'success', extractedData: data } : i));
+                        setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'success', extractedData: dataWithImage } : i));
                     }
                     console.log(`✅ Factura procesada exitosamente.`);
                 } catch (err: any) {
@@ -823,11 +929,27 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         </TableRow>
                                     ) : (
                                         filteredExpenses.map((expense) => (
-                                            <TableRow key={expense.id} className="hover:bg-muted/20 transition-colors border-b border-border/30">
+                                            <TableRow
+                                                key={expense.id}
+                                                className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/30"
+                                                onClick={() => {
+                                                    setSelectedExpenseForDetails(expense);
+                                                    setIsDetailsOpen(true);
+                                                }}
+                                            >
                                                 <TableCell className="text-[11px] font-bold text-muted-foreground">
                                                     {expense.date && isValid(expense.date) ? format(expense.date, 'dd/MM/yyyy') : '-'}
                                                 </TableCell>
-                                                <TableCell className="font-bold text-sm tracking-tight">{expense.description}</TableCell>
+                                                <TableCell className="font-bold text-sm tracking-tight">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{expense.description}</span>
+                                                        {expense.image_url && (
+                                                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 text-[9px] font-black uppercase border border-green-500/20">
+                                                                📎 Factura
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
                                                 <TableCell className="text-[11px] font-black uppercase text-primary/70">{expense.supplier_name || 'N/A'}</TableCell>
                                                 <TableCell>
                                                     <span className={`inline-flex px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${isReinvestment(expense.category) ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
@@ -837,7 +959,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                 <TableCell className="text-right font-black text-base pr-8">
                                                     ${(expense.amount || 0).toLocaleString()}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteExpense(expense.id)}>
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -857,7 +979,14 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 <div className="p-12 text-center text-muted-foreground font-black uppercase tracking-widest text-xs border-2 border-dashed rounded-3xl">Sin registros este mes</div>
                             ) : (
                                 filteredExpenses.map((expense) => (
-                                    <div key={expense.id} className="bg-muted/10 border border-border/50 rounded-3xl p-5 space-y-4 shadow-sm relative overflow-hidden group active:bg-muted/20 transition-all">
+                                    <div
+                                        key={expense.id}
+                                        className="bg-muted/10 border border-border/50 rounded-3xl p-5 space-y-4 shadow-sm relative overflow-hidden group active:bg-muted/20 cursor-pointer transition-all hover:border-green-500/30"
+                                        onClick={() => {
+                                            setSelectedExpenseForDetails(expense);
+                                            setIsDetailsOpen(true);
+                                        }}
+                                    >
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-1">
                                                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
@@ -881,8 +1010,19 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             </div>
                                         </div>
                                         
-                                        <div className="flex justify-between items-center pt-3 border-t border-border/30">
-                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">ID: #{expense.id.slice(0,6)}</span>
+                                        <div className="flex justify-between items-center pt-3 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex gap-2">
+                                                {expense.image_url && (
+                                                    <span className="text-[9px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-lg">
+                                                        📎 Con Factura
+                                                    </span>
+                                                )}
+                                                {expense.invoice_number && (
+                                                    <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted border border-border/30 px-2 py-0.5 rounded-lg">
+                                                        #{expense.invoice_number}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <Button variant="ghost" size="sm" className="h-8 px-3 rounded-xl text-destructive hover:bg-destructive/10 gap-2" onClick={() => handleDeleteExpense(expense.id)}>
                                                 <Trash2 className="h-3.5 w-3.5" />
                                                 <span className="text-[10px] font-black uppercase">Eliminar</span>
@@ -1403,6 +1543,61 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         />
                                     </div>
                                 </div>
+
+                                {/* ── IMAGE UPLOAD FIELD ── */}
+                                <div className="flex flex-col gap-1.5 mt-1">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                        <Camera className="h-3 w-3" /> Foto de Factura / Comprobante
+                                    </label>
+                                    <input
+                                        type="file"
+                                        ref={manualFileInputRef}
+                                        onChange={handleManualImageUpload}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    
+                                    {isUploadingManualImage ? (
+                                        <div className="flex items-center justify-center gap-2 h-14 rounded-xl border border-dashed border-border bg-muted/20 text-muted-foreground text-xs font-semibold">
+                                            <Loader2 className="h-4 w-4 animate-spin text-green-500" />
+                                            <span>Subiendo imagen...</span>
+                                        </div>
+                                    ) : newExpense.image_url ? (
+                                        <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
+                                            <img
+                                                src={newExpense.image_url}
+                                                alt="Comprobante"
+                                                className="w-12 h-12 rounded-lg object-cover border border-border/80"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
+                                                <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                                                onClick={() => setNewExpense(prev => ({ ...prev, image_url: null }))}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => manualFileInputRef.current?.click()}
+                                            className="h-14 border-dashed border-border/60 hover:border-green-500/40 bg-muted/10 hover:bg-green-500/5 hover:text-green-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
+                                        >
+                                            <Upload className="h-4 w-4 text-muted-foreground" />
+                                            <div className="text-left">
+                                                <p className="text-xs font-semibold">Subir imagen (Opcional)</p>
+                                                <p className="text-[10px] text-muted-foreground">Formato JPG, PNG (máx. 5MB)</p>
+                                            </div>
+                                        </Button>
+                                    )}
+                                </div>
                             </motion.div>
 
                         ) : null}
@@ -1501,6 +1696,139 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     </div>
                     <DialogFooter>
                         <Button onClick={handleAddSupplier} type="submit">Guardar Proveedor</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Expense Details */}
+            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-card border border-border/60 rounded-3xl">
+                    <DialogHeader className="p-6 pb-4 border-b border-border/30 bg-muted/20">
+                        <div className="flex justify-between items-start gap-4">
+                            <div>
+                                <DialogTitle className="text-xl font-black tracking-tight flex items-center gap-2">
+                                    <span>📄 Detalle del Gasto</span>
+                                </DialogTitle>
+                                <DialogDescription className="text-xs font-semibold text-muted-foreground mt-1">
+                                    Información del comprobante de compra
+                                </DialogDescription>
+                            </div>
+                            {selectedExpenseForDetails?.category && (
+                                <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider border ${
+                                    isReinvestment(selectedExpenseForDetails.category)
+                                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                        : 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                }`}>
+                                    {selectedExpenseForDetails.category}
+                                </span>
+                            )}
+                        </div>
+                    </DialogHeader>
+                    
+                    <div className="p-6 space-y-5">
+                        {/* Summary details */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Concepto</span>
+                                <p className="text-sm font-bold text-foreground truncate">{selectedExpenseForDetails?.description}</p>
+                            </div>
+                            <div className="space-y-1 text-right">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Monto</span>
+                                <p className="text-lg font-black text-green-400">${(selectedExpenseForDetails?.amount || 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/20">
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                    <Building2 className="h-3 w-3" /> Proveedor
+                                </span>
+                                <p className="text-xs font-semibold text-foreground">{selectedExpenseForDetails?.supplier_name || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" /> Fecha de Transacción
+                                </span>
+                                <p className="text-xs font-semibold text-foreground">
+                                    {selectedExpenseForDetails?.date && isValid(new Date(selectedExpenseForDetails.date))
+                                        ? format(new Date(selectedExpenseForDetails.date), 'dd/MM/yyyy')
+                                        : '-'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/20">
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                    <Receipt className="h-3 w-3" /> No. Factura
+                                </span>
+                                <p className="text-xs font-semibold text-foreground">{selectedExpenseForDetails?.invoice_number || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Fecha Registro</span>
+                                <p className="text-xs font-semibold text-muted-foreground">
+                                    {selectedExpenseForDetails?.created_at && isValid(new Date(selectedExpenseForDetails.created_at))
+                                        ? format(new Date(selectedExpenseForDetails.created_at), 'dd/MM/yyyy HH:mm')
+                                        : '-'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Invoice Image preview */}
+                        <div className="space-y-2 pt-4 border-t border-border/20">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                <Camera className="h-3 w-3" /> Factura Adjunta
+                            </span>
+                            
+                            {selectedExpenseForDetails?.image_url ? (
+                                <div className="space-y-3">
+                                    <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-muted/10">
+                                        <img
+                                            src={selectedExpenseForDetails.image_url}
+                                            alt="Factura / Comprobante"
+                                            className="w-full max-h-[260px] object-contain mx-auto rounded-2xl"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 justify-center">
+                                        <a
+                                            href={selectedExpenseForDetails.image_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 py-2 rounded-xl bg-muted/35 text-foreground border border-border/50 text-xs font-bold hover:bg-muted/50 transition-all flex items-center justify-center gap-1.5"
+                                        >
+                                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span>Ver Completa</span>
+                                        </a>
+                                        <Button
+                                            type="button"
+                                            onClick={() => handleDownloadImage(
+                                                selectedExpenseForDetails.image_url!,
+                                                `factura-${selectedExpenseForDetails.invoice_number || selectedExpenseForDetails.id.slice(0,8)}.jpg`
+                                            )}
+                                            className="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                                        >
+                                            <Download className="h-3.5 w-3.5" />
+                                            <span>Descargar</span>
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-dashed border-border/60 bg-muted/5 text-center text-muted-foreground">
+                                    <Receipt className="h-6 w-6 mb-2 text-muted-foreground/40" />
+                                    <p className="text-xs font-semibold">No hay imagen adjunta</p>
+                                    <p className="text-[10px] text-muted-foreground/60">Este gasto se registró sin imagen de comprobante</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <DialogFooter className="p-4 border-t border-border/30 bg-muted/10 sm:justify-end">
+                        <Button
+                            onClick={() => setIsDetailsOpen(false)}
+                            className="w-full sm:w-auto font-bold rounded-xl px-5"
+                        >
+                            Cerrar
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { offlineDB, OfflineStore } from '@/lib/offlineDB';
 
 export interface Sale {
   id: string;
@@ -46,6 +47,7 @@ export interface Sale {
     total: number;
     product?: {
       name: string;
+      image_url?: string | null;
     };
   }[];
 }
@@ -95,7 +97,7 @@ export const useSales = (filters: SalesFilters = {}) => {
             discount_amount,
             tax_amount,
             total,
-            product:products(name)
+            product:products(name, image_url)
           )
         `)
         .order('created_at', { ascending: false });
@@ -217,39 +219,135 @@ export const useSales = (filters: SalesFilters = {}) => {
   });
 };
 
+// Helper to map local sale to Sale interface
+async function mapLocalSaleToSale(localSale: any): Promise<Sale> {
+  const mappedItems = (localSale.items || []).map((item: any) => {
+    const taxRate = item.tax || 0.18;
+    const itemSubtotal = item.price * item.quantity;
+    
+    const discountPercent = item.discount_percentage || 0;
+    const discountAmount = (discountPercent / 100) * itemSubtotal;
+    const subtotalAfterDiscount = itemSubtotal - discountAmount;
+    
+    let taxAmount, total;
+    if (item.cost_includes_tax) {
+      total = subtotalAfterDiscount;
+      const baseNet = total / (1 + taxRate);
+      taxAmount = total - baseNet;
+    } else {
+      taxAmount = subtotalAfterDiscount * taxRate;
+      total = subtotalAfterDiscount + taxAmount;
+    }
+
+    return {
+      id: item.id || crypto.randomUUID(),
+      product_id: item.id,
+      quantity: item.quantity,
+      unit_price: item.price,
+      discount_percentage: discountPercent,
+      tax_percentage: taxRate * 100,
+      subtotal: itemSubtotal,
+      discount_amount: discountAmount,
+      tax_amount: taxAmount,
+      total: total,
+      product: {
+        name: item.name || 'Producto',
+        image_url: item.image_url || null
+      }
+    };
+  });
+
+  return {
+    id: localSale.id,
+    invoice_number: localSale.invoice_number,
+    subtotal: localSale.subtotal,
+    discount_total: localSale.discount_total,
+    tax_total: localSale.tax_total,
+    total: localSale.total,
+    payment_method: localSale.payment_method,
+    amount_received: localSale.amount_received,
+    change_amount: localSale.change_amount,
+    status: localSale.status || 'completed',
+    payment_status: localSale.payment_status || 'paid',
+    due_date: localSale.due_date,
+    created_at: localSale.created_at,
+    updated_at: localSale.updated_at || localSale.created_at,
+    sale_items: mappedItems,
+    customer: localSale.customer || undefined,
+    invoice_type: localSale.invoice_type || undefined,
+  };
+}
+
 export const useSaleDetails = (saleId: string) => {
   return useQuery({
     queryKey: ['sale-details', saleId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          *,
-          customer:customers(name, rnc, phone, email),
-          invoice_type:invoice_types(name, code),
-          sale_items:sale_items(
-            id,
-            product_id,
-            quantity,
-            unit_price,
-            discount_percentage,
-            tax_percentage,
-            subtotal,
-            discount_amount,
-            tax_amount,
-            total,
-            product:products(name)
-          )
-        `)
-        .eq('id', saleId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('sales')
+          .select(`
+            *,
+            customer:customers(name, rnc, phone, email),
+            invoice_type:invoice_types(name, code),
+            sale_items:sale_items(
+              id,
+              product_id,
+              quantity,
+              unit_price,
+              discount_percentage,
+              tax_percentage,
+              subtotal,
+              discount_amount,
+              tax_amount,
+              total,
+              product:products(name, image_url)
+            )
+          `)
+          .eq('id', saleId)
+          .single();
 
-      if (error) {
-        console.error('Error fetching sale details:', error);
-        throw error;
+        if (error) {
+          console.warn('Supabase fetch details error, trying local DB:', error);
+          const localSale = await offlineDB.get<any>(OfflineStore.SALES, saleId);
+          if (localSale) {
+            let customerData = undefined;
+            if (localSale.customer_id) {
+              customerData = await offlineDB.get<any>(OfflineStore.CUSTOMERS, localSale.customer_id);
+            }
+            let invoiceTypeData = undefined;
+            if (localSale.invoice_type_id) {
+              invoiceTypeData = await offlineDB.get<any>(OfflineStore.INVOICE_TYPES, localSale.invoice_type_id);
+            }
+            return await mapLocalSaleToSale({
+              ...localSale,
+              customer: customerData,
+              invoice_type: invoiceTypeData
+            });
+          }
+          throw error;
+        }
+
+        return data as Sale;
+      } catch (err) {
+        console.warn('Error fetching online sale details, trying offline:', err);
+        const localSale = await offlineDB.get<any>(OfflineStore.SALES, saleId);
+        if (localSale) {
+          let customerData = undefined;
+          if (localSale.customer_id) {
+            customerData = await offlineDB.get<any>(OfflineStore.CUSTOMERS, localSale.customer_id);
+          }
+          let invoiceTypeData = undefined;
+          if (localSale.invoice_type_id) {
+            invoiceTypeData = await offlineDB.get<any>(OfflineStore.INVOICE_TYPES, localSale.invoice_type_id);
+          }
+          return await mapLocalSaleToSale({
+            ...localSale,
+            customer: customerData,
+            invoice_type: invoiceTypeData
+          });
+        }
+        throw err;
       }
-
-      return data as Sale;
     },
     enabled: !!saleId,
   });
