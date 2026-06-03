@@ -2121,7 +2121,10 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
         }
         setIsAIStockOpen(open);
       }}>
-        <DialogContent className="max-w-[95vw] lg:max-w-[1150px] w-full max-h-[92vh] overflow-y-auto p-5 sm:p-8 gap-6">
+        <DialogContent 
+          className="max-w-[95vw] lg:max-w-[1150px] w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 gap-4 sm:gap-6 rounded-2xl inset-x-auto left-[50%] bottom-auto top-[50%] translate-x-[-50%] translate-y-[-50%]"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-blue-500" />
@@ -2141,13 +2144,13 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           {extractedItems.length === 0 && !isAIScanning && (
             <div 
               onClick={() => aiFileInputRef.current?.click()}
-              className="flex flex-col items-center justify-center py-12 px-6 border-2 border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 rounded-2xl cursor-pointer text-center group transition-all duration-200"
+              className="flex flex-col items-center justify-center py-8 px-4 sm:py-12 sm:px-6 border-2 border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 rounded-2xl cursor-pointer text-center group transition-all duration-200"
             >
-              <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-115 transition-transform shadow-lg shadow-blue-500/20">
-                <Upload className="w-8 h-8 text-blue-500" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-500/20 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/20">
+                <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
               </div>
-              <h3 className="font-bold text-lg text-foreground">Subir Foto de Factura</h3>
-              <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+              <h3 className="font-bold text-base sm:text-lg text-foreground">Subir Foto de Factura</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 sm:mt-2 max-w-sm leading-relaxed">
                 La IA identificará los productos, cantidades, costos e impuestos (ITBIS) de forma automática para cargarlos a tu stock.
               </p>
             </div>
@@ -2372,9 +2375,9 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5 items-end">
                           {/* Product Selector */}
-                          <div className="flex flex-col gap-1.5 md:col-span-2">
+                          <div className="flex flex-col gap-1.5 col-span-2 md:col-span-2">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Asignar a Producto</label>
                             <Popover modal={true} open={openComboIdx === idx} onOpenChange={(open) => {
                               setOpenComboIdx(open ? idx : null);
@@ -2493,7 +2496,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                           </div>
 
                           {/* Quantity Input */}
-                          <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-col gap-1.5 col-span-1">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
                               {item.buyMode === 'unit' ? 'Cantidad (Unds.)' : 'Cantidad (Cajas/Paqs)'}
                             </label>
@@ -2509,7 +2512,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                           </div>
 
                           {/* Units Per Box Input */}
-                          <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-col gap-1.5 col-span-1">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">Und. x Caja</label>
                             <Input
                               type="number"
@@ -2524,7 +2527,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                           </div>
 
                           {/* Cost Input (Costo Unitario) */}
-                          <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
                               Costo Unitario ($)
                             </label>
@@ -2583,9 +2586,9 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
 
                                 {!minimizedProductMap[item.id] && (
                                   <>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3">
+                                    <div className="grid grid-cols-2 md:grid-cols-7 gap-2.5 items-end">
                                       {/* Nombre */}
-                                      <div className="flex flex-col gap-1 md:col-span-2">
+                                      <div className="flex flex-col gap-1 col-span-2 md:col-span-2">
                                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nombre del Producto</label>
                                         <Input
                                           value={editVal.name}
@@ -2595,7 +2598,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                       </div>
 
                                       {/* Código de barras */}
-                                      <div className="flex flex-col gap-1">
+                                      <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
                                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                           <Barcode className="h-3 w-3" /> Código Barras
                                         </label>
@@ -2607,7 +2610,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                       </div>
 
                                       {/* Stock actual */}
-                                      <div className="flex flex-col gap-1">
+                                      <div className="flex flex-col gap-1 col-span-1">
                                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Stock Actual</label>
                                         <Input
                                           type="number"
@@ -2618,7 +2621,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                       </div>
 
                                       {/* Costo */}
-                                      <div className="flex flex-col gap-1">
+                                      <div className="flex flex-col gap-1 col-span-1">
                                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-0.5">
                                           <DollarSign className="h-3 w-3 text-blue-600" /> Costo ($)
                                         </label>
@@ -2635,7 +2638,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                       </div>
 
                                       {/* % Margen */}
-                                      <div className="flex flex-col gap-1">
+                                      <div className="flex flex-col gap-1 col-span-1">
                                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-0.5">% Margen</label>
                                         <Input
                                           type="number"
@@ -2651,7 +2654,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                       </div>
 
                                       {/* Precio Venta */}
-                                      <div className="flex flex-col gap-1">
+                                      <div className="flex flex-col gap-1 col-span-1">
                                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-0.5">
                                           <DollarSign className="h-3 w-3 text-emerald-600" /> Precio Venta ($)
                                         </label>
@@ -2712,7 +2715,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
             </div>
           )}
 
-          <DialogFooter className="flex sm:justify-between items-center border-t pt-4">
+          <DialogFooter className="flex !flex-row justify-end items-center gap-2 sm:gap-3 border-t pt-4 mt-2">
             {isConfirmingSummary ? (
               <>
                 <Button
@@ -2720,19 +2723,19 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                   variant="outline"
                   onClick={() => setIsConfirmingSummary(false)}
                   disabled={isSavingAIStock}
-                  className="text-xs"
+                  className="text-xs h-10 px-4 rounded-xl border-border/80 text-muted-foreground hover:text-foreground hover:bg-accent/40"
                 >
-                  Atrás (Editar)
+                  Atrás
                 </Button>
 
                 <Button
                   type="button"
                   onClick={handleConfirmAIStock}
                   disabled={isSavingAIStock}
-                  className="bg-emerald-600 hover:bg-emerald-500 font-bold px-5 text-xs shadow-lg transition-all"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-10 px-5 text-xs rounded-xl shadow-lg transition-all"
                 >
                   {isSavingAIStock ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                  Sí, Aplicar y Cargar Stock
+                  Sí, Aplicar<span className="hidden sm:inline"> y Cargar Stock</span>
                 </Button>
               </>
             ) : (
@@ -2746,7 +2749,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                     setIsConfirmingSummary(false);
                   }}
                   disabled={isSavingAIStock}
-                  className="text-xs"
+                  className="text-xs h-10 px-4 rounded-xl border-border/80 text-muted-foreground hover:text-foreground hover:bg-accent/40"
                 >
                   Cancelar
                 </Button>
@@ -2766,9 +2769,9 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                       }
                       setIsConfirmingSummary(true);
                     }}
-                    className="bg-primary hover:bg-primary/90 font-bold px-5 text-xs shadow-lg transition-all"
+                    className="bg-primary hover:bg-primary/90 text-white font-bold h-10 px-5 text-xs rounded-xl shadow-lg transition-all"
                   >
-                    Confirmar y Cargar Stock
+                    Confirmar<span className="hidden sm:inline"> y Cargar Stock</span>
                   </Button>
                 )}
               </>
