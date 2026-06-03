@@ -2141,16 +2141,16 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
           </Button>
         </DrawerTrigger>
         <DrawerContent className="bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-4 pb-12 rounded-t-[2.5rem]">
-          <DrawerHeader className="border-b border-white/5 pb-6 mb-6">
-            <DrawerTitle className="text-2xl font-black text-white flex items-center gap-3">
-              <div className="bg-green-500 h-10 w-10 rounded-xl flex items-center justify-center">
-                <Layers className="h-6 w-6 text-white" />
+          <DrawerHeader className="border-b border-white/5 pb-5 mb-5">
+            <DrawerTitle className="text-xl font-black text-white flex items-center gap-3">
+              <div className="bg-green-600 h-9 w-9 rounded-xl flex items-center justify-center">
+                <Layers className="h-5 w-5 text-white" />
               </div>
               Menú Principal
             </DrawerTitle>
           </DrawerHeader>
-          <div className="grid grid-cols-1 gap-1 overflow-y-auto max-h-[60vh] px-2 py-4 no-scrollbar">
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-4 mb-3">Navegación General</div>
+          <div className="flex flex-col gap-1 overflow-y-auto max-h-[65vh] px-2 py-2 no-scrollbar">
+            {/* General Navigation */}
             {navigationItems.map(item => {
               const Icon = item.icon;
               return (
@@ -2158,103 +2158,123 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   <Button
                     variant="ghost"
                     onClick={() => onNavigate(item.href)}
-                    className="w-full h-14 justify-start px-4 rounded-2xl hover:bg-white/5 group transition-all"
+                    className="w-full h-14 justify-start px-4 rounded-2xl bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/20 group transition-all duration-200 mb-4"
                   >
-                    <div className="bg-white/5 group-hover:bg-green-500/10 p-2.5 rounded-xl mr-4 transition-colors">
+                    <div className="bg-white/5 group-hover:bg-green-500/15 p-2.5 rounded-xl mr-4 transition-colors">
                       <Icon className="h-5 w-5 text-zinc-400 group-hover:text-green-500 shadow-sm" />
                     </div>
-                    <span className="font-bold text-zinc-200 group-hover:text-white transition-colors uppercase tracking-widest text-xs">{item.name}</span>
+                    <div className="text-left">
+                      <span className="font-bold text-zinc-400 group-hover:text-white transition-colors uppercase tracking-widest text-[9px] block">Panel Principal</span>
+                      <span className="text-xs font-semibold text-zinc-200">{item.name}</span>
+                    </div>
                   </Button>
                 </DrawerClose>
               );
             })}
 
-            {/* Diseño y Vista Section for Mobile */}
-            <div className="h-px bg-white/5 my-6 mx-4" />
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-4 mb-3">Diseño y Vista</div>
-            <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl mb-2 space-y-4 mx-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Modo del POS</span>
-                <div className="flex gap-1 bg-zinc-950 p-1 rounded-xl border border-white/5">
+            {/* MODO DEL POS Segmented Control */}
+            <div className="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-white/5 border border-white/5 mb-4">
+              <div className="flex flex-col text-left">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Modo del POS</span>
+                <span className="text-xs font-bold text-white">
+                  {layoutMode === 'classic' ? 'Búsqueda de Productos' : 'Catálogo Visual'}
+                </span>
+              </div>
+              <div className="flex bg-zinc-950 p-1 rounded-xl border border-white/10 shadow-inner">
+                <Button
+                  size="sm"
+                  variant={layoutMode === 'classic' ? 'secondary' : 'ghost'}
+                  onClick={() => onLayoutModeChange?.('classic')}
+                  className={cn(
+                    "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
+                    layoutMode === 'classic' ? "bg-white text-zinc-950 hover:bg-white/90 shadow-md font-black" : "text-muted-foreground hover:text-white"
+                  )}
+                >
+                  Búsqueda
+                </Button>
+                <Button
+                  size="sm"
+                  variant={layoutMode === 'catalog' ? 'secondary' : 'ghost'}
+                  onClick={() => onLayoutModeChange?.('catalog')}
+                  className={cn(
+                    "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
+                    layoutMode === 'catalog' ? "bg-white text-zinc-950 hover:bg-white/90 shadow-md font-black" : "text-muted-foreground hover:text-white"
+                  )}
+                >
+                  Catálogo
+                </Button>
+              </div>
+            </div>
+
+            {/* View Mode (List/Grid) for Catalog */}
+            {layoutMode === 'catalog' && (
+              <div className="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-white/5 border border-white/5 mb-4 transition-all animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex flex-col text-left">
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Vista de Catálogo</span>
+                  <span className="text-xs font-bold text-white">
+                    {viewMode === 'list' ? 'Lista Detallada' : 'Cuadricula de Fotos'}
+                  </span>
+                </div>
+                <div className="flex bg-zinc-950 p-1 rounded-xl border border-white/10 shadow-inner">
                   <Button
                     size="sm"
-                    variant={layoutMode === 'classic' ? 'secondary' : 'ghost'}
-                    onClick={() => onLayoutModeChange?.('classic')}
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    onClick={() => onViewModeChange?.('list')}
                     className={cn(
-                      "h-8 text-xs font-bold rounded-lg px-3 transition-all",
-                      layoutMode === 'classic' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
+                      "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
+                      viewMode === 'list' ? "bg-white text-zinc-950 hover:bg-white/90 shadow-md font-black" : "text-muted-foreground hover:text-white"
                     )}
                   >
-                    Búsqueda
+                    Lista
                   </Button>
                   <Button
                     size="sm"
-                    variant={layoutMode === 'catalog' ? 'secondary' : 'ghost'}
-                    onClick={() => onLayoutModeChange?.('catalog')}
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    onClick={() => onViewModeChange?.('grid')}
                     className={cn(
-                      "h-8 text-xs font-bold rounded-lg px-3 transition-all",
-                      layoutMode === 'catalog' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
+                      "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
+                      viewMode === 'grid' ? "bg-white text-zinc-950 hover:bg-white/90 shadow-md font-black" : "text-muted-foreground hover:text-white"
                     )}
                   >
-                    Catálogo
+                    Cuadros
                   </Button>
                 </div>
               </div>
-              
-              {layoutMode === 'catalog' && (
-                <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Vista de Catálogo</span>
-                  <div className="flex gap-1 bg-zinc-950 p-1 rounded-xl border border-white/5">
-                    <Button
-                      size="sm"
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                      onClick={() => onViewModeChange?.('list')}
-                      className={cn(
-                        "h-8 text-xs font-bold rounded-lg px-3 transition-all",
-                        viewMode === 'list' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
-                      )}
-                    >
-                      Lista
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                      onClick={() => onViewModeChange?.('grid')}
-                      className={cn(
-                        "h-8 text-xs font-bold rounded-lg px-3 transition-all",
-                        viewMode === 'grid' && "bg-white text-zinc-950 hover:bg-white/90 shadow-sm"
-                      )}
-                    >
-                      Cuadros
-                    </Button>
-                  </div>
-                </div>
-              )}
+            )}
+
+            {/* Caja Operations Grid */}
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-4 mb-3">Operaciones de Caja</div>
+            <div className="grid grid-cols-2 gap-2.5 mb-6">
+              {[
+                { icon: Receipt, label: 'Ventas del Día', action: onDailySales, color: 'text-blue-400' },
+                { icon: RefreshCcw, label: 'Devoluciones', action: onRefund, color: 'text-orange-400' },
+                { icon: HandCoins, label: 'Movimientos', action: onCashMovements, color: 'text-emerald-400' },
+                { icon: Lock, label: 'Cierre de Caja', action: onCloseDay, color: 'text-red-400' },
+                { icon: DollarSign, label: 'Cobros Deudas', action: onDebtSelect, color: 'text-yellow-400', colSpan: true },
+              ].map((item, idx) => (
+                <DrawerClose asChild key={idx}>
+                  <Button
+                    variant="ghost"
+                    onClick={item.action}
+                    className={cn(
+                      "flex flex-col items-center justify-center h-20 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 group transition-all duration-200",
+                      item.colSpan && "col-span-2 h-16 flex-row gap-3"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-1.5 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors",
+                      !item.colSpan && "mb-1"
+                    )}>
+                      <item.icon className={cn("h-5 w-5", item.color)} />
+                    </div>
+                    <span className="font-semibold text-zinc-200 group-hover:text-white transition-colors tracking-wider text-[11px] text-center uppercase">{item.label}</span>
+                  </Button>
+                </DrawerClose>
+              ))}
             </div>
 
-            <div className="h-px bg-white/5 my-6 mx-4" />
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-4 mb-3">Gestión de Caja</div>
-            {[
-              { icon: Receipt, label: 'Ventas del Día', action: onDailySales },
-              { icon: RefreshCcw, label: 'Devoluciones', action: onRefund },
-              { icon: HandCoins, label: 'Movimientos Caja', action: onCashMovements },
-              { icon: Lock, label: 'Cierre de Caja', action: onCloseDay },
-              { icon: DollarSign, label: 'Cobros (Deudas)', action: onDebtSelect },
-            ].map((item, idx) => (
-              <DrawerClose asChild key={idx}>
-                <Button
-                  variant="ghost"
-                  onClick={item.action}
-                  className="w-full h-14 justify-start px-4 rounded-2xl hover:bg-white/5 group transition-all"
-                >
-                  <div className="bg-white/5 group-hover:bg-green-500/10 p-2.5 rounded-xl mr-4 transition-colors">
-                    <item.icon className="h-5 w-5 text-zinc-400 group-hover:text-green-500 shadow-sm" />
-                  </div>
-                  <span className="font-bold text-zinc-200 group-hover:text-white transition-colors uppercase tracking-widest text-xs">{item.label}</span>
-                </Button>
-              </DrawerClose>
-            ))}
-            <div className="mt-8 px-2">
+            {/* Logout Button */}
+            <div className="px-2 mt-2">
               <Button
                 onClick={onLogout}
                 variant="ghost"
