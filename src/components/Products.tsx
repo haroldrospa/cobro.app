@@ -2376,7 +2376,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5 items-end">
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-3.5 items-end">
                           {/* Product Selector */}
                           <div className="flex flex-col gap-1.5 col-span-2 md:col-span-2">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Asignar a Producto</label>
@@ -2528,7 +2528,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                           </div>
 
                           {/* Cost Input (Costo Unitario) */}
-                          <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
+                          <div className="flex flex-col gap-1.5 col-span-1">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
                               Costo Unitario ($)
                             </label>
@@ -2539,14 +2539,34 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                               onChange={(e) => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, cost: parseFloat(e.target.value) || 0 } : it))}
                               className="h-11 text-sm font-extrabold px-3 rounded-xl"
                             />
-                            <div className="text-[10px] font-black uppercase tracking-wider block ml-1 flex flex-col gap-0.5">
-                              {item.buyMode === 'box' && (
-                                <span className="text-blue-500">Costo Caja: ${(item.cost * item.unitsPerBox).toFixed(2)}</span>
-                              )}
-                              <span className="text-emerald-600 font-black">
-                                Subtotal: ${(item.quantity * item.cost * (item.buyMode === 'box' ? item.unitsPerBox : 1)).toFixed(2)}
-                              </span>
-                            </div>
+                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block ml-1 leading-none h-4">
+                              {item.buyMode === 'box' ? `Caja: $${(item.cost * (item.unitsPerBox || 1)).toFixed(2)}` : 'Por Unidad'}
+                            </span>
+                          </div>
+
+                          {/* Subtotal Input (Editable) */}
+                          <div className="flex flex-col gap-1.5 col-span-1">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
+                              Subtotal ($)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={parseFloat((item.quantity * item.cost * (item.buyMode === 'box' ? (item.unitsPerBox || 1) : 1)).toFixed(2)) || ""}
+                              onChange={(e) => {
+                                const newSubtotal = parseFloat(e.target.value) || 0;
+                                setExtractedItems(prev => prev.map((it, i) => {
+                                  if (i !== idx) return it;
+                                  const totalUnits = it.quantity * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1);
+                                  const newCost = totalUnits > 0 ? newSubtotal / totalUnits : 0;
+                                  return { ...it, cost: parseFloat(newCost.toFixed(4)) };
+                                }));
+                              }}
+                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
+                            />
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block ml-1 leading-none h-4">
+                              Subtotal Ítem
+                            </span>
                           </div>
                         </div>
 
