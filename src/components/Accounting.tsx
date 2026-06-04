@@ -179,7 +179,7 @@ function AccountingContent() {
         if (payAmountNum > remainingDebt + 0.01) {
             toast({
                 title: "Monto excedido",
-                description: `El monto a pagar no puede superar el saldo pendiente ($${remainingDebt.toLocaleString()}).`,
+                description: `El monto a pagar no puede superar el pago pendiente ($${remainingDebt.toLocaleString()}).`,
                 variant: "destructive"
             });
             return;
@@ -1321,7 +1321,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             <span>{supplier.contact || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between items-center mt-1 pt-1 border-t border-border/50">
-                                            <span className="text-muted-foreground font-medium">Saldo Pendiente:</span>
+                                            <span className="text-muted-foreground font-medium">Pago Pendiente:</span>
                                             {(() => {
                                                 const outstanding = getSupplierOutstandingDebt(supplier.id);
                                                 if (outstanding > 0) {
@@ -2565,7 +2565,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="flex flex-col gap-2 text-left">
-                            <Label className="text-xs font-bold text-muted-foreground uppercase">Saldo Pendiente</Label>
+                            <Label className="text-xs font-bold text-muted-foreground uppercase">Pago Pendiente</Label>
                             <div className="text-lg font-black text-red-500 bg-red-500/5 px-3 py-2 rounded-xl border border-red-500/10">
                                 ${selectedDebtForPayment ? (Number(selectedDebtForPayment.amount) - Number(selectedDebtForPayment.amount_paid)).toLocaleString() : '0.00'}
                             </div>
