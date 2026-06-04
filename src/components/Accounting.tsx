@@ -1640,10 +1640,10 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         <Button
                                             onClick={handleAddExpense}
                                             disabled={isCreating}
-                                            className="font-bold px-6 shadow-lg transition-all duration-200 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white shadow-green-500/30"
+                                            className="rounded-xl font-medium px-6 bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-200 active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-emerald-500/10"
                                         >
                                             {isCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                                            {isCreating ? "Guardando..." : expenseType === 'reinversion' ? '💾 Guardar Reinversión' : '💾 Guardar Gasto'}
+                                            {isCreating ? "Guardando..." : expenseType === 'reinversion' ? 'Guardar Reinversión' : 'Guardar Gasto'}
                                         </Button>
                                     </div>
                                 )}
