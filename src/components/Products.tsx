@@ -87,15 +87,6 @@ const Products: FC = () => {
   const [quickCreateName, setQuickCreateName] = useState('');
   const [quickCreatePrice, setQuickCreatePrice] = useState(0);
   const [quickCreateCost, setQuickCreateCost] = useState(0);
-  const [quickCreateTax, setQuickCreateTax] = useState(customTaxRate);
-  const [quickCreateItemIdx, setQuickCreateItemIdx] = useState<number | null>(null);
-  const [quickCreateBarcode, setQuickCreateBarcode] = useState('');
-  const [prefilledFormValues, setPrefilledFormValues] = useState<Partial<Product> | null>(null);
-  const [comboboxSearchTerm, setComboboxSearchTerm] = useState('');
-  const aiFileInputRef = useRef<HTMLInputElement>(null);
-  const [openComboIdx, setOpenComboIdx] = useState<number | null>(null);
-  const [aiTaxMessage, setAiTaxMessage] = useState<string | null>(null);
-  const [aiIsTaxInclusive, setAiIsTaxInclusive] = useState<boolean>(false);
   const [customTaxRate, setCustomTaxRate] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('cobro_app_ai_stock_custom_tax_rate');
@@ -112,6 +103,16 @@ const Products: FC = () => {
       console.error("Error saving custom tax rate to localStorage:", e);
     }
   }, [customTaxRate]);
+
+  const [quickCreateTax, setQuickCreateTax] = useState(customTaxRate);
+  const [quickCreateItemIdx, setQuickCreateItemIdx] = useState<number | null>(null);
+  const [quickCreateBarcode, setQuickCreateBarcode] = useState('');
+  const [prefilledFormValues, setPrefilledFormValues] = useState<Partial<Product> | null>(null);
+  const [comboboxSearchTerm, setComboboxSearchTerm] = useState('');
+  const aiFileInputRef = useRef<HTMLInputElement>(null);
+  const [openComboIdx, setOpenComboIdx] = useState<number | null>(null);
+  const [aiTaxMessage, setAiTaxMessage] = useState<string | null>(null);
+  const [aiIsTaxInclusive, setAiIsTaxInclusive] = useState<boolean>(false);
 
   const [isConfirmingSummary, setIsConfirmingSummary] = useState(false);
   // Quick Stock Edit State
