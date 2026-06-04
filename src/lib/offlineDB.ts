@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'CobroAppOfflineDB';
-const DB_VERSION = 8; // v8: Agregar gastos fijos mensuales
+const DB_VERSION = 9; // v9: Agregar deudas con proveedores
 
 // Tipos de tiendas (stores) en IndexedDB
 export enum OfflineStore {
@@ -19,6 +19,7 @@ export enum OfflineStore {
     CASH_SESSIONS = 'cash_sessions',
     INVENTORY_MOVEMENTS = 'inventory_movements',
     FIXED_EXPENSES = 'fixed_expenses',
+    SUPPLIER_DEBTS = 'supplier_debts',
 }
 
 export interface SyncQueueItem {
@@ -112,6 +113,12 @@ class OfflineDatabase {
                 if (!db.objectStoreNames.contains(OfflineStore.FIXED_EXPENSES)) {
                     const fixedExpenseStore = db.createObjectStore(OfflineStore.FIXED_EXPENSES, { keyPath: 'id' });
                     fixedExpenseStore.createIndex('store_id', 'store_id', { unique: false });
+                }
+
+                if (!db.objectStoreNames.contains(OfflineStore.SUPPLIER_DEBTS)) {
+                    const supplierDebtsStore = db.createObjectStore(OfflineStore.SUPPLIER_DEBTS, { keyPath: 'id' });
+                    supplierDebtsStore.createIndex('store_id', 'store_id', { unique: false });
+                    supplierDebtsStore.createIndex('supplier_id', 'supplier_id', { unique: false });
                 }
             };
         });

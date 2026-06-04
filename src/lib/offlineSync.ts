@@ -454,6 +454,33 @@ class OfflineSyncManager {
                 console.log(`📌 ${fixedExpenses.length} gastos fijos sincronizados`);
             }
 
+            // Sincronizar deudas con proveedores (supplier_debts)
+            let supplierDebtsQuery = supabase
+                .from('supplier_debts' as any)
+                .select('*')
+                .abortSignal(signal || null);
+
+            if (storeId) {
+                supplierDebtsQuery = supplierDebtsQuery.eq('store_id', storeId);
+            }
+
+            const { data: supplierDebts, error: supplierDebtsError } = await supplierDebtsQuery;
+
+            if (!supplierDebtsError && supplierDebts) {
+                const localDebts = await offlineDB.getAll<any>(OfflineStore.SUPPLIER_DEBTS);
+                const serverIds = new Set(supplierDebts.map(d => d.id));
+                
+                const toDelete = localDebts.filter(ld => ld.store_id === storeId && !serverIds.has(ld.id));
+                if (toDelete.length > 0) {
+                    await offlineDB.deleteBulk(OfflineStore.SUPPLIER_DEBTS, toDelete.map(item => item.id));
+                }
+
+                if (supplierDebts.length > 0) {
+                    await offlineDB.putBulk(OfflineStore.SUPPLIER_DEBTS, supplierDebts);
+                }
+                console.log(`📌 ${supplierDebts.length} deudas con proveedores sincronizadas`);
+            }
+
         } catch (error: any) {
             if (!navigator.onLine || error?.message?.includes('Failed to fetch')) {
                 console.warn('Network error syncing from Supabase (offline/unstable):', error?.message);
@@ -519,6 +546,9 @@ class OfflineSyncManager {
                 break;
             case OfflineStore.FIXED_EXPENSES:
                 await this.syncFixedExpense(operation, data, signal);
+                break;
+            case OfflineStore.SUPPLIER_DEBTS:
+                await this.syncSupplierDebt(operation, data, signal);
                 break;
             default:
                 console.warn('Store no soportado para sincronización:', store);
@@ -981,6 +1011,59 @@ class OfflineSyncManager {
                 .insert(data)
                 .abortSignal(signal || null);
             if (error && error.code !== '23505') throw error;
+        }
+    }
+
+    // Sincronizar deuda con proveedor
+    private async syncSupplierDebt(operation: string, data: any, signal?: AbortSignal): Promise<void> {
+        switch (operation) {
+            case 'CREATE':
+                if (!data.store_id) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('store_id')
+                            .eq('id', user.id)
+                            .maybeSingle();
+
+                        if (profile?.store_id) {
+                            data.store_id = profile.store_id;
+                        }
+                    }
+                }
+                const { synced, ...insertData } = data;
+                const { error: createError } = await supabase
+                    .from('supplier_debts')
+                    .insert(insertData)
+                    .abortSignal(signal || null);
+
+                if (createError) {
+                    if (createError.code === '23505' || createError.message?.includes('duplicate')) {
+                        console.warn(`Supplier debt already exists, ignoring duplicate.`);
+                        return;
+                    }
+                    throw createError;
+                }
+                break;
+
+            case 'UPDATE':
+                const { id, ...updateData } = data;
+                const { error: updateError } = await supabase
+                    .from('supplier_debts')
+                    .update(updateData)
+                    .eq('id', id)
+                    .abortSignal(signal || null);
+                if (updateError) throw updateError;
+                break;
+
+            case 'DELETE':
+                const { error: deleteError } = await supabase
+                    .from('supplier_debts')
+                    .delete()
+                    .eq('id', data.id);
+                if (deleteError) throw deleteError;
+                break;
         }
     }
 }

@@ -21,6 +21,7 @@ import { useExpenses } from '@/hooks/useExpenses';
 import { useFixedExpenses, FixedExpense } from '@/hooks/useFixedExpenses';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useSupplierDebts, SupplierDebt } from '@/hooks/useSupplierDebts';
 import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
@@ -84,6 +85,136 @@ function AccountingContent() {
         category: 'Alquiler',
         due_day: '5'
     });
+
+    // Deudas con Proveedores State & Hook
+    const {
+        supplierDebts,
+        createSupplierDebt,
+        paySupplierDebt,
+        deleteSupplierDebt,
+        isLoading: loadingSupplierDebts,
+        isCreating: isCreatingSupplierDebt,
+        isPaying: isPayingSupplierDebt,
+        isDeleting: isDeletingSupplierDebt
+    } = useSupplierDebts();
+
+    const [isAddDebtOpen, setIsAddDebtOpen] = useState(false);
+    const [selectedSupplierForDebt, setSelectedSupplierForDebt] = useState<Supplier | null>(null);
+    const [debtForm, setDebtForm] = useState({
+        amount: '',
+        description: '',
+        category: 'Inventario',
+        due_date: ''
+    });
+
+    const [isViewDebtsOpen, setIsViewDebtsOpen] = useState(false);
+    const [selectedSupplierForView, setSelectedSupplierForView] = useState<Supplier | null>(null);
+
+    const [isPayDebtOpen, setIsPayDebtOpen] = useState(false);
+    const [selectedDebtForPayment, setSelectedDebtForPayment] = useState<SupplierDebt | null>(null);
+    const [payDebtForm, setPayDebtForm] = useState({
+        amountToPay: '',
+        category: 'Inventario',
+        description: ''
+    });
+
+    const handleRegisterDebt = async () => {
+        if (!selectedSupplierForDebt) return;
+        if (!debtForm.amount || !debtForm.description.trim()) {
+            toast({
+                title: "Campos incompletos",
+                description: "Por favor introduce el monto y la descripción.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const amountNum = parseFloat(debtForm.amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            toast({
+                title: "Monto inválido",
+                description: "El monto de la deuda debe ser mayor a 0.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            await createSupplierDebt({
+                supplier_id: selectedSupplierForDebt.id,
+                amount: amountNum,
+                description: debtForm.description.trim(),
+                category: debtForm.category,
+                due_date: debtForm.due_date || null
+            });
+            setIsAddDebtOpen(false);
+            setDebtForm({ amount: '', description: '', category: 'Inventario', due_date: '' });
+        } catch (err) {
+            console.error("Error al registrar deuda:", err);
+        }
+    };
+
+    const handlePayDebt = async () => {
+        if (!selectedDebtForPayment) return;
+        if (!payDebtForm.amountToPay) {
+            toast({
+                title: "Campo incompleto",
+                description: "Introduce el monto a abonar/pagar.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const payAmountNum = parseFloat(payDebtForm.amountToPay);
+        if (isNaN(payAmountNum) || payAmountNum <= 0) {
+            toast({
+                title: "Monto inválido",
+                description: "El monto a pagar debe ser mayor a 0.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const remainingDebt = Number(selectedDebtForPayment.amount) - Number(selectedDebtForPayment.amount_paid);
+        if (payAmountNum > remainingDebt + 0.01) {
+            toast({
+                title: "Monto excedido",
+                description: `El monto a pagar no puede superar el saldo pendiente ($${remainingDebt.toLocaleString()}).`,
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            await paySupplierDebt({
+                debtId: selectedDebtForPayment.id,
+                amountToPay: payAmountNum,
+                category: payDebtForm.category,
+                description: payDebtForm.description.trim() || undefined
+            });
+            setIsPayDebtOpen(false);
+            setSelectedDebtForPayment(null);
+            setPayDebtForm({ amountToPay: '', category: 'Inventario', description: '' });
+        } catch (err) {
+            console.error("Error al realizar pago de deuda:", err);
+        }
+    };
+
+    const handleDeleteDebt = async (id: string, description: string) => {
+        if (confirm(`¿Estás seguro de eliminar el registro de deuda "${description}"?`)) {
+            try {
+                await deleteSupplierDebt(id);
+            } catch (err) {
+                console.error("Error al eliminar deuda:", err);
+            }
+        }
+    };
+
+    const getSupplierOutstandingDebt = (supplierId: string) => {
+        const supplierDebtsList = supplierDebts.filter(d => d.supplier_id === supplierId && d.status !== 'paid');
+        return supplierDebtsList.reduce((sum, d) => sum + (Number(d.amount) - Number(d.amount_paid)), 0);
+    };
+
 
     const handleSaveFixedExpense = async () => {
         if (!fixedForm.description.trim() || !fixedForm.amount || !fixedForm.due_day) {
@@ -1189,6 +1320,41 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             <span className="text-muted-foreground">Contacto:</span>
                                             <span>{supplier.contact || 'N/A'}</span>
                                         </div>
+                                        <div className="flex justify-between items-center mt-1 pt-1 border-t border-border/50">
+                                            <span className="text-muted-foreground font-medium">Saldo Pendiente:</span>
+                                            {(() => {
+                                                const outstanding = getSupplierOutstandingDebt(supplier.id);
+                                                if (outstanding > 0) {
+                                                    return <span className="font-extrabold text-red-500">${outstanding.toLocaleString()}</span>;
+                                                } else {
+                                                    return <span className="font-extrabold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-lg text-xs">Sin deuda</span>;
+                                                }
+                                            })()}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-4 pt-2 border-t border-border/30">
+                                        <Button
+                                            size="sm"
+                                            className="flex-1 rounded-xl text-xs"
+                                            onClick={() => {
+                                                setSelectedSupplierForDebt(supplier);
+                                                setDebtForm({ amount: '', description: '', category: 'Inventario', due_date: '' });
+                                                setIsAddDebtOpen(true);
+                                            }}
+                                        >
+                                            <Plus className="mr-1 h-3 w-3" /> Registrar Deuda
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1 rounded-xl text-xs"
+                                            onClick={() => {
+                                                setSelectedSupplierForView(supplier);
+                                                setIsViewDebtsOpen(true);
+                                            }}
+                                        >
+                                            <Eye className="mr-1 h-3 w-3" /> Ver Deudas
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -2189,6 +2355,273 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             onClick={handleSaveFixedExpense}
                         >
                             Guardar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Registrar Deuda */}
+            <Dialog open={isAddDebtOpen} onOpenChange={setIsAddDebtOpen}>
+                <DialogContent className="sm:max-w-[425px] rounded-2xl border border-border/50">
+                    <DialogHeader>
+                        <DialogTitle className="text-left flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-primary" />
+                            Registrar Deuda con Proveedor
+                        </DialogTitle>
+                        <DialogDescription className="text-left">
+                            Agrega una nueva cuenta por pagar a {selectedSupplierForDebt?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label htmlFor="debt-desc" className="text-xs font-bold text-muted-foreground uppercase">Concepto / Descripción</Label>
+                            <Input
+                                id="debt-desc"
+                                placeholder="Ej. Compra de empaques, mercancía a crédito"
+                                className="h-10 rounded-xl"
+                                value={debtForm.description}
+                                onChange={(e) => setDebtForm({ ...debtForm, description: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-2 text-left">
+                                <Label htmlFor="debt-amount" className="text-xs font-bold text-muted-foreground uppercase">Monto de la Deuda</Label>
+                                <Input
+                                    id="debt-amount"
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="h-10 rounded-xl"
+                                    value={debtForm.amount}
+                                    onChange={(e) => setDebtForm({ ...debtForm, amount: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2 text-left">
+                                <Label htmlFor="debt-due" className="text-xs font-bold text-muted-foreground uppercase">Vencimiento (Opcional)</Label>
+                                <Input
+                                    id="debt-due"
+                                    type="date"
+                                    className="h-10 rounded-xl"
+                                    value={debtForm.due_date}
+                                    onChange={(e) => setDebtForm({ ...debtForm, due_date: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase">Categoría de Gasto Asociado</Label>
+                            <Select
+                                value={debtForm.category}
+                                onValueChange={(val) => setDebtForm({ ...debtForm, category: val })}
+                            >
+                                <SelectTrigger className="h-10 rounded-xl bg-background border border-input">
+                                    <SelectValue placeholder="Selecciona una categoría" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {CATEGORIES.map((cat) => (
+                                        <SelectItem key={cat} value={cat} className="rounded-lg">
+                                            {cat}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="ghost" className="rounded-xl" onClick={() => setIsAddDebtOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button className="rounded-xl px-5" onClick={handleRegisterDebt} disabled={isCreatingSupplierDebt}>
+                            {isCreatingSupplierDebt ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
+                                </>
+                            ) : (
+                                "Guardar Deuda"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Ver Deudas de Proveedor */}
+            <Dialog open={isViewDebtsOpen} onOpenChange={setIsViewDebtsOpen}>
+                <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto rounded-2xl border border-border/50">
+                    <DialogHeader>
+                        <DialogTitle className="text-left flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-primary" />
+                            Historial de Deudas: {selectedSupplierForView?.name}
+                        </DialogTitle>
+                        <DialogDescription className="text-left">
+                            Consulta el estado de las cuentas por pagar y registra abonos o liquidaciones.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        {(() => {
+                            const list = supplierDebts.filter(d => d.supplier_id === selectedSupplierForView?.id);
+                            if (list.length === 0) {
+                                return (
+                                    <div className="text-center py-8 text-muted-foreground text-sm flex flex-col items-center justify-center gap-2">
+                                        <Check className="h-10 w-10 text-emerald-500 bg-emerald-500/10 p-2 rounded-full" />
+                                        <span>No tienes ninguna deuda registrada con este proveedor.</span>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Concepto</TableHead>
+                                            <TableHead className="text-right">Total</TableHead>
+                                            <TableHead className="text-right">Pagado</TableHead>
+                                            <TableHead className="text-right">Pendiente</TableHead>
+                                            <TableHead>Vencimiento</TableHead>
+                                            <TableHead className="text-center">Estado</TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {list.map((debt) => {
+                                            const remaining = Number(debt.amount) - Number(debt.amount_paid);
+                                            return (
+                                                <TableRow key={debt.id}>
+                                                    <TableCell className="font-medium">
+                                                        <div>{debt.description}</div>
+                                                        <div className="text-xs text-muted-foreground">{debt.category}</div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-semibold">${Number(debt.amount).toLocaleString()}</TableCell>
+                                                    <TableCell className="text-right text-emerald-500">${Number(debt.amount_paid).toLocaleString()}</TableCell>
+                                                    <TableCell className="text-right text-red-500 font-bold">${remaining.toLocaleString()}</TableCell>
+                                                    <TableCell className="text-xs">
+                                                        {debt.due_date ? format(new Date(debt.due_date + 'T12:00:00'), 'dd MMM yyyy', { locale: es }) : 'N/A'}
+                                                    </TableCell>
+                                                    <TableCell className="text-center text-xs">
+                                                        {debt.status === 'paid' && (
+                                                            <span className="px-2 py-0.5 rounded-full font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Pagado</span>
+                                                        )}
+                                                        {debt.status === 'partial' && (
+                                                            <span className="px-2 py-0.5 rounded-full font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">Parcial</span>
+                                                        )}
+                                                        {debt.status === 'pending' && (
+                                                            <span className="px-2 py-0.5 rounded-full font-black bg-red-500/10 text-red-500 border border-red-500/20">Pendiente</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end items-center gap-1">
+                                                            {debt.status !== 'paid' && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="h-8 rounded-lg text-xs"
+                                                                    onClick={() => {
+                                                                        setSelectedDebtForPayment(debt);
+                                                                        setPayDebtForm({
+                                                                            amountToPay: remaining.toString(),
+                                                                            category: debt.category,
+                                                                            description: `Abono Deuda: ${debt.description}`
+                                                                        });
+                                                                        setIsPayDebtOpen(true);
+                                                                    }}
+                                                                >
+                                                                    Abonar
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                                onClick={() => handleDeleteDebt(debt.id, debt.description)}
+                                                                disabled={isDeletingSupplierDebt}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            );
+                        })()}
+                    </div>
+                    <DialogFooter>
+                        <Button className="rounded-xl px-5" onClick={() => setIsViewDebtsOpen(false)}>
+                            Cerrar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Registrar Pago / Abono a Deuda */}
+            <Dialog open={isPayDebtOpen} onOpenChange={setIsPayDebtOpen}>
+                <DialogContent className="sm:max-w-[400px] rounded-2xl border border-border/50">
+                    <DialogHeader>
+                        <DialogTitle className="text-left flex items-center gap-2">
+                            <DollarSign className="h-5 w-5 text-emerald-500" />
+                            Registrar Abono / Pago
+                        </DialogTitle>
+                        <DialogDescription className="text-left">
+                            Registra un pago para la deudade "{selectedDebtForPayment?.description}".
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase">Saldo Pendiente</Label>
+                            <div className="text-lg font-black text-red-500 bg-red-500/5 px-3 py-2 rounded-xl border border-red-500/10">
+                                ${selectedDebtForPayment ? (Number(selectedDebtForPayment.amount) - Number(selectedDebtForPayment.amount_paid)).toLocaleString() : '0.00'}
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label htmlFor="pay-amount" className="text-xs font-bold text-muted-foreground uppercase">Monto a Abonar</Label>
+                            <Input
+                                id="pay-amount"
+                                type="number"
+                                placeholder="0.00"
+                                className="h-10 rounded-xl"
+                                value={payDebtForm.amountToPay}
+                                onChange={(e) => setPayDebtForm({ ...payDebtForm, amountToPay: e.target.value })}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label htmlFor="pay-desc" className="text-xs font-bold text-muted-foreground uppercase">Descripción del Egreso</Label>
+                            <Input
+                                id="pay-desc"
+                                placeholder="Ej. Pago con transferencia, abono en efectivo"
+                                className="h-10 rounded-xl"
+                                value={payDebtForm.description}
+                                onChange={(e) => setPayDebtForm({ ...payDebtForm, description: e.target.value })}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase">Categoría del Egreso</Label>
+                            <Select
+                                value={payDebtForm.category}
+                                onValueChange={(val) => setPayDebtForm({ ...payDebtForm, category: val })}
+                            >
+                                <SelectTrigger className="h-10 rounded-xl bg-background border border-input">
+                                    <SelectValue placeholder="Selecciona una categoría" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {CATEGORIES.map((cat) => (
+                                        <SelectItem key={cat} value={cat} className="rounded-lg">
+                                            {cat}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="ghost" className="rounded-xl" onClick={() => setIsPayDebtOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button className="rounded-xl px-5 bg-emerald-600 hover:bg-emerald-500 text-white" onClick={handlePayDebt} disabled={isPayingSupplierDebt}>
+                            {isPayingSupplierDebt ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...
+                                </>
+                            ) : (
+                                "Registrar Pago"
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
