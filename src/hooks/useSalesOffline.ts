@@ -12,6 +12,8 @@ import { useOnlineStatus } from './useProductsOffline';
 interface CreateSaleData {
     customer_id?: string;
     invoice_type_id: string;
+    invoice_type_code?: string;
+    is_electronic?: boolean;
     subtotal: number;
     discount_total: number;
     tax_total: number;
@@ -331,7 +333,6 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     if (!user) throw new Error('Usuario no autenticado');
 
     // 0. VERIFICACIÓN PREVENTIVA: Si ya tenemos un ID, revisar si ya existe la venta
-    // Esto previene duplicados si la petición anterior tuvo éxito pero el cliente no recibió el OK
     if (saleData.id) {
         const { data: existingSale } = await supabase
             .from('sales')
@@ -357,23 +358,77 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         storeId = profile?.store_id;
     }
 
-    // Validar que tenemos storeId
     if (!storeId) {
-        // Último intento: buscar en settings locales si estamos offline-first
         const localSettings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'user_profile');
         if (localSettings?.store_id) {
             storeId = localSettings.store_id;
         }
 
-        // Si sigue sin haber storeId, es un error crítico
         if (!storeId) {
             console.error('CRITICAL: Intentando guardar venta sin store_id');
             throw new Error('No se pudo identificar la tienda (store_id) para esta venta. Por favor recarga la página.');
         }
     }
-    let traditionalCode = saleData.invoice_type_id;
 
-    if (saleData.invoice_type_id.length > 10) {
+    // --- RPC PATH: Intentar facturación atómica de 1 roundtrip ---
+    try {
+        console.log('⚡ Ejecutando facturación rápida via RPC...');
+        const rpcItems = saleData.items.map(item => ({
+            id: item.id,
+            price: item.price,
+            quantity: item.quantity,
+            tax: item.tax,
+            cost_includes_tax: item.cost_includes_tax || false
+        }));
+
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('create_sale_transaction_v3', {
+            p_sale_id: saleData.id || crypto.randomUUID(),
+            p_customer_id: saleData.customer_id || null,
+            p_invoice_type_id: saleData.invoice_type_id,
+            p_subtotal: saleData.subtotal,
+            p_discount_total: saleData.discount_total,
+            p_tax_total: saleData.tax_total,
+            p_total: saleData.total,
+            p_payment_method: saleData.payment_method,
+            p_amount_received: saleData.amount_received || null,
+            p_change_amount: saleData.change_amount || null,
+            p_split_cash: saleData.split_cash || null,
+            p_split_method: saleData.split_method || null,
+            p_payment_status: saleData.payment_status || 'paid',
+            p_due_date: saleData.due_date || null,
+            p_store_id: storeId,
+            p_profile_id: user.id,
+            p_items: rpcItems
+        });
+
+        if (rpcError) {
+            console.warn('⚠️ RPC create_sale_transaction_v3 falló, usando fallback JS:', rpcError.message);
+            throw rpcError;
+        }
+
+        if (rpcResult) {
+            console.log('✅ Facturación rápida via RPC completada con éxito:', rpcResult.invoice_number);
+
+            // Emisión de Alanube en segundo plano (asíncrona)
+            if (rpcResult.is_electronic_active) {
+                console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
+                import('@/services/alanube/AlanubeService')
+                    .then(({ AlanubeService }) => {
+                        AlanubeService.emitirFacturaElectronica(rpcResult.id);
+                    })
+                    .catch(err => console.error('⚠️ Error al cargar AlanubeService para emisión en segundo plano:', err));
+            }
+
+            return rpcResult;
+        }
+    } catch (err) {
+        console.warn('🔄 Usando fallback clásico de facturación por JS...');
+    }
+
+    // --- FALLBACK CLÁSICO POR JS ---
+    let traditionalCode = saleData.invoice_type_code || saleData.invoice_type_id;
+
+    if (traditionalCode.length > 10) {
         const { data: invoiceTypeData } = await supabase
             .from('invoice_types')
             .select('code')
@@ -384,9 +439,8 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         }
     }
 
-    // Check if electronic billing (e-NCF) is active for this store
-    let isElectronicActive = false;
-    if (storeId) {
+    let isElectronicActive = saleData.is_electronic;
+    if (isElectronicActive === undefined) {
         const { data: alanubeConfig } = await supabase
             .from('alanube_config')
             .select('is_active')
@@ -403,7 +457,6 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     while (attempts < maxAttempts) {
         attempts++;
         try {
-            // 1. Obtener la secuencia actual desde la base de datos
             let currentSeqNumber = 0;
             let sequenceRowId = null;
 
@@ -420,15 +473,12 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                     sequenceRowId = seqData.id;
                 }
 
-                // CRITICAL SELF-HEAL: If no sequence row exists OR sequence is at 0,
-                // query the ACTUAL max invoice number from sales to avoid starting from 1
-                // when hundreds of invoices already exist.
                 if (currentSeqNumber === 0) {
                     const { data: maxSale } = await supabase
                         .from('sales')
                         .select('invoice_number')
                         .eq('store_id', storeId)
-                        .eq('invoice_type_id', saleData.invoice_type_id) // Use UUID here for FK match
+                        .eq('invoice_type_id', saleData.invoice_type_id)
                         .order('invoice_number', { ascending: false })
                         .limit(1);
 
@@ -442,8 +492,6 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 }
             }
 
-            // 2. Calcular siguiente número
-            // IMPORTANTE: Math.max con highestTriedNumber previene bucles infinitos.
             const nextNumber = Math.max(currentSeqNumber + 1, highestTriedNumber + 1);
             
             let displayPrefix = traditionalCode;
@@ -466,11 +514,10 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
 
             const formattedInvoiceNumber = `${displayPrefix}${separator}${String(nextNumber).padStart(padding, '0')}`;
 
-            // 3. Intentar crear la venta con este número
             const { data: sale, error: saleError } = await supabase
                 .from('sales')
                 .insert([{
-                    id: saleData.id, // CRÍTICO: Usar el ID generado para prevenir duplicados (idempotencia)
+                    id: saleData.id,
                     invoice_number: formattedInvoiceNumber,
                     customer_id: saleData.customer_id || null,
                     invoice_type_id: saleData.invoice_type_id,
@@ -491,12 +538,9 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 .select()
                 .single();
 
-            // 4. Manejar resultado del insert
             if (saleError) {
                 const errorMsg = saleError.message || '';
 
-                // Caso A: El ID ya existe (Duplicado de PRIMARY KEY)
-                // Significa que la venta se guardó exitosamente en un intento anterior que creímos fallido
                 if (saleError.code === '23505' && (errorMsg.includes('sales_pkey') || errorMsg.includes('primary key'))) {
                     console.log('✅ La venta ya existe por ID (idempotencia). Recuperando registro...');
                     const { data: existingSale } = await supabase
@@ -511,28 +555,20 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 }
 
                 if (saleError.code === '23505' || errorMsg.includes('unique constraint') || errorMsg.includes('duplicate')) {
-                    // Conflicto: Alguien ganó el número o la secuencia local estaba mal.
-                    // Guardamos el número que intentamos para no volver a intentarlo y 
-                    // poder auto-reparar la secuencia si está desincronizada.
                     highestTriedNumber = Math.max(highestTriedNumber, nextNumber);
-                    
-                    // Esperamos un momento aleatorio (jitter) para desincronizar reintentos
                     await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200));
                     continue;
                 }
-                throw saleError; // Otro error, lanzar
+                throw saleError;
             }
 
-            // 5. ¡Éxito! Ahora actualizamos la secuencia para que otros no intenten usar este número
-            // (Si falla este update, no es fatal, el próximo insert de otro usuario fallará por duplicado y se auto-corregirá)
             if (sequenceRowId) {
                 await supabase
                     .from('invoice_sequences')
                     .update({ current_number: nextNumber, updated_at: new Date().toISOString() })
                     .eq('id', sequenceRowId)
-                    .lt('current_number', nextNumber); // Solo actualizar si es mayor (optimización)
+                    .lt('current_number', nextNumber);
             } else if (storeId) {
-                // Si no existía la fila, intentamos crearla
                 await supabase.from('invoice_sequences').insert({
                     store_id: storeId,
                     invoice_type_id: traditionalCode,
@@ -541,18 +577,16 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             }
 
             finalSale = sale;
-            break; // Salir del loop
+            break;
 
         } catch (err: any) {
             if (attempts === maxAttempts) throw err;
-            // Si el error no parace ser recuperable, lanzarlo
             if (!err.message?.includes('duplicate') && !err.message?.includes('unique constraint')) throw err;
         }
     }
 
     if (!finalSale) throw new Error('No se pudo generar número de factura único tras varios intentos');
 
-    // Crear los items
     const totalSubtotal = saleData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     const saleItems = saleData.items.map(item => {
@@ -563,17 +597,13 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         const itemDiscountPercentage = itemSubtotal > 0 ? (itemDiscountAmount / itemSubtotal) * 100 : 0;
         const itemAfterDiscount = itemSubtotal - itemDiscountAmount;
 
-        // Lógica corregida: No sumar impuesto si ya está incluido
         let finalItemTaxAmount, finalItemTotal;
 
         if (item.cost_includes_tax) {
-            // El total es el precio unitario (con descuento aplicado)
             finalItemTotal = itemAfterDiscount;
-            // El impuesto se desglosa del total
             const baseNet = finalItemTotal / (1 + taxRate);
             finalItemTaxAmount = finalItemTotal - baseNet;
         } else {
-            // El total es subtotal + impuesto calculado
             finalItemTaxAmount = itemAfterDiscount * taxRate;
             finalItemTotal = itemAfterDiscount + finalItemTaxAmount;
         }
@@ -600,13 +630,11 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
 
     if (itemsError) throw itemsError;
 
-    // Actualizar stock en PARALELO (todos los productos a la vez en lugar de uno por uno)
     const validItems = saleData.items.filter(item =>
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id)
     );
 
     await Promise.all(validItems.map(async (item) => {
-        // Fetch current stock and update in parallel per item
         const { data: product } = await supabase
             .from('products')
             .select('stock')
@@ -622,7 +650,6 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             );
         }
 
-        // Descontar ingredientes en paralelo también
         try {
             const { data: recipes } = await supabase
                 .from('product_recipes')
@@ -645,37 +672,14 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         await Promise.all(updateAndRecipePromises);
     }));
 
-    // INTEGRACIÓN CON ALANUBE (e-NCF)
-    if (storeId) {
-        try {
-            const { data: alanubeConfig } = await supabase
-                .from('alanube_config')
-                .select('is_active')
-                .eq('store_id', storeId)
-                .maybeSingle();
-
-            if (alanubeConfig?.is_active) {
-                console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico...');
-                const { AlanubeService } = await import('@/services/alanube/AlanubeService');
-                const success = await AlanubeService.emitirFacturaElectronica(finalSale.id);
-                if (success) {
-                    console.log('✅ Factura electrónica emitida exitosamente.');
-                    // Recuperar el registro actualizado con los campos fiscales
-                    const { data: updatedSale } = await supabase
-                        .from('sales')
-                        .select('*')
-                        .eq('id', finalSale.id)
-                        .single();
-                    if (updatedSale) {
-                        finalSale = updatedSale;
-                    }
-                } else {
-                    console.error('❌ Error emitiendo factura electrónica con Alanube');
-                }
-            }
-        } catch (alanubeErr) {
-            console.error('⚠️ Error al integrar con Alanube en saveSaleToSupabase:', alanubeErr);
-        }
+    // Emisión de Alanube en segundo plano (asíncrona)
+    if (isElectronicActive && storeId) {
+        console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
+        import('@/services/alanube/AlanubeService')
+            .then(({ AlanubeService }) => {
+                AlanubeService.emitirFacturaElectronica(finalSale.id);
+            })
+            .catch(err => console.error('⚠️ Error cargando AlanubeService para emisión en segundo plano:', err));
     }
 
     return finalSale;

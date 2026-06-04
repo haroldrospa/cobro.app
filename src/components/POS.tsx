@@ -545,6 +545,9 @@ const POSContent: React.FC = () => {
         id: saleId, // Pasar el ID generado para asegurar idempotencia
         customer_id: selectedCustomer || undefined,
         invoice_type_id: selectedInvoiceType,
+        invoice_type_code: selectedInvoiceTypeData?.code,
+        is_electronic: isElectronicActive,
+        store_id: store?.id || undefined,
         subtotal: parseFloat(currentTotals.subtotal) + surchargeAmount + (includePreviousDebt ? previousDebtAmount : 0),
         discount_total: parseFloat(currentTotals.discount),
         tax_total: parseFloat(currentTotals.tax),
