@@ -427,6 +427,33 @@ class OfflineSyncManager {
                 console.log(`📦 ${invMovements.length} movimientos de inventario sincronizados`);
             }
 
+            // Sincronizar gastos fijos mensuales
+            let fixedExpensesQuery = supabase
+                .from('fixed_expenses' as any)
+                .select('*')
+                .abortSignal(signal || null);
+
+            if (storeId) {
+                fixedExpensesQuery = fixedExpensesQuery.eq('store_id', storeId);
+            }
+
+            const { data: fixedExpenses, error: fixedExpensesError } = await fixedExpensesQuery;
+
+            if (!fixedExpensesError && fixedExpenses) {
+                const localFixed = await offlineDB.getAll<any>(OfflineStore.FIXED_EXPENSES);
+                const serverIds = new Set(fixedExpenses.map(f => f.id));
+                
+                const toDelete = localFixed.filter(lf => lf.store_id === storeId && !serverIds.has(lf.id));
+                if (toDelete.length > 0) {
+                    await offlineDB.deleteBulk(OfflineStore.FIXED_EXPENSES, toDelete.map(item => item.id));
+                }
+
+                if (fixedExpenses.length > 0) {
+                    await offlineDB.putBulk(OfflineStore.FIXED_EXPENSES, fixedExpenses);
+                }
+                console.log(`📌 ${fixedExpenses.length} gastos fijos sincronizados`);
+            }
+
         } catch (error: any) {
             if (!navigator.onLine || error?.message?.includes('Failed to fetch')) {
                 console.warn('Network error syncing from Supabase (offline/unstable):', error?.message);
@@ -489,6 +516,9 @@ class OfflineSyncManager {
                 break;
             case OfflineStore.INVENTORY_MOVEMENTS:
                 await this.syncInventoryMovement(operation, data, signal);
+                break;
+            case OfflineStore.FIXED_EXPENSES:
+                await this.syncFixedExpense(operation, data, signal);
                 break;
             default:
                 console.warn('Store no soportado para sincronización:', store);
@@ -883,6 +913,59 @@ class OfflineSyncManager {
             case 'DELETE':
                 const { error: deleteError } = await supabase
                     .from('expenses')
+                    .delete()
+                    .eq('id', data.id);
+                if (deleteError) throw deleteError;
+                break;
+        }
+    }
+
+    // Sincronizar gasto fijo
+    private async syncFixedExpense(operation: string, data: any, signal?: AbortSignal): Promise<void> {
+        switch (operation) {
+            case 'CREATE':
+                if (!data.store_id) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('store_id')
+                            .eq('id', user.id)
+                            .maybeSingle();
+
+                        if (profile?.store_id) {
+                            data.store_id = profile.store_id;
+                        }
+                    }
+                }
+                const { synced, ...insertData } = data;
+                const { error: createError } = await supabase
+                    .from('fixed_expenses')
+                    .insert(insertData)
+                    .abortSignal(signal || null);
+
+                if (createError) {
+                    if (createError.code === '23505' || createError.message?.includes('duplicate')) {
+                        console.warn(`Fixed expense already exists, ignoring duplicate.`);
+                        return;
+                    }
+                    throw createError;
+                }
+                break;
+
+            case 'UPDATE':
+                const { id, ...updateData } = data;
+                const { error: updateError } = await supabase
+                    .from('fixed_expenses')
+                    .update(updateData)
+                    .eq('id', id)
+                    .abortSignal(signal || null);
+                if (updateError) throw updateError;
+                break;
+
+            case 'DELETE':
+                const { error: deleteError } = await supabase
+                    .from('fixed_expenses')
                     .delete()
                     .eq('id', data.id);
                 if (deleteError) throw deleteError;

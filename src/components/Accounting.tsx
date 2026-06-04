@@ -18,6 +18,7 @@ import { format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useExpenses } from '@/hooks/useExpenses';
+import { useFixedExpenses, FixedExpense } from '@/hooks/useFixedExpenses';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
@@ -66,6 +67,123 @@ function AccountingContent() {
     const { expenses, createExpense, deleteExpense, isLoading: loadingExpenses, isCreating } = useExpenses();
     const { suppliers, createSupplier, deleteSupplier, isLoading: loadingSuppliers } = useSuppliers();
     const { settings: storeSettings, updateSettings } = useStoreSettings();
+
+    const { 
+        fixedExpenses, 
+        createFixedExpense, 
+        updateFixedExpense, 
+        deleteFixedExpense, 
+        isLoading: loadingFixedExpenses 
+    } = useFixedExpenses();
+
+    const [isAddFixedOpen, setIsAddFixedOpen] = useState(false);
+    const [editingFixed, setEditingFixed] = useState<FixedExpense | null>(null);
+    const [fixedForm, setFixedForm] = useState({
+        description: '',
+        amount: '',
+        category: 'Alquiler',
+        due_day: '5'
+    });
+
+    const handleSaveFixedExpense = async () => {
+        if (!fixedForm.description.trim() || !fixedForm.amount || !fixedForm.due_day) {
+            toast({
+                title: "Campos incompletos",
+                description: "Por favor llena todos los campos obligatorios.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const dueDayNum = parseInt(fixedForm.due_day, 10);
+        if (isNaN(dueDayNum) || dueDayNum < 1 || dueDayNum > 31) {
+            toast({
+                title: "Día inválido",
+                description: "El día de vencimiento debe estar entre 1 y 31.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const amountNum = parseFloat(fixedForm.amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            toast({
+                title: "Monto inválido",
+                description: "El monto debe ser mayor a 0.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            if (editingFixed) {
+                await updateFixedExpense({
+                    ...editingFixed,
+                    description: fixedForm.description.trim(),
+                    amount: amountNum,
+                    category: fixedForm.category,
+                    due_day: dueDayNum
+                });
+            } else {
+                await createFixedExpense({
+                    description: fixedForm.description.trim(),
+                    amount: amountNum,
+                    category: fixedForm.category,
+                    due_day: dueDayNum
+                });
+            }
+            setIsAddFixedOpen(false);
+            setEditingFixed(null);
+            setFixedForm({ description: '', amount: '', category: 'Alquiler', due_day: '5' });
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleMarkAsPaid = async (fixed: FixedExpense) => {
+        if (isCreating) return;
+
+        const today = new Date();
+        let expenseDate = today;
+
+        if (currentDate.getMonth() !== today.getMonth() || currentDate.getFullYear() !== today.getFullYear()) {
+            const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+            const actualDay = Math.min(fixed.due_day, daysInMonth);
+            expenseDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), actualDay, 12, 0, 0);
+        }
+
+        try {
+            await createExpense({
+                date: expenseDate,
+                description: `Gasto Fijo: ${fixed.description}`,
+                amount: fixed.amount,
+                category: fixed.category,
+                fixed_expense_id: fixed.id,
+                supplier_id: null,
+                invoice_number: null,
+                image_url: null,
+                created_at: expenseDate.toISOString()
+            });
+
+            toast({
+                title: "Gasto pagado",
+                description: `Se registró el pago de "${fixed.description}" en Contabilidad.`,
+                className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+            });
+        } catch (err) {
+            console.error("Error al registrar pago de gasto fijo:", err);
+        }
+    };
+
+    const handleDeleteFixed = async (id: string, description: string) => {
+        if (confirm(`¿Estás seguro de eliminar el gasto fijo "${description}"?`)) {
+            try {
+                await deleteFixedExpense(id);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    };
 
     console.log("=== VERSION DE DEPURACION DE IA DE LA CONTABILIDAD CARGADA ===");
 
@@ -888,6 +1006,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 <div className="flex justify-center w-full">
                     <TabsList className="bg-muted/20 p-1 rounded-2xl border border-border/50 h-auto self-center">
                         <TabsTrigger value="expenses" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Gastos</TabsTrigger>
+                        <TabsTrigger value="fixed-expenses" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Gastos Fijos</TabsTrigger>
                         <TabsTrigger value="suppliers" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Proveedores</TabsTrigger>
                         <TabsTrigger value="reports" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Reportes</TabsTrigger>
                     </TabsList>
@@ -1114,6 +1233,167 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             </div>
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                <TabsContent value="fixed-expenses" className="space-y-6 animate-in fade-in duration-300">
+                    <div className="flex justify-between items-center max-w-4xl mx-auto w-full gap-4 flex-wrap">
+                        <div className="text-left">
+                            <h2 className="text-xl font-black uppercase">Gastos Fijos del Mes</h2>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Control y programación de egresos recurrentes del negocio para el mes de {currentDate ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}.
+                            </p>
+                        </div>
+                        <Button 
+                            onClick={() => {
+                                setEditingFixed(null);
+                                setFixedForm({
+                                    description: '',
+                                    amount: '',
+                                    category: 'Alquiler',
+                                    due_day: '5'
+                                });
+                                setIsAddFixedOpen(true);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest px-6 h-11 rounded-xl shadow-md gap-2"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Agregar Gasto Fijo
+                        </Button>
+                    </div>
+
+                    {/* Stats for the month */}
+                    {(() => {
+                        const totalFixedAmount = fixedExpenses.reduce((sum, fx) => sum + (fx.amount || 0), 0);
+                        const paidFixedAmount = fixedExpenses
+                            .filter(fx => filteredExpenses.some(e => e.fixed_expense_id === fx.id))
+                            .reduce((sum, fx) => sum + (fx.amount || 0), 0);
+                        const pendingFixedAmount = totalFixedAmount - paidFixedAmount;
+
+                        return (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto w-full">
+                                <Card className="bg-muted/10 border-border/50">
+                                    <CardHeader className="pb-1 py-3 text-left">
+                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Presupuesto Fijo Total</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="py-2 pb-4 text-left">
+                                        <span className="text-2xl font-black">${totalFixedAmount.toLocaleString()}</span>
+                                    </CardContent>
+                                </Card>
+                                <Card className="bg-emerald-500/5 border-emerald-500/20">
+                                    <CardHeader className="pb-1 py-3 text-left">
+                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-emerald-500">Pagado este Mes</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="py-2 pb-4 text-left">
+                                        <span className="text-2xl font-black text-emerald-500">${paidFixedAmount.toLocaleString()}</span>
+                                    </CardContent>
+                                </Card>
+                                <Card className="bg-red-500/5 border-red-500/20">
+                                    <CardHeader className="pb-1 py-3 text-left">
+                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-red-500">Pendiente de Pago</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="py-2 pb-4 text-left">
+                                        <span className="text-2xl font-black text-red-500">${pendingFixedAmount.toLocaleString()}</span>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Table View */}
+                    <div className="max-w-4xl mx-auto w-full overflow-hidden rounded-2xl border border-border/50 shadow-lg bg-card">
+                        <Table>
+                            <TableHeader className="bg-muted/30">
+                                <TableRow>
+                                    <TableHead className="font-bold text-xs uppercase tracking-wider text-left">Concepto</TableHead>
+                                    <TableHead className="font-bold text-xs uppercase tracking-wider text-left">Categoría</TableHead>
+                                    <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Monto</TableHead>
+                                    <TableHead className="font-bold text-xs uppercase tracking-wider text-left">Vencimiento</TableHead>
+                                    <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Estado</TableHead>
+                                    <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loadingFixedExpenses ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-10">
+                                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground mt-2 block">Cargando gastos fijos...</span>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : fixedExpenses.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm font-medium">
+                                            No tienes gastos fijos mensuales registrados.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    fixedExpenses.map((fixed) => {
+                                        const paidExpense = filteredExpenses.find(e => e.fixed_expense_id === fixed.id);
+                                        const isPaid = !!paidExpense;
+
+                                        return (
+                                            <TableRow key={fixed.id} className="hover:bg-muted/10 transition-colors">
+                                                <TableCell className="font-bold text-sm text-left">{fixed.description}</TableCell>
+                                                <TableCell className="text-left">
+                                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground border border-border">
+                                                        {fixed.category}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-right font-black text-sm">${fixed.amount.toLocaleString()}</TableCell>
+                                                <TableCell className="font-medium text-xs text-left">Día {fixed.due_day}</TableCell>
+                                                <TableCell className="text-center">
+                                                    {isPaid ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 mx-auto">
+                                                            <Check className="h-3 w-3" /> Pagado
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex justify-center">
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleMarkAsPaid(fixed)}
+                                                                className="h-7 text-[10px] font-black uppercase tracking-wider rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-200 active:scale-95 px-3"
+                                                            >
+                                                                Marcar Pagado
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1.5">
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                setEditingFixed(fixed);
+                                                                setFixedForm({
+                                                                    description: fixed.description,
+                                                                    amount: String(fixed.amount),
+                                                                    category: fixed.category,
+                                                                    due_day: String(fixed.due_day)
+                                                                });
+                                                                setIsAddFixedOpen(true);
+                                                            }}
+                                                            className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg"
+                                                        >
+                                                            <Settings2 className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            onClick={() => handleDeleteFixed(fixed.id, fixed.description)}
+                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
             </Tabs>
 
@@ -1828,6 +2108,87 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             className="w-full sm:w-auto font-bold rounded-xl px-5"
                         >
                             Cerrar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Add/Edit Fixed Expense */}
+            <Dialog open={isAddFixedOpen} onOpenChange={setIsAddFixedOpen}>
+                <DialogContent className="sm:max-w-[425px] rounded-2xl border border-border/50">
+                    <DialogHeader>
+                        <DialogTitle className="text-left">
+                            {editingFixed ? "Editar Gasto Fijo" : "Registrar Gasto Fijo Mensual"}
+                        </DialogTitle>
+                        <DialogDescription className="text-left">
+                            Define un gasto fijo que se repita todos los meses de forma automática.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label htmlFor="fixed-desc" className="text-xs font-bold text-muted-foreground uppercase">Concepto / Descripción</Label>
+                            <Input
+                                id="fixed-desc"
+                                placeholder="Ej. Alquiler Local, Internet, Luz"
+                                className="h-10 rounded-xl"
+                                value={fixedForm.description}
+                                onChange={(e) => setFixedForm({ ...fixedForm, description: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-2 text-left">
+                                <Label htmlFor="fixed-amount" className="text-xs font-bold text-muted-foreground uppercase">Monto Mensual</Label>
+                                <Input
+                                    id="fixed-amount"
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="h-10 rounded-xl"
+                                    value={fixedForm.amount}
+                                    onChange={(e) => setFixedForm({ ...fixedForm, amount: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2 text-left">
+                                <Label htmlFor="fixed-due" className="text-xs font-bold text-muted-foreground uppercase">Día de Pago</Label>
+                                <Input
+                                    id="fixed-due"
+                                    type="number"
+                                    min="1"
+                                    max="31"
+                                    placeholder="Día 1-31"
+                                    className="h-10 rounded-xl"
+                                    value={fixedForm.due_day}
+                                    onChange={(e) => setFixedForm({ ...fixedForm, due_day: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase">Categoría</Label>
+                            <Select
+                                value={fixedForm.category}
+                                onValueChange={(val) => setFixedForm({ ...fixedForm, category: val })}
+                            >
+                                <SelectTrigger className="h-10 rounded-xl bg-background border border-input">
+                                    <SelectValue placeholder="Selecciona una categoría" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {CATEGORIES.filter(c => c !== 'Inventario').map((cat) => (
+                                        <SelectItem key={cat} value={cat} className="rounded-lg">
+                                            {cat}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" className="rounded-xl" onClick={() => setIsAddFixedOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button 
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-5 font-bold animate-in duration-200 active:scale-95"
+                            onClick={handleSaveFixedExpense}
+                        >
+                            Guardar
                         </Button>
                     </DialogFooter>
                 </DialogContent>

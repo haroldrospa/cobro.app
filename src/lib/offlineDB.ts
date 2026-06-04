@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'CobroAppOfflineDB';
-const DB_VERSION = 7; // v7: Agregar historial de movimientos de inventario
+const DB_VERSION = 8; // v8: Agregar gastos fijos mensuales
 
 // Tipos de tiendas (stores) en IndexedDB
 export enum OfflineStore {
@@ -18,6 +18,7 @@ export enum OfflineStore {
     EXPENSES = 'expenses',
     CASH_SESSIONS = 'cash_sessions',
     INVENTORY_MOVEMENTS = 'inventory_movements',
+    FIXED_EXPENSES = 'fixed_expenses',
 }
 
 export interface SyncQueueItem {
@@ -106,6 +107,11 @@ class OfflineDatabase {
                     });
                     syncStore.createIndex('synced', 'synced', { unique: false });
                     syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+                }
+
+                if (!db.objectStoreNames.contains(OfflineStore.FIXED_EXPENSES)) {
+                    const fixedExpenseStore = db.createObjectStore(OfflineStore.FIXED_EXPENSES, { keyPath: 'id' });
+                    fixedExpenseStore.createIndex('store_id', 'store_id', { unique: false });
                 }
             };
         });

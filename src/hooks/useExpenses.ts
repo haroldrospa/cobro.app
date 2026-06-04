@@ -16,6 +16,7 @@ export interface Expense {
     supplier_name?: string; // Optional helpful field join
     invoice_number: string | null;
     image_url: string | null;
+    fixed_expense_id?: string | null;
     created_at: string;
     synced?: boolean | number;
 }
@@ -110,6 +111,7 @@ export const useExpenses = () => {
                 supplier_id: newExpense.supplier_id || null,
                 invoice_number: newExpense.invoice_number,
                 image_url: newExpense.image_url,
+                fixed_expense_id: newExpense.fixed_expense_id || null,
                 created_at: newExpense.created_at || new Date().toISOString(),
                 synced: 0,
                 supplier_name: newExpense.supplier_name
