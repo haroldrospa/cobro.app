@@ -378,7 +378,11 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                 onClose={() => setShowCashCount(false)}
                 onConfirm={(total) => setActualCash(total.toString())}
             />
-            <DialogContent hideCloseButton className="max-w-6xl h-[90vh] p-0 overflow-hidden bg-zinc-950/95 backdrop-blur-2xl border-white/10 flex flex-col rounded-[2rem]">
+            <DialogContent 
+                hideCloseButton 
+                className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl w-full h-[90vh] p-0 overflow-hidden bg-zinc-950/95 backdrop-blur-2xl border-white/10 flex flex-col rounded-[2rem]"
+                centerOnMobile={true}
+            >
                 <div className="bg-gradient-to-b from-green-500/10 via-green-500/5 to-transparent p-5 pb-1">
                     <DialogHeader className="flex flex-row items-center justify-between space-y-0">
                         <div className="space-y-1">

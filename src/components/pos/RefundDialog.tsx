@@ -123,7 +123,10 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+            <DialogContent 
+                className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full max-h-[90vh] flex flex-col bg-[#0a0a0a] border-zinc-900 rounded-[2rem] shadow-2xl"
+                centerOnMobile={true}
+            >
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <RefreshCcw className="h-5 w-5" />

@@ -87,7 +87,7 @@ const Products: FC = () => {
   const [quickCreateName, setQuickCreateName] = useState('');
   const [quickCreatePrice, setQuickCreatePrice] = useState(0);
   const [quickCreateCost, setQuickCreateCost] = useState(0);
-  const [quickCreateTax, setQuickCreateTax] = useState(18);
+  const [quickCreateTax, setQuickCreateTax] = useState(customTaxRate);
   const [quickCreateItemIdx, setQuickCreateItemIdx] = useState<number | null>(null);
   const [quickCreateBarcode, setQuickCreateBarcode] = useState('');
   const [prefilledFormValues, setPrefilledFormValues] = useState<Partial<Product> | null>(null);
@@ -96,6 +96,23 @@ const Products: FC = () => {
   const [openComboIdx, setOpenComboIdx] = useState<number | null>(null);
   const [aiTaxMessage, setAiTaxMessage] = useState<string | null>(null);
   const [aiIsTaxInclusive, setAiIsTaxInclusive] = useState<boolean>(false);
+  const [customTaxRate, setCustomTaxRate] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('cobro_app_ai_stock_custom_tax_rate');
+      return saved ? Number(saved) : 18;
+    } catch (e) {
+      return 18;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cobro_app_ai_stock_custom_tax_rate', String(customTaxRate));
+    } catch (e) {
+      console.error("Error saving custom tax rate to localStorage:", e);
+    }
+  }, [customTaxRate]);
+
   const [isConfirmingSummary, setIsConfirmingSummary] = useState(false);
   // Quick Stock Edit State
   const [stockEditProduct, setStockEditProduct] = useState<Product | null>(null);
@@ -490,7 +507,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           isTaxInclusive = true;
         }
       } else if (cleanTotal > 0) {
-        if (Math.abs(sumSubtotals - cleanTotal) < Math.abs(sumSubtotals * 1.18 - cleanTotal)) {
+        if (Math.abs(sumSubtotals - cleanTotal) < Math.abs(sumSubtotals * (1 + customTaxRate / 100) - cleanTotal)) {
           isTaxInclusive = true;
         }
       }
@@ -501,7 +518,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       if (isTaxInclusive) {
         taxAlertMsg = `✅ Impuestos Incluidos: Los precios de esta factura ya contienen el ITBIS.`;
       } else {
-        const avgTaxPct = items.length > 0 ? (items.reduce((acc: number, item: any) => acc + (item.tax_percentage !== undefined ? item.tax_percentage : 18), 0) / items.length) : 18;
+        const avgTaxPct = items.length > 0 ? (items.reduce((acc: number, item: any) => acc + (item.tax_percentage !== undefined && item.tax_percentage !== null ? item.tax_percentage : customTaxRate), 0) / items.length) : customTaxRate;
         taxAlertMsg = `⚠️ Impuestos Adicionados: Los precios de la factura NO incluyen ITBIS. Se ha sumado automáticamente el ${avgTaxPct.toFixed(0)}% de impuesto al costo de los productos.`;
       }
       setAiTaxMessage(taxAlertMsg);
@@ -538,7 +555,8 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           : parsedBoxCost;
 
         // Si la factura NO incluye impuestos, se los agregamos al costo
-        const taxPercentage = item.tax_percentage !== undefined ? item.tax_percentage : 18;
+        const hasTaxPercentage = item.tax_percentage !== undefined && item.tax_percentage !== null;
+        const taxPercentage = hasTaxPercentage ? item.tax_percentage : customTaxRate;
         if (!isTaxInclusive) {
           unitCost = parseFloat((unitCost * (1 + taxPercentage / 100)).toFixed(2));
         }
@@ -550,6 +568,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           quantity: parsedBoxQuantity,
           cost: unitCost,
           taxPercentage: taxPercentage,
+          isDefaultTax: !hasTaxPercentage,
           unitsPerBox: parsedUnitsPerBox,
           originalBoxQty: parsedBoxQuantity,
           originalBoxCost: parsedBoxCost,
@@ -601,7 +620,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       setQuickCreateName('');
       setQuickCreatePrice(0);
       setQuickCreateCost(0);
-      setQuickCreateTax(18);
+      setQuickCreateTax(customTaxRate);
       setQuickCreateBarcode('');
       setComboboxSearchTerm('');
       setQuickCreateItemIdx(null);
@@ -1203,21 +1222,16 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     
     // Recalcular los costos de los productos extraídos
     setExtractedItems(prev => prev.map(item => {
-      // originalBoxCost representa el costo base extraído de la factura (antes de impuesto)
-      const baseCost = item.originalBoxCost || 0;
-      let unitCost = item.buyMode === 'box'
-        ? parseFloat((baseCost / (item.unitsPerBox || 1)).toFixed(2))
-        : baseCost;
-
-      // Si NO es inclusivo de impuestos, se le suma la tasa de impuesto
-      if (!newValue) {
-        const taxPercentage = item.taxPercentage !== undefined ? item.taxPercentage : 18;
-        unitCost = parseFloat((unitCost * (1 + taxPercentage / 100)).toFixed(2));
-      }
+      const currentSub = item.subtotal !== undefined ? item.subtotal : parseFloat((item.quantity * item.cost * (item.buyMode === 'box' ? (item.unitsPerBox || 1) : 1)).toFixed(2));
+      const totalUnits = item.quantity * (item.buyMode === 'box' ? (item.unitsPerBox || 1) : 1);
+      const taxPercentage = item.taxPercentage !== undefined ? item.taxPercentage : customTaxRate;
+      const baseCost = totalUnits > 0 ? currentSub / totalUnits : 0;
+      const finalCost = newValue ? baseCost : (baseCost * (1 + taxPercentage / 100));
 
       return {
         ...item,
-        cost: unitCost
+        subtotal: currentSub,
+        cost: parseFloat(finalCost.toFixed(4))
       };
     }));
 
@@ -1225,8 +1239,28 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     if (newValue) {
       setAiTaxMessage(`✅ Impuestos Incluidos: Los precios de esta factura ya contienen el ITBIS.`);
     } else {
-      setAiTaxMessage(`⚠️ Impuestos Adicionados: Los precios de la factura NO incluyen ITBIS. Se ha sumado automáticamente el impuesto al costo de los productos.`);
+      setAiTaxMessage(`⚠️ Impuestos Adicionados: Los precios de la factura NO incluyen ITBIS. Se ha sumado automáticamente el ${customTaxRate}% de impuesto al costo de los productos.`);
     }
+  };
+
+  const handleCustomTaxRateChange = (newRate: number) => {
+    setCustomTaxRate(newRate);
+    
+    setExtractedItems(prev => prev.map(item => {
+      if (!item.isDefaultTax) return item;
+
+      const currentSub = item.subtotal !== undefined ? item.subtotal : parseFloat((item.quantity * item.cost * (item.buyMode === 'box' ? (item.unitsPerBox || 1) : 1)).toFixed(2));
+      const totalUnits = item.quantity * (item.buyMode === 'box' ? (item.unitsPerBox || 1) : 1);
+      const baseCost = totalUnits > 0 ? currentSub / totalUnits : 0;
+      const finalCost = aiIsTaxInclusive ? baseCost : (baseCost * (1 + newRate / 100));
+
+      return {
+        ...item,
+        taxPercentage: newRate,
+        cost: parseFloat(finalCost.toFixed(4)),
+        subtotal: currentSub
+      };
+    }));
   };
 
   const handleCloseForm = () => {
@@ -2122,7 +2156,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
         setIsAIStockOpen(open);
       }}>
         <DialogContent 
-          className="max-w-[95vw] lg:max-w-[1150px] w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 gap-4 sm:gap-6 rounded-2xl"
+          className="max-w-[95vw] lg:max-w-[1150px] w-auto sm:w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 gap-4 sm:gap-6 rounded-2xl"
           centerOnMobile={true}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
@@ -2193,31 +2227,52 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center bg-muted/65 p-1 rounded-xl shrink-0 self-start md:self-auto border border-border/40">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTaxInclusive(true)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200",
-                        aiIsTaxInclusive 
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      Sí, Incluyen ITBIS
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTaxInclusive(false)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200",
-                        !aiIsTaxInclusive 
-                          ? "bg-amber-600 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      No, Sumar ITBIS
-                    </button>
+                  <div className="flex flex-wrap items-center gap-3 shrink-0 self-start md:self-auto">
+                    {/* Input para el porcentaje personalizado de ITBIS si no viene en factura */}
+                    <div className="flex items-center bg-muted/65 px-3 py-1.5 rounded-xl border border-border/40 h-10 gap-2 shadow-sm">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                        % Impuesto:
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={customTaxRate}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          handleCustomTaxRateChange(isNaN(val) ? 0 : val);
+                        }}
+                        className="w-12 h-6 text-center font-extrabold px-1 rounded-lg bg-background border border-border/40 text-xs shadow-inner focus:outline-none focus:ring-1 focus:ring-amber-500 text-foreground"
+                      />
+                    </div>
+
+                    {/* Selector de modo de impuestos */}
+                    <div className="flex items-center bg-muted/65 p-1 rounded-xl border border-border/40 h-10">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTaxInclusive(true)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 h-full flex items-center justify-center",
+                          aiIsTaxInclusive 
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Sí, Incluyen ITBIS
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTaxInclusive(false)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 h-full flex items-center justify-center",
+                          !aiIsTaxInclusive 
+                            ? "bg-amber-600 text-white shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        No, Sumar ITBIS
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2232,7 +2287,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
 
                   <div className="border border-border/80 rounded-2xl overflow-hidden shadow-sm">
                     <div className="overflow-x-auto max-h-[50vh]">
-                      <table className="w-full text-sm text-left">
+                      <table className="w-full text-sm text-left min-w-[700px]">
                         <thead className="bg-muted text-muted-foreground uppercase tracking-widest text-[10px] font-black border-b border-border/50 sticky top-0">
                           <tr>
                             <th className="px-4 py-3">Producto</th>
@@ -2308,18 +2363,24 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                     {extractedItems.map((item, idx) => (
                       <div key={item.id} className="p-5 bg-muted/40 border border-border/80 rounded-2xl flex flex-col gap-4 shadow-sm hover:border-border transition-colors duration-200">
                         {/* Header: Temp name in invoice */}
-                        <div className="flex justify-between items-center pb-2 border-b border-border/40">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-2 border-b border-border/40">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-xs text-muted-foreground/80 font-bold uppercase tracking-wider">Nombre en Factura</span>
                             <span className="text-base sm:text-lg font-black text-foreground line-clamp-1">{item.tempName}</span>
                           </div>
                           
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                             {/* Buy Mode Toggle */}
                             <div className="flex items-center gap-1 bg-background/80 border border-border/60 p-0.5 rounded-xl shadow-inner">
                               <button
                                 type="button"
-                                onClick={() => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, buyMode: 'box' } : it))}
+                                onClick={() => setExtractedItems(prev => prev.map((it, i) => {
+                                  if (i !== idx) return it;
+                                  const currentSub = it.subtotal !== undefined ? it.subtotal : (it.quantity * it.cost * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1));
+                                  const totalUnits = it.quantity * (it.unitsPerBox || 1);
+                                  const newCost = totalUnits > 0 ? currentSub / totalUnits : 0;
+                                  return { ...it, buyMode: 'box', subtotal: currentSub, cost: parseFloat(newCost.toFixed(4)) };
+                                }))}
                                 className={cn(
                                   "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200",
                                   (item.buyMode || 'box') === 'box'
@@ -2331,7 +2392,13 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, buyMode: 'unit' } : it))}
+                                onClick={() => setExtractedItems(prev => prev.map((it, i) => {
+                                  if (i !== idx) return it;
+                                  const currentSub = it.subtotal !== undefined ? it.subtotal : (it.quantity * it.cost * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1));
+                                  const totalUnits = it.quantity;
+                                  const newCost = totalUnits > 0 ? currentSub / totalUnits : 0;
+                                  return { ...it, buyMode: 'unit', subtotal: currentSub, cost: parseFloat(newCost.toFixed(4)) };
+                                }))}
                                 className={cn(
                                   "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200",
                                   item.buyMode === 'unit'
@@ -2496,6 +2563,37 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                             </Popover>
                           </div>
 
+                          {/* Subtotal Input (Editable) */}
+                          <div className="flex flex-col gap-1.5 col-span-1">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
+                              Subtotal ($)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.subtotal !== undefined ? item.subtotal : parseFloat((item.quantity * item.cost * (item.buyMode === 'box' ? (item.unitsPerBox || 1) : 1)).toFixed(2)) || ""}
+                              onChange={(e) => {
+                                const newSubtotal = parseFloat(e.target.value) || 0;
+                                setExtractedItems(prev => prev.map((it, i) => {
+                                  if (i !== idx) return it;
+                                  const totalUnits = it.quantity * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1);
+                                  const taxPercentage = it.taxPercentage !== undefined ? it.taxPercentage : customTaxRate;
+                                  const baseCost = totalUnits > 0 ? newSubtotal / totalUnits : 0;
+                                  const finalCost = aiIsTaxInclusive ? baseCost : (baseCost * (1 + taxPercentage / 100));
+                                  return { 
+                                    ...it, 
+                                    subtotal: newSubtotal, 
+                                    cost: parseFloat(finalCost.toFixed(4)) 
+                                  };
+                                }));
+                              }}
+                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
+                            />
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block ml-1 leading-none h-4">
+                              Subtotal Ítem
+                            </span>
+                          </div>
+
                           {/* Quantity Input */}
                           <div className="flex flex-col gap-1.5 col-span-1">
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
@@ -2504,7 +2602,23 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                             <Input
                               type="number"
                               value={item.quantity}
-                              onChange={(e) => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: parseFloat(e.target.value) || 0 } : it))}
+                              onChange={(e) => {
+                                const newQty = parseFloat(e.target.value) || 0;
+                                setExtractedItems(prev => prev.map((it, i) => {
+                                  if (i !== idx) return it;
+                                  const totalUnits = newQty * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1);
+                                  const currentSub = it.subtotal !== undefined ? it.subtotal : (it.quantity * it.cost * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1));
+                                  const taxPercentage = it.taxPercentage !== undefined ? it.taxPercentage : customTaxRate;
+                                  const baseCost = totalUnits > 0 ? currentSub / totalUnits : 0;
+                                  const finalCost = aiIsTaxInclusive ? baseCost : (baseCost * (1 + taxPercentage / 100));
+                                  return { 
+                                    ...it, 
+                                    quantity: newQty, 
+                                    cost: parseFloat(finalCost.toFixed(4)),
+                                    subtotal: currentSub
+                                  };
+                                }));
+                              }}
                               className="h-11 text-sm font-extrabold px-3 rounded-xl"
                             />
                             <span className="text-[10px] font-black text-amber-600 uppercase tracking-wider block ml-1">
@@ -2518,7 +2632,23 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                             <Input
                               type="number"
                               value={item.unitsPerBox || 1}
-                              onChange={(e) => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, unitsPerBox: parseFloat(e.target.value) || 1 } : it))}
+                              onChange={(e) => {
+                                const newUnits = parseFloat(e.target.value) || 1;
+                                setExtractedItems(prev => prev.map((it, i) => {
+                                  if (i !== idx) return it;
+                                  const totalUnits = it.quantity * (it.buyMode === 'box' ? newUnits : 1);
+                                  const currentSub = it.subtotal !== undefined ? it.subtotal : (it.quantity * it.cost * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1));
+                                  const taxPercentage = it.taxPercentage !== undefined ? it.taxPercentage : customTaxRate;
+                                  const baseCost = totalUnits > 0 ? currentSub / totalUnits : 0;
+                                  const finalCost = aiIsTaxInclusive ? baseCost : (baseCost * (1 + taxPercentage / 100));
+                                  return { 
+                                    ...it, 
+                                    unitsPerBox: newUnits, 
+                                    cost: parseFloat(finalCost.toFixed(4)),
+                                    subtotal: currentSub
+                                  };
+                                }));
+                              }}
                               className="h-11 text-sm font-extrabold px-3 rounded-xl"
                               disabled={item.buyMode === 'unit'}
                             />
@@ -2536,36 +2666,25 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                               type="number"
                               step="0.01"
                               value={item.cost}
-                              onChange={(e) => setExtractedItems(prev => prev.map((it, i) => i === idx ? { ...it, cost: parseFloat(e.target.value) || 0 } : it))}
-                              className="h-11 text-sm font-extrabold px-3 rounded-xl"
-                            />
-                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block ml-1 leading-none h-4">
-                              {item.buyMode === 'box' ? `Caja: $${(item.cost * (item.unitsPerBox || 1)).toFixed(2)}` : 'Por Unidad'}
-                            </span>
-                          </div>
-
-                          {/* Subtotal Input (Editable) */}
-                          <div className="flex flex-col gap-1.5 col-span-1">
-                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-extrabold font-black">
-                              Subtotal ($)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={parseFloat((item.quantity * item.cost * (item.buyMode === 'box' ? (item.unitsPerBox || 1) : 1)).toFixed(2)) || ""}
                               onChange={(e) => {
-                                const newSubtotal = parseFloat(e.target.value) || 0;
+                                const newCost = parseFloat(e.target.value) || 0;
                                 setExtractedItems(prev => prev.map((it, i) => {
                                   if (i !== idx) return it;
                                   const totalUnits = it.quantity * (it.buyMode === 'box' ? (it.unitsPerBox || 1) : 1);
-                                  const newCost = totalUnits > 0 ? newSubtotal / totalUnits : 0;
-                                  return { ...it, cost: parseFloat(newCost.toFixed(4)) };
+                                  const taxPercentage = it.taxPercentage !== undefined ? it.taxPercentage : customTaxRate;
+                                  const baseSubtotal = totalUnits * newCost;
+                                  const finalSubtotal = aiIsTaxInclusive ? baseSubtotal : (baseSubtotal / (1 + taxPercentage / 100));
+                                  return { 
+                                    ...it, 
+                                    cost: newCost, 
+                                    subtotal: parseFloat(finalSubtotal.toFixed(2)) 
+                                  };
                                 }));
                               }}
                               className="h-11 text-sm font-extrabold px-3 rounded-xl"
                             />
-                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block ml-1 leading-none h-4">
-                              Subtotal Ítem
+                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block ml-1 leading-none h-4">
+                              {item.buyMode === 'box' ? `Caja: $${(item.cost * (item.unitsPerBox || 1)).toFixed(2)}` : 'Por Unidad'}
                             </span>
                           </div>
                         </div>

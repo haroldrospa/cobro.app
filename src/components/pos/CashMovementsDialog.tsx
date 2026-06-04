@@ -65,7 +65,11 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent hideCloseButton className="max-w-xl p-0 overflow-hidden bg-zinc-950/95 backdrop-blur-2xl border-white/10 rounded-[2.5rem]">
+            <DialogContent 
+                hideCloseButton 
+                className="max-w-[95vw] sm:max-w-md lg:max-w-xl w-full p-0 overflow-hidden bg-zinc-950/95 backdrop-blur-2xl border-white/10 rounded-[2.5rem]"
+                centerOnMobile={true}
+            >
                 <div className="bg-gradient-to-b from-green-500/10 to-transparent p-6 pb-2">
                     <DialogHeader className="flex flex-row items-center justify-between space-y-0">
                         <div className="space-y-1">

@@ -46,7 +46,7 @@ import CustomerCreditDialog from './customers/CustomerCreditDialog';
 import { LimitReachedDialog } from './subscription/PlanRestrictions';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 import { useUserStore } from '@/hooks/useUserStore';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
@@ -1589,16 +1589,30 @@ const POSContent: React.FC = () => {
 
         {/* Diálogo de selección de cliente para cobros de deuda */}
         <Dialog open={showDebtSelectDialog} onOpenChange={setShowDebtSelectDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Seleccionar Cliente para Cobro</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <Command className="rounded-lg border shadow-md">
-                <CommandInput placeholder="Buscar por nombre, cédula o código..." />
-                <CommandList>
-                  <CommandEmpty>No se encontraron clientes.</CommandEmpty>
-                  <CommandGroup heading="Clientes con Deuda">
+          <DialogContent 
+            className="max-w-[95vw] sm:max-w-md w-full p-0 overflow-hidden bg-[#0a0a0a] border-zinc-900 rounded-[2rem] shadow-2xl"
+            centerOnMobile={true}
+          >
+            <div className="p-6 border-b border-zinc-900 bg-transparent flex items-center justify-between">
+              <DialogHeader className="space-y-0.5">
+                <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+                  <Users className="h-5 w-5 text-emerald-500" />
+                  Seleccionar Cliente
+                </DialogTitle>
+                <DialogDescription className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">
+                  Buscar cliente para cobro de deuda
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="p-4">
+              <Command className="bg-transparent border-none [&_[cmdk-input-wrapper]]:border-zinc-800/80 [&_[cmdk-input-wrapper]]:bg-zinc-900/40 [&_[cmdk-input-wrapper]]:rounded-xl [&_[cmdk-input-wrapper]]:px-4 [&_[cmdk-input-wrapper]]:h-12 [&_[cmdk-input-wrapper]_svg]:text-emerald-500 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4">
+                <CommandInput 
+                  placeholder="Buscar por nombre, cédula o código..." 
+                  className="h-12 bg-transparent text-white placeholder:text-zinc-600 border-none outline-none focus:ring-0 text-sm"
+                />
+                <CommandList className="max-h-[350px] overflow-y-auto no-scrollbar mt-3 pr-1">
+                  <CommandEmpty className="py-8 text-center text-zinc-500 text-sm">No se encontraron clientes.</CommandEmpty>
+                  <CommandGroup heading="Clientes con Deuda" className="[&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-black [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-red-500/80 [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2">
                     {customers.filter(c => (c.credit_used || 0) > 0).map(customer => (
                       <CommandItem
                         key={customer.id}
@@ -1607,14 +1621,14 @@ const POSContent: React.FC = () => {
                           setSelectedCustomerForDebt(customer);
                           setShowDebtSelectDialog(false);
                         }}
-                        className="flex justify-between items-center cursor-pointer"
+                        className="flex justify-between items-center cursor-pointer p-3 my-1 rounded-xl transition-all duration-200 border border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-white data-[selected='true']:bg-emerald-600/10 data-[selected='true']:text-emerald-400 data-[selected='true']:border-emerald-500/20 data-[selected='true']:shadow-sm"
                       >
                         <div className="flex flex-col">
-                          <span className="font-medium">{customer.name}</span>
-                          <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                            <span className="text-xs text-muted-foreground">{customer.phone || 'Sin teléfono'}</span>
+                          <span className="font-bold text-sm text-zinc-100">{customer.name}</span>
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 items-center">
+                            <span className="text-xs text-zinc-500">{customer.phone || 'Sin teléfono'}</span>
                             {(customer.rnc || customer.validation_code) && (
-                              <span className="text-[10px] text-muted-foreground/70">
+                              <span className="text-[9px] text-zinc-500 font-bold bg-zinc-900/80 px-1.5 py-0.5 rounded border border-zinc-800">
                                 {customer.rnc ? `ID: ${customer.rnc}` : ''}
                                 {customer.rnc && customer.validation_code ? ' | ' : ''}
                                 {customer.validation_code ? `Cód: ${customer.validation_code}` : ''}
@@ -1622,13 +1636,14 @@ const POSContent: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="font-bold text-red-600">${(customer.credit_used || 0).toLocaleString()}</span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-black text-sm text-red-500">${(customer.credit_used || 0).toLocaleString()}</span>
+                          <span className="text-[8px] font-black text-red-500 bg-red-500/10 border border-red-500/20 px-1 rounded">DEUDA</span>
                         </div>
                       </CommandItem>
                     ))}
                   </CommandGroup>
-                  <CommandGroup heading="Otros Clientes">
+                  <CommandGroup heading="Otros Clientes" className="[&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-black [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-zinc-500 [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2">
                     {customers.filter(c => !(c.credit_used || 0)).map(customer => (
                       <CommandItem
                         key={customer.id}
@@ -1637,17 +1652,23 @@ const POSContent: React.FC = () => {
                           setSelectedCustomerForDebt(customer);
                           setShowDebtSelectDialog(false);
                         }}
-                        className="cursor-pointer"
+                        className="flex justify-between items-center cursor-pointer p-3 my-1 rounded-xl transition-all duration-200 border border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-white data-[selected='true']:bg-emerald-600/10 data-[selected='true']:text-emerald-400 data-[selected='true']:border-emerald-500/20 data-[selected='true']:shadow-sm"
                       >
                         <div className="flex flex-col">
-                          <span>{customer.name}</span>
-                          {(customer.rnc || customer.validation_code) && (
-                            <span className="text-[10px] text-muted-foreground/70">
-                              {customer.rnc ? `ID: ${customer.rnc}` : ''}
-                              {customer.rnc && customer.validation_code ? ' | ' : ''}
-                              {customer.validation_code ? `Cód: ${customer.validation_code}` : ''}
-                            </span>
-                          )}
+                          <span className="font-bold text-sm text-zinc-200">{customer.name}</span>
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 items-center">
+                            <span className="text-xs text-zinc-500">{customer.phone || 'Sin teléfono'}</span>
+                            {(customer.rnc || customer.validation_code) && (
+                              <span className="text-[9px] text-zinc-500 font-bold bg-zinc-900/80 px-1.5 py-0.5 rounded border border-zinc-800">
+                                {customer.rnc ? `ID: ${customer.rnc}` : ''}
+                                {customer.rnc && customer.validation_code ? ' | ' : ''}
+                                {customer.validation_code ? `Cód: ${customer.validation_code}` : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-[8px] font-black text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">SIN DEUDA</span>
                         </div>
                       </CommandItem>
                     ))}
@@ -1916,16 +1937,30 @@ const POSContent: React.FC = () => {
 
         {/* --- DEBT COLLECTION DIALOGS --- */}
         <Dialog open={showDebtSelectDialog} onOpenChange={setShowDebtSelectDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Seleccionar Cliente para Cobro</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <Command className="rounded-lg border shadow-md">
-                <CommandInput placeholder="Buscar por nombre, cédula o código..." />
-                <CommandList>
-                  <CommandEmpty>No se encontraron clientes.</CommandEmpty>
-                  <CommandGroup heading="Clientes con Deuda">
+          <DialogContent 
+            className="max-w-[95vw] sm:max-w-md w-full p-0 overflow-hidden bg-[#0a0a0a] border-zinc-900 rounded-[2rem] shadow-2xl"
+            centerOnMobile={true}
+          >
+            <div className="p-6 border-b border-zinc-900 bg-transparent flex items-center justify-between">
+              <DialogHeader className="space-y-0.5">
+                <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+                  <Users className="h-5 w-5 text-emerald-500" />
+                  Seleccionar Cliente
+                </DialogTitle>
+                <DialogDescription className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">
+                  Buscar cliente para cobro de deuda
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="p-4">
+              <Command className="bg-transparent border-none [&_[cmdk-input-wrapper]]:border-zinc-800/80 [&_[cmdk-input-wrapper]]:bg-zinc-900/40 [&_[cmdk-input-wrapper]]:rounded-xl [&_[cmdk-input-wrapper]]:px-4 [&_[cmdk-input-wrapper]]:h-12 [&_[cmdk-input-wrapper]_svg]:text-emerald-500 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4">
+                <CommandInput 
+                  placeholder="Buscar por nombre, cédula o código..." 
+                  className="h-12 bg-transparent text-white placeholder:text-zinc-600 border-none outline-none focus:ring-0 text-sm"
+                />
+                <CommandList className="max-h-[350px] overflow-y-auto no-scrollbar mt-3 pr-1">
+                  <CommandEmpty className="py-8 text-center text-zinc-500 text-sm">No se encontraron clientes.</CommandEmpty>
+                  <CommandGroup heading="Clientes con Deuda" className="[&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-black [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-red-500/80 [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2">
                     {customers.filter(c => (c.credit_used || 0) > 0).map(customer => (
                       <CommandItem
                         key={customer.id}
@@ -1934,14 +1969,14 @@ const POSContent: React.FC = () => {
                           setSelectedCustomerForDebt(customer);
                           setShowDebtSelectDialog(false);
                         }}
-                        className="flex justify-between items-center cursor-pointer"
+                        className="flex justify-between items-center cursor-pointer p-3 my-1 rounded-xl transition-all duration-200 border border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-white data-[selected='true']:bg-emerald-600/10 data-[selected='true']:text-emerald-400 data-[selected='true']:border-emerald-500/20 data-[selected='true']:shadow-sm"
                       >
                         <div className="flex flex-col">
-                          <span className="font-medium">{customer.name}</span>
-                          <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                            <span className="text-xs text-muted-foreground">{customer.phone || 'Sin teléfono'}</span>
+                          <span className="font-bold text-sm text-zinc-100">{customer.name}</span>
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 items-center">
+                            <span className="text-xs text-zinc-500">{customer.phone || 'Sin teléfono'}</span>
                             {(customer.rnc || customer.validation_code) && (
-                              <span className="text-[10px] text-muted-foreground/70">
+                              <span className="text-[9px] text-zinc-500 font-bold bg-zinc-900/80 px-1.5 py-0.5 rounded border border-zinc-800">
                                 {customer.rnc ? `ID: ${customer.rnc}` : ''}
                                 {customer.rnc && customer.validation_code ? ' | ' : ''}
                                 {customer.validation_code ? `Cód: ${customer.validation_code}` : ''}
@@ -1949,13 +1984,14 @@ const POSContent: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="font-bold text-red-600">${(customer.credit_used || 0).toLocaleString()}</span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-black text-sm text-red-500">${(customer.credit_used || 0).toLocaleString()}</span>
+                          <span className="text-[8px] font-black text-red-500 bg-red-500/10 border border-red-500/20 px-1 rounded">DEUDA</span>
                         </div>
                       </CommandItem>
                     ))}
                   </CommandGroup>
-                  <CommandGroup heading="Otros Clientes">
+                  <CommandGroup heading="Otros Clientes" className="[&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-black [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-zinc-500 [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2">
                     {customers.filter(c => !(c.credit_used || 0)).map(customer => (
                       <CommandItem
                         key={customer.id}
@@ -1964,17 +2000,23 @@ const POSContent: React.FC = () => {
                           setSelectedCustomerForDebt(customer);
                           setShowDebtSelectDialog(false);
                         }}
-                        className="cursor-pointer"
+                        className="flex justify-between items-center cursor-pointer p-3 my-1 rounded-xl transition-all duration-200 border border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-white data-[selected='true']:bg-emerald-600/10 data-[selected='true']:text-emerald-400 data-[selected='true']:border-emerald-500/20 data-[selected='true']:shadow-sm"
                       >
                         <div className="flex flex-col">
-                          <span>{customer.name}</span>
-                          {(customer.rnc || customer.validation_code) && (
-                            <span className="text-[10px] text-muted-foreground/70">
-                              {customer.rnc ? `ID: ${customer.rnc}` : ''}
-                              {customer.rnc && customer.validation_code ? ' | ' : ''}
-                              {customer.validation_code ? `Cód: ${customer.validation_code}` : ''}
-                            </span>
-                          )}
+                          <span className="font-bold text-sm text-zinc-200">{customer.name}</span>
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 items-center">
+                            <span className="text-xs text-zinc-500">{customer.phone || 'Sin teléfono'}</span>
+                            {(customer.rnc || customer.validation_code) && (
+                              <span className="text-[9px] text-zinc-500 font-bold bg-zinc-900/80 px-1.5 py-0.5 rounded border border-zinc-800">
+                                {customer.rnc ? `ID: ${customer.rnc}` : ''}
+                                {customer.rnc && customer.validation_code ? ' | ' : ''}
+                                {customer.validation_code ? `Cód: ${customer.validation_code}` : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-[8px] font-black text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">SIN DEUDA</span>
                         </div>
                       </CommandItem>
                     ))}

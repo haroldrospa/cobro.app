@@ -1054,7 +1054,7 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
   return (
 
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 outline-none overflow-hidden">
+      <DialogContent className="max-w-[95vw] md:max-w-4xl lg:max-w-5xl w-full max-h-[90vh] flex flex-col p-0 gap-0 outline-none overflow-hidden">
         <div className="p-4 sm:p-6 pb-2">
           <DialogHeader className="pr-8 sm:pr-0">
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
@@ -1089,433 +1089,441 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-4">
-          {/* Resumen de crédito */}
-          <div className="grid grid-cols-3 gap-3">
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-xl font-bold text-red-500">${totalDebt.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Deuda Total</p>
-                {pendingSales.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1 truncate" title={pendingInvoiceNumbers}>
-                    {pendingSales.length} factura(s)
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-xl font-bold text-yellow-500">${creditUsed.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Crédito Usado</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-xl font-bold text-green-500">${creditAvailable.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Disponible</p>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="flex-1 overflow-y-auto p-6 pt-2">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Columna Izquierda: Información de Crédito y Pago (6 cols on lg) */}
+            <div className="lg:col-span-6 space-y-4">
+              {/* Resumen de crédito */}
+              <div className="grid grid-cols-3 gap-3">
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold text-red-500">${totalDebt.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Deuda Total</p>
+                    {pendingSales.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1 truncate" title={pendingInvoiceNumbers}>
+                        {pendingSales.length} factura(s)
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold text-yellow-500">${creditUsed.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Crédito Usado</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold text-green-500">${creditAvailable.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Disponible</p>
+                  </CardContent>
+                </Card>
+              </div>
 
-          {/* Show pending invoice numbers */}
-          {pendingSales.length > 0 && (
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">Facturas pendientes:</p>
-              <p className="text-sm font-medium">{pendingInvoiceNumbers}</p>
-            </div>
-          )}
-
-          {/* Barra de crédito */}
-          <div className="space-y-1">
-            <div className="flex justify-between items-end text-xs text-muted-foreground mb-1 h-8">
-              {isEditingLimit ? (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
-                  <span className="font-medium text-foreground whitespace-nowrap">Nuevo Límite:</span>
-                  <div className="relative">
-                    <DollarSign className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                    <Input
-                      type="number"
-                      value={newCreditLimit}
-                      onChange={e => setNewCreditLimit(e.target.value)}
-                      className="h-7 w-28 text-xs pl-5"
-                      placeholder="0.00"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleUpdateLimit();
-                        if (e.key === 'Escape') setIsEditingLimit(false);
-                      }}
-                    />
-                  </div>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={handleUpdateLimit}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setIsEditingLimit(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 group">
-                  <span>Límite de crédito: <span className="font-medium text-foreground">${creditLimit.toLocaleString()}</span></span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-muted"
-                    onClick={() => {
-                      setNewCreditLimit(creditLimit.toString());
-                      setIsEditingLimit(true);
-                    }}
-                    title="Editar límite de crédito"
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-              <span>{creditPercentage.toFixed(0)}% utilizado</span>
-            </div>
-            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
-              <div
-                className={`h-2 rounded-full transition-all duration-500 ease-out ${creditPercentage >= 90 ? 'bg-red-500' : creditPercentage >= 60 ? 'bg-yellow-500' : 'bg-green-500'
-                  }`}
-                style={{ width: `${Math.min(creditPercentage, 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {customer.credit_due_date && (
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="h-4 w-4" />
-              <span>Vencimiento de crédito: {format(new Date(customer.credit_due_date), 'PPP', { locale: es })}</span>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Facturas pendientes */}
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Receipt className="h-4 w-4" />
-                Facturas Pendientes ({pendingSales.length})
-              </h3>
+              {/* Show pending invoice numbers */}
               {pendingSales.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={handleSelectAll}>
-                  {selectedInvoices.length === pendingSales.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
-                </Button>
-              )}
-            </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : pendingSales.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                  <p className="text-muted-foreground">No hay facturas pendientes</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {pendingSales.map((sale) => {
-                  const daysOverdue = getDaysOverdue(sale.due_date);
-                  const isOverdue = daysOverdue > 0;
-                  const isSelected = selectedInvoices.includes(sale.id);
-
-                  return (
-                    <Card
-                      key={sale.id}
-                      className={`cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : ''}`}
-                      onClick={() => handleToggleInvoice(sale.id)}
-                      onDoubleClick={() => setViewingSaleId(sale.id)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => handleToggleInvoice(sale.id)}
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{sale.invoice_number}</span>
-                              <div className="text-right">
-                                <span className="font-bold">${sale.balance.toLocaleString()}</span>
-                                {sale.amount_paid > 0 && (
-                                  <span className="text-xs text-muted-foreground ml-1">
-                                    (de ${sale.total.toLocaleString()})
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-                              <span>
-                                {format(new Date(sale.created_at), 'dd/MM/yyyy')}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                {sale.amount_paid > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Abonado: ${sale.amount_paid.toLocaleString()}
-                                  </Badge>
-                                )}
-                                {sale.due_date && (
-                                  <span className="flex items-center gap-1">
-                                    Vence: {format(new Date(sale.due_date), 'dd/MM/yyyy')}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {isOverdue && (
-                            <Badge variant="destructive" className="flex items-center gap-1">
-                              <AlertTriangle className="h-3 w-3" />
-                              {daysOverdue} días
-                            </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Opciones de pago */}
-          <div className="space-y-3">
-            <h3 className="font-semibold flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Procesar Pago
-              </span>
-              <div className="flex items-center gap-2 text-sm font-normal">
-                <span className="text-muted-foreground mr-2">Método de Pago:</span>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'transfer')}
-                  className="bg-card border rounded-md text-sm px-3 py-1.5 focus:ring-1 focus:ring-primary outline-none"
-                >
-                  <option value="cash">Efectivo</option>
-                  <option value="card">Tarjeta</option>
-                  <option value="transfer">Transferencia</option>
-                </select>
-              </div>
-            </h3>
-
-            {/* Pay All Button - Prominent */}
-            <Button
-              onClick={handlePayAll}
-              disabled={pendingSales.length === 0 || isProcessing}
-              className="w-full h-12 text-lg"
-              variant="default"
-            >
-              {isProcessing ? (
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              ) : (
-                <DollarSign className="h-5 w-5 mr-2" />
-              )}
-              Pagar Todo - ${totalDebt.toLocaleString()}
-            </Button>
-
-            {/* Abonar section */}
-            <Card className="border-primary/50">
-              <CardContent className="p-3 space-y-2">
-                <p className="text-sm font-medium">Abonar a la deuda</p>
-                <p className="text-xs text-muted-foreground">
-                  El abono se aplicará a las facturas más antiguas primero
-                </p>
-                {/* Quick amount buttons */}
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {totalDebt > 0 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPaymentAmount(totalDebt.toFixed(2))}
-                        className="text-xs"
-                      >
-                        Exacto (${totalDebt.toLocaleString()})
-                      </Button>
-                      {[500, 1000, 2000, 5000].filter(amt => amt <= totalDebt).map(amt => (
-                        <Button
-                          key={amt}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPaymentAmount(amt.toString())}
-                          className="text-xs"
-                        >
-                          ${amt.toLocaleString()}
-                        </Button>
-                      ))}
-                    </>
-                  )}
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Facturas pendientes:</p>
+                  <p className="text-sm font-medium">{pendingInvoiceNumbers}</p>
                 </div>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Monto a abonar"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    className="flex-1"
+              )}
+
+              {/* Barra de crédito */}
+              <div className="space-y-1">
+                <div className="flex justify-between items-end text-xs text-muted-foreground mb-1 h-8">
+                  {isEditingLimit ? (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                      <span className="font-medium text-foreground whitespace-nowrap">Nuevo Límite:</span>
+                      <div className="relative">
+                        <DollarSign className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          value={newCreditLimit}
+                          onChange={e => setNewCreditLimit(e.target.value)}
+                          className="h-7 w-28 text-xs pl-5"
+                          placeholder="0.00"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateLimit();
+                            if (e.key === 'Escape') setIsEditingLimit(false);
+                          }}
+                        />
+                      </div>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={handleUpdateLimit}>
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setIsEditingLimit(false)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span>Límite de crédito: <span className="font-medium text-foreground">${creditLimit.toLocaleString()}</span></span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-muted"
+                        onClick={() => {
+                          setNewCreditLimit(creditLimit.toString());
+                          setIsEditingLimit(true);
+                        }}
+                        title="Editar límite de crédito"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <span>{creditPercentage.toFixed(0)}% utilizado</span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-500 ease-out ${creditPercentage >= 90 ? 'bg-red-500' : creditPercentage >= 60 ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}
+                    style={{ width: `${Math.min(creditPercentage, 100)}%` }}
                   />
+                </div>
+              </div>
+
+              {customer.credit_due_date && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4" />
+                  <span>Vencimiento de crédito: {format(new Date(customer.credit_due_date), 'PPP', { locale: es })}</span>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Opciones de pago */}
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Procesar Pago
+                  </span>
+                  <div className="flex items-center gap-2 text-sm font-normal">
+                    <span className="text-muted-foreground mr-2">Método de Pago:</span>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'transfer')}
+                      className="bg-card border rounded-md text-sm px-3 py-1.5 focus:ring-1 focus:ring-primary outline-none"
+                    >
+                      <option value="cash">Efectivo</option>
+                      <option value="card">Tarjeta</option>
+                      <option value="transfer">Transferencia</option>
+                    </select>
+                  </div>
+                </h3>
+
+                {/* Pay All Button - Prominent */}
+                <Button
+                  onClick={handlePayAll}
+                  disabled={pendingSales.length === 0 || isProcessing}
+                  className="w-full h-12 text-lg"
+                  variant="default"
+                >
+                  {isProcessing ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <DollarSign className="h-5 w-5 mr-2" />
+                  )}
+                  Pagar Todo - ${totalDebt.toLocaleString()}
+                </Button>
+
+                {/* Abonar section */}
+                <Card className="border-primary/50">
+                  <CardContent className="p-3 space-y-2">
+                    <p className="text-sm font-medium">Abonar a la deuda</p>
+                    <p className="text-xs text-muted-foreground">
+                      El abono se aplicará a las facturas más antiguas primero
+                    </p>
+                    {/* Quick amount buttons */}
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {totalDebt > 0 && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPaymentAmount(totalDebt.toFixed(2))}
+                            className="text-xs"
+                          >
+                            Exacto (${totalDebt.toLocaleString()})
+                          </Button>
+                          {[500, 1000, 2000, 5000].filter(amt => amt <= totalDebt).map(amt => (
+                            <Button
+                              key={amt}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPaymentAmount(amt.toString())}
+                              className="text-xs"
+                            >
+                              ${amt.toLocaleString()}
+                            </Button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Monto a abonar"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={async () => {
+                          const amount = parseFloat(paymentAmount);
+                          if (isNaN(amount) || amount <= 0) {
+                            toast.error('Ingresa un monto válido');
+                            return;
+                          }
+                          if (amount > totalDebt) {
+                            toast.error('El monto no puede ser mayor que la deuda total');
+                            return;
+                          }
+
+                          setIsProcessing(true);
+                          try {
+                            let remainingAmount = amount;
+                            const invoicesPaidDetails: Array<{ invoice_number: string; amountPaid: number; fullyPaid: boolean }> = [];
+
+                            // Sort by due date (oldest first) and pay invoices
+                            const sortedSales = [...pendingSales].sort((a, b) =>
+                              new Date(a.due_date || a.created_at).getTime() - new Date(b.due_date || b.created_at).getTime()
+                            );
+
+                            for (const sale of sortedSales) {
+                              if (remainingAmount <= 0) break;
+
+                              const currentBalance = sale.balance; // remaining balance on this invoice
+                              const paymentForThisInvoice = Math.min(remainingAmount, currentBalance);
+                              const newAmountPaid = sale.amount_paid + paymentForThisInvoice;
+                              const fullyPaid = newAmountPaid >= sale.total;
+
+                              // Update the invoice
+                              const { error } = await supabase
+                                .from('sales')
+                                .update({
+                                  amount_paid: newAmountPaid,
+                                  payment_status: fullyPaid ? 'paid' : 'pending',
+                                  updated_at: new Date().toISOString()
+                                })
+                                .eq('id', sale.id);
+
+                              if (error) throw error;
+
+                              invoicesPaidDetails.push({
+                                invoice_number: sale.invoice_number,
+                                amountPaid: paymentForThisInvoice,
+                                fullyPaid
+                              });
+
+                              remainingAmount -= paymentForThisInvoice;
+                            }
+
+                            // Update customer's credit_used
+                            const newCreditUsed = Math.max(0, (customer.credit_used || 0) - amount);
+                            await updateCustomer.mutateAsync({
+                              id: customer.id,
+                              credit_used: newCreditUsed,
+                            });
+
+                            queryClient.invalidateQueries({ queryKey: ['customerBalance', customer.id] });
+                            queryClient.invalidateQueries({ queryKey: ['sales'] });
+
+                            // Generate receipt
+                            const receiptNo = generateReceiptNumber();
+
+                            // Ensure the payment appears in the POS daily sales (Ventas del dia)
+                            const { data: authData } = await supabase.auth.getUser();
+                            const profileId = authData.user?.id;
+                            
+                            let storeId = null;
+                            let invoiceTypeId = null;
+                            if (profileId) {
+                              const { data: profile } = await supabase.from('profiles').select('store_id').eq('id', profileId).maybeSingle();
+                              storeId = profile?.store_id;
+                            }
+                            
+                            const { data: invoiceType } = await supabase.from('invoice_types').select('id').eq('code', 'B02').maybeSingle();
+                            invoiceTypeId = invoiceType?.id;
+                            
+                            const receiptSaleId = crypto.randomUUID();
+                            
+                            await supabase.from('sales').insert({
+                              id: receiptSaleId,
+                              invoice_number: receiptNo,
+                              customer_id: customer.id,
+                              invoice_type_id: invoiceTypeId,
+                              subtotal: amount,
+                              tax_total: 0,
+                              discount_total: 0,
+                              total: amount,
+                              payment_method: paymentMethod,
+                              amount_received: amount,
+                              payment_status: 'paid',
+                              profile_id: profileId,
+                              store_id: storeId
+                            });
+
+                            await supabase.from('sale_items').insert({
+                              sale_id: receiptSaleId,
+                              product_name: `Abono Parcial a Deuda`,
+                              quantity: 1,
+                              unit_price: amount,
+                              subtotal: amount,
+                              total: amount,
+                              tax_percentage: 0,
+                              tax_amount: 0
+                            });
+
+                            setPaymentReceipt({
+                              customerName: customer.name,
+                              invoicesPaid: invoicesPaidDetails,
+                              totalPaid: amount,
+                              remainingDebt: Math.max(0, totalDebt - amount),
+                              paymentDate: new Date(),
+                              receiptNumber: receiptNo,
+                            });
+
+                            const fullyPaidCount = invoicesPaidDetails.filter(i => i.fullyPaid).length;
+                            const partialCount = invoicesPaidDetails.filter(i => !i.fullyPaid).length;
+                            let message = `Se abonaron $${amount.toLocaleString()}`;
+                            if (fullyPaidCount > 0) message += ` (${fullyPaidCount} factura(s) pagadas)`;
+                            if (partialCount > 0) message += ` (${partialCount} abono(s) parcial(es))`;
+                            toast.success(message);
+
+                            setPaymentAmount('');
+                          } catch (error) {
+                            console.error('Error processing payment:', error);
+                            toast.error('Error al procesar el abono');
+                          } finally {
+                            setIsProcessing(false);
+                          }
+                        }}
+                        disabled={!paymentAmount || isProcessing}
+                        className="min-w-[100px]"
+                      >
+                        {isProcessing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Abonar'
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">O pagar facturas seleccionadas</p>
                   <Button
-                    onClick={async () => {
-                      const amount = parseFloat(paymentAmount);
-                      if (isNaN(amount) || amount <= 0) {
-                        toast.error('Ingresa un monto válido');
-                        return;
-                      }
-                      if (amount > totalDebt) {
-                        toast.error('El monto no puede ser mayor que la deuda total');
-                        return;
-                      }
-
-                      setIsProcessing(true);
-                      try {
-                        let remainingAmount = amount;
-                        const invoicesPaidDetails: Array<{ invoice_number: string; amountPaid: number; fullyPaid: boolean }> = [];
-
-                        // Sort by due date (oldest first) and pay invoices
-                        const sortedSales = [...pendingSales].sort((a, b) =>
-                          new Date(a.due_date || a.created_at).getTime() - new Date(b.due_date || b.created_at).getTime()
-                        );
-
-                        for (const sale of sortedSales) {
-                          if (remainingAmount <= 0) break;
-
-                          const currentBalance = sale.balance; // remaining balance on this invoice
-                          const paymentForThisInvoice = Math.min(remainingAmount, currentBalance);
-                          const newAmountPaid = sale.amount_paid + paymentForThisInvoice;
-                          const fullyPaid = newAmountPaid >= sale.total;
-
-                          // Update the invoice
-                          const { error } = await supabase
-                            .from('sales')
-                            .update({
-                              amount_paid: newAmountPaid,
-                              payment_status: fullyPaid ? 'paid' : 'pending',
-                              updated_at: new Date().toISOString()
-                            })
-                            .eq('id', sale.id);
-
-                          if (error) throw error;
-
-                          invoicesPaidDetails.push({
-                            invoice_number: sale.invoice_number,
-                            amountPaid: paymentForThisInvoice,
-                            fullyPaid
-                          });
-
-                          remainingAmount -= paymentForThisInvoice;
-                        }
-
-                        // Update customer's credit_used
-                        const newCreditUsed = Math.max(0, (customer.credit_used || 0) - amount);
-                        await updateCustomer.mutateAsync({
-                          id: customer.id,
-                          credit_used: newCreditUsed,
-                        });
-
-                        queryClient.invalidateQueries({ queryKey: ['customerBalance', customer.id] });
-                        queryClient.invalidateQueries({ queryKey: ['sales'] });
-
-                        // Generate receipt
-                        const receiptNo = generateReceiptNumber();
-
-                        // Ensure the payment appears in the POS daily sales (Ventas del dia)
-                        const { data: authData } = await supabase.auth.getUser();
-                        const profileId = authData.user?.id;
-                        
-                        let storeId = null;
-                        let invoiceTypeId = null;
-                        if (profileId) {
-                          const { data: profile } = await supabase.from('profiles').select('store_id').eq('id', profileId).maybeSingle();
-                          storeId = profile?.store_id;
-                        }
-                        
-                        const { data: invoiceType } = await supabase.from('invoice_types').select('id').eq('code', 'B02').maybeSingle();
-                        invoiceTypeId = invoiceType?.id;
-                        
-                        const receiptSaleId = crypto.randomUUID();
-                        
-                        await supabase.from('sales').insert({
-                          id: receiptSaleId,
-                          invoice_number: receiptNo,
-                          customer_id: customer.id,
-                          invoice_type_id: invoiceTypeId,
-                          subtotal: amount,
-                          tax_total: 0,
-                          discount_total: 0,
-                          total: amount,
-                          payment_method: paymentMethod,
-                          amount_received: amount,
-                          payment_status: 'paid',
-                          profile_id: profileId,
-                          store_id: storeId
-                        });
-
-                        await supabase.from('sale_items').insert({
-                          sale_id: receiptSaleId,
-                          product_name: `Abono Parcial a Deuda`,
-                          quantity: 1,
-                          unit_price: amount,
-                          subtotal: amount,
-                          total: amount,
-                          tax_percentage: 0,
-                          tax_amount: 0
-                        });
-
-                        setPaymentReceipt({
-                          customerName: customer.name,
-                          invoicesPaid: invoicesPaidDetails,
-                          totalPaid: amount,
-                          remainingDebt: Math.max(0, totalDebt - amount),
-                          paymentDate: new Date(),
-                          receiptNumber: receiptNo,
-                        });
-
-                        const fullyPaidCount = invoicesPaidDetails.filter(i => i.fullyPaid).length;
-                        const partialCount = invoicesPaidDetails.filter(i => !i.fullyPaid).length;
-                        let message = `Se abonaron $${amount.toLocaleString()}`;
-                        if (fullyPaidCount > 0) message += ` (${fullyPaidCount} factura(s) pagadas)`;
-                        if (partialCount > 0) message += ` (${partialCount} abono(s) parcial(es))`;
-                        toast.success(message);
-
-                        setPaymentAmount('');
-                      } catch (error) {
-                        console.error('Error processing payment:', error);
-                        toast.error('Error al procesar el abono');
-                      } finally {
-                        setIsProcessing(false);
-                      }
-                    }}
-                    disabled={!paymentAmount || isProcessing}
-                    className="min-w-[100px]"
+                    onClick={handlePaySelected}
+                    disabled={selectedInvoices.length === 0 || isProcessing}
+                    className="w-full"
+                    variant="secondary"
                   >
                     {isProcessing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      'Abonar'
-                    )}
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Pagar Seleccionadas - ${selectedTotal.toLocaleString()}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">O pagar facturas seleccionadas</p>
-              <Button
-                onClick={handlePaySelected}
-                disabled={selectedInvoices.length === 0 || isProcessing}
-                className="w-full"
-                variant="secondary"
-              >
-                {isProcessing ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : null}
-                Pagar Seleccionadas - ${selectedTotal.toLocaleString()}
-              </Button>
+            {/* Columna Derecha: Facturas Pendientes (6 cols on lg) */}
+            <div className="lg:col-span-6 space-y-4">
+              {/* Facturas pendientes */}
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    Facturas Pendientes ({pendingSales.length})
+                  </h3>
+                  {pendingSales.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                      {selectedInvoices.length === pendingSales.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+                    </Button>
+                  )}
+                </div>
+
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : pendingSales.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                      <p className="text-muted-foreground">No hay facturas pendientes</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <ScrollArea className="h-[55vh] pr-2">
+                    <div className="space-y-2">
+                      {pendingSales.map((sale) => {
+                        const daysOverdue = getDaysOverdue(sale.due_date);
+                        const isOverdue = daysOverdue > 0;
+                        const isSelected = selectedInvoices.includes(sale.id);
+
+                        return (
+                          <Card
+                            key={sale.id}
+                            className={`cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : ''}`}
+                            onClick={() => handleToggleInvoice(sale.id)}
+                            onDoubleClick={() => setViewingSaleId(sale.id)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => handleToggleInvoice(sale.id)}
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">{sale.invoice_number}</span>
+                                    <div className="text-right">
+                                      <span className="font-bold">${sale.balance.toLocaleString()}</span>
+                                      {sale.amount_paid > 0 && (
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          (de ${sale.total.toLocaleString()})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                                    <span>
+                                      {format(new Date(sale.created_at), 'dd/MM/yyyy')}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      {sale.amount_paid > 0 && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          Abonado: ${sale.amount_paid.toLocaleString()}
+                                        </Badge>
+                                      )}
+                                      {sale.due_date && (
+                                        <span className="flex items-center gap-1">
+                                          Vence: {format(new Date(sale.due_date), 'dd/MM/yyyy')}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {isOverdue && (
+                                  <Badge variant="destructive" className="flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {daysOverdue} días
+                                  </Badge>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
             </div>
           </div>
         </div>

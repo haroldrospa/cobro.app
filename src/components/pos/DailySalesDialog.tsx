@@ -231,7 +231,10 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl h-[90vh] p-0 overflow-hidden flex flex-col bg-[#0a0a0a] border-zinc-900 rounded-[2rem] shadow-2xl">
+            <DialogContent 
+                className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl w-full h-[90vh] p-0 overflow-hidden flex flex-col bg-[#0a0a0a] border-zinc-900 rounded-[2rem] shadow-2xl"
+                centerOnMobile={true}
+            >
                     {/* Header Section */}
                     <div className="p-6 border-b border-zinc-900 bg-transparent">
                         <div className="flex justify-between items-center mb-4">
