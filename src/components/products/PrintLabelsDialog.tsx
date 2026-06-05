@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Printer, Loader2, Settings, Search } from 'lucide-react';
+import { Printer, Loader2, Settings, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { Product } from '@/hooks/useProducts';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useUserStore } from '@/hooks/useUserStore';
@@ -59,15 +59,26 @@ interface PrintLabelsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   products: Product[];
+  filteredProductIds?: string[];
 }
 
-export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDialogProps) {
+export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductIds }: PrintLabelsDialogProps) {
   const { settings } = useCompanySettings();
   const { data: userStore } = useUserStore();
   const [isPrinting, setIsPrinting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 200);
   const { toast } = useToast();
+
+  const savedSettings = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('cobro_label_settings');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Error loading label settings", e);
+    }
+    return {};
+  }, []);
 
   // Plantillas personalizadas guardadas en localStorage
   const [customTemplates, setCustomTemplates] = useState<any[]>(() => {
@@ -79,19 +90,9 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
     }
     return [];
   });
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
-
-
-  const savedSettings = useMemo(() => {
-    try {
-      const saved = localStorage.getItem('cobro_label_settings');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Error loading label settings", e);
-    }
-    return {};
-  }, []);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(() => savedSettings.selectedTemplateId ?? '');
+  const [isConfigExpanded, setIsConfigExpanded] = useState<boolean>(() => !savedSettings.selectedTemplateId);
 
   // Configuraciones de etiqueta
   const [labelWidth, setLabelWidth] = useState<number>(savedSettings.labelWidth ?? 50); // mm
@@ -124,17 +125,29 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
         labelWidth, labelHeight, columns, gapX, gapY,
         showBusinessName, showProductName, showPrice, showBarcodeText, rotation,
         bnameSize, pnameSize, priceSize, barcodeFontSize,
-        barHeight, barWidth
+        barHeight, barWidth, selectedTemplateId
       }));
     }, 500);
     return () => clearTimeout(timer);
-  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth]);
+  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth, selectedTemplateId]);
 
   // Lista interactiva de impresión
   const [printList, setPrintList] = useState<PrintItem[]>(() => 
     products.map(p => ({ product: p, selected: false, quantity: 1 }))
   );
   const [previewId, setPreviewId] = useState<string>(printList[0]?.product.id || '');
+
+  // Paginación progresiva para evitar la lentitud al renderizar miles de productos
+  const [visibleCount, setVisibleCount] = useState(80);
+
+  // Estado para controlar si mostramos solo los productos filtrados por la tabla del padre
+  const [showFilteredOnly, setShowFilteredOnly] = useState<boolean>(
+    () => !!filteredProductIds && filteredProductIds.length < products.length
+  );
+
+  useEffect(() => {
+    setVisibleCount(80);
+  }, [debouncedSearch, showFilteredOnly]);
 
   // Calcular dinámicamente la altura máxima del código de barra según la cantidad de textos habilitados
   const barcodeMaxHeightMultiplier = useMemo(() => {
@@ -152,6 +165,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   // Perfiles predeterminados para facilitar la vida al usuario
   const applyProfile = useCallback((profileId: string) => {
     setSelectedTemplateId(profileId);
+    setIsConfigExpanded(false);
     
     if (profileId === 'thermal') {
       setLabelWidth(50);
@@ -500,13 +514,17 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
   };
 
   // ---- Listas derivadas memoizadas (crítico: products puede ser 1638+ items) ----
-  const filteredPrintList = useMemo(() =>
-    printList.filter(item =>
+  const filteredPrintList = useMemo(() => {
+    let list = printList;
+    if (showFilteredOnly && filteredProductIds) {
+      const filterSet = new Set(filteredProductIds);
+      list = list.filter(item => filterSet.has(item.product.id));
+    }
+    return list.filter(item =>
       item.product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       (item.product.barcode?.toLowerCase() || '').includes(debouncedSearch.toLowerCase())
-    ),
-    [printList, debouncedSearch]
-  );
+    );
+  }, [printList, debouncedSearch, showFilteredOnly, filteredProductIds]);
 
   const selectedItems = useMemo(
     () => printList.filter(item => item.selected && item.quantity > 0),
@@ -535,7 +553,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl h-[90vh] sm:h-[auto] max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="w-[95vw] sm:max-w-6xl lg:max-w-7xl h-[90vh] max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 shrink-0 border-b">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Printer className="h-6 w-6 text-primary" />
@@ -601,133 +619,149 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                   )}
                 </SelectContent>
               </Select>
+              
+              <div className="flex justify-end pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5 px-2.5 rounded-lg border border-transparent hover:border-border/30 hover:bg-background/40"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  {isConfigExpanded ? "Ocultar Ajustes de Medidas" : "Personalizar Medidas y Diseño"}
+                  {isConfigExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Dimensiones */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-sm border-b pb-1">1. Dimensiones (mm)</h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Ancho (mm)</Label>
-                    <Input type="number" value={labelWidth} onChange={(e) => setLabelWidth(Number(e.target.value))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Alto (mm)</Label>
-                    <Input type="number" value={labelHeight} onChange={(e) => setLabelHeight(Number(e.target.value))} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Columnas</Label>
-                    <Input type="number" min="1" max="10" value={columns} onChange={(e) => setColumns(Number(e.target.value))} />
-                  </div>
-                  <div className="space-y-2 flex flex-col justify-end pb-1">
-                    <Label className="text-xs">Rotación</Label>
-                    <Select value={rotation.toString()} onValueChange={(val) => setRotation(Number(val))}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Rotación" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Normal (0°)</SelectItem>
-                        <SelectItem value="90">Girar 90° (Acostado)</SelectItem>
-                        <SelectItem value="180">Girar 180° (Volteado)</SelectItem>
-                        <SelectItem value="270">Girar 270°</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                {columns > 1 && (
+            {isConfigExpanded && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-b pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                {/* Dimensiones */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-sm border-b pb-1">1. Dimensiones (mm)</h4>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Espaciado X (mm)</Label>
-                      <Input type="number" value={gapX} onChange={(e) => setGapX(Number(e.target.value))} />
+                      <Label>Ancho (mm)</Label>
+                      <Input type="number" value={labelWidth} onChange={(e) => setLabelWidth(Number(e.target.value))} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Espaciado Y (mm)</Label>
-                      <Input type="number" value={gapY} onChange={(e) => setGapY(Number(e.target.value))} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Contenido Visual */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-sm border-b pb-1">2. Información a Mostrar</h4>
-                
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show_bname" className="cursor-pointer">Nombre del Negocio</Label>
-                    <div className="flex items-center gap-2">
-                       {showBusinessName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={bnameSize} onChange={(e) => setBnameSize(Number(e.target.value))} title="Tamaño (px)" />}
-                       <Switch id="show_bname" checked={showBusinessName} onCheckedChange={setShowBusinessName} />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show_pname" className="cursor-pointer">Nombre del Producto</Label>
-                    <div className="flex items-center gap-2">
-                       {showProductName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={pnameSize} onChange={(e) => setPnameSize(Number(e.target.value))} title="Tamaño (px)" />}
-                       <Switch id="show_pname" checked={showProductName} onCheckedChange={setShowProductName} />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show_price" className="cursor-pointer">Precio de Venta</Label>
-                    <div className="flex items-center gap-2">
-                       {showPrice && <Input type="number" min="8" max="32" className="w-16 h-8 text-xs" value={priceSize} onChange={(e) => setPriceSize(Number(e.target.value))} title="Tamaño (px)" />}
-                       <Switch id="show_price" checked={showPrice} onCheckedChange={setShowPrice} />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show_btext" className="cursor-pointer">Número del Código</Label>
-                    <div className="flex items-center gap-2">
-                       {showBarcodeText && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={barcodeFontSize} onChange={(e) => setBarcodeFontSize(Number(e.target.value))} title="Tamaño (px)" />}
-                       <Switch id="show_btext" checked={showBarcodeText} onCheckedChange={setShowBarcodeText} />
+                      <Label>Alto (mm)</Label>
+                      <Input type="number" value={labelHeight} onChange={(e) => setLabelHeight(Number(e.target.value))} />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t pt-3 mt-2">
-                    <Label htmlFor="bar_height" className="text-xs font-semibold">Altura del Código (px)</Label>
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        id="bar_height" 
-                        type="number" 
-                        min="10" 
-                        max="150" 
-                        className="w-16 h-8 text-xs" 
-                        value={barHeight} 
-                        onChange={(e) => setBarHeight(Number(e.target.value))} 
-                        title="Altura del código de barras en px"
-                      />
-                      <div className="w-11 shrink-0" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Columnas</Label>
+                      <Input type="number" min="1" max="10" value={columns} onChange={(e) => setColumns(Number(e.target.value))} />
+                    </div>
+                    <div className="space-y-2 flex flex-col justify-end pb-1">
+                      <Label className="text-xs">Rotación</Label>
+                      <Select value={rotation.toString()} onValueChange={(val) => setRotation(Number(val))}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Rotación" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Normal (0°)</SelectItem>
+                          <SelectItem value="90">Girar 90° (Acostado)</SelectItem>
+                          <SelectItem value="180">Girar 180° (Volteado)</SelectItem>
+                          <SelectItem value="270">Girar 270°</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between pt-1">
-                    <Label htmlFor="bar_width" className="text-xs font-semibold">Grosor de Líneas</Label>
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        id="bar_width" 
-                        type="number" 
-                        min="1.0" 
-                        max="4.0" 
-                        step="0.1" 
-                        className="w-16 h-8 text-xs" 
-                        value={barWidth} 
-                        onChange={(e) => setBarWidth(Number(e.target.value))} 
-                        title="Grosor de las líneas del código (1.0 - 4.0)"
-                      />
-                      <div className="w-11 shrink-0" />
+                  {columns > 1 && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Espaciado X (mm)</Label>
+                        <Input type="number" value={gapX} onChange={(e) => setGapX(Number(e.target.value))} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Espaciado Y (mm)</Label>
+                        <Input type="number" value={gapY} onChange={(e) => setGapY(Number(e.target.value))} />
+                      </div>
                     </div>
-                  </div>
-                 </div>
+                  )}
+                </div>
+
+                {/* Contenido Visual */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-sm border-b pb-1">2. Información a Mostrar</h4>
+                  
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show_bname" className="cursor-pointer">Nombre del Negocio</Label>
+                      <div className="flex items-center gap-2">
+                         {showBusinessName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={bnameSize} onChange={(e) => setBnameSize(Number(e.target.value))} title="Tamaño (px)" />}
+                         <Switch id="show_bname" checked={showBusinessName} onCheckedChange={setShowBusinessName} />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show_pname" className="cursor-pointer">Nombre del Producto</Label>
+                      <div className="flex items-center gap-2">
+                         {showProductName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={pnameSize} onChange={(e) => setPnameSize(Number(e.target.value))} title="Tamaño (px)" />}
+                         <Switch id="show_pname" checked={showProductName} onCheckedChange={setShowProductName} />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show_price" className="cursor-pointer">Precio de Venta</Label>
+                      <div className="flex items-center gap-2">
+                         {showPrice && <Input type="number" min="8" max="32" className="w-16 h-8 text-xs" value={priceSize} onChange={(e) => setPriceSize(Number(e.target.value))} title="Tamaño (px)" />}
+                         <Switch id="show_price" checked={showPrice} onCheckedChange={setShowPrice} />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show_btext" className="cursor-pointer">Número del Código</Label>
+                      <div className="flex items-center gap-2">
+                         {showBarcodeText && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={barcodeFontSize} onChange={(e) => setBarcodeFontSize(Number(e.target.value))} title="Tamaño (px)" />}
+                         <Switch id="show_btext" checked={showBarcodeText} onCheckedChange={setShowBarcodeText} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t pt-3 mt-2">
+                      <Label htmlFor="bar_height" className="text-xs font-semibold">Altura del Código (px)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          id="bar_height" 
+                          type="number" 
+                          min="10" 
+                          max="150" 
+                          className="w-16 h-8 text-xs" 
+                          value={barHeight} 
+                          onChange={(e) => setBarHeight(Number(e.target.value))} 
+                          title="Altura del código de barras en px"
+                        />
+                        <div className="w-11 shrink-0" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-1">
+                      <Label htmlFor="bar_width" className="text-xs font-semibold">Grosor de Líneas</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          id="bar_width" 
+                          type="number" 
+                          min="1.0" 
+                          max="4.0" 
+                          step="0.1" 
+                          className="w-16 h-8 text-xs" 
+                          value={barWidth} 
+                          onChange={(e) => setBarWidth(Number(e.target.value))} 
+                          title="Grosor de las líneas del código (1.0 - 4.0)"
+                        />
+                        <div className="w-11 shrink-0" />
+                      </div>
+                    </div>
+                   </div>
+                </div>
               </div>
-            </div>
+            )}
             
             {/* Lista de selección interactiva */}
             <div className="space-y-4">
@@ -735,12 +769,12 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                 <h4 className="font-semibold text-sm">3. Productos y Cantidad</h4>
                 <div className="flex gap-2 text-xs">
                   <Button variant="ghost" size="sm" onClick={() => {
-                    const filteredIds = filteredPrintList.map(i => i.product.id);
-                    setPrintList(prev => prev.map(i => filteredIds.includes(i.product.id) ? {...i, selected: true} : i));
+                    const filteredIds = new Set(filteredPrintList.map(i => i.product.id));
+                    setPrintList(prev => prev.map(i => filteredIds.has(i.product.id) ? {...i, selected: true} : i));
                   }} className="h-6 px-2 text-xs">Marcar Todos</Button>
                   <Button variant="ghost" size="sm" onClick={() => {
-                    const filteredIds = filteredPrintList.map(i => i.product.id);
-                    setPrintList(prev => prev.map(i => filteredIds.includes(i.product.id) ? {...i, selected: false} : i));
+                    const filteredIds = new Set(filteredPrintList.map(i => i.product.id));
+                    setPrintList(prev => prev.map(i => filteredIds.has(i.product.id) ? {...i, selected: false} : i));
                   }} className="h-6 px-2 text-xs">Desmarcar</Button>
                 </div>
               </div>
@@ -755,51 +789,88 @@ export function PrintLabelsDialog({ isOpen, onClose, products }: PrintLabelsDial
                   className="pl-9 h-9"
                 />
               </div>
+
+              {filteredProductIds && filteredProductIds.length < products.length && (
+                <div className="flex items-center justify-between bg-primary/5 border border-primary/10 rounded-xl p-3 text-xs">
+                  <span className="text-muted-foreground">
+                    {showFilteredOnly 
+                      ? `Mostrando solo los ${filteredProductIds.length} productos del filtro de la tabla.` 
+                      : `Mostrando todos los ${products.length} productos del catálogo.`
+                    }
+                  </span>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    type="button"
+                    onClick={() => setShowFilteredOnly(!showFilteredOnly)}
+                    className="h-auto p-0 font-bold text-primary hover:text-primary/80"
+                  >
+                    {showFilteredOnly ? "Ver todo el catálogo" : "Volver al filtro"}
+                  </Button>
+                </div>
+              )}
               
-              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 border rounded-md p-2 bg-background">
+              <div 
+                className="max-h-[300px] overflow-y-auto space-y-2 pr-2 border rounded-md p-2 bg-background"
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  if (target.scrollHeight - target.scrollTop <= target.clientHeight + 100) {
+                    if (visibleCount < filteredPrintList.length) {
+                      setVisibleCount(prev => Math.min(prev + 80, filteredPrintList.length));
+                    }
+                  }
+                }}
+              >
                 {filteredPrintList.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4 px-2">No se encontraron productos.</p>
                 ) : (
-                  filteredPrintList.map((item) => (
-                    <div key={item.product.id} className={`flex items-center justify-between p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors border-transparent border`}
-                      onClick={() => {
-                        setPrintList(prev => prev.map(i => i.product.id === item.product.id ? {...i, selected: !i.selected} : i));
-                      }}
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <Checkbox 
-                          checked={item.selected} 
-                          onCheckedChange={(c) => {
-                            setPrintList(prev => prev.map(i => i.product.id === item.product.id ? {...i, selected: !!c} : i));
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <div className="flex flex-col overflow-hidden min-w-[120px]">
-                          <span className="text-sm font-medium truncate" title={item.product.name}>{item.product.name}</span>
-                          <span className="text-xs text-muted-foreground truncate">{item.product.barcode} - ${(item.product.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                  <>
+                    {filteredPrintList.slice(0, visibleCount).map((item) => (
+                      <div key={item.product.id} className={`flex items-center justify-between p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors border-transparent border`}
+                        onClick={() => {
+                          setPrintList(prev => prev.map(i => i.product.id === item.product.id ? {...i, selected: !i.selected} : i));
+                        }}
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <Checkbox 
+                            checked={item.selected} 
+                            onCheckedChange={(c) => {
+                              setPrintList(prev => prev.map(i => i.product.id === item.product.id ? {...i, selected: !!c} : i));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="flex flex-col overflow-hidden min-w-[120px]">
+                            <span className="text-sm font-medium truncate" title={item.product.name}>{item.product.name}</span>
+                            <span className="text-xs text-muted-foreground truncate">{item.product.barcode} - ${(item.product.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Label className="text-xs">Cant:</Label>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            className="w-16 h-8 text-sm" 
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const qty = parseInt(e.target.value) || 0;
+                              setPrintList(prev => prev.map(i => {
+                                if (i.product.id === item.product.id) {
+                                  return { ...i, quantity: qty, selected: qty > 0 ? true : i.selected };
+                                }
+                                return i;
+                              }));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Label className="text-xs">Cant:</Label>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          className="w-16 h-8 text-sm" 
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const qty = parseInt(e.target.value) || 0;
-                            setPrintList(prev => prev.map(i => {
-                              if (i.product.id === item.product.id) {
-                                return { ...i, quantity: qty, selected: qty > 0 ? true : i.selected };
-                              }
-                              return i;
-                            }));
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                    ))}
+                    {filteredPrintList.length > visibleCount && (
+                      <div className="text-center py-2 text-xs text-muted-foreground border-t border-dashed mt-2">
+                        Mostrando {visibleCount} de {filteredPrintList.length} productos. Desliza hacia abajo para cargar más...
                       </div>
-                    </div>
-                  ))
+                    )}
+                  </>
                 )}
               </div>
             </div>

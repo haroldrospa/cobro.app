@@ -2146,7 +2146,8 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
         <PrintLabelsDialog
           isOpen={showPrintLabelsDialog}
           onClose={() => setShowPrintLabelsDialog(false)}
-          products={filteredProducts}
+          products={products}
+          filteredProductIds={filteredProducts.map(p => p.id)}
         />
       )}
       {/* Diálogo Cargar Stock con IA */}
