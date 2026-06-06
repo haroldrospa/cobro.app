@@ -91,6 +91,12 @@ export const generateCleanInvoiceHTML = (
       margin: ${pageMargin};
     }
     
+    @media screen {
+      html, body {
+        overflow: hidden !important;
+      }
+    }
+    
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background-color: #ffffff;

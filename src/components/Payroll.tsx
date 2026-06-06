@@ -662,7 +662,7 @@ function PayrollContent() {
 
             {/* SAlARY CONFIG DIALOG */}
             <Dialog open={isSalaryConfigOpen} onOpenChange={setIsSalaryConfigOpen}>
-                <DialogContent className="max-w-[95vw] w-full">
+                <DialogContent className="max-w-[95vw] sm:max-w-4xl w-full">
                     <DialogHeader>
                         <DialogTitle>Configuración de Salarios</DialogTitle>
                         <DialogDescription>Define los sueldos y deducciones fijas por empleado.</DialogDescription>
@@ -694,7 +694,9 @@ function PayrollContent() {
                                             <TableCell className="font-medium">
                                                 <div className="flex flex-col">
                                                     <span>{emp.full_name}</span>
-                                                    <span className="text-xs text-muted-foreground capitalize">{emp.role}</span>
+                                                    <span className="text-xs text-muted-foreground capitalize">
+                                                        {emp.role}{emp.cedula && ` • ID: ${emp.cedula}`}
+                                                    </span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -756,7 +758,7 @@ function PayrollContent() {
             <Dialog open={!!selectedPayroll} onOpenChange={(o) => {
                 if (!o && !isSaving) setSelectedPayroll(null);
             }}>
-                <DialogContent className="max-w-[95vw] w-full h-[90vh] flex flex-col gap-0 p-0 bg-background/95 backdrop-blur-xl border-none shadow-2xl [&>button]:hidden">
+                <DialogContent className="max-w-[95vw] sm:max-w-[95vw] w-full h-[90vh] flex flex-col gap-0 p-0 bg-background/95 backdrop-blur-xl border-none shadow-2xl [&>button]:hidden">
 
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-border/40 bg-background/50">
@@ -856,13 +858,18 @@ function PayrollContent() {
                                                 No se encontraron resultados
                                             </TableCell>
                                         </TableRow>
-                                    ) : filteredItems.map((item) => (
-                                        <TableRow key={item.id} className="hover:bg-muted/30 border-b border-border/30 transition-colors">
-                                            <TableCell className="font-medium pl-6">
-                                                <div className="flex flex-col">
-                                                    <span>{item.employee_name}</span>
-                                                </div>
-                                            </TableCell>
+                                    ) : filteredItems.map((item) => {
+                                        const emp = employees.find(e => e.id === item.profile_id);
+                                        return (
+                                            <TableRow key={item.id} className="hover:bg-muted/30 border-b border-border/30 transition-colors">
+                                                <TableCell className="font-medium pl-6">
+                                                    <div className="flex flex-col">
+                                                        <span>{item.employee_name}</span>
+                                                        {emp?.cedula && (
+                                                            <span className="text-[10px] font-mono text-muted-foreground">ID: {emp.cedula}</span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
                                             <TableCell className="text-right text-muted-foreground font-mono text-xs">
                                                 ${item.base_salary.toLocaleString()}
                                             </TableCell>
@@ -910,7 +917,8 @@ function PayrollContent() {
                                                 </span>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>

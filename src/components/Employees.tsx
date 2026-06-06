@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit, User, CheckCircle, XCircle, Trash2, AlertTriangle, DollarSign } from 'lucide-react';
+import { Plus, Search, Edit, User, CheckCircle, XCircle, Trash2, AlertTriangle, DollarSign, CreditCard } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,7 @@ const Employees: React.FC = () => {
     const [showLimitDialog, setShowLimitDialog] = useState(false);
     const [creditEmployee, setCreditEmployee] = useState<Employee | null>(null);
     const [creditAmount, setCreditAmount] = useState('');
-    const [creditAction, setCreditAction] = useState<'add' | 'set'>('add');
+    const [creditAction, setCreditAction] = useState<'add' | 'set' | 'pay'>('add');
 
     const { data: employees = [], isLoading } = useEmployees();
     const { mutate: manageEmployee, isPending: isDeleting } = useManageEmployee();
@@ -176,8 +176,10 @@ const Employees: React.FC = () => {
             <TableHeader className="bg-muted/30">
               <TableRow className="border-none">
                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-6 pl-8">Empleado</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest py-6">Cédula</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-6">Correo</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-6">Rol</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest py-6">Salario Base</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-6">Consumo</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-6">Estado</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-6 text-right pr-8">Acciones</TableHead>
@@ -186,13 +188,13 @@ const Employees: React.FC = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-20 text-center">
+                  <TableCell colSpan={8} className="py-20 text-center">
                     <LoadingLogo size="sm" text="Cargando equipo..." />
                   </TableCell>
                 </TableRow>
               ) : filteredEmployees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-20 text-center text-muted-foreground font-bold italic">
+                  <TableCell colSpan={8} className="py-20 text-center text-muted-foreground font-bold italic">
                     {searchTerm ? "No se encontraron empleados" : "No hay empleados registrados"}
                   </TableCell>
                 </TableRow>
@@ -204,11 +206,24 @@ const Employees: React.FC = () => {
                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
                           <User className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="font-black text-sm tracking-tight">{employee.full_name}</span>
+                        <div className="flex flex-col">
+                          <span className="font-black text-sm tracking-tight">{employee.full_name}</span>
+                        </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {employee.cedula ? (
+                        <div className="inline-flex items-center gap-2 bg-primary/5 px-2.5 py-1.5 rounded-lg border border-primary/10">
+                          <CreditCard className="h-3.5 w-3.5 text-primary/70" />
+                          <span className="font-mono text-[13px] font-bold text-foreground/90 tracking-tight">{employee.cedula}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/30 font-bold">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-[11px] font-bold text-muted-foreground">{employee.email}</TableCell>
                     <TableCell>{getRoleBadge(employee.role)}</TableCell>
+                    <TableCell className="font-black text-emerald-600">${(employee.base_salary || 0).toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className={cn("text-sm font-black tracking-tighter", (employee.credit_used || 0) > 0 ? "text-red-500" : "text-emerald-500")}>
@@ -269,6 +284,16 @@ const Employees: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-muted/10 rounded-2xl p-3 border border-border/30">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1">Cédula</p>
+                    <p className="font-mono text-xs font-bold tracking-tight">{employee.cedula || '-'}</p>
+                  </div>
+                  <div className="bg-muted/10 rounded-2xl p-3 border border-border/30">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1">Salario Base</p>
+                    <p className="text-lg font-black tracking-tighter leading-none text-emerald-500">
+                      ${(employee.base_salary || 0).toLocaleString()}
+                    </p>
+                  </div>
                   <div className="bg-muted/10 rounded-2xl p-3 border border-border/30">
                     <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1">Consumo</p>
                     <p className={cn("text-lg font-black tracking-tighter leading-none", (employee.credit_used || 0) > 0 ? "text-red-500" : "text-emerald-500")}>
@@ -358,20 +383,28 @@ const Employees: React.FC = () => {
                     </AlertDialogHeader>
 
                     <div className="space-y-4 py-4">
-                        <div className="flex bg-muted p-1 rounded-md">
+                        <div className="flex bg-muted p-1 rounded-md overflow-x-auto gap-1">
                             <Button 
                                 variant={creditAction === 'add' ? 'default' : 'ghost'} 
-                                className="flex-1 text-xs h-8"
+                                className="flex-1 text-xs h-8 px-2 whitespace-nowrap"
                                 onClick={() => setCreditAction('add')}
                             >
-                                Añadir a Deuda
+                                Añadir Deuda
+                            </Button>
+                            <Button 
+                                variant={creditAction === 'pay' ? 'default' : 'ghost'} 
+                                className="flex-1 text-xs h-8 px-2 whitespace-nowrap bg-emerald-500 text-white hover:bg-emerald-600 hover:text-white data-[state=inactive]:bg-transparent data-[state=inactive]:text-foreground"
+                                data-state={creditAction === 'pay' ? 'active' : 'inactive'}
+                                onClick={() => setCreditAction('pay')}
+                            >
+                                Restar / Pagar
                             </Button>
                             <Button 
                                 variant={creditAction === 'set' ? 'default' : 'ghost'} 
-                                className="flex-1 text-xs h-8"
+                                className="flex-1 text-xs h-8 px-2 whitespace-nowrap"
                                 onClick={() => setCreditAction('set')}
                             >
-                                Ajustar Balance Final
+                                Ajustar Total
                             </Button>
                         </div>
                         
@@ -388,7 +421,17 @@ const Employees: React.FC = () => {
                         
                         {creditAction === 'add' && (
                             <div className="text-sm text-muted-foreground bg-orange-50 border border-orange-100 p-3 rounded-md">
-                                <p><strong>Resumen:</strong> El empleado debe <span className="text-orange-600 font-bold">${creditEmployee?.credit_used || 0}</span>. Se le sumarán <span className="text-orange-600 font-bold">${creditAmount || 0}</span>.</p>
+                                <p><strong>Resumen:</strong> El empleado debe <span className="text-orange-600 font-bold">${creditEmployee?.credit_used || 0}</span>. Se le sumarán <span className="text-orange-600 font-bold">${creditAmount || 0}</span> a su deuda.</p>
+                            </div>
+                        )}
+                        {creditAction === 'pay' && (
+                            <div className="text-sm text-muted-foreground bg-emerald-50 border border-emerald-100 p-3 rounded-md">
+                                <p><strong>Resumen:</strong> El empleado debe <span className="text-emerald-600 font-bold">${creditEmployee?.credit_used || 0}</span>. Se le restarán <span className="text-emerald-600 font-bold">${creditAmount || 0}</span> a su deuda.</p>
+                            </div>
+                        )}
+                        {creditAction === 'set' && (
+                            <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-100 p-3 rounded-md">
+                                <p><strong>Resumen:</strong> La deuda total del empleado pasará a ser exactamente <span className="text-blue-600 font-bold">${creditAmount || 0}</span>.</p>
                             </div>
                         )}
                     </div>

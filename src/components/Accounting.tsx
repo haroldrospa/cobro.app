@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -465,7 +465,7 @@ function AccountingContent() {
     useEffect(() => {
         if (scanQueue.length > 0 && scanQueue[reviewIndex]) {
             const item = scanQueue[reviewIndex];
-            if (item.status === 'success' && item.extractedData) {
+            if ((item.status === 'success' || item.status === 'saved') && item.extractedData) {
                 const data = item.extractedData;
                 setNewExpense(prev => ({
                     ...prev,
@@ -479,8 +479,6 @@ function AccountingContent() {
                 }));
             } else if (item.status === 'error') {
                 toast({ title: "Error", description: item.error || "No se pudo leer esta factura. Ingrésala manual.", variant: "destructive" });
-                // Reset form to clean state for manual entry but keep context if needed?
-                // Actually better to clear it to avoid confusion
                 setNewExpense({
                     date: new Date(),
                     description: '',
@@ -495,12 +493,72 @@ function AccountingContent() {
     }, [reviewIndex, scanQueue]);
 
     const handleSkipItem = () => {
-        if (reviewIndex < scanQueue.length - 1) {
-            setReviewIndex(prev => prev + 1);
+        let nextIndex = -1;
+        for (let offset = 1; offset < scanQueue.length; offset++) {
+            const checkIdx = (reviewIndex + offset) % scanQueue.length;
+            const checkItem = scanQueue[checkIdx];
+            if (checkItem && (checkItem.status === 'success' || checkItem.status === 'error')) {
+                nextIndex = checkIdx;
+                break;
+            }
+        }
+
+        if (nextIndex !== -1) {
+            setReviewIndex(nextIndex);
         } else {
-            setIsAddExpenseOpen(false);
-            setScanQueue([]);
-            setReviewIndex(0);
+            toast({ title: "Fin de la lista", description: "No hay más facturas para revisar en este momento." });
+        }
+    };
+
+    const handleSaveAllReady = async () => {
+        const readyItems = scanQueue.filter(item => item.status === 'success' && item.extractedData);
+        if (readyItems.length === 0) {
+            toast({ title: "Sin facturas listas", description: "No hay facturas listas para guardar." });
+            return;
+        }
+        
+        setIsScanning(true);
+        let count = 0;
+        try {
+            for (const item of readyItems) {
+                const supplierNameInput = item.extractedData.supplier_name ? item.extractedData.supplier_name.trim() : "";
+                let finalSupplierId = null;
+
+                if (supplierNameInput) {
+                    const existingSupplier = suppliers.find(s => s.name?.toLowerCase() === supplierNameInput.toLowerCase());
+                    if (existingSupplier) {
+                        finalSupplierId = existingSupplier.id;
+                    } else {
+                        try {
+                            const newSup = await createSupplier({ name: supplierNameInput, rnc: null, contact: null });
+                            if (newSup && newSup.id) {
+                                finalSupplierId = newSup.id;
+                            }
+                        } catch (supErr) {
+                            console.error("Failed to auto-create supplier:", supErr);
+                        }
+                    }
+                }
+
+                await createExpense({
+                    date: item.extractedData.date ? new Date(item.extractedData.date) : new Date(),
+                    description: item.extractedData.description || `Gasto en ${item.extractedData.supplier_name || 'Desconocido'}`,
+                    amount: typeof item.extractedData.amount === 'number' ? item.extractedData.amount : (parseFloat(item.extractedData.amount) || 0),
+                    category: item.extractedData.category || 'Otros',
+                    supplier_id: finalSupplierId,
+                    invoice_number: item.extractedData.invoice_number,
+                    image_url: item.extractedData.image_url
+                });
+
+                setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'saved' } : i));
+                count++;
+            }
+            toast({ title: "Guardado Masivo", description: `Se guardaron ${count} facturas correctamente.` });
+        } catch (err: any) {
+            console.error("Error in handleSaveAllReady:", err);
+            toast({ title: "Error al guardar", description: err.message || "Ocurrió un error al guardar las facturas.", variant: "destructive" });
+        } finally {
+            setIsScanning(false);
         }
     };
 
@@ -559,15 +617,27 @@ function AccountingContent() {
             toast({ title: "Guardado", description: "Gasto registrado exitosamente." });
 
             if (scanQueue.length > 0) {
-                // Batch Mode: Move to next
-                if (reviewIndex < scanQueue.length - 1) {
-                    setReviewIndex(prev => prev + 1);
+                // Mark current item as saved in scanQueue
+                const currentItem = scanQueue[reviewIndex];
+                if (currentItem) {
+                    setScanQueue(prev => prev.map(i => i.id === currentItem.id ? { ...i, status: 'saved' } : i));
+                }
+
+                // Find the next item that is 'success' or 'error' and not 'saved'
+                let nextIndex = -1;
+                for (let offset = 1; offset <= scanQueue.length; offset++) {
+                    const checkIdx = (reviewIndex + offset) % scanQueue.length;
+                    const checkItem = scanQueue[checkIdx];
+                    if (checkItem && checkItem.id !== currentItem?.id && (checkItem.status === 'success' || checkItem.status === 'error')) {
+                        nextIndex = checkIdx;
+                        break;
+                    }
+                }
+
+                if (nextIndex !== -1) {
+                    setReviewIndex(nextIndex);
                 } else {
-                    // Finished batch
-                    setIsAddExpenseOpen(false);
-                    setScanQueue([]);
-                    setReviewIndex(0);
-                    toast({ title: "Proceso Completo", description: "Todas las facturas han sido procesadas." });
+                    toast({ title: "Proceso Completo", description: "Todas las facturas de la lista han sido guardadas." });
                 }
             } else {
                 // Single/Manual Mode
@@ -885,7 +955,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         }));
 
         // Append to existing queue
+        const prevLength = scanQueue.length;
         setScanQueue(prev => [...prev, ...newItems]);
+        setReviewIndex(prevLength);
         setIsScanning(true);
         console.log(`🚀 Iniciando escaneo de ${newItems.length} nuevos archivos...`);
 
@@ -904,13 +976,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     const imageUrl = await uploadReceiptImage(item.file);
                     const dataWithImage = { ...data, image_url: imageUrl };
 
-                    if (isMassive) {
-                        await saveExpenseToDb(dataWithImage);
-                        setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'saved', extractedData: dataWithImage } : i));
-                        toast({ title: "Guardado Automático", description: `Factura ${data.invoice_number || ''} guardada.` });
-                    } else {
-                        setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'success', extractedData: dataWithImage } : i));
-                    }
+                    setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'success', extractedData: dataWithImage } : i));
                     console.log(`✅ Factura procesada exitosamente.`);
                 } catch (err: any) {
                     console.error(`❌ Error procesando factura (${item.file.name}):`, err);
@@ -1569,16 +1635,15 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     setIsScanning(false);
                     setScanQueue([]);
                 }
-                setIsAddExpenseOpen(open);
             }}>
-                <DialogContent className="sm:max-w-[560px] p-4 sm:p-6 max-h-[92vh] sm:max-h-[85vh] gap-3 sm:gap-4 overflow-y-auto">
+                <DialogContent className={cn("p-4 sm:p-6 max-h-[92vh] sm:max-h-[85vh] gap-3 sm:gap-4 overflow-y-auto transition-all duration-300", scanQueue.length > 0 ? "sm:max-w-4xl" : "sm:max-w-[560px]")}>
                     <DialogHeader>
                         <DialogTitle>
-                            {scanQueue.length > 0 ? "Gestión de Facturas" : "Registrar Nuevo Gasto"}
+                            {scanQueue.length > 0 ? "Gestión de Facturas (IA)" : "Registrar Nuevo Gasto"}
                         </DialogTitle>
                         <DialogDescription>
-                            {scanQueue.length > 1
-                                ? "Procesando múltiples facturas automáticamente."
+                            {scanQueue.length > 0
+                                ? "Revisa, edita y confirma la información extraída por la IA de cada comprobante."
                                 : "Ingresa los detalles o escanea una factura."}
                         </DialogDescription>
                     </DialogHeader>
@@ -1659,443 +1724,733 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         onChange={processReceiptImage}
                     />
 
-                    {/* Mode Selection Toggle */}
-                    {scanQueue.length === 0 && (
-                        <div className="grid grid-cols-2 gap-2 p-1.5 bg-muted/40 rounded-2xl mb-4 border border-border/50">
-                            <button
-                                type="button"
-                                onClick={() => setExpenseEntryMode('ia')}
-                                className={cn(
-                                    "flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all",
-                                    expenseEntryMode === 'ia' 
-                                        ? "bg-background shadow-md text-emerald-500 border border-border/50" 
-                                        : "text-muted-foreground hover:bg-muted/60"
-                                )}
-                            >
-                                <Sparkles className="w-5 h-5" />
-                                Con IA
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setExpenseEntryMode('manual')}
-                                className={cn(
-                                    "flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all",
-                                    expenseEntryMode === 'manual' 
-                                        ? "bg-background shadow-md text-foreground border border-border/50" 
-                                        : "text-muted-foreground hover:bg-muted/60"
-                                )}
-                            >
-                                <PenTool className="w-5 h-5" />
-                                Manual
-                            </button>
-                        </div>
-                    )}
+                    {scanQueue.length === 0 ? (
+                        /* Standard entry flow (empty queue) */
+                        <div className="space-y-4">
+                            {/* Mode Selection Toggle */}
+                            <div className="grid grid-cols-2 gap-2 p-1.5 bg-muted/40 rounded-2xl border border-border/50">
+                                <button
+                                    type="button"
+                                    onClick={() => setExpenseEntryMode('ia')}
+                                    className={cn(
+                                        "flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all",
+                                        expenseEntryMode === 'ia' 
+                                            ? "bg-background shadow-md text-emerald-500 border border-border/50" 
+                                            : "text-muted-foreground hover:bg-muted/60"
+                                    )}
+                                >
+                                    <Sparkles className="w-5 h-5" />
+                                    Con IA
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setExpenseEntryMode('manual')}
+                                    className={cn(
+                                        "flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all",
+                                        expenseEntryMode === 'manual' 
+                                            ? "bg-background shadow-md text-foreground border border-border/50" 
+                                            : "text-muted-foreground hover:bg-muted/60"
+                                    )}
+                                >
+                                    <PenTool className="w-5 h-5" />
+                                    Manual
+                                </button>
+                            </div>
 
-                    {/* AI Mode Upload Box */}
-                    {expenseEntryMode === 'ia' && scanQueue.length === 0 && (
-                        <div 
-                            onClick={() => !isScanning && fileInputRef.current?.click()}
-                            className={cn(
-                                "flex flex-col items-center justify-center py-6 sm:py-10 px-4 sm:px-6 border-2 border-dashed rounded-2xl sm:rounded-3xl transition-all text-center animate-in fade-in cursor-pointer group mb-2 text-balance",
-                                isScanning ? "border-emerald-500/50 bg-emerald-500/5 opacity-80" : "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/50 shadow-sm"
-                            )}
-                        >
-                            {isScanning ? (
-                                <>
-                                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
-                                        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                                    </div>
-                                    <h3 className="font-black text-xl text-foreground tracking-tight">Analizando facturas...</h3>
-                                    <p className="text-sm text-muted-foreground mt-2">Por favor espera un momento</p>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/20">
-                                        <Camera className="w-8 h-8 text-emerald-500" />
-                                    </div>
-                                    <h3 className="font-black text-xl text-foreground tracking-tight">Escanear Documento</h3>
-                                    <p className="text-sm text-muted-foreground mt-2 font-medium">La IA extraerá todos los datos de forma automática.</p>
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                    <AnimatePresence mode='wait'>
-                        {scanQueue.length > 1 ? (
-                            <motion.div
-                                key="massive-list"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="space-y-4"
-                            >
-                                <div className="bg-muted/30 rounded-lg p-4 border space-y-3 max-h-[400px] overflow-y-auto">
-                                    <div className="flex justify-between items-center pb-2 border-b">
-                                        <h3 className="font-semibold text-sm">Cola de Procesamiento</h3>
-                                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                                            {scanQueue.filter(i => i.status === 'saved').length}/{scanQueue.length} Guardadas
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        {scanQueue.map((item, idx) => (
-                                            <div key={item.id} className="flex items-center justify-between bg-card p-3 rounded-md border shadow-sm">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                                                        {idx + 1}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-medium truncate max-w-[200px]">
-                                                            {item.file.name}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {item.status === 'pending' && "En cola..."}
-                                                            {item.status === 'scanning' && "Analizando..."}
-                                                            {item.status === 'saved' && "Guardado exitosamente"}
-                                                            {item.status === 'error' && "Falló el análisis"}
-                                                            {item.status === 'success' && "Listo para revisar"}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    {item.status === 'scanning' && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
-                                                    {item.status === 'saved' && <Check className="h-5 w-5 text-green-500" />}
-                                                    {item.status === 'error' && <AlertCircle className="h-5 w-5 text-red-500" />}
-                                                    {item.status === 'success' && (
-                                                        <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => {
-                                                            setScanQueue([item]); // Switch to single mode to review this one
-                                                            setReviewIndex(0);
-                                                        }}>
-                                                            Revisar
-                                                        </Button>
-                                                    )}
-                                                </div>
+                            {/* IA Mode Upload Box */}
+                            {expenseEntryMode === 'ia' && (
+                                <div 
+                                    onClick={() => !isScanning && fileInputRef.current?.click()}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center py-6 sm:py-10 px-4 sm:px-6 border-2 border-dashed rounded-2xl sm:rounded-3xl transition-all text-center animate-in fade-in cursor-pointer group mb-2 text-balance",
+                                        isScanning ? "border-emerald-500/50 bg-emerald-500/5 opacity-80" : "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/50 shadow-sm"
+                                    )}
+                                >
+                                    {isScanning ? (
+                                        <>
+                                            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
+                                                <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {scanQueue.every(i => i.status === 'saved') && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="bg-green-50 border border-green-200 rounded-lg p-4 text-center space-y-2"
-                                    >
-                                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                                            <Check className="h-6 w-6 text-green-600" />
-                                        </div>
-                                        <h3 className="font-bold text-green-800">¡Todo listo!</h3>
-                                        <p className="text-sm text-green-700">Todas las facturas han sido procesadas y guardadas correctamente.</p>
-                                    </motion.div>
-                                )}
-                            </motion.div>
-                        ) : (expenseEntryMode === 'manual' || scanQueue.length === 1) ? (
-                            <motion.div
-                                key="single-form"
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -8 }}
-                                transition={{ duration: 0.2 }}
-                                className="flex flex-col gap-3 pt-1"
-                            >
-                                {/* ── TYPE SELECTOR ── */}
-                                <div className="relative grid grid-cols-2 gap-0 p-1 rounded-2xl bg-muted/30 border border-border/60 overflow-hidden">
-                                    <div
-                                        className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-md ${
-                                            expenseType === 'reinversion'
-                                                ? 'left-1 bg-gradient-to-br from-green-600 to-emerald-500'
-                                                : 'left-[calc(50%+3px)] bg-gradient-to-br from-green-700 to-teal-600'
-                                        }`}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => handleExpenseTypeChange('reinversion')}
-                                        className={`relative z-10 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                                            expenseType === 'reinversion' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
-                                        }`}
-                                    >
-                                        <span>🔄</span> Reinversión
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleExpenseTypeChange('operativo')}
-                                        className={`relative z-10 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                                            expenseType === 'operativo' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
-                                        }`}
-                                    >
-                                        <span>⚙️</span> Gasto Operativo
-                                    </button>
-                                </div>
-                                {/* hint label */}
-                                <p className="-mt-1 text-[11px] text-center font-medium tracking-wide text-green-400">
-                                    {expenseType === 'reinversion'
-                                        ? '📦 Compra de mercadería / inventario para vender'
-                                        : '🏢 Alquiler, nómina, servicios, mantenimiento, etc.'}
-                                </p>
-
-                                {/* ── AMOUNT hero ── */}
-                                <div className="relative rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 border-2 bg-green-500/5 border-green-500/30">
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-0.5">Monto</p>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-2xl sm:text-3xl font-black text-green-400">$</span>
-                                        <input
-                                            id="amount"
-                                            type="number"
-                                            placeholder="0.00"
-                                            step="0.01"
-                                            className="flex-1 bg-transparent text-2xl sm:text-3xl font-black text-foreground placeholder:text-muted-foreground/30 outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                            value={newExpense.amount || ''}
-                                            onChange={(e) => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* ── CONCEPT + DATE row ── */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="flex flex-col gap-1">
-                                        <label htmlFor="description" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                            <FileText className="h-3 w-3" /> Concepto
-                                        </label>
-                                        <Input
-                                            id="description"
-                                            placeholder="Ej. Compra de mercancería"
-                                            className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
-                                            value={newExpense.description || ''}
-                                            onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col gap-1">
-                                        <label htmlFor="date" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                            <Calendar className="h-3 w-3" /> Fecha
-                                        </label>
-                                        <Input
-                                            id="date"
-                                            type="date"
-                                            className="h-9 bg-muted/30 border-border/60 rounded-xl font-medium text-sm"
-                                            value={newExpense.date && isValid(newExpense.date) ? format(newExpense.date, 'yyyy-MM-dd') : ''}
-                                            onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value ? new Date(e.target.value) : new Date() })}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* ── CATEGORY pills ── */}
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                        <ShoppingCart className="h-3 w-3" /> Categoría
-                                    </label>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {availableCategories.map(cat => (
-                                            <button
-                                                key={cat}
-                                                type="button"
-                                                onClick={() => setNewExpense({ ...newExpense, category: cat })}
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 ${
-                                                    newExpense.category === cat
-                                                        ? 'bg-green-600 border-green-600 text-white shadow-sm shadow-green-500/30'
-                                                        : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:border-green-500/40'
-                                                }`}
-                                            >
-                                                {cat}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* ── SUPPLIER + INVOICE row ── */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                            <Building2 className="h-3 w-3" /> Proveedor
-                                        </label>
-                                        <Popover modal={true}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    className={cn(
-                                                        "w-full justify-between h-10 bg-muted/30 border-border/60 rounded-xl",
-                                                        !newExpense.supplier_name && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    <span className="truncate">{newExpense.supplier_name || 'Seleccionar...'}</span>
-                                                    <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[calc(100vw-32px)] sm:w-[280px] p-0" align="start">
-                                                <Command>
-                                                    <CommandInput placeholder="Buscar proveedor..." />
-                                                    <CommandList>
-                                                        <CommandEmpty>
-                                                            <div className="p-2 text-sm text-center">
-                                                                No encontrado. Escribe para crear.
-                                                            </div>
-                                                        </CommandEmpty>
-                                                        <CommandGroup heading="Proveedores Existentes">
-                                                            {suppliers.map((supplier) => (
-                                                                <CommandItem
-                                                                    key={supplier.id}
-                                                                    value={supplier.name}
-                                                                    onSelect={(currentValue) => {
-                                                                        setNewExpense({ ...newExpense, supplier_name: currentValue });
-                                                                    }}
-                                                                    className="flex justify-between items-center group w-full"
-                                                                >
-                                                                    <div className="flex items-center">
-                                                                        <Check
-                                                                            className={cn(
-                                                                                "mr-2 h-4 w-4",
-                                                                                newExpense.supplier_name === supplier.name ? "opacity-100" : "opacity-0"
-                                                                            )}
-                                                                        />
-                                                                        {supplier.name}
-                                                                    </div>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleDeleteSupplier(supplier.id, supplier.name);
-                                                                        }}
-                                                                    >
-                                                                        <Trash2 className="h-3 w-3 text-destructive" />
-                                                                    </Button>
-                                                                </CommandItem>
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                    <div className="p-2 border-t">
-                                                        <Input
-                                                            placeholder="O escribir nombre nuevo..."
-                                                            value={newExpense.supplier_name}
-                                                            onChange={(e) => setNewExpense({ ...newExpense, supplier_name: e.target.value })}
-                                                            className="h-8"
-                                                        />
-                                                    </div>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-                                    <div className="flex flex-col gap-1">
-                                        <label htmlFor="invoice" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                            <Receipt className="h-3 w-3" /> No. Factura
-                                        </label>
-                                        <Input
-                                            id="invoice"
-                                            placeholder="NCF o Referencia"
-                                            className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
-                                            value={newExpense.invoice_number || ''}
-                                            onChange={(e) => setNewExpense({ ...newExpense, invoice_number: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* ── IMAGE UPLOAD FIELD ── */}
-                                <div className="flex flex-col gap-1.5 mt-1">
-                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                        <Camera className="h-3 w-3" /> Foto de Factura / Comprobante
-                                    </label>
-                                    <input
-                                        type="file"
-                                        ref={manualFileInputRef}
-                                        onChange={handleManualImageUpload}
-                                        accept="image/*"
-                                        className="hidden"
-                                    />
-                                    
-                                    {isUploadingManualImage ? (
-                                        <div className="flex items-center justify-center gap-2 h-14 rounded-xl border border-dashed border-border bg-muted/20 text-muted-foreground text-xs font-semibold">
-                                            <Loader2 className="h-4 w-4 animate-spin text-green-500" />
-                                            <span>Subiendo imagen...</span>
-                                        </div>
-                                    ) : newExpense.image_url ? (
-                                        <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
-                                            <img
-                                                src={newExpense.image_url}
-                                                alt="Comprobante"
-                                                className="w-12 h-12 rounded-lg object-cover border border-border/80"
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
-                                                <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
-                                                onClick={() => setNewExpense(prev => ({ ...prev, image_url: null }))}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                            <h3 className="font-black text-xl text-foreground tracking-tight">Analizando facturas...</h3>
+                                            <p className="text-sm text-muted-foreground mt-2">Por favor espera un momento</p>
+                                        </>
                                     ) : (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => manualFileInputRef.current?.click()}
-                                            className="h-14 border-dashed border-border/60 hover:border-green-500/40 bg-muted/10 hover:bg-green-500/5 hover:text-green-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
-                                        >
-                                            <Upload className="h-4 w-4 text-muted-foreground" />
-                                            <div className="text-left">
-                                                <p className="text-xs font-semibold">Subir imagen (Opcional)</p>
-                                                <p className="text-[10px] text-muted-foreground">Formato JPG, PNG (máx. 5MB)</p>
+                                        <>
+                                            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/20">
+                                                <Camera className="w-8 h-8 text-emerald-500" />
                                             </div>
-                                        </Button>
+                                            <h3 className="font-black text-xl text-foreground tracking-tight">Escanear Documento</h3>
+                                            <p className="text-sm text-muted-foreground mt-2 font-medium">La IA extraerá todos los datos de forma automática.</p>
+                                        </>
                                     )}
                                 </div>
-                            </motion.div>
+                            )}
 
-                        ) : null}
-                    </AnimatePresence>
+                            {/* Manual entry form (Queue is empty) */}
+                            {expenseEntryMode === 'manual' && (
+                                <div className="flex flex-col gap-3 pt-1">
+                                    {/* Type Selector */}
+                                    <div className="relative grid grid-cols-2 gap-0 p-1 rounded-2xl bg-muted/30 border border-border/60 overflow-hidden">
+                                        <div
+                                            className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-md ${
+                                                expenseType === 'reinversion'
+                                                    ? 'left-1 bg-gradient-to-br from-green-600 to-emerald-500'
+                                                    : 'left-[calc(50%+3px)] bg-gradient-to-br from-green-700 to-teal-600'
+                                            }`}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleExpenseTypeChange('reinversion')}
+                                            className={`relative z-10 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                                                expenseType === 'reinversion' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                                            }`}
+                                        >
+                                            <span>🔄</span> Reinversión
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleExpenseTypeChange('operativo')}
+                                            className={`relative z-10 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                                                expenseType === 'operativo' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                                            }`}
+                                        >
+                                            <span>⚙️</span> Gasto Operativo
+                                        </button>
+                                    </div>
 
-                    <DialogFooter className="sm:justify-between">
-                        {scanQueue.length > 1 ? (
-                            <div className="flex w-full justify-between items-center">
-                                <span className="text-xs text-muted-foreground flex items-center">
-                                    {isScanning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                                    {isScanning ? "Procesando más facturas..." : "Proceso completado"}
-                                </span>
-                                <Button variant="outline" onClick={() => {
-                                    setIsAddExpenseOpen(false);
-                                    setScanQueue([]);
-                                }}>
-                                    Cerrar Ventana
-                                </Button>
-                            </div>
-                        ) : (
-                            <>
-                                {scanQueue.length > 0 && scanQueue[0].status === 'success' && (
-                                    <Button variant="ghost" onClick={() => {
-                                        setIsAddExpenseOpen(false);
-                                        setScanQueue([]);
-                                        setNewExpense({
-                                            date: new Date(),
-                                            description: '',
-                                            amount: '',
-                                            category: 'Inventario',
-                                            supplier_name: '',
-                                            invoice_number: ''
-                                        });
-                                    }}>
-                                        Cancelar
-                                    </Button>
-                                )}
-                                {(expenseEntryMode === 'manual' || scanQueue.length === 1) && (
-                                    <div className="flex gap-2 w-full sm:w-auto justify-end">
-                                        <Button
+                                    <p className="-mt-1 text-[11px] text-center font-medium tracking-wide text-green-400">
+                                        {expenseType === 'reinversion'
+                                            ? '📦 Compra de mercadería / inventario para vender'
+                                            : '🏢 Alquiler, nómina, servicios, mantenimiento, etc.'}
+                                    </p>
+
+                                    {/* Amount */}
+                                    <div className="relative rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 border-2 bg-green-500/5 border-green-500/30">
+                                        <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-0.5">Monto</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-2xl sm:text-3xl font-black text-green-400">$</span>
+                                            <input
+                                                id="amount"
+                                                type="number"
+                                                placeholder="0.00"
+                                                step="0.01"
+                                                className="flex-1 bg-transparent text-2xl sm:text-3xl font-black text-foreground placeholder:text-muted-foreground/30 outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                value={newExpense.amount || ''}
+                                                onChange={(e) => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Concept + Date */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="flex flex-col gap-1">
+                                            <label htmlFor="description" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                <FileText className="h-3 w-3" /> Concepto
+                                            </label>
+                                            <Input
+                                                id="description"
+                                                placeholder="Ej. Compra de mercancería"
+                                                className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
+                                                value={newExpense.description || ''}
+                                                onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label htmlFor="date" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                <Calendar className="h-3 w-3" /> Fecha
+                                            </label>
+                                            <Input
+                                                id="date"
+                                                type="date"
+                                                className="h-9 bg-muted/30 border-border/60 rounded-xl font-medium text-sm"
+                                                value={newExpense.date && isValid(newExpense.date) ? format(newExpense.date, 'yyyy-MM-dd') : ''}
+                                                onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value ? new Date(e.target.value) : new Date() })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Category pills */}
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                            <ShoppingCart className="h-3 w-3" /> Categoría
+                                        </label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {availableCategories.map(cat => (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    onClick={() => setNewExpense({ ...newExpense, category: cat })}
+                                                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 ${
+                                                        newExpense.category === cat
+                                                            ? 'bg-green-600 border-green-600 text-white shadow-sm shadow-green-500/30'
+                                                            : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:border-green-500/40'
+                                                    }`}
+                                                >
+                                                    {cat}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Supplier + Invoice number */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                <Building2 className="h-3 w-3" /> Proveedor
+                                            </label>
+                                            <Popover modal={true}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                            "w-full justify-between h-10 bg-muted/30 border-border/60 rounded-xl",
+                                                            !newExpense.supplier_name && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <span className="truncate">{newExpense.supplier_name || 'Seleccionar...'}</span>
+                                                        <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[calc(100vw-32px)] sm:w-[280px] p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Buscar proveedor..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>
+                                                                <div className="p-2 text-sm text-center">
+                                                                    No encontrado. Escribe para crear.
+                                                                </div>
+                                                            </CommandEmpty>
+                                                            <CommandGroup heading="Proveedores Existentes">
+                                                                {suppliers.map((supplier) => (
+                                                                    <CommandItem
+                                                                        key={supplier.id}
+                                                                        value={supplier.name}
+                                                                        onSelect={(currentValue) => {
+                                                                            setNewExpense({ ...newExpense, supplier_name: currentValue });
+                                                                        }}
+                                                                        className="flex justify-between items-center group w-full"
+                                                                    >
+                                                                        <div className="flex items-center">
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    "mr-2 h-4 w-4",
+                                                                                    newExpense.supplier_name === supplier.name ? "opacity-100" : "opacity-0"
+                                                                                )}
+                                                                            />
+                                                                            {supplier.name}
+                                                                        </div>
+                                                                        <Button
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeleteSupplier(supplier.id, supplier.name);
+                                                                            }}
+                                                                        >
+                                                                            <Trash2 className="h-3 w-3 text-destructive" />
+                                                                        </Button>
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                        <div className="p-2 border-t">
+                                                            <Input
+                                                                placeholder="O escribir nombre nuevo..."
+                                                                value={newExpense.supplier_name}
+                                                                onChange={(e) => setNewExpense({ ...newExpense, supplier_name: e.target.value })}
+                                                                className="h-8"
+                                                            />
+                                                        </div>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label htmlFor="invoice" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                <Receipt className="h-3 w-3" /> No. Factura
+                                            </label>
+                                            <Input
+                                                id="invoice"
+                                                placeholder="NCF o Referencia"
+                                                className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
+                                                value={newExpense.invoice_number || ''}
+                                                onChange={(e) => setNewExpense({ ...newExpense, invoice_number: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Photo upload */}
+                                    <div className="flex flex-col gap-1.5 mt-1">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                            <Camera className="h-3 w-3" /> Foto de Factura / Comprobante
+                                        </label>
+                                        <input
+                                            type="file"
+                                            ref={manualFileInputRef}
+                                            onChange={handleManualImageUpload}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        
+                                        {isUploadingManualImage ? (
+                                            <div className="flex items-center justify-center gap-2 h-14 rounded-xl border border-dashed border-border bg-muted/20 text-muted-foreground text-xs font-semibold">
+                                                <Loader2 className="h-4 w-4 animate-spin text-green-500" />
+                                                <span>Subiendo imagen...</span>
+                                            </div>
+                                        ) : newExpense.image_url ? (
+                                            <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
+                                                <img
+                                                    src={newExpense.image_url}
+                                                    alt="Comprobante"
+                                                    className="w-12 h-12 rounded-lg object-cover border border-border/80"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
+                                                    <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                                                    onClick={() => setNewExpense(prev => ({ ...prev, image_url: null }))}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => manualFileInputRef.current?.click()}
+                                                className="h-14 border-dashed border-border/60 hover:border-green-500/40 bg-muted/10 hover:bg-green-500/5 hover:text-green-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
+                                            >
+                                                <Upload className="h-4 w-4 text-muted-foreground" />
+                                                <div className="text-left">
+                                                    <p className="text-xs font-semibold">Subir imagen (Opcional)</p>
+                                                    <p className="text-[10px] text-muted-foreground">Formato JPG, PNG (máx. 5MB)</p>
+                                                </div>
+                                            </Button>
+                                        )}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex justify-end gap-2 mt-4 pt-2 border-t">
+                                        <Button variant="ghost" className="rounded-xl h-10 px-4 text-xs font-semibold" onClick={() => setIsAddExpenseOpen(false)}>Cancelar</Button>
+                                        <Button 
                                             onClick={handleAddExpense}
                                             disabled={isCreating}
-                                            className="rounded-xl font-medium px-6 bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-200 active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-emerald-500/10"
+                                            className="rounded-xl h-10 px-6 font-bold bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
                                         >
-                                            {isCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                                            {isCreating ? "Guardando..." : expenseType === 'reinversion' ? 'Guardar Reinversión' : 'Guardar Gasto'}
+                                            {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            {expenseType === 'reinversion' ? 'Guardar Reinversión' : 'Guardar Gasto'}
                                         </Button>
                                     </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        /* Split screen view when files are in the queue */
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-[450px]">
+                            {/* Left Column: Queue Manager */}
+                            <div className="md:col-span-5 flex flex-col gap-4 border-r border-border/20 pr-4">
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <h3 className="font-black text-xs uppercase tracking-wider text-muted-foreground">Lista de Facturas</h3>
+                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
+                                        {scanQueue.filter(i => i.status === 'saved').length}/{scanQueue.length} Guardadas
+                                    </span>
+                                </div>
+                                
+                                {/* Add more invoices button */}
+                                <Button 
+                                    size="sm"
+                                    variant="outline" 
+                                    className="w-full h-10 border-dashed border-2 border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/5 text-emerald-500 font-bold gap-2 rounded-xl text-xs"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isScanning}
+                                >
+                                    <Plus className="h-4 w-4" /> Agregar más facturas
+                                </Button>
+
+                                {/* Scrollable Queue List */}
+                                <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                                    {scanQueue.map((item, idx) => (
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => {
+                                                if (item.status === 'success' || item.status === 'saved' || item.status === 'error') {
+                                                    setReviewIndex(idx);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "flex items-center justify-between bg-card p-3 rounded-xl border shadow-sm transition-all duration-200",
+                                                (item.status === 'success' || item.status === 'saved' || item.status === 'error') && "cursor-pointer hover:bg-muted/30",
+                                                reviewIndex === idx && "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-2.5 truncate flex-1 mr-2">
+                                                <div className={cn(
+                                                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0",
+                                                    reviewIndex === idx ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                                                )}>
+                                                    {idx + 1}
+                                                </div>
+                                                <div className="flex flex-col truncate">
+                                                    <span className="text-xs font-bold truncate max-w-[140px] text-foreground">
+                                                        {item.file.name}
+                                                    </span>
+                                                    <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">
+                                                        {item.status === 'pending' && "En cola..."}
+                                                        {item.status === 'scanning' && "Analizando..."}
+                                                        {item.status === 'saved' && "✓ Guardada"}
+                                                        {item.status === 'error' && "⚠ Error"}
+                                                        {item.status === 'success' && "Listo para revisar"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0">
+                                                {item.status === 'scanning' && <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />}
+                                                {item.status === 'saved' && <Check className="h-4 w-4 text-emerald-500 font-bold" />}
+                                                {item.status === 'error' && <AlertCircle className="h-4 w-4 text-red-500" />}
+                                                {item.status === 'success' && <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Save All / Actions */}
+                                <div className="pt-2 border-t mt-auto flex flex-col gap-2">
+                                    {scanQueue.some(i => i.status === 'success') && (
+                                        <Button 
+                                            size="sm"
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-[10px] h-9 rounded-xl shadow-md gap-1.5"
+                                            onClick={handleSaveAllReady}
+                                            disabled={isScanning}
+                                        >
+                                            <CheckCheck className="h-4 w-4" /> Guardar todo listo
+                                        </Button>
+                                    )}
+                                    <Button 
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full text-xs h-9 rounded-xl font-semibold"
+                                        onClick={() => {
+                                            setIsAddExpenseOpen(false);
+                                            setScanQueue([]);
+                                        }}
+                                    >
+                                        Cerrar Ventana
+                                    </Button>
+                                </div>
+                            </div>
+                            
+                            {/* Right Column: Review Details Form */}
+                            <div className="md:col-span-7 flex flex-col justify-center">
+                                {scanQueue[reviewIndex]?.status === 'scanning' ? (
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 text-center">
+                                        <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center animate-pulse">
+                                            <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                                        </div>
+                                        <p className="text-sm font-bold text-foreground">Analizando factura con IA...</p>
+                                        <p className="text-xs text-muted-foreground">La IA de Groq está leyendo los datos del comprobante.</p>
+                                    </div>
+                                ) : scanQueue[reviewIndex]?.status === 'pending' ? (
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 text-center text-muted-foreground">
+                                        <Clock className="h-8 w-8 animate-pulse text-emerald-500" />
+                                        <p className="text-sm font-semibold">En cola de procesamiento</p>
+                                        <p className="text-xs">Se iniciará el escaneo automáticamente en unos momentos.</p>
+                                    </div>
+                                ) : (
+                                    /* Form for success/error/saved */
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between pb-1 border-b border-border/30">
+                                            <h4 className="font-black text-xs uppercase tracking-wider text-muted-foreground">Datos del Gasto Seleccionado</h4>
+                                            <span className="text-[10px] font-bold text-muted-foreground max-w-[200px] truncate">
+                                                {scanQueue[reviewIndex]?.file.name}
+                                            </span>
+                                        </div>
+
+                                        {/* Type Selector */}
+                                        <div className="relative grid grid-cols-2 gap-0 p-1 rounded-2xl bg-muted/30 border border-border/60 overflow-hidden">
+                                            <div
+                                                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-md ${
+                                                    expenseType === 'reinversion'
+                                                        ? 'left-1 bg-gradient-to-br from-green-600 to-emerald-500'
+                                                        : 'left-[calc(50%+3px)] bg-gradient-to-br from-green-700 to-teal-600'
+                                                }`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleExpenseTypeChange('reinversion')}
+                                                className={`relative z-10 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                                                    expenseType === 'reinversion' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                                                }`}
+                                            >
+                                                <span>🔄</span> Reinversión
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleExpenseTypeChange('operativo')}
+                                                className={`relative z-10 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                                                    expenseType === 'operativo' ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                                                }`}
+                                            >
+                                                <span>⚙️</span> Gasto Operativo
+                                            </button>
+                                        </div>
+
+                                        <p className="-mt-1 text-[11px] text-center font-medium tracking-wide text-green-400">
+                                            {expenseType === 'reinversion'
+                                                ? '📦 Compra de mercadería / inventario para vender'
+                                                : '🏢 Alquiler, nómina, servicios, mantenimiento, etc.'}
+                                        </p>
+
+                                        {/* Amount */}
+                                        <div className="relative rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 border-2 bg-green-500/5 border-green-500/30">
+                                            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-0.5">Monto</p>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-2xl sm:text-3xl font-black text-green-400">$</span>
+                                                <input
+                                                    id="amount"
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    step="0.01"
+                                                    className="flex-1 bg-transparent text-2xl sm:text-3xl font-black text-foreground placeholder:text-muted-foreground/30 outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    value={newExpense.amount || ''}
+                                                    onChange={(e) => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) || 0 })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Concept + Date */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="flex flex-col gap-1">
+                                                <label htmlFor="description" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                    <FileText className="h-3 w-3" /> Concepto
+                                                </label>
+                                                <Input
+                                                    id="description"
+                                                    placeholder="Ej. Compra de mercancería"
+                                                    className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
+                                                    value={newExpense.description || ''}
+                                                    onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label htmlFor="date" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" /> Fecha
+                                                </label>
+                                                <Input
+                                                    id="date"
+                                                    type="date"
+                                                    className="h-9 bg-muted/30 border-border/60 rounded-xl font-medium text-sm"
+                                                    value={newExpense.date && isValid(newExpense.date) ? format(newExpense.date, 'yyyy-MM-dd') : ''}
+                                                    onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value ? new Date(e.target.value) : new Date() })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Category pills */}
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                <ShoppingCart className="h-3 w-3" /> Categoría
+                                            </label>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {availableCategories.map(cat => (
+                                                    <button
+                                                        key={cat}
+                                                        type="button"
+                                                        onClick={() => setNewExpense({ ...newExpense, category: cat })}
+                                                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 ${
+                                                            newExpense.category === cat
+                                                                ? 'bg-green-600 border-green-600 text-white shadow-sm shadow-green-500/30'
+                                                                : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:border-green-500/40'
+                                                        }`}
+                                                    >
+                                                        {cat}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Supplier + Invoice number */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                    <Building2 className="h-3 w-3" /> Proveedor
+                                                </label>
+                                                <Popover modal={true}>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between h-10 bg-muted/30 border-border/60 rounded-xl",
+                                                                !newExpense.supplier_name && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            <span className="truncate">{newExpense.supplier_name || 'Seleccionar...'}</span>
+                                                            <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[calc(100vw-32px)] sm:w-[280px] p-0" align="start">
+                                                        <Command>
+                                                            <CommandInput placeholder="Buscar proveedor..." />
+                                                            <CommandList>
+                                                                <CommandEmpty>
+                                                                    <div className="p-2 text-sm text-center">
+                                                                        No encontrado. Escribe para crear.
+                                                                    </div>
+                                                                </CommandEmpty>
+                                                                <CommandGroup heading="Proveedores Existentes">
+                                                                    {suppliers.map((supplier) => (
+                                                                        <CommandItem
+                                                                            key={supplier.id}
+                                                                            value={supplier.name}
+                                                                            onSelect={(currentValue) => {
+                                                                                setNewExpense({ ...newExpense, supplier_name: currentValue });
+                                                                            }}
+                                                                            className="flex justify-between items-center group w-full"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <Check
+                                                                                    className={cn(
+                                                                                        "mr-2 h-4 w-4",
+                                                                                        newExpense.supplier_name === supplier.name ? "opacity-100" : "opacity-0"
+                                                                                    )}
+                                                                                />
+                                                                                {supplier.name}
+                                                                            </div>
+                                                                            <Button
+                                                                                size="icon"
+                                                                                variant="ghost"
+                                                                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleDeleteSupplier(supplier.id, supplier.name);
+                                                                                }}
+                                                                            >
+                                                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                                                            </Button>
+                                                                        </CommandItem>
+                                                                    ))}
+                                                                </CommandGroup>
+                                                            </CommandList>
+                                                            <div className="p-2 border-t">
+                                                                <Input
+                                                                    placeholder="O escribir nombre nuevo..."
+                                                                    value={newExpense.supplier_name}
+                                                                    onChange={(e) => setNewExpense({ ...newExpense, supplier_name: e.target.value })}
+                                                                    className="h-8"
+                                                                />
+                                                            </div>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label htmlFor="invoice" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                    <Receipt className="h-3 w-3" /> No. Factura
+                                                </label>
+                                                <Input
+                                                    id="invoice"
+                                                    placeholder="NCF o Referencia"
+                                                    className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
+                                                    value={newExpense.invoice_number || ''}
+                                                    onChange={(e) => setNewExpense({ ...newExpense, invoice_number: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Photo upload / image preview */}
+                                        <div className="flex flex-col gap-1.5 mt-1">
+                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                <Camera className="h-3 w-3" /> Foto de Factura / Comprobante
+                                            </label>
+                                            <input
+                                                type="file"
+                                                ref={manualFileInputRef}
+                                                onChange={handleManualImageUpload}
+                                                accept="image/*"
+                                                className="hidden"
+                                            />
+                                            
+                                            {isUploadingManualImage ? (
+                                                <div className="flex items-center justify-center gap-2 h-14 rounded-xl border border-dashed border-border bg-muted/20 text-muted-foreground text-xs font-semibold">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-green-500" />
+                                                    <span>Subiendo imagen...</span>
+                                                </div>
+                                            ) : newExpense.image_url ? (
+                                                <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
+                                                    <img
+                                                        src={newExpense.image_url}
+                                                        alt="Comprobante"
+                                                        className="w-12 h-12 rounded-lg object-cover border border-border/80"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
+                                                        <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                                                        onClick={() => setNewExpense(prev => ({ ...prev, image_url: null }))}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => manualFileInputRef.current?.click()}
+                                                    className="h-14 border-dashed border-border/60 hover:border-green-500/40 bg-muted/10 hover:bg-green-500/5 hover:text-green-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
+                                                >
+                                                    <Upload className="h-4 w-4 text-muted-foreground" />
+                                                    <div className="text-left">
+                                                        <p className="text-xs font-semibold">Subir imagen (Opcional)</p>
+                                                        <p className="text-[10px] text-muted-foreground">Formato JPG, PNG (máx. 5MB)</p>
+                                                    </div>
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {/* Action buttons inside form */}
+                                        <div className="flex justify-between items-center gap-2 mt-4 pt-2 border-t border-border/30">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="text-xs rounded-xl"
+                                                onClick={handleSkipItem}
+                                            >
+                                                Omitir factura
+                                            </Button>
+                                            
+                                            {scanQueue[reviewIndex]?.status === 'saved' ? (
+                                                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-2 text-xs font-bold text-emerald-500 flex items-center gap-1.5 shadow-sm">
+                                                    <Check className="h-4 w-4" /> Registrado
+                                                </div>
+                                            ) : (
+                                                <Button 
+                                                    size="sm"
+                                                    disabled={isCreating}
+                                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-xs px-6 h-9 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                                                    onClick={handleAddExpense}
+                                                >
+                                                    {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                                    {isCreating ? "Guardando..." : "Registrar Gasto"}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
-                            </>
-                        )}
-                    </DialogFooter>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 

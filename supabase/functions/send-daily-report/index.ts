@@ -181,7 +181,7 @@ async function sendReportForStore(
     }
 
     // Fetch Stats
-    const { data: currentSales } = await supabase.from('sales').select('total').eq('store_id', store_id).gte('created_at', currentStart.toISOString()).lte('created_at', currentEnd.toISOString());
+    const { data: currentSales } = await supabase.from('sales').select('id, total').eq('store_id', store_id).gte('created_at', currentStart.toISOString()).lte('created_at', currentEnd.toISOString());
     const { data: prevSales } = await supabase.from('sales').select('total').eq('store_id', store_id).gte('created_at', prevStart.toISOString()).lt('created_at', prevEnd.toISOString());
 
     const totalSales = (currentSales || []).reduce((acc: number, s: any) => acc + (s.total || 0), 0);
@@ -230,7 +230,16 @@ async function sendReportForStore(
     const bestDay = weeklyBreakdown.reduce((prev, curr) => (prev.total > curr.total) ? prev : curr);
 
     // Top Products (Specific to session if session_id provided)
-    const { data: currentItems } = await supabase.from('sale_items').select('quantity, total, product_id').gte('created_at', currentStart.toISOString()).lte('created_at', currentEnd.toISOString());
+    const currentSalesIds = (currentSales || []).map((s: any) => s.id);
+    let currentItems: any[] = [];
+    if (currentSalesIds.length > 0) {
+      const chunkSize = 200;
+      for (let i = 0; i < currentSalesIds.length; i += chunkSize) {
+        const chunk = currentSalesIds.slice(i, i + chunkSize);
+        const { data } = await supabase.from('sale_items').select('quantity, total, product_id').in('sale_id', chunk);
+        if (data) currentItems.push(...data);
+      }
+    }
     const productMap = new Map();
     (currentItems || []).forEach((item: any) => {
       if (item.product_id) {
@@ -252,8 +261,11 @@ async function sendReportForStore(
     }
 
     // Low stock alerts
-    const { data: allProds } = await supabase.from('products').select('name, stock, min_stock, sku').eq('store_id', store_id).eq('status', 'active');
-    const lowStock = (allProds || []).filter((p: any) => p.stock <= (p.min_stock || 5)).sort((a,b) => a.stock - b.stock).slice(0, 8);
+    const { data: allProds } = await supabase.from('products').select('name, stock, min_stock, sku, track_inventory').eq('store_id', store_id).eq('status', 'active');
+    const lowStock = (allProds || [])
+      .filter((p: any) => p.track_inventory !== false && p.stock <= (p.min_stock || 5))
+      .sort((a: any, b: any) => a.stock - b.stock)
+      .slice(0, 8);
 
     // Helpers
     const formatCurrency = (val: number) => `RD$ ${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

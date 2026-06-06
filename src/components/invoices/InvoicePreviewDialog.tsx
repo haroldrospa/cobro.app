@@ -118,7 +118,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent hideCloseButton className="max-w-5xl w-full p-0 overflow-hidden rounded-2xl border-border/40 bg-background shadow-2xl" style={{ height: 'min(90vh, 760px)' }}>
+      <DialogContent hideCloseButton className="sm:max-w-4xl w-full p-0 overflow-hidden rounded-2xl border-border/40 bg-background shadow-2xl" style={{ height: 'min(90vh, 760px)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/30 bg-muted/20 shrink-0">
           <div className="flex items-center gap-3">
@@ -240,7 +240,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                 </div>
               ) : (
                 <div
-                  className="bg-white shadow-2xl rounded"
+                  className="bg-white shadow-2xl rounded overflow-hidden"
                   style={{
                     width: '80mm',
                     minHeight: '120mm',
@@ -258,17 +258,53 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                       border: 'none',
                       display: 'block',
                       borderRadius: '2px',
+                      overflow: 'hidden',
                     }}
                     scrolling="no"
                     onLoad={(e) => {
-                      // Auto-adjust iframe height to content
                       const iframe = e.currentTarget;
                       try {
-                        const height = iframe.contentDocument?.body?.scrollHeight;
-                        if (height) {
-                          iframe.style.height = height + 'px';
+                        const doc = iframe.contentWindow?.document || iframe.contentDocument;
+                        if (doc && doc.body) {
+                          // Inject CSS to guarantee no scrollbars on screen
+                          const style = doc.createElement('style');
+                          style.textContent = `
+                            @media screen {
+                              html, body {
+                                overflow: hidden !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                width: 100% !important;
+                              }
+                              ::-webkit-scrollbar {
+                                display: none !important;
+                                width: 0 !important;
+                                height: 0 !important;
+                              }
+                            }
+                          `;
+                          doc.head.appendChild(style);
+
+                          // ResizeObserver to adjust height dynamically as content (like images) loads
+                          const resizeObserver = new ResizeObserver((entries) => {
+                            for (const entry of entries) {
+                              const height = doc.body.scrollHeight || entry.contentRect.height;
+                              if (height) {
+                                iframe.style.height = `${height}px`;
+                              }
+                            }
+                          });
+                          resizeObserver.observe(doc.body);
                         }
-                      } catch (_) {}
+                      } catch (_) {
+                        // Fallback if ResizeObserver or contentWindow access fails
+                        try {
+                          const height = iframe.contentDocument?.body?.scrollHeight;
+                          if (height) {
+                            iframe.style.height = height + 'px';
+                          }
+                        } catch (__) {}
+                      }
                     }}
                   />
                 </div>

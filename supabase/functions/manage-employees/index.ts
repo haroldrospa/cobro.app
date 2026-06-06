@@ -47,7 +47,7 @@ serve(async (req) => {
 
         // ── CREATE ──────────────────────────────────────────────────────────
         if (action === "create") {
-            const { email, password, fullName, role } = payload;
+            const { email, password, fullName, role, cedula } = payload;
             let userId: string;
 
             if (!currentStoreId) throw new Error("No tienes un comercio asociado. Crea uno primero.");
@@ -78,7 +78,7 @@ serve(async (req) => {
 
             const dbRole = role || "staff";
             const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
-                { id: userId, email, full_name: fullName, role: dbRole, store_id: currentStoreId, is_active: true },
+                { id: userId, email, full_name: fullName, role: dbRole, store_id: currentStoreId, is_active: true, cedula },
                 { onConflict: "id" }
             );
             if (profileError) {
@@ -100,7 +100,7 @@ serve(async (req) => {
 
         // ── UPDATE ──────────────────────────────────────────────────────────
         else if (action === "update") {
-            const { id, email, password, fullName, role, is_active } = payload;
+            const { id, email, password, fullName, role, is_active, cedula } = payload;
 
             const { data: targetProfile, error: fetchError } = await supabaseAdmin
                 .from("profiles").select("store_id, email").eq("id", id).single();
@@ -112,12 +112,13 @@ serve(async (req) => {
 
             const updateData: any = { full_name: fullName, role, email };
             if (typeof is_active === "boolean") updateData.is_active = is_active;
+            if (cedula !== undefined) updateData.cedula = cedula;
 
             const { error: profileError } = await supabaseAdmin.from("profiles").update(updateData).eq("id", id);
             if (profileError) {
                 if (profileError.message.includes("is_active") || profileError.code === "42703") {
                     const { error: retryError } = await supabaseAdmin
-                        .from("profiles").update({ full_name: fullName, role, email }).eq("id", id);
+                        .from("profiles").update({ full_name: fullName, role, email, cedula }).eq("id", id);
                     if (retryError) throw retryError;
                 } else {
                     throw profileError;

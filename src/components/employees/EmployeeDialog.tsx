@@ -27,6 +27,13 @@ import { Switch } from '@/components/ui/switch';
 import { useManageEmployee, Employee } from '@/hooks/useEmployees';
 import { useCustomers } from '@/hooks/useCustomers';
 
+const formatCedula = (v: string) => {
+    const clean = v.replace(/\D/g, '');
+    if (clean.length <= 3) return clean;
+    if (clean.length <= 10) return `${clean.slice(0, 3)}-${clean.slice(3)}`;
+    return `${clean.slice(0, 3)}-${clean.slice(3, 10)}-${clean.slice(10, 11)}`;
+};
+
 const employeeSchema = z.object({
     full_name: z.string().min(2, 'El nombre es muy corto'),
     email: z.string().email('Correo inválido'),
@@ -34,6 +41,7 @@ const employeeSchema = z.object({
     role: z.enum(['admin', 'manager', 'cashier', 'kitchen', 'delivery']),
     is_active: z.boolean().default(true),
     credit_limit: z.coerce.number().min(0).optional(),
+    cedula: z.string().optional(),
 });
 
 interface EmployeeDialogProps {
@@ -55,6 +63,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             role: 'cashier',
             is_active: true,
             credit_limit: 0,
+            cedula: '',
         },
     });
 
@@ -67,6 +76,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 is_active: employee.is_active,
                 password: '',
                 credit_limit: employee.credit_limit || 0,
+                cedula: employee.cedula || '',
             });
         } else {
             form.reset({
@@ -76,6 +86,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 is_active: true,
                 password: '',
                 credit_limit: 0,
+                cedula: '',
             });
         }
     }, [employee, form, open]);
@@ -93,12 +104,13 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
         const action = employee ? 'update' : 'create';
         const payload: any = {
             action,
-            full_name: values.full_name, // Changed from fullName to full_name to match edge function expected payload often, wait... let's check edge function... edge function expects fullName
+            full_name: values.full_name,
             fullName: values.full_name,
             email: values.email,
             role: values.role,
             is_active: values.is_active,
             credit_limit: values.credit_limit,
+            cedula: values.cedula || '',
         };
 
         if (employee) {
@@ -134,7 +146,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-2xl w-full">
                 <DialogHeader>
                     <DialogTitle>{employee ? 'Editar Empleado' : 'Nuevo Empleado'}</DialogTitle>
                 </DialogHeader>
@@ -154,59 +166,81 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                             )}
                         />
 
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Correo Electrónico</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="juan@empresa.com" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="password"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{employee ? 'Nueva Contraseña (Opcional)' : 'Contraseña'}</FormLabel>
-                                    <FormControl>
-                                        <Input type="password" placeholder="******" {...field} />
-                                    </FormControl>
-                                    {employee && <FormDescription>Dejar en blanco para mantener la actual</FormDescription>}
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="role"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Rol / Nivel de Acceso</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="cedula"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Cédula (ID)</FormLabel>
                                         <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar rol" />
-                                            </SelectTrigger>
+                                            <Input
+                                                placeholder="001-0000000-0"
+                                                {...field}
+                                                onChange={(e) => field.onChange(formatCedula(e.target.value))}
+                                            />
                                         </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="manager">Gerente (Acceso Total)</SelectItem>
-                                            <SelectItem value="cashier">Cajero (Solo POS y Clientes)</SelectItem>
-                                            <SelectItem value="kitchen">Cocinero (Solo Pantalla Cocina)</SelectItem>
-                                            <SelectItem value="delivery">Delivery (Solo Pedidos Delivery)</SelectItem>
-                                            <SelectItem value="admin">Administrador</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="role"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Rol / Nivel de Acceso</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Seleccionar rol" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="manager">Gerente (Acceso Total)</SelectItem>
+                                                <SelectItem value="cashier">Cajero (Solo POS y Clientes)</SelectItem>
+                                                <SelectItem value="kitchen">Cocinero (Solo Pantalla Cocina)</SelectItem>
+                                                <SelectItem value="delivery">Delivery (Solo Pedidos Delivery)</SelectItem>
+                                                <SelectItem value="admin">Administrador</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Correo Electrónico</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="juan@empresa.com" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{employee ? 'Nueva Contraseña (Opcional)' : 'Contraseña'}</FormLabel>
+                                        <FormControl>
+                                            <Input type="password" placeholder="******" {...field} />
+                                        </FormControl>
+                                        {employee && <FormDescription>Dejar en blanco para mantener la actual</FormDescription>}
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
                         <FormField
                             control={form.control}

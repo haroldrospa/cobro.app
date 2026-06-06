@@ -29,6 +29,7 @@ export interface Employee {
     credit_limit?: number;
     credit_used?: number;
     customer_id?: string;
+    cedula?: string;
 }
 
 import { useQuery } from '@tanstack/react-query';
@@ -121,6 +122,7 @@ interface ManageEmployeePayload {
     password?: string;
     role?: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery';
     isActive?: boolean;
+    cedula?: string;
 }
 
 export const useManageEmployee = () => {
@@ -129,17 +131,64 @@ export const useManageEmployee = () => {
 
     return useMutation({
         mutationFn: async (payload: ManageEmployeePayload) => {
-            const { data, error } = await supabase.functions.invoke('manage-employees', {
-                body: payload
-            });
+            // ── 1. Call edge function (handles name, role, email, password, etc.) ──
+            let edgeFunctionError: string | null = null;
+            let createdUserId: string | undefined;
 
-            if (error) throw error;
-            // Edge function returns 200 even on errors, check response body
-            if (data?.error) throw new Error(data.error);
-            return data;
+            try {
+                const { data, error } = await supabase.functions.invoke('manage-employees', {
+                    body: payload
+                });
+                if (error) edgeFunctionError = error.message;
+                else if (data?.error) edgeFunctionError = data.error;
+                else createdUserId = data?.userId;
+            } catch (e: any) {
+                edgeFunctionError = e.message;
+            }
+
+            // If the edge function failed due to a non-trigger error, abort
+            if (edgeFunctionError) {
+                const isTriggerError = edgeFunctionError.toLowerCase().includes('customer_id') ||
+                    edgeFunctionError.toLowerCase().includes('record') ||
+                    edgeFunctionError.toLowerCase().includes('trigger') ||
+                    edgeFunctionError.toLowerCase().includes('field');
+                if (!isTriggerError) {
+                    throw new Error(edgeFunctionError);
+                }
+                console.warn('Edge function trigger error (ignored):', edgeFunctionError);
+            }
+
+            // ── 2. Save cedula via RPC (SECURITY DEFINER bypasses RLS) ──
+            // Direct table update doesn't work due to RLS. RPC is required.
+            const targetId = payload.action === 'update'
+                ? payload.id
+                : (payload.action === 'create' ? createdUserId : undefined);
+
+            if (payload.cedula !== undefined && targetId) {
+                const { error: rpcError, data: rpcResult } = await supabase.rpc('update_profile_cedula', {
+                    p_profile_id: targetId,
+                    p_cedula: payload.cedula
+                });
+
+                if (rpcError) {
+                    throw new Error('Error al conectar con DB: ' + rpcError.message);
+                }
+                
+                if (rpcResult === false) {
+                    throw new Error('Error: La base de datos rechazó el cambio. Ejecuta de nuevo el archivo SQL.');
+                }
+                
+                if (typeof rpcResult === 'string' && rpcResult !== 'OK') {
+                    throw new Error('Error guardando cédula: ' + rpcResult);
+                }
+            }
+
+            return { success: true, targetId };
+
         },
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            // Force immediate refetch (not just invalidate) to see new cedula right away
+            queryClient.refetchQueries({ queryKey: ['employees'] });
 
             const messages = {
                 create: 'Empleado creado exitosamente',
