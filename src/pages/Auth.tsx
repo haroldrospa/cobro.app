@@ -259,14 +259,14 @@ const Auth = () => {
     }
   };
 
-  // Clean input style using white background and emerald accents
-  const inputCls = "pl-9 h-11 text-sm bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all rounded-lg";
+  // Clean input style using soft gray background and emerald accents
+  const inputCls = "pl-9 h-11 text-sm bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all rounded-lg";
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-[#f8fafc] text-slate-900 px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
-      {/* Subtle dotted grid pattern */}
-      <div className="absolute inset-0 z-0 opacity-[0.4]" style={{
-        backgroundImage: 'radial-gradient(circle at 1px 1px, #cbd5e1 1px, transparent 0)',
+    <div className="min-h-[100dvh] flex items-center justify-center bg-slate-100 text-slate-900 px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
+      {/* Structured dotted grid pattern */}
+      <div className="absolute inset-0 z-0 opacity-[0.5]" style={{
+        backgroundImage: 'radial-gradient(circle at 1px 1px, #cbd5e1 1.5px, transparent 0)',
         backgroundSize: '24px 24px'
       }} />
 
