@@ -263,10 +263,10 @@ const Auth = () => {
   const inputCls = "pl-9 h-11 text-sm bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all rounded-lg";
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-slate-100 text-slate-900 px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-[#2b343b] text-slate-900 px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
       {/* Structured dotted grid pattern */}
-      <div className="absolute inset-0 z-0 opacity-[0.5]" style={{
-        backgroundImage: 'radial-gradient(circle at 1px 1px, #cbd5e1 1.5px, transparent 0)',
+      <div className="absolute inset-0 z-0 opacity-[0.25]" style={{
+        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1.5px, transparent 0)',
         backgroundSize: '24px 24px'
       }} />
 
@@ -294,11 +294,11 @@ const Auth = () => {
               className="h-9 w-auto object-contain rounded-lg"
               loading="eager"
             />
-            <span className="text-2xl font-black tracking-tight text-slate-800">Cobro<span className="text-emerald-500">app</span></span>
+            <span className="text-2xl font-black tracking-tight text-white">Cobro<span className="text-emerald-400">app</span></span>
           </motion.div>
         </div>
 
-        <Card className="bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] overflow-hidden relative rounded-2xl">
+        <Card className="bg-white border border-slate-200/80 shadow-[0_15px_50px_rgba(0,0,0,0.15)] overflow-hidden relative rounded-2xl">
           <CardContent className="p-6 sm:p-8 relative z-10">
             <Tabs defaultValue={isSignup ? "signup" : "login"} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100/60 border border-slate-200/40 p-1 rounded-xl relative gap-1 h-auto">
@@ -653,7 +653,7 @@ const Auth = () => {
         <div className="flex items-center justify-center mt-6">
           <Button
             variant="link"
-            className="text-slate-400 hover:text-slate-700 transition-colors text-xs font-medium"
+            className="text-slate-300 hover:text-white transition-colors text-xs font-medium"
             onClick={() => navigate('/')}
           >
             <ArrowRight className="mr-2 h-3.5 w-3.5 rotate-180" />
