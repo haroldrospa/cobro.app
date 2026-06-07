@@ -259,11 +259,11 @@ const Auth = () => {
     }
   };
 
-  // Clean input style using soft gray background and emerald accents
-  const inputCls = "pl-9 h-11 text-sm bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all rounded-lg";
+  // Clean input style using dark glass background and emerald accents
+  const inputCls = "pl-9 h-11 text-sm bg-slate-950/30 border border-white/5 text-white placeholder:text-slate-500 focus:bg-slate-950/50 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all rounded-lg";
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-[#2b343b] text-slate-900 px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-[#2b343b] text-white px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
       {/* Structured dotted grid pattern */}
       <div className="absolute inset-0 z-0 opacity-[0.25]" style={{
         backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1.5px, transparent 0)',
@@ -298,28 +298,27 @@ const Auth = () => {
           </motion.div>
         </div>
 
-        <Card className="bg-white border border-slate-200/80 shadow-[0_15px_50px_rgba(0,0,0,0.15)] overflow-hidden relative rounded-2xl">
+        <Card className="bg-gradient-to-b from-[#323d46]/70 to-[#222a30]/80 backdrop-blur-xl border border-white/5 border-t-emerald-500/20 shadow-[0_30px_60px_-15px_rgba(15,23,30,0.5)] overflow-hidden relative rounded-2xl">
           <CardContent className="p-6 sm:p-8 relative z-10">
             <Tabs defaultValue={isSignup ? "signup" : "login"} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100/60 border border-slate-200/40 p-1 rounded-xl relative gap-1 h-auto">
+              <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-950/40 border border-white/5 p-1 rounded-xl relative gap-1 h-auto">
                 <TabsTrigger
                   value="login"
-                  className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-500 hover:text-slate-800 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:bg-[#2b343b]/90 data-[state=active]:text-emerald-400 data-[state=active]:border data-[state=active]:border-emerald-500/20 data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-slate-200 outline-none ring-0 focus-visible:ring-0"
                 >
                   Iniciar Sesión
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-500 hover:text-slate-800 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:bg-[#2b343b]/90 data-[state=active]:text-emerald-400 data-[state=active]:border data-[state=active]:border-emerald-500/20 data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-slate-200 outline-none ring-0 focus-visible:ring-0"
                 >
                   Registrarse
                 </TabsTrigger>
               </TabsList>
-
               <TabsContent value="login" className="mt-0">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="login-email" className="text-xs font-medium text-slate-600">Correo electrónico</Label>
+                    <Label htmlFor="login-email" className="text-xs font-medium text-slate-200">Correo electrónico</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                       <Input
@@ -332,11 +331,11 @@ const Auth = () => {
                         className={inputCls}
                       />
                     </div>
-                    {errors.email && <p className="text-[10px] text-red-600 mt-1">{errors.email}</p>}
+                    {errors.email && <p className="text-[10px] text-red-400 mt-1">{errors.email}</p>}
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="login-password" className="text-xs font-medium text-slate-600">Contraseña</Label>
+                    <Label htmlFor="login-password" className="text-xs font-medium text-slate-200">Contraseña</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                       <Input
@@ -352,18 +351,18 @@ const Auth = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-600"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-200"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.5} /> : <Eye className="h-4 w-4" strokeWidth={1.5} />}
                       </Button>
                     </div>
-                    {errors.password && <p className="text-[10px] text-red-600 mt-1">{errors.password}</p>}
+                    {errors.password && <p className="text-[10px] text-red-400 mt-1">{errors.password}</p>}
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-[0_4px_12px_rgba(16,185,129,0.12)] transition-all rounded-lg mt-2"
+                    className="w-full h-11 bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-[0_4px_12px_rgba(16,185,129,0.15)] transition-all rounded-lg mt-2"
                     disabled={loading}
                   >
                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando sesión...</> : 'Continuar'}
@@ -374,10 +373,10 @@ const Auth = () => {
               <TabsContent value="signup" className="mt-0 relative overflow-hidden min-h-[380px]">
                 <div className="mb-8 mt-2">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                       Paso {step} de 4
                     </span>
-                    <span className="text-xs font-medium text-emerald-600">
+                    <span className="text-xs font-medium text-emerald-400">
                       {step === 1 && 'Información Básica'}
                       {step === 2 && 'Empresa'}
                       {step === 3 && 'Selección de Plan'}
@@ -389,7 +388,7 @@ const Auth = () => {
                       <div 
                         key={i} 
                         className={`flex-1 rounded-full transition-colors duration-500 ${
-                          step >= i ? 'bg-emerald-500' : 'bg-slate-200'
+                          step >= i ? 'bg-emerald-500' : 'bg-white/10'
                         }`} 
                       />
                     ))}
@@ -408,7 +407,7 @@ const Auth = () => {
                       className="space-y-4"
                     >
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-name" className="text-xs font-medium text-slate-600">Nombre Completo</Label>
+                        <Label htmlFor="signup-name" className="text-xs font-medium text-slate-200">Nombre Completo</Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                           <Input
@@ -420,11 +419,11 @@ const Auth = () => {
                             className={inputCls}
                           />
                         </div>
-                        {errors.fullName && <p className="text-[10px] text-red-600">{errors.fullName}</p>}
+                        {errors.fullName && <p className="text-[10px] text-red-400">{errors.fullName}</p>}
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-email" className="text-xs font-medium text-slate-600">Correo electrónico</Label>
+                        <Label htmlFor="signup-email" className="text-xs font-medium text-slate-200">Correo electrónico</Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                           <Input
@@ -436,13 +435,13 @@ const Auth = () => {
                             className={inputCls}
                           />
                         </div>
-                        {errors.email && <p className="text-[10px] text-red-600">{errors.email}</p>}
+                        {errors.email && <p className="text-[10px] text-red-400">{errors.email}</p>}
                       </div>
 
                       <Button
                         type="button"
                         onClick={handleNextStep}
-                        className="w-full h-11 mt-6 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.12)]"
+                        className="w-full h-11 mt-6 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
                       >
                         Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -460,7 +459,7 @@ const Auth = () => {
                       className="space-y-4"
                     >
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-company" className="text-xs font-medium text-slate-600">Nombre de la Empresa</Label>
+                        <Label htmlFor="signup-company" className="text-xs font-medium text-slate-200">Nombre de la Empresa</Label>
                         <div className="relative">
                           <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                           <Input
@@ -472,11 +471,11 @@ const Auth = () => {
                             className={inputCls}
                           />
                         </div>
-                        {errors.companyName && <p className="text-[10px] text-red-600">{errors.companyName}</p>}
+                        {errors.companyName && <p className="text-[10px] text-red-400">{errors.companyName}</p>}
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-rnc" className="text-xs font-medium text-slate-600">RNC o Cédula</Label>
+                        <Label htmlFor="signup-rnc" className="text-xs font-medium text-slate-200">RNC o Cédula</Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                           <Input
@@ -488,7 +487,7 @@ const Auth = () => {
                             className={inputCls}
                           />
                         </div>
-                        {errors.rnc && <p className="text-[10px] text-red-600">{errors.rnc}</p>}
+                        {errors.rnc && <p className="text-[10px] text-red-400">{errors.rnc}</p>}
                       </div>
 
                       <div className="flex gap-3 mt-6">
@@ -496,14 +495,14 @@ const Auth = () => {
                           type="button"
                           variant="ghost"
                           onClick={handlePrevStep}
-                          className="flex-[1] h-11 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg group transition-all"
+                          className="flex-[1] h-11 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="button"
                           onClick={handleNextStep}
-                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.12)]"
+                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
                         >
                           Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
@@ -532,19 +531,19 @@ const Auth = () => {
                             onClick={() => setSelectedPlan(plan.id)}
                             className={`cursor-pointer rounded-xl border p-4 flex items-center gap-4 transition-all duration-200 ${
                               selectedPlan === plan.id
-                                ? 'border-emerald-500 bg-emerald-50/40 shadow-[0_4px_20px_rgba(16,185,129,0.06)]'
-                                : 'border-slate-200 bg-slate-50/20 hover:border-slate-300 hover:bg-slate-50/50'
+                                ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_4px_20px_rgba(16,185,129,0.05)]'
+                                : 'border-white/5 bg-slate-950/20 hover:border-white/10 hover:bg-slate-950/30'
                               }`}
                           >
                              <div className="text-2xl opacity-90">{plan.icon}</div>
                              <div className="flex-1">
-                               <div className={`text-sm font-semibold tracking-wide ${selectedPlan === plan.id ? 'text-emerald-950 font-bold' : 'text-slate-700'}`}>{plan.label}</div>
-                               <div className={`text-xs mt-0.5 ${selectedPlan === plan.id ? 'text-emerald-600' : 'text-slate-500'}`}>{plan.price}</div>
+                               <div className={`text-sm font-semibold tracking-wide ${selectedPlan === plan.id ? 'text-emerald-50 font-bold' : 'text-slate-300'}`}>{plan.label}</div>
+                               <div className={`text-xs mt-0.5 ${selectedPlan === plan.id ? 'text-emerald-400' : 'text-slate-500'}`}>{plan.price}</div>
                              </div>
                              <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                               selectedPlan === plan.id ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 bg-transparent'
+                               selectedPlan === plan.id ? 'border-emerald-500 bg-emerald-500' : 'border-white/10 bg-transparent'
                              }`}>
-                               {selectedPlan === plan.id && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                               {selectedPlan === plan.id && <Check className="w-3 h-3 text-emerald-950" strokeWidth={3} />}
                              </div>
                           </div>
                         ))}
@@ -555,14 +554,14 @@ const Auth = () => {
                           type="button"
                           variant="ghost"
                           onClick={handlePrevStep}
-                          className="flex-[1] h-11 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg group transition-all"
+                          className="flex-[1] h-11 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="button"
                           onClick={handleNextStep}
-                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.12)]"
+                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
                         >
                           Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
@@ -582,7 +581,7 @@ const Auth = () => {
                       className="space-y-4"
                     >
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-password" className="text-xs font-medium text-slate-600">Contraseña</Label>
+                        <Label htmlFor="signup-password" className="text-xs font-medium text-slate-200">Contraseña</Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                           <Input
@@ -598,17 +597,17 @@ const Auth = () => {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-600"
+                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-200"
                             onClick={() => setShowPassword(!showPassword)}
                           >
                             {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.5} /> : <Eye className="h-4 w-4" strokeWidth={1.5} />}
                           </Button>
                         </div>
-                        {errors.password && <p className="text-[10px] text-red-600">{errors.password}</p>}
+                        {errors.password && <p className="text-[10px] text-red-400">{errors.password}</p>}
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-confirm" className="text-xs font-medium text-slate-600">Confirmar Contraseña</Label>
+                        <Label htmlFor="signup-confirm" className="text-xs font-medium text-slate-200">Confirmar Contraseña</Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
                           <Input
@@ -621,7 +620,7 @@ const Auth = () => {
                             className={inputCls}
                           />
                         </div>
-                        {errors.confirmPassword && <p className="text-[10px] text-red-600">{errors.confirmPassword}</p>}
+                        {errors.confirmPassword && <p className="text-[10px] text-red-400">{errors.confirmPassword}</p>}
                       </div>
 
                       <div className="flex gap-3 mt-6">
@@ -630,14 +629,14 @@ const Auth = () => {
                           variant="ghost"
                           onClick={handlePrevStep}
                           disabled={loading}
-                          className="flex-[1] h-11 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg group transition-all"
+                          className="flex-[1] h-11 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="submit"
                           disabled={loading}
-                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-all rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.12)]"
+                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-all rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
                         >
                           {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando...</> : 'Crear Cuenta'}
                         </Button>
