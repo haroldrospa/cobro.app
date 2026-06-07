@@ -182,13 +182,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     // Cajero/Staff
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
-      const allowedPaths = ['/', '/pos', '/customers', '/delivery', '/kitchen'];
+      const allowedPaths = ['/', '/pos', '/customers', '/delivery', '/kitchen', '/app'];
       const isAllowed = allowedPaths.some(path =>
         location.pathname === path || (path !== '/' && location.pathname.startsWith(path))
       );
 
       if (!isAllowed) {
-        navigate('/');
+        navigate('/pos', { replace: true });
       }
     }
   }, [profile, location.pathname, navigate]);

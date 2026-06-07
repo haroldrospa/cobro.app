@@ -97,10 +97,8 @@ export const useEmployees = () => {
             }) as Employee[];
         },
         enabled: !!storeId,
-        staleTime: 1000 * 60 * 10, // 10 min — employees rarely change mid-session
+        staleTime: 1000 * 30, // 30s
         gcTime: 1000 * 60 * 60 * 24,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
     });
 
     return {
