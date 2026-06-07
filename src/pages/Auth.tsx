@@ -244,14 +244,15 @@ const Auth = () => {
     }
   };
 
-  // Clean, minimalist input style
-  const inputCls = "pl-9 h-11 text-sm bg-transparent border border-white/10 text-white placeholder:text-gray-600 focus:bg-white-[0.02] focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all rounded-lg";
+  // Clean input style using dark gray and emerald accents
+  const inputCls = "pl-9 h-11 text-sm bg-gray-900/50 border border-gray-800 text-white placeholder:text-gray-500 focus:bg-gray-900 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all rounded-lg";
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-[#030712] px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(circle at 50% 0%, rgba(52,211,153,0.03) 0%, transparent 60%)' }}
-      />
+    <div className="min-h-[100dvh] flex items-center justify-center bg-[#050505] px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
+      {/* Subtle emerald glow behind the card */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px]" />
+      </div>
 
       <motion.div
         className="relative w-full max-w-[420px] z-10 flex flex-col"
@@ -270,25 +271,25 @@ const Auth = () => {
             <img
               src={cobroLogo}
               alt="Cobro"
-              className="h-10 sm:h-12 w-auto mx-auto opacity-90"
+              className="h-10 sm:h-12 w-auto mx-auto"
               loading="eager"
             />
           </motion.div>
         </div>
 
-        <Card className="bg-[#09090b] border border-white/5 shadow-2xl overflow-hidden relative rounded-2xl">
+        <Card className="bg-[#111111] border border-gray-800/60 shadow-2xl overflow-hidden relative rounded-2xl">
           <CardContent className="p-6 sm:p-8 relative z-10">
             <Tabs defaultValue={isSignup ? "signup" : "login"} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 bg-[#18181b] border border-white/5 p-1 rounded-xl relative gap-1 h-auto">
+              <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-900/80 border border-gray-800/50 p-1 rounded-xl relative gap-1 h-auto">
                 <TabsTrigger
                   value="login"
-                  className="data-[state=active]:!bg-white/10 data-[state=active]:!text-white transition-all duration-300 rounded-lg py-2 px-4 text-sm font-medium text-gray-500 hover:text-gray-300 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:!bg-gray-800 data-[state=active]:!text-white transition-all duration-300 rounded-lg py-2 px-4 text-sm font-medium text-gray-400 hover:text-gray-300 outline-none ring-0 focus-visible:ring-0"
                 >
                   Iniciar Sesión
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="data-[state=active]:!bg-white/10 data-[state=active]:!text-white transition-all duration-300 rounded-lg py-2 px-4 text-sm font-medium text-gray-500 hover:text-gray-300 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:!bg-gray-800 data-[state=active]:!text-white transition-all duration-300 rounded-lg py-2 px-4 text-sm font-medium text-gray-400 hover:text-gray-300 outline-none ring-0 focus-visible:ring-0"
                 >
                   Registrarse
                 </TabsTrigger>
@@ -342,7 +343,7 @@ const Auth = () => {
 
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-white hover:bg-gray-200 text-black font-semibold transition-all rounded-lg mt-2"
+                    className="w-full h-11 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all rounded-lg mt-2"
                     disabled={loading}
                   >
                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando sesión...</> : 'Continuar'}
@@ -358,7 +359,7 @@ const Auth = () => {
                     <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                       Paso {step} de 4
                     </span>
-                    <span className="text-xs font-medium text-emerald-400/80">
+                    <span className="text-xs font-medium text-emerald-500">
                       {step === 1 && 'Información Básica'}
                       {step === 2 && 'Empresa'}
                       {step === 3 && 'Selección de Plan'}
@@ -370,7 +371,7 @@ const Auth = () => {
                       <div 
                         key={i} 
                         className={`flex-1 rounded-full transition-colors duration-500 ${
-                          step >= i ? 'bg-emerald-500' : 'bg-white/5'
+                          step >= i ? 'bg-emerald-500' : 'bg-gray-800'
                         }`} 
                       />
                     ))}
@@ -424,7 +425,7 @@ const Auth = () => {
                       <Button
                         type="button"
                         onClick={handleNextStep}
-                        className="w-full h-11 mt-6 bg-white hover:bg-gray-200 text-black transition-all rounded-lg font-semibold group"
+                        className="w-full h-11 mt-6 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 transition-all rounded-lg font-bold group"
                       >
                         Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -479,14 +480,14 @@ const Auth = () => {
                           type="button"
                           variant="ghost"
                           onClick={handlePrevStep}
-                          className="flex-[1] h-11 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg group transition-all"
+                          className="flex-[1] h-11 text-gray-400 hover:text-white bg-gray-800/30 hover:bg-gray-800 border border-gray-800/50 rounded-lg group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="button"
                           onClick={handleNextStep}
-                          className="flex-[2] h-11 bg-white hover:bg-gray-200 text-black transition-all rounded-lg font-semibold group"
+                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 transition-all rounded-lg font-bold group"
                         >
                           Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
@@ -516,8 +517,8 @@ const Auth = () => {
                             onClick={() => setSelectedPlan(plan.id)}
                             className={`cursor-pointer rounded-xl border p-4 flex items-center gap-4 transition-all duration-200 ${
                               selectedPlan === plan.id
-                                ? 'border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_20px_rgba(16,185,129,0.05)]'
-                                : 'border-white/5 bg-transparent hover:border-white/10 hover:bg-white/[0.02]'
+                                ? 'border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.05)]'
+                                : 'border-gray-800 bg-gray-900/30 hover:border-gray-700 hover:bg-gray-900/50'
                               }`}
                           >
                              <div className="text-2xl opacity-90">{plan.icon}</div>
@@ -526,7 +527,7 @@ const Auth = () => {
                                <div className={`text-xs mt-0.5 ${selectedPlan === plan.id ? 'text-emerald-400' : 'text-gray-500'}`}>{plan.price}</div>
                              </div>
                              <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                               selectedPlan === plan.id ? 'border-emerald-500 bg-emerald-500' : 'border-white/10 bg-transparent'
+                               selectedPlan === plan.id ? 'border-emerald-500 bg-emerald-500' : 'border-gray-700 bg-transparent'
                              }`}>
                                {selectedPlan === plan.id && <Check className="w-3 h-3 text-emerald-950" strokeWidth={3} />}
                              </div>
@@ -539,14 +540,14 @@ const Auth = () => {
                           type="button"
                           variant="ghost"
                           onClick={handlePrevStep}
-                          className="flex-[1] h-11 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg group transition-all"
+                          className="flex-[1] h-11 text-gray-400 hover:text-white bg-gray-800/30 hover:bg-gray-800 border border-gray-800/50 rounded-lg group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="button"
                           onClick={handleNextStep}
-                          className="flex-[2] h-11 bg-white hover:bg-gray-200 text-black transition-all rounded-lg font-semibold group"
+                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 transition-all rounded-lg font-bold group"
                         >
                           Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
@@ -615,7 +616,7 @@ const Auth = () => {
                           variant="ghost"
                           onClick={handlePrevStep}
                           disabled={loading}
-                          className="flex-[1] h-11 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg group transition-all"
+                          className="flex-[1] h-11 text-gray-400 hover:text-white bg-gray-800/30 hover:bg-gray-800 border border-gray-800/50 rounded-lg group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
