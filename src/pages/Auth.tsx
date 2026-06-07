@@ -90,6 +90,21 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  useEffect(() => {
+    // Force light mode on document element for the Auth page
+    const htmlElement = document.documentElement;
+    const hadDark = htmlElement.classList.contains('dark');
+    if (hadDark) {
+      htmlElement.classList.remove('dark');
+    }
+    return () => {
+      // Restore dark mode if it was present
+      if (hadDark) {
+        htmlElement.classList.add('dark');
+      }
+    };
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -244,15 +259,20 @@ const Auth = () => {
     }
   };
 
-  // Clean input style using light gray background and emerald accents
-  const inputCls = "pl-9 h-11 text-sm bg-slate-50/50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/10 transition-all rounded-lg";
+  // Clean input style using white background and emerald accents
+  const inputCls = "pl-9 h-11 text-sm bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all rounded-lg";
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-[#f8fafc] text-slate-900 px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
-      {/* Subtle emerald glow behind the card */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[400px] h-[400px] bg-emerald-500/[0.04] rounded-full blur-[100px]" />
-      </div>
+      {/* Subtle dotted grid pattern */}
+      <div className="absolute inset-0 z-0 opacity-[0.4]" style={{
+        backgroundImage: 'radial-gradient(circle at 1px 1px, #cbd5e1 1px, transparent 0)',
+        backgroundSize: '24px 24px'
+      }} />
+
+      {/* Soft emerald gradient glow auras in the corners */}
+      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none" />
 
       <motion.div
         className="relative w-full max-w-[420px] z-10 flex flex-col"
@@ -263,7 +283,7 @@ const Auth = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <motion.div
-            className="inline-flex items-center justify-center cursor-pointer"
+            className="inline-flex items-center justify-center gap-2.5 cursor-pointer"
             whileHover={{ scale: 1.02 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             onClick={() => navigate('/')}
@@ -271,25 +291,26 @@ const Auth = () => {
             <img
               src={cobroLogo}
               alt="Cobro"
-              className="h-10 sm:h-12 w-auto mx-auto"
+              className="h-9 w-auto object-contain rounded-lg"
               loading="eager"
             />
+            <span className="text-2xl font-black tracking-tight text-slate-800">Cobro<span className="text-emerald-500">app</span></span>
           </motion.div>
         </div>
 
-        <Card className="bg-white border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative rounded-2xl">
+        <Card className="bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] overflow-hidden relative rounded-2xl">
           <CardContent className="p-6 sm:p-8 relative z-10">
             <Tabs defaultValue={isSignup ? "signup" : "login"} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100/80 border border-slate-200/60 p-1 rounded-xl relative gap-1 h-auto">
+              <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100/60 border border-slate-200/40 p-1 rounded-xl relative gap-1 h-auto">
                 <TabsTrigger
                   value="login"
-                  className="data-[state=active]:!bg-white data-[state=active]:!text-slate-900 data-[state=active]:shadow-sm transition-all duration-300 rounded-lg py-2 px-4 text-sm font-medium text-slate-500 hover:text-slate-800 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-500 hover:text-slate-800 outline-none ring-0 focus-visible:ring-0"
                 >
                   Iniciar Sesión
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="data-[state=active]:!bg-white data-[state=active]:!text-slate-900 data-[state=active]:shadow-sm transition-all duration-300 rounded-lg py-2 px-4 text-sm font-medium text-slate-500 hover:text-slate-800 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-500 hover:text-slate-800 outline-none ring-0 focus-visible:ring-0"
                 >
                   Registrarse
                 </TabsTrigger>
