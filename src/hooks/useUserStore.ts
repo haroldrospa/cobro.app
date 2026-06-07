@@ -149,6 +149,22 @@ export const useUserStore = () => {
           return getCachedStore(effectiveUserId);
         }
 
+        // Fallback robusto en caso de que exista store_id pero la consulta de stores devuelva null (debido a RLS o BD desactualizada)
+        if (data?.store_id && !data?.stores) {
+          console.warn('[useUserStore] store_id fue encontrado pero el registro de stores regresó null (posiblemente por políticas RLS). Usando fallback.');
+          const cached = getCachedStore(effectiveUserId);
+          if (cached && cached.id === data.store_id) {
+            return cached;
+          }
+          return {
+            id: data.store_id,
+            store_code: 'STORE',
+            store_name: 'Mi Tienda',
+            slug: 'mi-tienda',
+            is_active: true,
+          } as UserStore;
+        }
+
         if (!data?.store_id || !data?.stores) {
           const { data: ownedStores, error: recoveryError } = await supabase
             .from('stores')
