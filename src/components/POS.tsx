@@ -118,6 +118,16 @@ const POSContent: React.FC = () => {
   const [amountReceived, setAmountReceived] = useState('');
   const [creditDays, setCreditDays] = useState(30);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'grid' | 'list'>(() => {
+    const saved = localStorage.getItem('pos_mobile_view_mode');
+    return (saved as 'grid' | 'list') || 'list';
+  });
+
+  const handleMobileViewModeChange = (mode: 'grid' | 'list') => {
+    setMobileViewMode(mode);
+    localStorage.setItem('pos_mobile_view_mode', mode);
+  };
+
   const [globalDiscount, setGlobalDiscount] = useState<GlobalDiscount>({ value: 0, type: 'percentage' });
   const { data: userStore } = useUserStore();
   const [isWebSalesDialogOpen, setIsWebSalesDialogOpen] = useState(false);
@@ -1452,14 +1462,14 @@ const POSContent: React.FC = () => {
               menuButton={menuButton}
               actionButton={actionButtons}
               gridCols={storeSettings?.pos_layout_grid_cols || 4}
-              viewMode={storeSettings?.pos_view_mode || 'grid'}
-              onViewModeChange={(mode) => updateSettings({ pos_view_mode: mode })}
+              viewMode={mobileViewMode}
+              onViewModeChange={handleMobileViewModeChange}
               onGridColsChange={(cols) => updateSettings({ pos_layout_grid_cols: cols })}
               mode={storeSettings?.pos_layout_mode || 'catalog'}
-              onLayoutModeChange={(mode) => updateSettings({
-                pos_layout_mode: mode,
-                pos_view_mode: mode === 'classic' ? 'list' : 'grid'
-              })}
+              onLayoutModeChange={(mode) => {
+                updateSettings({ pos_layout_mode: mode });
+                handleMobileViewModeChange(mode === 'classic' ? 'list' : 'grid');
+              }}
               companyLogo={companyInfo?.logo}
               userName={profile?.full_name}
             />
@@ -1703,8 +1713,9 @@ const POSContent: React.FC = () => {
   }
 
   // Desktop Layout
-  // Desktop Layout
-  const isClassicLayout = storeSettings?.pos_layout_mode === 'classic';
+  const isClassicLayout = storeSettings?.pos_layout_mode === undefined 
+    ? true 
+    : storeSettings.pos_layout_mode === 'classic';
 
   return (
     <SimpleErrorBoundary>
@@ -2136,7 +2147,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         variant="ghost"
         size="icon"
         onClick={onToggleFullscreen}
-        className="h-9 w-9 sm:h-10 sm:w-10 rounded-full text-muted-foreground hover:text-foreground"
+        className="hidden md:flex h-9 w-9 sm:h-10 sm:w-10 rounded-full text-muted-foreground hover:text-foreground items-center justify-center"
         title="Pantalla Completa"
       >
         {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}

@@ -115,10 +115,10 @@ export const useProducts = () => {
 
       return (data || []) as Product[];
     },
-    staleTime: 1000 * 60 * 30,   // 30 min – products rarely change mid-session
+    staleTime: 1000 * 60 * 2,    // 2 min
     gcTime: 1000 * 60 * 60 * 24, // 24 hours
-    refetchOnMount: false,        // use cache on navigation
-    refetchOnWindowFocus: false,  // no extra fetch on tab switch
+    refetchOnMount: true,        // Siempre refetchear al montar si está stale
+    refetchOnWindowFocus: true,  // Refetchear al volver a la pestaña
   });
 };
 

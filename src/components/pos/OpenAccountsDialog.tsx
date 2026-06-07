@@ -269,44 +269,65 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
         onClick={mergeMode ? (e) => handleMergeClick(e as any, order.id) : () => setSelectedOrderId(order.id)}
         onDoubleClick={!mergeMode ? () => handleRowDoubleClick(order) : undefined}
       >
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              {!mergeMode && selectedOrderId === order.id && <Check className="h-4 w-4 text-primary" />}
-              <span className="font-semibold text-primary">{order.order_number}</span>
+        <CardContent className="p-2.5 flex items-center justify-between gap-2">
+          {/* Info Column */}
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {!mergeMode && selectedOrderId === order.id && (
+                <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+              )}
+              <span className="font-bold text-xs text-primary leading-none">{order.order_number}</span>
+              <span className="text-xs font-semibold text-foreground truncate max-w-[120px] leading-none flex items-center gap-1">
+                <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                {order.customer_name}
+              </span>
               {getMergeLabel(order.id)}
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-lg font-bold">${(order.total || 0).toFixed(2)}</span>
-              {!mergeMode && (
-                <>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={(e) => handlePrint(e, order)}>
-                    <Printer className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={(e) => handleDeleteClick(e, order.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
+
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap leading-none">
+              <span className="flex items-center gap-0.5">
+                <Package className="h-3 w-3 text-muted-foreground/80 shrink-0" />
+                {order.open_order_items?.length || 0} prod.
+              </span>
+              <span className="text-muted-foreground/45">•</span>
+              <span className="flex items-center gap-0.5">
+                <Calendar className="h-3 w-3 text-muted-foreground/80 shrink-0" />
+                {format(new Date(order.created_at), 'dd/MM/yy HH:mm', { locale: es })}
+              </span>
             </div>
+
+            {order.notes && (
+              <div className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded truncate max-w-full italic mt-0.5">
+                {order.notes}
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <User className="h-4 w-4" />
-              <span className="truncate">{order.customer_name}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Package className="h-4 w-4" />
-              <span>{order.open_order_items?.length || 0} productos</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground col-span-2">
-              <Calendar className="h-4 w-4" />
-              <span>{format(new Date(order.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}</span>
-            </div>
+
+          {/* Action/Price Column */}
+          <div className="flex flex-col items-end justify-center gap-1 shrink-0 pl-2 border-l border-border/40 min-w-[75px]">
+            <span className="text-xs font-bold text-foreground leading-none">${(order.total || 0).toFixed(2)}</span>
+            
+            {!mergeMode && (
+              <div className="flex items-center gap-0.5 mt-0.5">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 text-muted-foreground hover:bg-muted/50" 
+                  onClick={(e) => handlePrint(e, order)}
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 text-destructive hover:bg-destructive/10" 
+                  onClick={(e) => handleDeleteClick(e, order.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
-          {order.notes && (
-            <div className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">{order.notes}</div>
-          )}
         </CardContent>
       </Card>
     );
@@ -375,45 +396,83 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className={`${isMobile ? 'max-w-[95vw] h-[90vh]' : 'max-w-4xl h-[85vh]'} flex flex-col overflow-hidden`}>
-          <DialogHeader className="pb-0 border-b border-border/40 bg-muted/10 p-4">
-            <div className="flex flex-row items-center justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <DialogTitle className="flex items-center gap-2 text-xl">
-                  <ClipboardList className="h-5 w-5 text-primary" />
-                  Pedidos Guardados
-                  {mergeMode && <Badge className="bg-orange-500 text-white text-xs ml-1">Modo Unir</Badge>}
-                </DialogTitle>
-                <DialogDescription className={isMobile ? 'text-xs' : ''}>
-                  {mergeMode
-                    ? mergeTarget
-                      ? `Destino: ${targetOrder?.customer_name || '...'} — Selecciona las cuentas a fusionar`
-                      : 'Toca la cuenta DESTINO primero (la que recibirá todos los ítems)'
-                    : isMobile ? 'Toca para seleccionar' : 'Selecciona un pedido para facturarlo.'}
-                </DialogDescription>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl w-full h-[90vh] sm:h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="pb-3 border-b border-border/40 bg-muted/10 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Info Column */}
+              <div className="flex items-start justify-between gap-4 w-full sm:w-auto">
+                <div className="flex flex-col gap-0.5">
+                  <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
+                    <ClipboardList className="h-5 w-5 text-primary" />
+                    <span>Pedidos Guardados</span>
+                    {mergeMode && <Badge className="bg-orange-500 text-white text-[10px] ml-1.5 px-1.5 py-0 shrink-0">Modo Unir</Badge>}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    {mergeMode
+                      ? mergeTarget
+                        ? `Destino: ${targetOrder?.customer_name || '...'} — Selecciona cuentas`
+                        : 'Toca la cuenta DESTINO (recibirá los ítems)'
+                      : 'Toca para seleccionar'}
+                  </DialogDescription>
+                </div>
+
+                {/* Mobile Action Buttons (Right of the title on mobile) */}
+                {isMobile && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    {filteredOrders.length > 1 && !mergeMode && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 border-orange-400/80 text-orange-500 hover:bg-orange-500/10"
+                        onClick={() => setMergeMode(true)}
+                        title="Unir Cuentas"
+                      >
+                        <Merge className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {mergeMode && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:bg-muted/80" 
+                        onClick={resetMergeMode} 
+                        title="Cancelar"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
-                {filteredOrders.length > 1 && !mergeMode && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 border-orange-400 text-orange-500 hover:bg-orange-500/10"
-                    onClick={() => setMergeMode(true)}
-                  >
-                    <Merge className="h-4 w-4" />
-                    {!isMobile && 'Unir Cuentas'}
-                  </Button>
+              {/* Total & Desktop Buttons Column */}
+              <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto border-t border-border/20 pt-2 sm:border-t-0 sm:pt-0">
+                {/* Desktop Buttons */}
+                {!isMobile && (
+                  <div className="flex items-center gap-1.5">
+                    {filteredOrders.length > 1 && !mergeMode && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 border-orange-400 text-orange-500 hover:bg-orange-500/10"
+                        onClick={() => setMergeMode(true)}
+                      >
+                        <Merge className="h-4 w-4" />
+                        Unir Cuentas
+                      </Button>
+                    )}
+                    {mergeMode && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetMergeMode} title="Cancelar">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 )}
-                {mergeMode && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetMergeMode} title="Cancelar">
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+
                 {filteredOrders.length > 0 && !mergeMode && (
-                  <div className="relative overflow-hidden bg-emerald-950/40 border border-emerald-500/20 px-5 py-2 rounded-xl flex flex-col items-end justify-center shrink-0 shadow-sm backdrop-blur-sm">
-                    <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-widest leading-none mb-1">Total</span>
-                    <span className="text-2xl font-black text-emerald-400 tabular-nums leading-none tracking-tight">
+                  <div className="flex flex-row items-center justify-between sm:justify-end gap-3 bg-emerald-950/35 border border-emerald-500/20 px-3 py-1.5 rounded-lg shadow-sm backdrop-blur-sm w-full sm:w-auto">
+                    <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider">Total Guardado</span>
+                    <span className="text-base font-black text-emerald-400 tabular-nums">
                       ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -435,7 +494,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <ScrollArea className="flex-1 min-h-0">
                 {isMobile ? (
-                  <div className="space-y-3 pr-4 pb-2">
+                  <div className="space-y-1.5 pr-4 pb-2">
                     {filteredOrders.map((order: any) => renderMobileCard(order))}
                   </div>
                 ) : renderDesktopTable()}

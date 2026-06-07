@@ -39,7 +39,7 @@ export const useOnlineStatus = () => {
 // Control de sincronización global
 const syncInProgress = new Set<string>();
 const lastSyncTimestamp = new Map<string, number>();
-const SYNC_COOLDOWN = 1000 * 60 * 10; // 10 minutos entre sincronizaciones
+const SYNC_COOLDOWN = 1000 * 60; // 1 minuto entre sincronizaciones para evitar spam pero mantener frescura
 
 export const useProductsOffline = () => {
     const isOnline = useOnlineStatus();
@@ -116,6 +116,8 @@ export const useProductsOffline = () => {
 
         } catch (error) {
             console.log('📦 Background sync error (no crítico):', error);
+            // Si hay error, quitamos el cooldown para que pueda reintentar en el próximo render
+            lastSyncTimestamp.delete(sid);
         } finally {
             syncInProgress.delete(sid);
         }
@@ -183,10 +185,10 @@ export const useProductsOffline = () => {
             // Sin internet y sin caché, o hubo error: retornar vacío temporalmente
             return [];
         },
-        staleTime: 1000 * 60 * 30,   // 30 min — usar caché local
+        staleTime: 1000 * 60 * 2,    // 2 min — usar caché local pero verificar seguido
         gcTime: 1000 * 60 * 60 * 24, // 24 horas
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
+        refetchOnMount: true,        // Siempre refetchear al montar si está stale
+        refetchOnWindowFocus: true,  // Refetchear al volver a la pestaña
     });
 
     return {

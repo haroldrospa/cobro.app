@@ -33,11 +33,19 @@ const DialogContent = React.forwardRef<
     hideCloseButton?: boolean;
     centerOnMobile?: boolean;
   }
->((({ className, children, hideCloseButton, centerOnMobile, ...props }, ref) => (
+>((({ className, children, hideCloseButton, centerOnMobile = true, style, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      style={{
+        ...(centerOnMobile ? {
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+        } : {}),
+        ...style
+      }}
       className={cn(
         // ── Base ──
         "fixed z-50 grid gap-4 border bg-background shadow-lg duration-200",
@@ -46,7 +54,7 @@ const DialogContent = React.forwardRef<
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // ── Layout (Centered on Mobile & Desktop OR Bottom Sheet on Mobile & Centered on Desktop) ──
         centerOnMobile ? (
-          "inset-x-4 top-[38%] -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full rounded-2xl p-5 max-h-[90vh] data-[state=open]:slide-in-from-left-1/2 data-[state=closed]:slide-out-to-left-1/2 data-[state=open]:slide-in-from-top-[48%] data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
+          "w-[calc(100%-2rem)] max-w-lg sm:w-full rounded-2xl p-5 max-h-[85dvh] overflow-y-auto data-[state=open]:slide-in-from-left-1/2 data-[state=closed]:slide-out-to-left-1/2 data-[state=open]:slide-in-from-top-[48%] data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
         ) : (
           "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5 max-h-[90dvh] overflow-y-auto overflow-x-hidden data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4 sm:inset-x-auto sm:left-1/2 sm:bottom-auto sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6 sm:max-h-[85vh] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%] sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95"
         ),

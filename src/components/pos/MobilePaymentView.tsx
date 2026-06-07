@@ -181,6 +181,45 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
 
       {/* ── CUSTOMER & SETTINGS (Clean Accordions) ── */}
       <div className="grid gap-3">
+        {/* ── INVOICE TYPE (Tipo de Comprobante) ── */}
+        <Collapsible open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-green-500/10 text-green-500">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Tipo de Comprobante</span>
+                  <span className="text-sm font-black text-white">
+                    {selectedType ? `${selectedType.name} (${selectedType.code})` : 'Crédito Fiscal'}
+                  </span>
+                </div>
+              </div>
+              {isInvoiceOpen ? <ChevronUp className="h-4 w-4 text-zinc-600" /> : <ChevronDown className="h-4 w-4 text-zinc-600" />}
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 animate-in slide-in-from-top-2 duration-200">
+            <div className="bg-zinc-900/30 border border-white/5 rounded-2xl p-3">
+              <Select value={selectedInvoiceType} onValueChange={onInvoiceTypeChange}>
+                <SelectTrigger className="h-12 bg-zinc-900 border-white/5 rounded-xl font-bold">
+                  <SelectValue placeholder="Tipo de NCF" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 rounded-xl">
+                  {mappedInvoiceTypes
+                    .filter(type => ['B01', 'E31', 'B02', 'E32'].includes(type.code))
+                    .map((type) => (
+                      <SelectItem key={type.id} value={type.id} className="font-bold">
+                        {type.name} ({type.code})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* ── CUSTOMER (Comprobante para) ── */}
         <Collapsible open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
           <CollapsibleTrigger asChild>
             <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all">
@@ -249,43 +288,6 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                 <UserPlus className="h-4 w-4" />
                 Registrar Nuevo Cliente
               </Button>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        <Collapsible open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-          <CollapsibleTrigger asChild>
-            <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-green-500/10 text-green-500">
-                  <FileText className="h-4 w-4" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Tipo de Comprobante</span>
-                  <span className="text-sm font-black text-white">
-                    {selectedType ? `${selectedType.name} (${selectedType.code})` : 'Crédito Fiscal'}
-                  </span>
-                </div>
-              </div>
-              {isInvoiceOpen ? <ChevronUp className="h-4 w-4 text-zinc-600" /> : <ChevronDown className="h-4 w-4 text-zinc-600" />}
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 animate-in slide-in-from-top-2 duration-200">
-            <div className="bg-zinc-900/30 border border-white/5 rounded-2xl p-3">
-              <Select value={selectedInvoiceType} onValueChange={onInvoiceTypeChange}>
-                <SelectTrigger className="h-12 bg-zinc-900 border-white/5 rounded-xl font-bold">
-                  <SelectValue placeholder="Tipo de NCF" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10 rounded-xl">
-                  {mappedInvoiceTypes
-                    .filter(type => ['B01', 'E31', 'B02', 'E32'].includes(type.code))
-                    .map((type) => (
-                      <SelectItem key={type.id} value={type.id} className="font-bold">
-                        {type.name} ({type.code})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
             </div>
           </CollapsibleContent>
         </Collapsible>

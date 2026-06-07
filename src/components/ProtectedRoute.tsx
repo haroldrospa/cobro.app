@@ -53,6 +53,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           .select(`
               is_active, 
               store_id, 
+              role,
               stores:store_id (
                   is_active
               )
@@ -92,12 +93,14 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           }
 
           // 3. Check Onboarding Status
+          const isOwner = profile.role === 'owner';
           const isOnboarded = session.user.user_metadata?.onboarding_completed;
           const currentPath = window.location.pathname;
-          if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+          
+          if (isOwner && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
             navigate('/onboarding', { replace: true });
             return;
-          } else if (isOnboarded && currentPath === '/onboarding') {
+          } else if ((isOnboarded || !isOwner) && currentPath === '/onboarding') {
             navigate('/app', { replace: true });
             return;
           }
@@ -114,7 +117,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
               // Retry the profile check after repair
               const { data: retriedProfiles } = await supabase
                 .from('profiles')
-                .select('is_active, store_id, stores:store_id (is_active)')
+                .select('is_active, store_id, role, stores:store_id (is_active)')
                 .eq('id', session.user.id)
                 .limit(1);
               const retriedProfile = retriedProfiles && retriedProfiles.length > 0 ? retriedProfiles[0] : null;
@@ -122,10 +125,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
                 localStorage.setItem('cobro_last_user_id', session.user.id);
                 
                 // Check onboarding for repaired profiles too
+                const isOwnerRetried = retriedProfile.role === 'owner';
                 const isOnboarded = session.user.user_metadata?.onboarding_completed;
                 const currentPath = window.location.pathname;
-                if (!isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+                
+                if (isOwnerRetried && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
                   navigate('/onboarding', { replace: true });
+                  return;
+                } else if ((isOnboarded || !isOwnerRetried) && currentPath === '/onboarding') {
+                  navigate('/app', { replace: true });
                   return;
                 }
 

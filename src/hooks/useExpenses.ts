@@ -134,7 +134,41 @@ export const useExpenses = () => {
                         .select()
                         .single();
 
-                    if (error) throw error;
+                    if (error) {
+                        // Fallback: If column doesn't exist yet, retry without it
+                        if (error.message?.includes('Could not find')) {
+                            const missingColumns = [];
+                            if (error.message.includes('supplier_debt_id')) missingColumns.push('supplier_debt_id');
+                            if (error.message.includes('fixed_expense_id')) missingColumns.push('fixed_expense_id');
+
+                            if (missingColumns.length > 0) {
+                                console.warn(`Missing columns in DB: ${missingColumns.join(', ')}. Saving without these fields.`);
+                                let safeExpense = { 
+                                    ...expenseToSave, 
+                                    synced: undefined, 
+                                    supplier_name: undefined, 
+                                    date: expenseToSave.date 
+                                };
+                                missingColumns.forEach(col => {
+                                    delete (safeExpense as any)[col];
+                                });
+
+                                const { data: retryData, error: retryError } = await supabase
+                                    .from('expenses')
+                                    .insert(safeExpense)
+                                    .select()
+                                    .single();
+
+                                if (retryError) throw retryError;
+                                
+                                const savedExpense = { ...expenseToSave, ...retryData, synced: 1 };
+                                await offlineDB.put(OfflineStore.EXPENSES, savedExpense);
+                                console.log('✅ Guardado en BD y Cache actualizado (fallback)');
+                                return savedExpense;
+                            }
+                        }
+                        throw error;
+                    }
 
                     // Success on DB -> Update Cache
                     const savedExpense = { ...expenseToSave, ...data, synced: 1 };

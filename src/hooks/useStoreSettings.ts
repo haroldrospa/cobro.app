@@ -171,10 +171,11 @@ export const useStoreSettings = () => {
     delete cleanExistingSettings.pos_layout_mode;
     delete cleanExistingSettings.pos_layout_grid_cols;
 
+    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 1024;
     // Default UI values for any user that hasn't configured them yet
     const uiDefaults = {
-      pos_view_mode: 'grid',
-      pos_layout_mode: 'catalog',
+      pos_view_mode: isMobileDevice ? 'list' : 'grid',
+      pos_layout_mode: isMobileDevice ? 'catalog' : 'classic',
       pos_layout_grid_cols: 4
     };
 

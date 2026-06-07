@@ -64,7 +64,22 @@ function AccountingContent() {
     const [scanQueue, setScanQueue] = useState<QueueItem[]>([]);
     const [reviewIndex, setReviewIndex] = useState(0);
     const { toast } = useToast();
-    const { data: sales = [], isLoading: loadingSales } = useSales();
+
+    const [currentDate, setCurrentDate] = useState(() => {
+        const savedDate = sessionStorage.getItem('accounting_view_date');
+        return savedDate ? new Date(savedDate) : new Date();
+    });
+
+    useEffect(() => {
+        if (currentDate) {
+            sessionStorage.setItem('accounting_view_date', currentDate.toISOString());
+        }
+    }, [currentDate]);
+
+    const dateFrom = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const dateTo = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+    const { data: sales = [], isLoading: loadingSales } = useSales({ dateFrom, dateTo });
     const { expenses, createExpense, deleteExpense, isLoading: loadingExpenses, isCreating } = useExpenses();
     const { suppliers, createSupplier, deleteSupplier, isLoading: loadingSuppliers } = useSuppliers();
     const { settings: storeSettings, updateSettings } = useStoreSettings();
@@ -389,17 +404,6 @@ function AccountingContent() {
         const defaultCat = type === 'reinversion' ? 'Inventario' : 'Servicios Públicos';
         setNewExpense(prev => ({ ...prev, category: defaultCat }));
     };
-
-    const [currentDate, setCurrentDate] = useState(() => {
-        const savedDate = sessionStorage.getItem('accounting_view_date');
-        return savedDate ? new Date(savedDate) : new Date();
-    });
-
-    useEffect(() => {
-        if (currentDate) {
-            sessionStorage.setItem('accounting_view_date', currentDate.toISOString());
-        }
-    }, [currentDate]);
 
     // Month Navigation
     const nextMonth = () => {
@@ -1636,7 +1640,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     setScanQueue([]);
                 }
             }}>
-                <DialogContent className={cn("p-4 sm:p-6 max-h-[92vh] sm:max-h-[85vh] gap-3 sm:gap-4 overflow-y-auto transition-all duration-300", scanQueue.length > 0 ? "sm:max-w-4xl" : "sm:max-w-[560px]")}>
+                <DialogContent centerOnMobile className={cn("p-4 sm:p-6 max-h-[85dvh] gap-3 sm:gap-4 overflow-y-auto transition-all duration-300", scanQueue.length > 0 ? "sm:max-w-4xl" : "sm:max-w-[560px]")}>
                     <DialogHeader>
                         <DialogTitle>
                             {scanQueue.length > 0 ? "Gestión de Facturas (IA)" : "Registrar Nuevo Gasto"}

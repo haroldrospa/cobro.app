@@ -217,13 +217,13 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   return (
     <div className="h-full flex flex-col bg-zinc-950/20 backdrop-blur-xl relative">
       {/* ── PREMIUM EBONY & EMERALD SEARCH BAR ── */}
-      <div className="px-4 py-4 space-y-4 bg-zinc-950/40 backdrop-blur-2xl border-b border-emerald-500/10 sticky top-0 z-40">
+      <div className="px-3 py-2 space-y-2 bg-zinc-950/40 backdrop-blur-2xl border-b border-emerald-500/10 sticky top-0 z-40">
         {/* Top Header Row: Menu, Profile, Actions */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {menuButton && <div className="shrink-0">{menuButton}</div>}
             {companyLogo && (
-              <div className="h-10 w-10 relative shrink-0 rounded-xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/5 flex items-center justify-center p-1 shadow-xl">
+              <div className="hidden sm:flex h-10 w-10 relative shrink-0 rounded-xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/5 items-center justify-center p-1 shadow-xl">
                 <img 
                   src={companyLogo} 
                   alt="Logo" 
@@ -232,7 +232,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
               </div>
             )}
             {userName && (
-              <div className="flex flex-col shrink-0">
+              <div className="hidden sm:flex flex-col shrink-0">
                 <span className="text-[9px] text-emerald-500/60 font-black uppercase tracking-widest leading-none mb-1">Cajero(a)</span>
                 <span className="text-[12px] font-bold text-white/90 truncate max-w-[150px] leading-none">{userName}</span>
               </div>
@@ -275,13 +275,13 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
 
         {/* Search Bar Row */}
         <div className="relative w-full group">
-          <div className="absolute inset-0 bg-emerald-500/5 blur-xl group-focus-within:bg-emerald-500/15 transition-all rounded-3xl" />
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-emerald-500/40 transition-colors group-focus-within:text-emerald-500 z-10" />
+          <div className="absolute inset-0 bg-emerald-500/5 blur-xl group-focus-within:bg-emerald-500/15 transition-all rounded-2xl" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-500/40 transition-colors group-focus-within:text-emerald-500 z-10" />
           <Input
             ref={searchInputRef}
             type="text"
             placeholder="Escanear o buscar producto..."
-            className="pl-12 pr-4 h-14 bg-zinc-900/60 dark:bg-zinc-950/60 backdrop-blur-xl border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all rounded-3xl shadow-xl font-black text-base md:text-lg tracking-tight placeholder:text-zinc-500 w-full"
+            className="pl-9 pr-3 h-10 bg-zinc-900/60 dark:bg-zinc-950/60 backdrop-blur-xl border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all rounded-xl shadow-md font-bold text-xs tracking-tight placeholder:text-zinc-500 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -291,15 +291,15 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
         </div>
 
         {/* Category Pills - Premium Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex items-center gap-1 overflow-x-auto flex-nowrap pb-0.5 no-scrollbar w-full">
           {searchTypes.map((st) => (
             <button
               key={st.type}
               onClick={() => setSearchType(st.type)}
               className={cn(
-                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all border whitespace-nowrap",
+                "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all border whitespace-nowrap shrink-0",
                 searchType === st.type
-                  ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-500/20"
+                  ? "bg-emerald-600 border-emerald-500 text-white shadow-sm"
                   : "bg-zinc-900/40 border-emerald-500/10 text-zinc-500 hover:border-emerald-500/30 hover:text-zinc-300"
               )}
             >
@@ -478,7 +478,12 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
     <div
       className={cn(
         "grid",
-        viewMode === 'list' ? "grid-cols-1 gap-3" : "grid-cols-4 gap-2"
+        viewMode === 'list' ? "grid-cols-1 gap-3" : {
+          1: "grid-cols-1 gap-3",
+          2: "grid-cols-2 gap-2",
+          3: "grid-cols-3 gap-2",
+          4: "grid-cols-2 min-[420px]:grid-cols-3 gap-2"
+        }[gridCols] || "grid-cols-2 min-[420px]:grid-cols-3 gap-2"
       )}
     >
       {filteredProducts.map((product) => {
@@ -495,13 +500,13 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
               "group text-left overflow-hidden border border-emerald-500/10 bg-zinc-900/40 active:scale-[0.94] transition-transform duration-150 shadow-md",
               gridCols >= 4 ? "rounded-2xl" : "rounded-[1.5rem]",
               outOfStock && "opacity-30 grayscale pointer-events-none",
-              viewMode === 'list' ? "flex flex-row h-28" : "flex flex-col"
+              viewMode === 'list' ? "flex flex-row h-20" : "flex flex-col"
             )}
           >
             {/* Image Area — no hover scale on mobile (jank) */}
             <div className={cn(
               "relative bg-zinc-900/60 overflow-hidden shrink-0 border-r border-emerald-500/5",
-              viewMode === 'list' ? "w-28 h-full" : "aspect-square w-full"
+              viewMode === 'list' ? "w-20 h-full" : "aspect-square w-full"
             )}>
               {product.image_url ? (
                 <img
@@ -534,16 +539,16 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
             {/* Content Area */}
             <div className={cn(
               "p-1.5 flex flex-col justify-between min-w-0 flex-1",
-              viewMode === 'list' ? "p-4" : (gridCols >= 4 ? "h-20" : "h-32")
+              viewMode === 'list' ? "p-2.5" : (gridCols >= 4 ? "h-24 sm:h-20" : "h-32")
             )}>
               <div className="space-y-0.5">
                 <h4 className={cn(
                   "font-black leading-[1.2] line-clamp-2 uppercase tracking-tight text-white",
-                  gridCols >= 4 ? "text-[10px]" : "text-[13px]"
+                  viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[10px]" : "text-[13px]")
                 )}>
                   {product.name}
                 </h4>
-                {product.category?.name && gridCols < 4 && (
+                {product.category?.name && gridCols < 4 && viewMode !== 'list' && (
                   <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600/60 truncate">
                     {product.category.name}
                   </p>
@@ -552,21 +557,21 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
 
               <div className={cn(
                 "flex items-center justify-between border-t border-emerald-500/5",
-                gridCols >= 4 ? "mt-1 pt-1" : "mt-2 pt-2"
+                viewMode === 'list' ? "mt-1 pt-1" : (gridCols >= 4 ? "mt-1 pt-1" : "mt-2 pt-2")
               )}>
                 <span className={cn(
                   "font-black text-emerald-500 tracking-tighter",
-                  gridCols >= 4 ? "text-sm" : "text-xl"
+                  viewMode === 'list' ? "text-base" : (gridCols >= 4 ? "text-sm" : "text-xl")
                 )}>
                   ${(product.price || 0).toLocaleString()}
                 </span>
                 <div className={cn(
                   "rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm group-active:scale-90 transition-transform duration-100",
-                  gridCols >= 4 ? "h-6 w-6" : "h-9 w-9"
+                  viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-6 w-6" : "h-9 w-9")
                 )}>
                   <Plus className={cn(
                     "text-white",
-                    gridCols >= 4 ? "h-3.5 w-3.5" : "h-5 w-5"
+                    viewMode === 'list' ? "h-4 w-4" : (gridCols >= 4 ? "h-3.5 w-3.5" : "h-5 w-5")
                   )} />
                 </div>
               </div>

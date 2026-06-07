@@ -498,7 +498,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`${isMobile ? 'max-w-[95vw] h-[90vh]' : 'max-w-5xl h-[85vh]'} flex flex-col overflow-hidden`}
+          className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl w-full h-[90vh] sm:h-[85vh] flex flex-col overflow-hidden"
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
