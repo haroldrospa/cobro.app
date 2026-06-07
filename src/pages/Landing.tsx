@@ -108,38 +108,164 @@ const Landing = () => {
       </nav>
 
       <main className="pt-16">
-        {/* 1. Hero Section */}
-        <section className="relative overflow-hidden pt-32 pb-24 lg:pt-40 lg:pb-48 border-b border-white/5">
-          {/* Background Image */}
-          <div 
-            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-50"
-            style={{ backgroundImage: `url(${heroBg})` }}
-          />
-          {/* Dark Gradient Overlay for Professional Look - Darker for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1f262d]/80 via-[#1f262d]/95 to-[#1f262d] z-10" />
-          
-          <div className="container px-4 mx-auto text-center relative z-20">
-            <motion.div 
-              className="max-w-4xl mx-auto space-y-6 md:space-y-8"
-              initial="initial" animate="animate" variants={fadeIn}
-            >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-tight md:leading-tight drop-shadow-lg">
-                El control total de tus ventas y <span className="text-emerald-400">facturación electrónica</span>, en un solo lugar.
-              </h1>
-              <p className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed drop-shadow-md">
-                La plataforma de Punto de Venta (POS) diseñada para que Tiendas, Restaurantes y Supermercados vendan más rápido, controlen su inventario sin errores y cumplan con las autoridades fiscales sin complicaciones.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
-                <Link to="/auth?signup=true" className="w-full sm:w-auto">
-                  <Button size="lg" className="h-14 px-8 text-base md:text-lg w-full sm:w-auto shadow-[0_0_25px_rgba(16,185,129,0.4)] hover:shadow-[0_0_35px_rgba(16,185,129,0.6)] hover:scale-105 transition-all duration-300 rounded-xl">
-                    Comienza tu prueba gratis de 15 días <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
+        {/* 1. Hero Section — Visual-first, minimal text */}
+        <section className="relative overflow-hidden min-h-[92vh] flex items-center border-b border-white/5">
+          {/* Animated gradient background */}
+          <div className="absolute inset-0 z-0" style={{
+            background: 'radial-gradient(ellipse 80% 60% at 60% 40%, rgba(16,185,129,0.13) 0%, transparent 70%), radial-gradient(ellipse 60% 80% at 10% 80%, rgba(59,130,246,0.08) 0%, transparent 70%), #1f262d'
+          }} />
+          {/* Subtle grid pattern */}
+          <div className="absolute inset-0 z-0 opacity-[0.03]" style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
+            backgroundSize: '60px 60px'
+          }} />
+
+          <div className="container px-4 mx-auto relative z-20">
+            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-8 py-16 lg:py-0">
+              
+              {/* Left: Text content */}
+              <div className="flex-1 text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
+                {/* Badge */}
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-sm font-semibold mb-6"
+                >
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                  POS · Facturación · Inventario
+                </motion.div>
+
+                {/* Headline */}
+                <motion.h1
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.05] mb-6"
+                >
+                  Vende más.<br />
+                  <span style={{
+                    background: 'linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}>Sin caos.</span>
+                </motion.h1>
+
+                {/* Subline — SHORT */}
+                <motion.p
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="text-lg sm:text-xl text-slate-400 mb-8 max-w-lg mx-auto lg:mx-0"
+                >
+                  Tu tienda, restaurante o supermercado con POS, inventario y facturación electrónica en un solo lugar.
+                </motion.p>
+
+                {/* CTA */}
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-8"
+                >
+                  <Link to="/auth?signup=true" className="w-full sm:w-auto">
+                    <Button size="lg" className="h-14 px-9 text-base font-bold w-full sm:w-auto rounded-xl transition-all duration-300 hover:scale-105"
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        boxShadow: '0 0 30px rgba(16,185,129,0.45), 0 4px 20px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      Prueba gratis 15 días <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <Link to="/auth" className="w-full sm:w-auto">
+                    <Button variant="ghost" size="lg" className="h-14 px-7 text-base w-full sm:w-auto text-slate-300 hover:text-white rounded-xl border border-white/10 hover:border-white/25 transition-all">
+                      Iniciar sesión
+                    </Button>
+                  </Link>
+                </motion.div>
+
+                {/* Trust line */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.45 }}
+                  className="text-sm text-slate-500 flex items-center justify-center lg:justify-start gap-2"
+                >
+                  <span>🔒</span> Sin tarjeta de crédito · Listo en 5 minutos
+                </motion.p>
+
+                {/* Stats row */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.55 }}
+                  className="flex flex-wrap items-center justify-center lg:justify-start gap-6 mt-10 pt-8 border-t border-white/8"
+                >
+                  {[
+                    { value: '+500', label: 'Negocios activos' },
+                    { value: '15 días', label: 'Prueba gratuita' },
+                    { value: '100%', label: 'Legal y fiscal' },
+                  ].map((s, i) => (
+                    <div key={i} className="text-center lg:text-left">
+                      <div className="text-2xl font-extrabold text-emerald-400">{s.value}</div>
+                      <div className="text-xs text-slate-500 font-medium mt-0.5">{s.label}</div>
+                    </div>
+                  ))}
+                </motion.div>
               </div>
-              <p className="text-xs sm:text-sm text-slate-400 flex items-center justify-center gap-1.5 mt-6 font-medium">
-                <span className="text-lg">🔒</span> Sin tarjeta de crédito. Configuración en menos de 5 minutos.
-              </p>
-            </motion.div>
+
+              {/* Right: Hero image with glow */}
+              <motion.div
+                initial={{ opacity: 0, x: 40, scale: 0.97 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
+                className="flex-1 flex items-end justify-center relative max-w-sm lg:max-w-none w-full"
+              >
+                {/* Glow behind image */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+                {/* Floating card 1 */}
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute top-8 left-0 lg:-left-6 z-10 flex items-center gap-3 bg-[#1e2830]/90 border border-white/10 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-sm"
+                >
+                  <div className="w-9 h-9 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                    <Zap className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Venta procesada</div>
+                    <div className="text-sm font-bold text-white">$12,450 RD</div>
+                  </div>
+                </motion.div>
+                {/* Floating card 2 */}
+                <motion.div
+                  animate={{ y: [0, 8, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                  className="absolute top-1/2 right-0 lg:-right-4 z-10 flex items-center gap-3 bg-[#1e2830]/90 border border-white/10 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-sm"
+                >
+                  <div className="w-9 h-9 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <Package className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Stock actualizado</div>
+                    <div className="text-sm font-bold text-white">Automático ✓</div>
+                  </div>
+                </motion.div>
+                {/* Businessman image */}
+                <img
+                  src={heroBg}
+                  alt="Negocio moderno con Cobroapp"
+                  className="w-full max-w-sm lg:max-w-md xl:max-w-lg rounded-3xl object-cover shadow-2xl"
+                  style={{
+                    maxHeight: '520px',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(16,185,129,0.1)'
+                  }}
+                />
+              </motion.div>
+            </div>
           </div>
         </section>
 
