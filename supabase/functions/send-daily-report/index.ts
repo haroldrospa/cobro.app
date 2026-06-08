@@ -191,7 +191,7 @@ async function sendReportForStore(
     const salesChange = prevTotalSales > 0 ? ((totalSales - prevTotalSales) / prevTotalSales) * 100 : 0;
 
     // Payment Methods
-    const { data: methods } = await supabase.from('sales').select('total, payment_method').eq('store_id', store_id).gte('created_at', currentStart.toISOString()).lte('created_at', currentEnd.toISOString());
+    const { data: methods } = await supabase.from('sales').select('id, total, payment_method').eq('store_id', store_id).gte('created_at', currentStart.toISOString()).lte('created_at', currentEnd.toISOString());
     const cashSales = (methods || []).filter((s: any) => s.payment_method === 'cash').reduce((a: number, s: any) => a + (s.total || 0), 0);
     const cardSales = (methods || []).filter((s: any) => s.payment_method === 'card').reduce((a: number, s: any) => a + (s.total || 0), 0);
     const xfSales = (methods || []).filter((s: any) => s.payment_method === 'transfer').reduce((a: number, s: any) => a + (s.total || 0), 0);
@@ -236,7 +236,7 @@ async function sendReportForStore(
       const chunkSize = 200;
       for (let i = 0; i < currentSalesIds.length; i += chunkSize) {
         const chunk = currentSalesIds.slice(i, i + chunkSize);
-        const { data } = await supabase.from('sale_items').select('quantity, total, product_id').in('sale_id', chunk);
+        const { data } = await supabase.from('sale_items').select('quantity, total, product_id, sale_id').in('sale_id', chunk);
         if (data) currentItems.push(...data);
       }
     }
@@ -260,12 +260,33 @@ async function sendReportForStore(
       }));
     }
 
-    // Low stock alerts
-    const { data: allProds } = await supabase.from('products').select('name, stock, min_stock, sku, track_inventory').eq('store_id', store_id).eq('status', 'active');
+    // Low stock alerts & product cost mapping
+    const { data: allProds } = await supabase.from('products').select('id, name, stock, min_stock, sku, track_inventory, cost, status').eq('store_id', store_id);
     const lowStock = (allProds || [])
-      .filter((p: any) => p.track_inventory !== false && p.stock <= (p.min_stock || 5))
+      .filter((p: any) => p.status === 'active' && p.track_inventory !== false && p.stock <= (p.min_stock || 5))
       .sort((a: any, b: any) => a.stock - b.stock)
       .slice(0, 8);
+
+    // Calculate cash sales reinvestment (cost) and net profit
+    const cashSalesIds = (methods || []).filter((s: any) => s.payment_method === 'cash').map((s: any) => s.id);
+    const productsMap = new Map();
+    (allProds || []).forEach((p: any) => {
+      productsMap.set(p.id, p);
+    });
+
+    let cashCost = 0;
+    (currentItems || []).forEach((item: any) => {
+      if (item.sale_id && cashSalesIds.includes(item.sale_id)) {
+        const product = productsMap.get(item.product_id);
+        if (product && product.cost) {
+          cashCost += (product.cost as number) * (item.quantity || 0);
+        }
+      }
+    });
+
+    const cashProfit = cashSales - cashCost;
+    const cashCostPct = cashSales > 0 ? (cashCost / cashSales) * 100 : 0;
+    const cashProfitPct = cashSales > 0 ? (cashProfit / cashSales) * 100 : 0;
 
     // Helpers
     const formatCurrency = (val: number) => `RD$ ${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -462,6 +483,41 @@ async function sendReportForStore(
                   <table width="100%" cellpadding="0" cellspacing="0" border="0">${topProdRows}</table>
                 </div>
               </div>` : ''}
+
+              <!-- Análisis de Venta en Efectivo -->
+              <div style="margin-bottom:48px;">
+                <div style="font-size:16px; font-weight:800; color:#0f172a; margin-bottom:20px; display:flex; align-items:center;">
+                  <span style="background:#15803d; width:4px; height:18px; border-radius:4px; margin-right:10px; display:inline-block;"></span>
+                  Análisis de Venta en Efectivo (Rentabilidad)
+                </div>
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:24px; overflow:hidden;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td style="padding:24px; border-bottom:1px solid #f1f5f9; background:#f8fafc;" colspan="2">
+                        <div style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:4px;">TOTAL EFECTIVO VENDIDO</div>
+                        <div style="font-size:28px; font-weight:950; color:#0f172a;">${formatCurrency(cashSales)}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:24px; border-right:1px solid #f1f5f9; width:50%;">
+                        <div style="font-size:10px; font-weight:800; color:#3b82f6; text-transform:uppercase; margin-bottom:6px;">Reinversión (Costo)</div>
+                        <div style="font-size:20px; font-weight:900; color:#1e293b;">${formatCurrency(cashCost)}</div>
+                        <div style="font-size:12px; color:#64748b; margin-top:4px; font-weight:600;">${cashCostPct.toFixed(1)}% de la venta</div>
+                      </td>
+                      <td style="padding:24px; background:#f0fdf4;">
+                        <div style="font-size:10px; font-weight:800; color:#16a34a; text-transform:uppercase; margin-bottom:6px;">Ganancia Neta</div>
+                        <div style="font-size:20px; font-weight:900; color:#15803d;">${formatCurrency(cashProfit)}</div>
+                        <div style="font-size:12px; color:#166534; margin-top:4px; font-weight:600;">${cashProfitPct.toFixed(1)}% de la venta</div>
+                      </td>
+                    </tr>
+                  </table>
+                  ${cashCost === 0 && cashSales > 0 ? `
+                  <div style="padding:16px 24px; background:#fffbeb; border-top:1px solid #fef3c7; font-size:12px; color:#b45309; line-height:1.5; font-weight:600;">
+                    ⚠️ Nota: Los productos vendidos no tienen costo de compra registrado. Registra los costos de tus productos en el inventario para calcular la ganancia real.
+                  </div>
+                  ` : ''}
+                </div>
+              </div>
 
               <!-- Alertas Inventario -->
               <div style="margin-bottom:8px;">
