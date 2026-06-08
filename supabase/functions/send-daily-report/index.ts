@@ -303,8 +303,10 @@ async function sendReportForStore(
     if (allProdsError) {
       console.error("Error fetching products:", allProdsError);
     }
-    const lowStock = (allProds || [])
-      .filter((p: any) => p.status === 'active' && p.track_inventory !== false && p.stock <= (p.min_stock || 5))
+    const allLowStock = (allProds || [])
+      .filter((p: any) => p.status === 'active' && p.track_inventory !== false && p.stock <= (p.min_stock || 5));
+    const criticalProductsCount = allLowStock.length;
+    const lowStock = [...allLowStock]
       .sort((a: any, b: any) => a.stock - b.stock)
       .slice(0, 8);
 
@@ -566,12 +568,18 @@ async function sendReportForStore(
               <div style="margin-bottom:8px;">
                 <div style="font-size:16px; font-weight:800; color:#0f172a; margin-bottom:20px; display:flex; align-items:center;">
                   <span style="background:#ef4444; width:4px; height:18px; border-radius:4px; margin-right:10px; display:inline-block;"></span>
-                  Alertas de Inventario Crítico
+                  Alertas de Inventario Crítico${criticalProductsCount > 0 ? ` (${criticalProductsCount})` : ''}
                 </div>
                 ${lowStock.length > 0 ? `
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:24px; overflow:hidden;">
                   <table width="100%" cellpadding="0" cellspacing="0" border="0">${lowStockRows}</table>
-                </div>` : `
+                </div>
+                ${criticalProductsCount > 8 ? `
+                <div style="text-align:center; padding:12px; font-size:12px; color:#64748b; font-weight:600;">
+                  * Mostrando los primeros 8 de ${criticalProductsCount} productos críticos.
+                </div>
+                ` : ''}
+                ` : `
                 <div style="text-align:center; padding:32px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:24px; color:#166534; font-weight:700;">
                   ✨ Todo el stock está al día. No hay alertas pendientes.
                 </div>`}
