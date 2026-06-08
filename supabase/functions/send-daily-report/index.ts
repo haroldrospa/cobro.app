@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { Resend } from "npm:resend@2.0.0";
+import { logoBase64 } from "./logo-base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,6 +140,43 @@ async function sendReportForStore(
   try {
     const reportLabel = report_type === 'weekly' ? 'Semanal' : 'Diario';
     const now = new Date();
+    
+    // Ensure logo exists in public storage
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const logoUrl = `${supabaseUrl}/storage/v1/object/public/product-images/cobro-logo.png`;
+
+    try {
+      const { data: logoExists } = await supabase.storage
+        .from('product-images')
+        .list('', {
+          limit: 1,
+          search: 'cobro-logo.png'
+        });
+
+      if (!logoExists || logoExists.length === 0) {
+        console.log("Logo not found in storage, uploading...");
+        const binaryString = atob(logoBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload('cobro-logo.png', bytes.buffer, {
+            contentType: 'image/png',
+            upsert: true
+          });
+          
+        if (uploadError) {
+          console.error("Error uploading logo to storage:", uploadError);
+        } else {
+          console.log("Logo uploaded successfully to product-images/cobro-logo.png");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to verify/upload logo:", err);
+    }
     const nowLocal = new Date(now.getTime() - (4 * 60 * 60 * 1000));
     
     // Default Dates
@@ -538,8 +576,11 @@ async function sendReportForStore(
 
             <!-- ▬▬ FOOTER ▬▬ -->
             <tr><td style="background-color:#0f172a; padding:48px 40px; text-align:center;">
-              <h2 style="margin:0; font-size:18px; font-weight:800; color:#ffffff; letter-spacing:0.5px;">CobroAPP</h2>
-              <div style="margin-top:24px; display:flex; justify-content:center; gap:20px;">
+              <div style="display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px;">
+                <img src="${logoUrl}" alt="Cobro" style="height:28px; width:auto; vertical-align:middle; display:inline-block;" />
+                <span style="font-size:20px; font-weight:900; color:#ffffff; letter-spacing:-0.5px;">Cobro<span style="color:#10b981;">app</span></span>
+              </div>
+              <div style="margin-top:8px; display:flex; justify-content:center; gap:20px;">
                 <p style="margin:0; font-size:12px; color:#94a3b8; font-weight:500;">
                   © ${new Date().getFullYear()} ${companyName}.<br>Desarrollado para la eficiencia de tu negocio.
                 </p>
@@ -548,7 +589,7 @@ async function sendReportForStore(
 
           </table>
           <div style="padding:32px; text-align:center; font-size:12px; color:#94a3b8; line-height:1.6;">
-            Este es un reporte automático generado por el sistema de CobroAPP.<br>
+            Este es un reporte automático generado por el sistema de Cobroapp.<br>
             No respondas a este correo.
           </div>
         </td></tr>
