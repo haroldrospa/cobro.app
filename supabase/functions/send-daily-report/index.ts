@@ -305,26 +305,28 @@ async function sendReportForStore(
       .sort((a: any, b: any) => a.stock - b.stock)
       .slice(0, 8);
 
-    // Calculate cash sales reinvestment (cost) and net profit
-    const cashSalesIds = (methods || []).filter((s: any) => s.payment_method === 'cash').map((s: any) => s.id);
+    // Calculate cash & card sales reinvestment (cost) and net profit
+    const cashAndCardSales = cashSales + cardSales;
+    const cashAndCardSalesIds = (methods || []).filter((s: any) => s.payment_method === 'cash' || s.payment_method === 'card').map((s: any) => s.id);
     const productsMap = new Map();
     (allProds || []).forEach((p: any) => {
       productsMap.set(p.id, p);
     });
 
-    let cashCost = 0;
+    let cashAndCardCost = 0;
     (currentItems || []).forEach((item: any) => {
-      if (item.sale_id && cashSalesIds.includes(item.sale_id)) {
+      if (item.sale_id && cashAndCardSalesIds.includes(item.sale_id)) {
         const product = productsMap.get(item.product_id);
         if (product && product.cost) {
-          cashCost += (product.cost as number) * (item.quantity || 0);
+          cashAndCardCost += (product.cost as number) * (item.quantity || 0);
         }
       }
     });
 
-    const cashProfit = cashSales - cashCost;
-    const cashCostPct = cashSales > 0 ? (cashCost / cashSales) * 100 : 0;
-    const cashProfitPct = cashSales > 0 ? (cashProfit / cashSales) * 100 : 0;
+    const cashAndCardProfit = cashAndCardSales - cashAndCardCost;
+    const cashAndCardCostPct = cashAndCardSales > 0 ? (cashAndCardCost / cashAndCardSales) * 100 : 0;
+    const cashAndCardProfitPct = cashAndCardSales > 0 ? (cashAndCardProfit / cashAndCardSales) * 100 : 0;
+
 
     // Helpers
     const formatCurrency = (val: number) => `RD$ ${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -522,34 +524,34 @@ async function sendReportForStore(
                 </div>
               </div>` : ''}
 
-              <!-- Análisis de Venta en Efectivo -->
+              <!-- Análisis de Rentabilidad (Efectivo + Tarjeta) -->
               <div style="margin-bottom:48px;">
                 <div style="font-size:16px; font-weight:800; color:#0f172a; margin-bottom:20px; display:flex; align-items:center;">
                   <span style="background:#15803d; width:4px; height:18px; border-radius:4px; margin-right:10px; display:inline-block;"></span>
-                  Análisis de Venta en Efectivo (Rentabilidad)
+                  Análisis de Rentabilidad (Efectivo + Tarjeta)
                 </div>
                 <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:24px; overflow:hidden;">
                   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                     <tr>
                       <td style="padding:24px; border-bottom:1px solid #f1f5f9; background:#f8fafc;" colspan="2">
-                        <div style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:4px;">TOTAL EFECTIVO VENDIDO</div>
-                        <div style="font-size:28px; font-weight:950; color:#0f172a;">${formatCurrency(cashSales)}</div>
+                        <div style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:4px;">TOTAL VENDIDO (EFECTIVO + TARJETA)</div>
+                        <div style="font-size:28px; font-weight:950; color:#0f172a;">${formatCurrency(cashAndCardSales)}</div>
                       </td>
                     </tr>
                     <tr>
                       <td style="padding:24px; border-right:1px solid #f1f5f9; width:50%;">
                         <div style="font-size:10px; font-weight:800; color:#3b82f6; text-transform:uppercase; margin-bottom:6px;">Reinversión (Costo)</div>
-                        <div style="font-size:20px; font-weight:900; color:#1e293b;">${formatCurrency(cashCost)}</div>
-                        <div style="font-size:12px; color:#64748b; margin-top:4px; font-weight:600;">${cashCostPct.toFixed(1)}% de la venta</div>
+                        <div style="font-size:20px; font-weight:900; color:#1e293b;">${formatCurrency(cashAndCardCost)}</div>
+                        <div style="font-size:12px; color:#64748b; margin-top:4px; font-weight:600;">${cashAndCardCostPct.toFixed(1)}% de la venta</div>
                       </td>
                       <td style="padding:24px; background:#f0fdf4;">
                         <div style="font-size:10px; font-weight:800; color:#16a34a; text-transform:uppercase; margin-bottom:6px;">Ganancia Neta</div>
-                        <div style="font-size:20px; font-weight:900; color:#15803d;">${formatCurrency(cashProfit)}</div>
-                        <div style="font-size:12px; color:#166534; margin-top:4px; font-weight:600;">${cashProfitPct.toFixed(1)}% de la venta</div>
+                        <div style="font-size:20px; font-weight:900; color:#15803d;">${formatCurrency(cashAndCardProfit)}</div>
+                        <div style="font-size:12px; color:#166534; margin-top:4px; font-weight:600;">${cashAndCardProfitPct.toFixed(1)}% de la venta</div>
                       </td>
                     </tr>
                   </table>
-                  ${cashCost === 0 && cashSales > 0 ? `
+                  ${cashAndCardCost === 0 && cashAndCardSales > 0 ? `
                   <div style="padding:16px 24px; background:#fffbeb; border-top:1px solid #fef3c7; font-size:12px; color:#b45309; line-height:1.5; font-weight:600;">
                     ⚠️ Nota: Los productos vendidos no tienen costo de compra registrado. Registra los costos de tus productos en el inventario para calcular la ganancia real.
                   </div>
