@@ -313,29 +313,32 @@ const Auth = () => {
         <Card className="bg-[#1e252b]/95 backdrop-blur-xl border border-white/[0.06] border-t-emerald-500/20 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.6)] overflow-hidden relative rounded-2xl w-full">
           <CardContent className="p-6 sm:p-8 relative z-10">
             <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'login' | 'signup')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-7 bg-slate-950/50 border border-white/[0.06] p-1 rounded-xl gap-1 h-11 relative">
-                {/* Framer Motion sliding pill background */}
-                <div className="absolute inset-y-1 left-1 right-1 grid grid-cols-2 pointer-events-none">
-                  <motion.div
-                    className="h-full w-full bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border border-emerald-500/30 rounded-lg shadow-[0_2px_10px_rgba(16,185,129,0.1)]"
-                    layout
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    style={{
-                      gridColumnStart: activeTab === 'login' ? 1 : 2
-                    }}
-                  />
-                </div>
+              <TabsList className="flex justify-center w-full mb-8 bg-transparent border-b border-white/[0.06] p-0 rounded-none gap-8 h-10 relative">
                 <TabsTrigger
                   value="login"
-                  className="z-10 data-[state=active]:!text-emerald-400 transition-colors duration-200 rounded-lg py-2 text-xs font-bold text-slate-400 hover:text-slate-200 outline-none focus-visible:ring-0 !bg-transparent data-[state=active]:!bg-transparent data-[state=active]:!shadow-none data-[state=active]:!border-0"
+                  className="relative pb-3 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors duration-200 outline-none focus-visible:ring-0 !bg-transparent data-[state=active]:!bg-transparent data-[state=active]:!text-emerald-400 data-[state=active]:!shadow-none data-[state=active]:!border-0 rounded-none px-1"
                 >
                   Iniciar Sesión
+                  {activeTab === 'login' && (
+                    <motion.div
+                      layoutId="activeTabUnderline"
+                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 rounded-full"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="z-10 data-[state=active]:!text-emerald-400 transition-colors duration-200 rounded-lg py-2 text-xs font-bold text-slate-400 hover:text-slate-200 outline-none focus-visible:ring-0 !bg-transparent data-[state=active]:!bg-transparent data-[state=active]:!shadow-none data-[state=active]:!border-0"
+                  className="relative pb-3 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors duration-200 outline-none focus-visible:ring-0 !bg-transparent data-[state=active]:!bg-transparent data-[state=active]:!text-emerald-400 data-[state=active]:!shadow-none data-[state=active]:!border-0 rounded-none px-1"
                 >
                   Registrarse
+                  {activeTab === 'signup' && (
+                    <motion.div
+                      layoutId="activeTabUnderline"
+                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 rounded-full"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="login" className="mt-0">
