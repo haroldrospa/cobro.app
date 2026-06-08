@@ -461,8 +461,8 @@ const SuperAdmin = () => {
                             {/* Plan Render Helper */}
                             {[
                                 { name: 'Emprendedor', key: 'basic', color: 'bg-emerald-500', price: 1500 },
-                                { name: 'Profesional', key: 'pro', color: 'bg-blue-600', price: 3000 },
-                                { name: 'Empresarial', key: 'enterprise', color: 'bg-violet-600', price: 6000 }
+                                { name: 'Negocio', key: 'pro', color: 'bg-blue-600', price: 3000 },
+                                { name: 'Corporativo', key: 'enterprise', color: 'bg-violet-600', price: 6000 }
                             ].map((plan) => {
                                 const count = stores?.filter((s: any) => s.is_active && s.plan_name === plan.key).length || 0;
                                 const activeStores = stores?.filter((s: any) => s.is_active) || [];
@@ -878,9 +878,9 @@ const SuperAdmin = () => {
                                                     <TableCell>
                                                         {hasPlan ? (
                                                             <Badge variant="outline" className="border-blue-500 text-blue-500">
-                                                                {store.plan_name === 'basic' ? 'Básico' :
-                                                                    store.plan_name === 'pro' ? 'Profesional' :
-                                                                        store.plan_name === 'enterprise' ? 'Empresarial' :
+                                                                {store.plan_name === 'basic' ? 'Emprendedor' :
+                                                                    store.plan_name === 'pro' ? 'Negocio' :
+                                                                        store.plan_name === 'enterprise' ? 'Corporativo' :
                                                                             store.plan_name}
                                                             </Badge>
                                                         ) : (
@@ -916,8 +916,8 @@ const SuperAdmin = () => {
                                                                 </SelectTrigger>
                                                                 <SelectContent>
                                                                     <SelectItem value="basic">Emprendedor</SelectItem>
-                                                                    <SelectItem value="pro">Profesional</SelectItem>
-                                                                    <SelectItem value="enterprise">Empresarial</SelectItem>
+                                                                    <SelectItem value="pro">Negocio</SelectItem>
+                                                                    <SelectItem value="enterprise">Corporativo</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
 

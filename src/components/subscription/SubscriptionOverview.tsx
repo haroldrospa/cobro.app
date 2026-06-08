@@ -232,7 +232,7 @@ export default function SubscriptionOverview() {
                                             {!feature.available && feature.requiredPlan && (
                                                 <p className="text-xs font-medium text-orange-500 flex items-center gap-1">
                                                     <Lock className="h-3 w-3" />
-                                                    Plan {feature.requiredPlan === 'pro' ? 'Profesional' : 'Empresarial'}
+                                                    Plan {feature.requiredPlan === 'pro' ? 'Negocio' : 'Corporativo'}
                                                 </p>
                                             )}
                                         </div>

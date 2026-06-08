@@ -46,8 +46,8 @@ export const useSubscription = () => {
             // Map plan_id to readable name
             const planNames: Record<string, string> = {
                 'basic': 'Emprendedor',
-                'pro': 'Profesional',
-                'enterprise': 'Empresarial'
+                'pro': 'Negocio',
+                'enterprise': 'Corporativo'
             };
 
             const subscriptionData = {

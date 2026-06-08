@@ -28,8 +28,8 @@ export const PlanRestrictionAlert: React.FC<PlanRestrictionProps> = ({
     requiredPlan = 'pro',
 }) => {
     const planNames = {
-        pro: 'Profesional',
-        enterprise: 'Empresarial',
+        pro: 'Negocio',
+        enterprise: 'Corporativo',
     };
 
     return (
@@ -240,8 +240,8 @@ export const FeatureLocked: React.FC<FeatureLockedProps> = ({
     children,
 }) => {
     const planNames = {
-        pro: 'Profesional',
-        enterprise: 'Empresarial',
+        pro: 'Negocio',
+        enterprise: 'Corporativo',
     };
 
     return (

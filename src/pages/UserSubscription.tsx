@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Check, Wallet, Loader2, Upload, DollarSign, CreditCard, ShieldCheck, Landmark, User } from 'lucide-react';
+import { Check, Wallet, Loader2, Upload, DollarSign, CreditCard, ShieldCheck, Landmark, User, Leaf, Star, Building2, X, MessageSquare, Mail } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -72,47 +72,70 @@ const UserSubscription = () => {
         {
             id: 'basic',
             name: 'Emprendedor',
+            priceDisplay: '$29',
             price: 1500,
-            currency: 'DOP',
+            currency: 'USD',
             period: 'mes',
-            description: 'Perfecto para negocios que inician',
+            description: 'Ideal para empezar con el pie derecho.',
             features: [
-                '2 Usuarios',
-                'Hasta 100 productos',
-                '250 Facturas/mes',
-                'Soporte por email'
+                { text: 'Facturas electrónicas ilimitadas', included: true },
+                { text: '1 Empleado', included: true },
+                { text: 'Control de inventario', included: true },
+                { text: 'Múltiples métodos de pago', included: true },
+                { text: 'Reportes de ventas', included: true },
+                { text: 'Soporte estándar', included: true },
+                { text: 'Gestión de clientes (CRM)', included: true },
+                { text: 'Mi tienda online', included: false },
+                { text: 'Nómina', included: false },
+                { text: 'Contabilidad', included: false },
+                { text: 'API de integración', included: false },
             ],
             popular: false
         },
         {
             id: 'pro',
-            name: 'Profesional',
+            name: 'Negocio',
+            priceDisplay: '$59',
             price: 3000,
-            currency: 'DOP',
+            currency: 'USD',
             period: 'mes',
-            description: 'Para negocios en expansión',
+            description: 'Todo lo que necesitas para escalar.',
             features: [
-                '3 Usuarios',
-                '1,000 productos',
-                'Facturación Ilimitada',
-                'Reportes avanzados',
-                'Módulo de Gastos'
+                { text: 'Facturas electrónicas ilimitadas', included: true },
+                { text: 'Hasta 5 Empleados', included: true },
+                { text: 'Control de inventario avanzado', included: true },
+                { text: 'Múltiples métodos de pago', included: true },
+                { text: 'Reportes y analíticas', included: true },
+                { text: 'Soporte prioritario', included: true },
+                { text: 'Gestión de clientes (CRM)', included: true },
+                { text: 'Mi tienda online', included: true },
+                { text: 'Nómina', included: true },
+                { text: 'Contabilidad', included: true },
+                { text: 'API de integración', included: false },
             ],
             popular: true
         },
         {
             id: 'enterprise',
-            name: 'Empresarial',
+            name: 'Corporativo',
+            priceDisplay: 'Personalizado',
             price: 6000,
-            currency: 'DOP',
-            period: 'mes',
-            description: 'Control total sin límites',
+            currency: '',
+            period: '',
+            description: 'Potencia ilimitada y adaptación exacta a las necesidades de tu negocio.',
             features: [
-                '10 Usuarios',
-                'Productos Ilimitados',
-                'Múltiples Sucursales',
-                'API Access',
-                'Soporte Prioritario VIP'
+                { text: 'Facturas electrónicas ilimitadas', included: true },
+                { text: 'Empleados ilimitados', included: true },
+                { text: 'Inventario de alto volumen', included: true },
+                { text: 'Múltiples métodos de pago', included: true },
+                { text: 'Reportes personalizados', included: true },
+                { text: 'Soporte 24/7 y dedicado', included: true },
+                { text: 'Gestión de clientes (CRM)', included: true },
+                { text: 'Mi tienda online', included: true },
+                { text: 'Nómina', included: true },
+                { text: 'Contabilidad', included: true },
+                { text: 'API y Webhooks', included: true },
+                { text: 'Software adaptado a medida', included: true },
             ],
             popular: false
         }
@@ -611,59 +634,188 @@ const UserSubscription = () => {
             </Dialog>
 
             {/* Planes y Precios Grid */}
-            <h2 className="text-xl font-bold mt-8">Planes Disponibles</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {plans.map((plan) => (
-                    <Card
-                        key={plan.id}
-                        className={`relative flex flex-col ${activePlan === plan.id
-                            ? 'border-primary ring-2 ring-primary/20 shadow-lg scale-[1.02] md:-mt-2 bg-gradient-to-b from-card to-primary/5'
-                            : 'border-border hover:border-primary/50 transition-colors'
+            <h2 className="text-2xl font-black tracking-tight uppercase tracking-widest text-center mt-12 mb-8">
+                Planes Disponibles
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto px-2">
+                {plans.map((plan) => {
+                    const isBasic = plan.id === 'basic';
+                    const isPro = plan.id === 'pro';
+                    const isEnterprise = plan.id === 'enterprise';
+
+                    return (
+                        <div
+                            key={plan.id}
+                            className={`relative rounded-3xl border flex flex-col justify-between p-7 transition-all duration-300 ${
+                                isPro
+                                    ? 'bg-[#0bb274] border-0 text-emerald-950 shadow-2xl scale-[1.03] md:-mt-2 md:z-10 min-h-[500px]'
+                                    : 'bg-[#1a1b1e] border-zinc-800 text-white shadow-xl min-h-[500px]'
                             }`}
-                    >
-                        {plan.popular && (
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                <Badge className="bg-primary text-primary-foreground hover:bg-primary px-3 py-1">
-                                    MÁS POPULAR
-                                </Badge>
+                        >
+                            {/* Star badge for pro (Negocio) */}
+                            {plan.popular && (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                                    <Badge className="bg-amber-300 text-emerald-950 hover:bg-amber-300 px-4 py-1.5 font-black uppercase text-[10px] tracking-widest rounded-full shadow-lg border-0">
+                                        EL MÁS POPULAR
+                                    </Badge>
+                                </div>
+                            )}
+
+                            <div>
+                                {/* Header with Plan Name and Icon */}
+                                <div className="flex items-center gap-2 mb-3 mt-2">
+                                    {isBasic && (
+                                        <>
+                                            <Leaf className="h-6 w-6 text-emerald-500 fill-emerald-500/20" />
+                                            <h3 className="text-xl font-black tracking-tight text-white">
+                                                Plan {plan.name}
+                                            </h3>
+                                        </>
+                                    )}
+                                    {isPro && (
+                                        <>
+                                            <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
+                                            <h3 className="text-xl font-black tracking-tight text-emerald-950">
+                                                Plan {plan.name}
+                                            </h3>
+                                        </>
+                                    )}
+                                    {isEnterprise && (
+                                        <>
+                                            <Building2 className="h-6 w-6 text-blue-400 fill-blue-400/20" />
+                                            <h3 className="text-xl font-black tracking-tight text-white">
+                                                Plan {plan.name}
+                                            </h3>
+                                        </>
+                                    )}
+                                </div>
+
+                                <p
+                                    className={`text-sm mb-6 ${
+                                        isPro ? 'text-emerald-900/90 font-medium' : 'text-zinc-400'
+                                    }`}
+                                >
+                                    {plan.description}
+                                </p>
+
+                                {/* Pricing block */}
+                                {isEnterprise ? (
+                                    <div className="flex items-baseline mb-8">
+                                        <span className="text-3xl font-black tracking-tight text-white">
+                                            {plan.priceDisplay}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-baseline gap-1.5 mb-8">
+                                        <span
+                                            className={`text-4xl font-black tracking-tight ${
+                                                isPro ? 'text-emerald-950' : 'text-white'
+                                            }`}
+                                        >
+                                            {plan.priceDisplay}
+                                        </span>
+                                        <span
+                                            className={`text-xs font-semibold ${
+                                                isPro ? 'text-emerald-900/80' : 'text-zinc-500'
+                                            }`}
+                                        >
+                                            USD / {plan.period}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Features List */}
+                                <ul className="space-y-3.5 w-full text-[13px] mb-8">
+                                    {plan.features.map((feature, i) => (
+                                        <li
+                                            key={i}
+                                            className={`flex items-start gap-3 ${
+                                                feature.included
+                                                    ? isPro
+                                                        ? 'text-emerald-950 font-medium'
+                                                        : 'text-zinc-100'
+                                                    : isPro
+                                                    ? 'text-emerald-900/40 opacity-40 font-medium'
+                                                    : 'text-zinc-500 opacity-30'
+                                            }`}
+                                        >
+                                            {feature.included ? (
+                                                <div
+                                                    className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${
+                                                        isPro
+                                                            ? 'bg-emerald-950/20 border-emerald-950/30'
+                                                            : 'bg-emerald-500/20 border-emerald-500/30'
+                                                    }`}
+                                                >
+                                                    <Check
+                                                        className={`h-3.5 w-3.5 ${
+                                                            isPro ? 'text-emerald-950' : 'text-emerald-400'
+                                                        }`}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="h-5 w-5 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <X
+                                                        className={`h-3.5 w-3.5 ${
+                                                            isPro ? 'text-emerald-900/30' : 'text-zinc-700'
+                                                        }`}
+                                                    />
+                                                </div>
+                                            )}
+                                            <span className="leading-tight">{feature.text}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
-                        )}
 
-                        <CardHeader className="text-center pb-2">
-                            <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
-                            <CardDescription>{plan.description}</CardDescription>
-                        </CardHeader>
-
-                        <CardContent className="flex-1 flex flex-col items-center">
-                            <div className="text-3xl font-bold mb-6 mt-2">
-                                RD${plan.price.toLocaleString()}
-                                <span className="text-sm font-normal text-muted-foreground">/{plan.period}</span>
-                            </div>
-
-                            <ul className="space-y-3 w-full text-sm">
-                                {plan.features.map((feature, i) => (
-                                    <li key={i} className="flex items-center gap-2">
-                                        <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                            <Check className="h-3 w-3 text-primary" />
-                                        </div>
-                                        <span className="text-muted-foreground">{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-
-                        <CardFooter className="pt-2">
-                            <Button
-                                className="w-full"
-                                variant={activePlan === plan.id ? "secondary" : "default"}
-                                disabled={activePlan === plan.id}
-                                onClick={() => handleSelectPlan(plan)}
-                            >
-                                {activePlan === plan.id ? 'Plan Actual' : 'Seleccionar Plan'}
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                ))}
+                            {/* CTA Action Buttons */}
+                            {isEnterprise ? (
+                                <div className="space-y-2.5 w-full mt-auto">
+                                    <Button
+                                        className="w-full h-11 bg-[#10b981] hover:bg-[#0bb274] text-white font-bold rounded-xl flex items-center justify-center gap-2 border-0 shadow-lg shadow-emerald-500/10 transition-all active:scale-[0.98]"
+                                        onClick={() =>
+                                            window.open(
+                                                'https://wa.me/18099175744?text=Hola!%20Estoy%20interesado%20en%20el%20Plan%20Corporativo%20de%20Cobroapp',
+                                                '_blank'
+                                            )
+                                        }
+                                    >
+                                        <MessageSquare className="h-4 w-4 fill-white" />
+                                        Contactar por WhatsApp
+                                    </Button>
+                                    <Button
+                                        className="w-full h-11 bg-zinc-800 hover:bg-[#2c2e33] text-white font-bold rounded-xl flex items-center justify-center gap-2 border border-zinc-700 transition-all active:scale-[0.98]"
+                                        onClick={() =>
+                                            window.open(
+                                                'mailto:haroldrospa@gmail.com?subject=Inter%C3%A9s%20en%20Plan%20Corporativo%20-%20CobroApp',
+                                                '_blank'
+                                            )
+                                        }
+                                    >
+                                        <Mail className="h-4 w-4" />
+                                        Escribir por Correo
+                                    </Button>
+                                </div>
+                            ) : (
+                                <Button
+                                    className={`w-full h-11 font-bold rounded-xl transition-all active:scale-[0.98] ${
+                                        activePlan === plan.id
+                                            ? isPro
+                                                ? 'bg-emerald-800/20 text-emerald-800 border-0 cursor-not-allowed opacity-60'
+                                                : 'bg-zinc-800 border-zinc-700 text-zinc-400 cursor-not-allowed'
+                                            : isPro
+                                            ? 'bg-white text-emerald-950 hover:bg-emerald-50 border-0 shadow-lg shadow-emerald-950/10'
+                                            : 'bg-[#25262b] border-zinc-800 hover:bg-[#2c2e33] text-white border'
+                                    }`}
+                                    disabled={activePlan === plan.id}
+                                    onClick={() => handleSelectPlan(plan)}
+                                >
+                                    {activePlan === plan.id ? 'Plan Actual' : 'Empezar Prueba'}
+                                </Button>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
         </div>

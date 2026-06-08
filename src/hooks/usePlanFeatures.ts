@@ -34,7 +34,7 @@ export interface PlanFeatures {
 const PLAN_FEATURES: Record<PlanTier, PlanFeatures> = {
     basic: {
         // Limits - Emprendedor
-        maxEmployees: 2,
+        maxEmployees: 1,
         maxProducts: 500,
         maxCustomers: 50,
         maxInvoicesPerMonth: Infinity,
@@ -60,11 +60,11 @@ const PLAN_FEATURES: Record<PlanTier, PlanFeatures> = {
         hasPhoneSupport: false,
     },
     pro: {
-        // Limits - Profesional
-        maxEmployees: 10,
+        // Limits - Negocio
+        maxEmployees: 5,
         maxProducts: 1000,
         maxCustomers: 500,
-        maxInvoicesPerMonth: 1000,
+        maxInvoicesPerMonth: Infinity,
 
         // Features
         canAccessReports: true,
@@ -87,7 +87,7 @@ const PLAN_FEATURES: Record<PlanTier, PlanFeatures> = {
         hasPhoneSupport: false,
     },
     enterprise: {
-        // Limits - Empresarial (Unlimited)
+        // Limits - Corporativo (Unlimited)
         maxEmployees: Infinity,
         maxProducts: Infinity,
         maxCustomers: Infinity,
@@ -173,8 +173,8 @@ export const usePlanFeatures = () => {
     const getPlanName = (): string => {
         const names = {
             basic: 'Emprendedor',
-            pro: 'Profesional',
-            enterprise: 'Empresarial',
+            pro: 'Negocio',
+            enterprise: 'Corporativo',
         };
         return names[planTier];
     };
