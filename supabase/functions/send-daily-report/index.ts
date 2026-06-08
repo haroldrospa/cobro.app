@@ -585,8 +585,8 @@ async function sendReportForStore(
                 <img src="${logoUrl}" alt="Cobro" style="height:28px; width:auto; vertical-align:middle; display:inline-block;" />
                 <span style="font-size:20px; font-weight:900; color:#ffffff; letter-spacing:-0.5px;">Cobro<span style="color:#10b981;">app</span></span>
               </div>
-              <div style="margin-top:8px; display:flex; justify-content:center; gap:20px;">
-                <p style="margin:0; font-size:12px; color:#94a3b8; font-weight:500;">
+              <div style="margin-top:16px; text-align:center;">
+                <p style="margin:0; font-size:12px; color:#94a3b8; font-weight:500; text-align:center; line-height:1.6;">
                   © ${new Date().getFullYear()} ${companyName}.<br>Desarrollado para la eficiencia de tu negocio.
                 </p>
               </div>
