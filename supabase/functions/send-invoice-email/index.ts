@@ -155,11 +155,11 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailOptions: any = {
-      from: `${companyInfo.name} <onboarding@resend.dev>`,
+      from: `${companyInfo.name} <facturas@cobroapp.app>`,
       to: [email],
       subject: `Su Factura de ${companyInfo.name} (${saleData.invoiceNumber})`,
       html: invoiceHTML,
-      reply_to: companyInfo.email || 'noreply@resend.dev',
+      reply_to: companyInfo.email || 'no-reply@cobroapp.app',
       headers: {
         'X-Entity-Ref-ID': saleData.invoiceNumber,
       }

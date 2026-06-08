@@ -600,7 +600,7 @@ async function sendReportForStore(
     const subjectPrefix = session_id ? "🔒 Cierre de Caja" : `📊 Informe ${reportLabel}`;
     
     const { data: resData, error: resError } = await resend.emails.send({
-      from: `${companyName} <onboarding@resend.dev>`,
+      from: `${companyName} <reportes@cobroapp.app>`,
       to: [recipient_email],
       subject: `${subjectPrefix} — ${companyName}`,
       html: emailHTML,

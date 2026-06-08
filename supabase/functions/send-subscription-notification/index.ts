@@ -104,7 +104,7 @@ serve(async (req) => {
 
     // ENVIAR AL ADMIN
     const emailToAdmin = await resend.emails.send({
-      from: "Cobro App <onboarding@resend.dev>",
+      from: "Cobro App <no-reply@cobroapp.app>",
       to: [adminEmail],
       subject: `🚨 VERIFICAR PAGO: La tienda ${storeName} realizó su renovación`,
       html: adminHtml,
