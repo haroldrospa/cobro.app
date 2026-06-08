@@ -299,7 +299,10 @@ async function sendReportForStore(
     }
 
     // Low stock alerts & product cost mapping
-    const { data: allProds } = await supabase.from('products').select('id, name, stock, min_stock, sku, track_inventory, cost, status').eq('store_id', store_id);
+    const { data: allProds, error: allProdsError } = await supabase.from('products').select('id, name, stock, min_stock, sku:internal_code, track_inventory, cost, status').eq('store_id', store_id);
+    if (allProdsError) {
+      console.error("Error fetching products:", allProdsError);
+    }
     const lowStock = (allProds || [])
       .filter((p: any) => p.status === 'active' && p.track_inventory !== false && p.stock <= (p.min_stock || 5))
       .sort((a: any, b: any) => a.stock - b.stock)
