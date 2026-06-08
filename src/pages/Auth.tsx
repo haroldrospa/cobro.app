@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { z } from 'zod';
 import cobroLogo from '@/assets/cobro-logo-light.png';
 
@@ -91,16 +91,16 @@ const Auth = () => {
   }, [navigate]);
 
   useEffect(() => {
-    // Force light mode on document element for the Auth page
+    // Force dark mode on document element for the Auth page to keep styling premium and dark
     const htmlElement = document.documentElement;
     const hadDark = htmlElement.classList.contains('dark');
-    if (hadDark) {
-      htmlElement.classList.remove('dark');
+    if (!hadDark) {
+      htmlElement.classList.add('dark');
     }
     return () => {
-      // Restore dark mode if it was present
-      if (hadDark) {
-        htmlElement.classList.add('dark');
+      // Restore previous state if needed
+      if (!hadDark) {
+        htmlElement.classList.remove('dark');
       }
     };
   }, []);
@@ -260,10 +260,10 @@ const Auth = () => {
   };
 
   // Clean input style using dark glass background and emerald accents
-  const inputCls = "pl-9 h-11 text-sm bg-slate-950/30 border border-white/5 text-white placeholder:text-slate-500 focus:bg-slate-950/50 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all rounded-lg";
+  const inputCls = "pl-10 h-12 text-sm !bg-slate-950/40 !border-white/[0.08] text-white placeholder:text-slate-600 focus:!bg-slate-950/60 focus:!border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 focus-visible:ring-offset-0 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 transition-all rounded-xl";
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-[#2b343b] text-white px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-tr from-[#121619] via-[#1a2228] to-[#252f36] text-white px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
       {/* Structured dotted grid pattern */}
       <div className="absolute inset-0 z-0 opacity-[0.25]" style={{
         backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1.5px, transparent 0)',
@@ -274,6 +274,9 @@ const Auth = () => {
       <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none" />
 
+      {/* Decorative center card background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] bg-emerald-500/[0.03] rounded-full blur-[60px] pointer-events-none z-0" />
+
       <motion.div
         className="relative w-full max-w-[420px] z-10 flex flex-col"
         initial={{ opacity: 0, y: 20 }}
@@ -283,44 +286,47 @@ const Auth = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <motion.div
-            className="inline-flex items-center justify-center gap-2.5 cursor-pointer"
+            className="inline-flex flex-col items-center justify-center cursor-pointer"
             whileHover={{ scale: 1.02 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             onClick={() => navigate('/')}
           >
-            <img
-              src={cobroLogo}
-              alt="Cobro"
-              className="h-9 w-auto object-contain rounded-lg"
-              loading="eager"
-            />
-            <span className="text-2xl font-black tracking-tight text-white">Cobro<span className="text-emerald-400">app</span></span>
+            <div className="flex items-center justify-center gap-2.5">
+              <img
+                src={cobroLogo}
+                alt="Cobro"
+                className="h-9 w-auto object-contain rounded-lg"
+                loading="eager"
+              />
+              <span className="text-2xl font-black tracking-tight text-white">Cobro<span className="text-emerald-400">app</span></span>
+            </div>
+            <p className="text-slate-400 text-[11px] mt-1.5 font-medium tracking-wide">Tu negocio en control, en cualquier lugar</p>
           </motion.div>
         </div>
 
-        <Card className="bg-gradient-to-b from-[#323d46]/70 to-[#222a30]/80 backdrop-blur-xl border border-white/5 border-t-emerald-500/20 shadow-[0_30px_60px_-15px_rgba(15,23,30,0.5)] overflow-hidden relative rounded-2xl">
+        <Card className="bg-[#1e252b]/95 backdrop-blur-xl border border-white/[0.06] border-t-emerald-500/20 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.6)] overflow-hidden relative rounded-2xl w-full">
           <CardContent className="p-6 sm:p-8 relative z-10">
             <Tabs defaultValue={isSignup ? "signup" : "login"} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-950/40 border border-white/5 p-1 rounded-xl relative gap-1 h-auto">
+              <TabsList className="grid w-full grid-cols-2 mb-7 bg-slate-950/50 border border-white/[0.06] p-1 rounded-xl gap-1 h-11">
                 <TabsTrigger
                   value="login"
-                  className="data-[state=active]:bg-[#2b343b]/90 data-[state=active]:text-emerald-400 data-[state=active]:border data-[state=active]:border-emerald-500/20 data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-slate-200 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:bg-slate-800/80 data-[state=active]:text-emerald-400 data-[state=active]:border data-[state=active]:border-white/5 data-[state=active]:shadow-md transition-all duration-200 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-slate-200 outline-none focus-visible:ring-0"
                 >
                   Iniciar Sesión
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="data-[state=active]:bg-[#2b343b]/90 data-[state=active]:text-emerald-400 data-[state=active]:border data-[state=active]:border-emerald-500/20 data-[state=active]:shadow-md transition-all duration-300 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-slate-200 outline-none ring-0 focus-visible:ring-0"
+                  className="data-[state=active]:bg-slate-800/80 data-[state=active]:text-emerald-400 data-[state=active]:border data-[state=active]:border-white/5 data-[state=active]:shadow-md transition-all duration-200 rounded-lg py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-slate-200 outline-none focus-visible:ring-0"
                 >
                   Registrarse
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="login" className="mt-0">
                 <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="login-email" className="text-xs font-medium text-slate-200">Correo electrónico</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Correo electrónico</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                       <Input
                         id="login-email"
                         type="email"
@@ -334,10 +340,10 @@ const Auth = () => {
                     {errors.email && <p className="text-[10px] text-red-400 mt-1">{errors.email}</p>}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="login-password" className="text-xs font-medium text-slate-200">Contraseña</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Contraseña</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                       <Input
                         id="login-password"
                         type={showPassword ? 'text' : 'password'}
@@ -351,10 +357,10 @@ const Auth = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-200"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 hover:bg-transparent text-slate-400 hover:text-slate-200"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.5} /> : <Eye className="h-4 w-4" strokeWidth={1.5} />}
+                        {showPassword ? <EyeOff className="h-4.5 w-4.5" strokeWidth={1.75} /> : <Eye className="h-4.5 w-4.5" strokeWidth={1.75} />}
                       </Button>
                     </div>
                     {errors.password && <p className="text-[10px] text-red-400 mt-1">{errors.password}</p>}
@@ -362,7 +368,7 @@ const Auth = () => {
 
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-[0_4px_12px_rgba(16,185,129,0.15)] transition-all rounded-lg mt-2"
+                    className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all active:scale-[0.98] rounded-xl mt-6 text-sm"
                     disabled={loading}
                   >
                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando sesión...</> : 'Continuar'}
@@ -376,7 +382,7 @@ const Auth = () => {
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                       Paso {step} de 4
                     </span>
-                    <span className="text-xs font-medium text-emerald-400">
+                    <span className="text-xs font-semibold text-emerald-400">
                       {step === 1 && 'Información Básica'}
                       {step === 2 && 'Empresa'}
                       {step === 3 && 'Selección de Plan'}
@@ -406,10 +412,10 @@ const Auth = () => {
                       transition={{ duration: 0.25 }}
                       className="space-y-4"
                     >
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-name" className="text-xs font-medium text-slate-200">Nombre Completo</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Nombre Completo</Label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                           <Input
                             id="signup-name"
                             type="text"
@@ -422,10 +428,10 @@ const Auth = () => {
                         {errors.fullName && <p className="text-[10px] text-red-400">{errors.fullName}</p>}
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-email" className="text-xs font-medium text-slate-200">Correo electrónico</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Correo electrónico</Label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                           <Input
                             id="signup-email"
                             type="email"
@@ -441,7 +447,7 @@ const Auth = () => {
                       <Button
                         type="button"
                         onClick={handleNextStep}
-                        className="w-full h-11 mt-6 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                        className="w-full h-12 mt-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all rounded-xl group text-sm"
                       >
                         Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -458,10 +464,10 @@ const Auth = () => {
                       transition={{ duration: 0.25 }}
                       className="space-y-4"
                     >
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-company" className="text-xs font-medium text-slate-200">Nombre de la Empresa</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-company" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Nombre de la Empresa</Label>
                         <div className="relative">
-                          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                          <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                           <Input
                             id="signup-company"
                             type="text"
@@ -474,10 +480,10 @@ const Auth = () => {
                         {errors.companyName && <p className="text-[10px] text-red-400">{errors.companyName}</p>}
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-rnc" className="text-xs font-medium text-slate-200">RNC o Cédula</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-rnc" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">RNC o Cédula</Label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                           <Input
                             id="signup-rnc"
                             type="text"
@@ -495,14 +501,14 @@ const Auth = () => {
                           type="button"
                           variant="ghost"
                           onClick={handlePrevStep}
-                          className="flex-[1] h-11 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg group transition-all"
+                          className="flex-[1] h-12 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="button"
                           onClick={handleNextStep}
-                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                          className="flex-[2] h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all rounded-xl group text-sm"
                         >
                           Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
@@ -549,19 +555,19 @@ const Auth = () => {
                         ))}
                       </div>
 
-                      <div className="flex gap-3 mt-4">
+                      <div className="flex gap-3 mt-6">
                         <Button
                           type="button"
                           variant="ghost"
                           onClick={handlePrevStep}
-                          className="flex-[1] h-11 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg group transition-all"
+                          className="flex-[1] h-12 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="button"
                           onClick={handleNextStep}
-                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white transition-all rounded-lg font-bold group shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                          className="flex-[2] h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all rounded-xl group text-sm"
                         >
                           Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
@@ -580,10 +586,10 @@ const Auth = () => {
                       transition={{ duration: 0.25 }}
                       className="space-y-4"
                     >
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-password" className="text-xs font-medium text-slate-200">Contraseña</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Contraseña</Label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                           <Input
                             id="signup-password"
                             type={showPassword ? 'text' : 'password'}
@@ -597,19 +603,19 @@ const Auth = () => {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-200"
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 hover:bg-transparent text-slate-400 hover:text-slate-200"
                             onClick={() => setShowPassword(!showPassword)}
                           >
-                            {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.5} /> : <Eye className="h-4 w-4" strokeWidth={1.5} />}
+                            {showPassword ? <EyeOff className="h-4.5 w-4.5" strokeWidth={1.75} /> : <Eye className="h-4.5 w-4.5" strokeWidth={1.75} />}
                           </Button>
                         </div>
                         {errors.password && <p className="text-[10px] text-red-400">{errors.password}</p>}
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="signup-confirm" className="text-xs font-medium text-slate-200">Confirmar Contraseña</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-confirm" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Confirmar Contraseña</Label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" strokeWidth={1.5} />
+                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                           <Input
                             id="signup-confirm"
                             type={showPassword ? 'text' : 'password'}
@@ -629,14 +635,14 @@ const Auth = () => {
                           variant="ghost"
                           onClick={handlePrevStep}
                           disabled={loading}
-                          className="flex-[1] h-11 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg group transition-all"
+                          className="flex-[1] h-12 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl group transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> Atrás
                         </Button>
                         <Button
                           type="submit"
                           disabled={loading}
-                          className="flex-[2] h-11 bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-all rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                          className="flex-[2] h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold transition-all rounded-xl shadow-[0_4px_20px_rgba(16,185,129,0.2)] text-sm"
                         >
                           {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando...</> : 'Crear Cuenta'}
                         </Button>
@@ -651,11 +657,11 @@ const Auth = () => {
 
         <div className="flex items-center justify-center mt-6">
           <Button
-            variant="link"
-            className="text-slate-300 hover:text-white transition-colors text-xs font-medium"
+            variant="ghost"
+            className="text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs font-semibold rounded-lg px-4 py-2 group"
             onClick={() => navigate('/')}
           >
-            <ArrowRight className="mr-2 h-3.5 w-3.5 rotate-180" />
+            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
             Volver al inicio
           </Button>
         </div>
