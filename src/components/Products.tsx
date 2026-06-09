@@ -128,7 +128,7 @@ const Products: FC = () => {
   const [importData, setImportData] = useState<any[]>([]);
   const [showImportDialog, setShowImportDialog] = useState(false);
   
-  const { data: products = [], isLoading } = useProductsOffline();
+  const { data: products = [], isLoading, isFetching } = useProductsOffline();
   const { data: categories = [] } = useCategories();
   const deleteProduct = useDeleteProductOffline();
   const updateProduct = useUpdateProductOffline();
@@ -1344,7 +1344,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
   };
 
 
-  if (isLoading) {
+  if (isLoading || (products.length === 0 && isFetching)) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
         <LoadingLogo text="Cargando productos..." size="md" />

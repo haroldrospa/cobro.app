@@ -210,10 +210,10 @@ const POSContent: React.FC = () => {
   const { data: activeSession, isLoading: isLoadingSession, isFetching: isFetchingSession } = useActiveSession();
   const { profile, isLoading: isLoadingProfile, isPending: isPendingProfile } = useUserProfile();
 
-  const { data: allProducts = [], isLoading: productsQueryLoading } = useProductsOffline();
+  const { data: allProducts = [], isLoading: productsQueryLoading, isFetching: productsQueryFetching } = useProductsOffline();
   // Solo mostrar pantalla de carga si NO hay ningún producto en caché todavía
   // Una vez que IndexedDB tiene datos, el POS abre inmediatamente aunque Supabase siga sincronizando
-  const loadingProducts = productsQueryLoading && allProducts.length === 0;
+  const loadingProducts = (productsQueryLoading || productsQueryFetching) && allProducts.length === 0;
   const products = React.useMemo(() => allProducts.filter(p => p.status !== 'inactive'), [allProducts]);
   const { data: customers = [] } = useCustomers();
   const { data: customerBalance } = useCustomerBalance(selectedCustomer);
