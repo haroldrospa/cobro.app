@@ -63,8 +63,10 @@ BEGIN
   VALUES (new_store_id, company_name_val);
 
   -- 8. Initialize Store Settings
-  INSERT INTO public.store_settings (store_id)
-  VALUES (new_store_id);
+  INSERT INTO public.store_settings (store_id, shop_type)
+  VALUES (new_store_id, COALESCE(NEW.raw_user_meta_data ->> 'shop_type', 'store'))
+  ON CONFLICT (store_id) DO UPDATE 
+    SET shop_type = EXCLUDED.shop_type;
 
   -- 9. Initialize Subscription
   v_plan_id := NEW.raw_user_meta_data->>'plan_id';
@@ -83,7 +85,7 @@ BEGIN
       v_plan_id, 
       'active', -- Active trial
       now(), 
-      now() + INTERVAL '14 days',
+      now() + INTERVAL '15 days',
       'trial'
   );
 

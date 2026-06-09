@@ -286,7 +286,11 @@ const Dashboard: React.FC = () => {
       sale.sale_items?.forEach(item => {
         const product = products.find(p => p.id === item.product_id);
         if (product && product.cost) {
-          totalCost += (product.cost as number) * (item.quantity || 0);
+          if (product.is_variable_price) {
+            totalCost += (product.cost / 100) * (item.total || 0);
+          } else {
+            totalCost += (product.cost as number) * (item.quantity || 0);
+          }
         }
       });
     });

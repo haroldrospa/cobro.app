@@ -58,7 +58,8 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [rnc, setRnc] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState(defaultPlan);
+  const [selectedPlan, setSelectedPlan] = useState('basic');
+  const [selectedBusinessType, setSelectedBusinessType] = useState<'restaurant' | 'store' | 'supermarket'>('store');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -231,7 +232,9 @@ const Auth = () => {
             full_name: fullName,
             company_name: companyName,
             rnc: rnc,
-            plan_id: selectedPlan
+            plan_id: 'basic',
+            shop_type: selectedBusinessType,
+            onboarding_completed: true
           }
         }
       });
@@ -405,7 +408,7 @@ const Auth = () => {
                     <span className="text-xs font-semibold text-emerald-400">
                       {step === 1 && 'Información Básica'}
                       {step === 2 && 'Empresa'}
-                      {step === 3 && 'Selección de Plan'}
+                      {step === 3 && 'Tipo de Negocio'}
                       {step === 4 && 'Seguridad'}
                     </span>
                   </div>
@@ -548,28 +551,28 @@ const Auth = () => {
                     >
                       <div className="grid grid-cols-1 gap-3">
                         {[
-                          { id: 'basic', label: 'Emprendedor', price: '$29 USD/mes', icon: '🌱' },
-                          { id: 'pro', label: 'Negocio', price: '$59 USD/mes', icon: '⭐' },
-                          { id: 'enterprise', label: 'Corporativo', price: 'Personalizado', icon: '🏢' },
-                        ].map(plan => (
+                          { id: 'store', label: 'Tienda', desc: 'Venta de productos, inventario y clientes', icon: '🛍️' },
+                          { id: 'restaurant', label: 'Restaurante', desc: 'Mesas, cocina, pedidos y delivery', icon: '🍽️' },
+                          { id: 'supermarket', label: 'Supermercado', desc: 'Gran inventario, categorías y cajas', icon: '🛒' },
+                        ].map(type => (
                           <div
-                            key={plan.id}
-                            onClick={() => setSelectedPlan(plan.id)}
+                            key={type.id}
+                            onClick={() => setSelectedBusinessType(type.id as any)}
                             className={`cursor-pointer rounded-xl border p-4 flex items-center gap-4 transition-all duration-200 ${
-                              selectedPlan === plan.id
+                              selectedBusinessType === type.id
                                 ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_4px_20px_rgba(16,185,129,0.05)]'
                                 : 'border-white/5 bg-slate-950/20 hover:border-white/10 hover:bg-slate-950/30'
                               }`}
                           >
-                             <div className="text-2xl opacity-90">{plan.icon}</div>
+                             <div className="text-2xl opacity-90">{type.icon}</div>
                              <div className="flex-1">
-                               <div className={`text-sm font-semibold tracking-wide ${selectedPlan === plan.id ? 'text-emerald-50 font-bold' : 'text-slate-300'}`}>{plan.label}</div>
-                               <div className={`text-xs mt-0.5 ${selectedPlan === plan.id ? 'text-emerald-400' : 'text-slate-500'}`}>{plan.price}</div>
+                               <div className={`text-sm font-semibold tracking-wide ${selectedBusinessType === type.id ? 'text-emerald-50 font-bold' : 'text-slate-300'}`}>{type.label}</div>
+                               <div className={`text-xs mt-0.5 ${selectedBusinessType === type.id ? 'text-emerald-400' : 'text-slate-500'}`}>{type.desc}</div>
                              </div>
                              <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                               selectedPlan === plan.id ? 'border-emerald-500 bg-emerald-500' : 'border-white/10 bg-transparent'
+                               selectedBusinessType === type.id ? 'border-emerald-500 bg-emerald-500' : 'border-white/10 bg-transparent'
                              }`}>
-                               {selectedPlan === plan.id && <Check className="w-3 h-3 text-emerald-950" strokeWidth={3} />}
+                               {selectedBusinessType === type.id && <Check className="w-3 h-3 text-emerald-950" strokeWidth={3} />}
                              </div>
                           </div>
                         ))}

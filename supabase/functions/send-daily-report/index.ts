@@ -298,11 +298,28 @@ async function sendReportForStore(
       }));
     }
 
-    // Low stock alerts & product cost mapping
-    const { data: allProds, error: allProdsError } = await supabase.from('products').select('id, name, stock, min_stock, sku:internal_code, track_inventory, cost, status').eq('store_id', store_id);
-    if (allProdsError) {
-      console.error("Error fetching products:", allProdsError);
+    // Low stock alerts & product cost mapping (paginated to handle >1000 products)
+    let allProds: any[] = [];
+    let from = 0;
+    const step = 1000;
+    while (true) {
+      const { data: chunk, error: chunkError } = await supabase
+        .from('products')
+        .select('id, name, stock, min_stock, sku:internal_code, track_inventory, cost, status, is_variable_price')
+        .eq('store_id', store_id)
+        .range(from, from + step - 1);
+      
+      if (chunkError) {
+        console.error("Error fetching products in edge function:", chunkError);
+        break;
+      }
+      
+      if (!chunk || chunk.length === 0) break;
+      allProds = allProds.concat(chunk);
+      if (chunk.length < step) break;
+      from += step;
     }
+
     const allLowStock = (allProds || [])
       .filter((p: any) => p.status === 'active' && p.track_inventory !== false && p.stock <= (p.min_stock || 5));
     const criticalProductsCount = allLowStock.length;
@@ -323,7 +340,11 @@ async function sendReportForStore(
       if (item.sale_id && cashAndCardSalesIds.includes(item.sale_id)) {
         const product = productsMap.get(item.product_id);
         if (product && product.cost) {
-          cashAndCardCost += (product.cost as number) * (item.quantity || 0);
+          if (product.is_variable_price) {
+            cashAndCardCost += (product.cost / 100) * (item.total || 0);
+          } else {
+            cashAndCardCost += (product.cost as number) * (item.quantity || 0);
+          }
         }
       }
     });

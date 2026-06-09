@@ -69,7 +69,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
         const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
-        if (profile) {
+        if (profile && profile.store_id && profile.stores) {
           // 1. Check User Status
           if (profile.is_active === false) {
             await supabase.auth.signOut();
@@ -108,8 +108,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           setSession(session);
           setProfileMissing(false);
         } else {
-          // User logged in but no profile found — try to auto-repair first
-          console.warn("User has no profile record. Attempting auto-repair...");
+          // User logged in but no profile found or store is missing — try to auto-repair first
+          console.warn("User has no profile record or store is missing. Attempting auto-repair...");
           try {
             const { data: repaired, error: repairError } = await supabase.rpc('auto_repair_profile');
             if (repaired === true && !repairError) {
@@ -121,7 +121,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
                 .eq('id', session.user.id)
                 .limit(1);
               const retriedProfile = retriedProfiles && retriedProfiles.length > 0 ? retriedProfiles[0] : null;
-              if (retriedProfile) {
+              if (retriedProfile && retriedProfile.store_id && retriedProfile.stores) {
                 localStorage.setItem('cobro_last_user_id', session.user.id);
                 
                 // Check onboarding for repaired profiles too

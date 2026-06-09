@@ -291,7 +291,11 @@ const Reports = () => {
       sale.sale_items?.forEach(item => {
         const product = products.find(p => p.id === item.product_id);
         if (product && product.cost) {
-          totalCost += product.cost * item.quantity;
+          if (product.is_variable_price) {
+            totalCost += (product.cost / 100) * (item.total || 0);
+          } else {
+            totalCost += product.cost * item.quantity;
+          }
         }
       });
     });
@@ -313,7 +317,9 @@ const Reports = () => {
         const product = products.find(p => p.id === item.product_id);
         const cat = product ? (categories.find(c => c.id === product.category_id)?.name || 'Sin categoría') : 'Sin categoría';
         const catId = product?.category_id || 'none';
-        const itemCost = (product?.cost || 0) * (item.quantity || 0);
+        const itemCost = product?.is_variable_price
+          ? ((product.cost || 0) / 100) * (item.total || 0)
+          : (product?.cost || 0) * (item.quantity || 0);
         const itemRevenue = item.total || 0;
         if (!map[key]) map[key] = { name, quantity: 0, revenue: 0, cost: 0, profit: 0, category: cat, categoryId: catId };
         map[key].quantity += item.quantity || 0;

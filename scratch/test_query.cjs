@@ -6,7 +6,7 @@ const SUPABASE_PUBLISHABLE_KEY = process.env.VITE_SUPABASE_KEY;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-async function check() {
+async function run() {
   const email = 'test_user_1780928355747@example.com';
   const password = 'password123';
   
@@ -23,18 +23,30 @@ async function check() {
   
   const userId = authData.user.id;
   console.log(`Auth successful. User ID: ${userId}`);
-
-  console.log('Fetching profiles...');
+  
+  console.log('\nRunning useUserStore query...');
   const { data, error } = await supabase
     .from('profiles')
-    .select('*');
+    .select(`
+      store_id,
+      stores:store_id (
+        id,
+        store_code,
+        store_name,
+        slug,
+        is_active,
+        owner_id,
+        store_settings (*)
+      )
+    `)
+    .eq('id', userId)
+    .maybeSingle();
     
   if (error) {
-    console.error('Error fetching profiles:', error);
+    console.error('Query Error:', error);
   } else {
-    console.log(`Found ${data.length} profiles:`);
-    console.log(JSON.stringify(data.map(p => ({ id: p.id, full_name: p.full_name, email: p.email, role: p.role, store_id: p.store_id })), null, 2));
+    console.log('Query Result:', JSON.stringify(data, null, 2));
   }
 }
 
-check();
+run();

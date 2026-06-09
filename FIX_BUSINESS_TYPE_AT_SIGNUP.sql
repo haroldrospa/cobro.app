@@ -1,59 +1,9 @@
--- ============================================================
--- FIX: ROBUST NEW USER REGISTRATION TRIGGER
--- 1. Ensures all required plan IDs exist in subscription_plans
--- 2. Replaces the silent-fail trigger with one that raises errors
---    properly so Supabase logs capture the real problem
--- 3. Updates auto_repair_profile to also be called on login
---    when a profile is missing (client-side fallback)
--- ============================================================
+-- ============================================================================
+-- SCRIPT DE ACTUALIZACIÓN: TIPO DE NEGOCIO AL REGISTRO Y 15 DÍAS DE PRUEBA (CON AUTO-REPAIR ROBUSTO)
+-- Ejecuta este script en el editor SQL de Supabase para actualizar la base de datos.
+-- ============================================================================
 
--- STEP 1: Ensure plan IDs that match the app ('basic', 'pro', 'enterprise') exist
--- Use UPSERT so this is idempotent (safe to run multiple times)
-INSERT INTO public.subscription_plans (id, name, description, price_monthly, price_yearly, features)
-VALUES
-  ('basic',      'Plan Emprendedor', 'Ideal para empezar con el pie derecho.',   29,  288, '{"users": 1, "products": -1, "invoices_per_month": -1}'::jsonb),
-  ('pro',        'Plan Negocio',     'Todo lo que necesitas para escalar.',       59,  588, '{"users": 5, "products": -1, "invoices_per_month": -1}'::jsonb),
-  ('enterprise', 'Plan Corporativo', 'Potencia ilimitada adaptada a tu negocio.', 0,    0, '{"users": -1, "products": -1, "invoices_per_month": -1}'::jsonb)
-ON CONFLICT (id) DO UPDATE
-  SET name        = EXCLUDED.name,
-      description = EXCLUDED.description,
-      price_monthly = EXCLUDED.price_monthly,
-      price_yearly  = EXCLUDED.price_yearly,
-      features      = EXCLUDED.features;
-
--- STEP 2: Helper functions (idempotent)
-CREATE OR REPLACE FUNCTION public.generate_store_code()
-RETURNS text AS $$
-DECLARE
-  chars  text[]  := '{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,I,J,K,L,M,N,P,Q,R,S,T,U,V,W,X,Y,Z}';
-  result text    := '';
-  i      integer;
-BEGIN
-  FOR i IN 1..6 LOOP
-    result := result || chars[1 + (random() * (array_length(chars, 1) - 1))::integer];
-  END LOOP;
-  RETURN result;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION public.generate_store_slug(company_name text, store_code text)
-RETURNS text AS $$
-DECLARE
-  base_slug  text;
-BEGIN
-  base_slug := lower(regexp_replace(company_name, '[^a-zA-Z0-9\s]', '', 'g'));
-  base_slug := regexp_replace(base_slug, '\s+', '-', 'g');
-  RETURN base_slug || '-' || lower(store_code);
-END;
-$$ LANGUAGE plpgsql;
-
--- STEP 3: Rebuild the trigger function
---  Key changes vs. previous version:
---   a) We RAISE LOG (not RAISE EXCEPTION) so Supabase Postgres logs capture the
---      exact error message, while still letting the auth insert succeed.
---   b) We validate the plan_id and fall back to 'basic' if it's not in the table.
---   c) We wrap each critical INSERT in its own sub-block so one failure doesn't
---      kill all the others silently.
+-- 1. Actualizar la función handle_new_user
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -69,7 +19,7 @@ DECLARE
   v_plan_id         TEXT;
   counter           INTEGER;
 BEGIN
-  -- ── A. Número de usuario único ────────────────────────────────────────────
+  -- A. Número de usuario único
   SELECT COALESCE(MAX(CAST(SUBSTRING(user_number FROM 5) AS INTEGER)), 0) + 1
     INTO counter
     FROM public.profiles
@@ -77,7 +27,7 @@ BEGIN
 
   new_user_number := 'USR-' || LPAD(counter::TEXT, 6, '0');
 
-  -- ── B. Datos del registro ─────────────────────────────────────────────────
+  -- B. Datos del registro
   company_name_val := COALESCE(
     NULLIF(TRIM(NEW.raw_user_meta_data ->> 'company_name'), ''),
     'Mi Comercio ' || new_user_number
@@ -90,22 +40,22 @@ BEGIN
     v_plan_id := 'basic';
   END IF;
 
-  -- ── C. Códigos de tienda ──────────────────────────────────────────────────
+  -- C. Códigos de tienda
   new_store_code := public.generate_store_code();
   new_slug       := public.generate_store_slug(company_name_val, new_store_code);
 
-  -- Ensure slug is unique (retry once on collision)
+  -- Ensure slug is unique
   IF EXISTS (SELECT 1 FROM public.stores WHERE slug = new_slug) THEN
     new_store_code := public.generate_store_code();
     new_slug       := public.generate_store_slug(company_name_val, new_store_code);
   END IF;
 
-  -- ── D. Tienda ─────────────────────────────────────────────────────────────
+  -- D. Tienda
   INSERT INTO public.stores (store_name, store_code, slug, owner_id, is_active)
   VALUES (company_name_val, new_store_code, new_slug, NEW.id, true)
   RETURNING id INTO new_store_id;
 
-  -- ── E. Perfil ─────────────────────────────────────────────────────────────
+  -- E. Perfil
   INSERT INTO public.profiles (id, email, full_name, user_number, store_id, role, is_active)
   VALUES (
     NEW.id,
@@ -117,12 +67,12 @@ BEGIN
     true
   );
 
-  -- ── F. Rol ────────────────────────────────────────────────────────────────
+  -- F. Rol
   INSERT INTO public.user_roles (user_id, role)
   VALUES (NEW.id, 'admin')
   ON CONFLICT DO NOTHING;
 
-  -- ── G. Suscripción ────────────────────────────────────────────────────────
+  -- G. Suscripción (15 Días Gratis)
   INSERT INTO public.company_subscriptions (
     company_id, plan_id, status, start_date, end_date, payment_method
   )
@@ -132,7 +82,7 @@ BEGIN
     'trial'
   );
 
-  -- ── H. Configuraciones ────────────────────────────────────────────────────
+  -- H. Configuraciones (Con Tipo de Negocio/Shop Type guardado desde el registro)
   INSERT INTO public.company_settings (store_id, company_name)
   VALUES (new_store_id, company_name_val)
   ON CONFLICT DO NOTHING;
@@ -142,7 +92,7 @@ BEGIN
   ON CONFLICT (store_id) DO UPDATE 
     SET shop_type = EXCLUDED.shop_type;
 
-  -- ── I. Categorías por defecto ─────────────────────────────────────────────
+  -- I. Categorías por defecto
   INSERT INTO public.categories (name, description, store_id) VALUES
     ('General',  'Productos generales',   new_store_id),
     ('Bebidas',  'Bebidas y líquidos',    new_store_id),
@@ -150,7 +100,7 @@ BEGIN
     ('Snacks',   'Bocadillos',            new_store_id)
   ON CONFLICT DO NOTHING;
 
-  -- ── J. Secuencias de facturación ──────────────────────────────────────────
+  -- J. Secuencias de facturación
   INSERT INTO public.invoice_sequences (invoice_type_id, current_number, store_id)
   VALUES
     ('B01', 0, new_store_id),
@@ -165,22 +115,18 @@ BEGIN
   RETURN NEW;
 
 EXCEPTION WHEN OTHERS THEN
-  -- Log the real error so it appears in Supabase → Logs → Postgres
   RAISE LOG 'handle_new_user FAILED for user %: SQLSTATE=% MSG=%', NEW.id, SQLSTATE, SQLERRM;
-  -- Still return NEW so the auth.users insert succeeds;
-  -- the client-side auto_repair_profile RPC will fix it on next login.
   RETURN NEW;
 END;
 $$;
 
--- STEP 4: Re-attach trigger
+-- 2. Asegurarse de que el trigger esté adjunto correctamente
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- STEP 5: Improve auto_repair_profile so it uses the correct plan and
---         full metadata when repairing broken accounts.
+-- 3. Actualizar la función de autoreparación auto_repair_profile (Versión robusta para usuarios existentes sin tienda)
 CREATE OR REPLACE FUNCTION public.auto_repair_profile()
 RETURNS boolean
 LANGUAGE plpgsql
