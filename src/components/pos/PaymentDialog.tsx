@@ -138,7 +138,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[420px] p-0 overflow-hidden bg-background border-border/40 rounded-2xl shadow-2xl max-h-[95vh] flex flex-col">
+        <DialogContent className="max-w-[420px] w-[calc(100%-1.5rem)] sm:w-full p-0 overflow-hidden bg-background border border-border/40 rounded-2xl shadow-2xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col">
           {/* Header & Total Area - Hyper Compact */}
           <div className="bg-gradient-to-b from-primary/10 to-transparent p-3 pb-0 border-b border-border/10 flex-shrink-0">
             <div className="flex justify-between items-center px-1">
@@ -167,7 +167,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
             </div>
           </div>
 
-          <div className="p-3 space-y-3 flex-1 flex flex-col">
+          <div className="p-3 space-y-3 flex-1 min-h-0 flex flex-col overflow-y-auto">
             {/* Customer Section */}
             <div>
               <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1 block ml-1">Cliente</label>

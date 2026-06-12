@@ -171,7 +171,7 @@ export const useStoreSettings = () => {
     delete cleanExistingSettings.pos_layout_mode;
     delete cleanExistingSettings.pos_layout_grid_cols;
 
-    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 1024;
+    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 1100;
     // Default UI values for any user that hasn't configured them yet
     const uiDefaults = {
       pos_view_mode: isMobileDevice ? 'list' : 'grid',
@@ -272,8 +272,8 @@ export const useStoreSettings = () => {
     // Use the store_settings already embedded in useUserStore as initialData.
     // This makes cached navigations render instantly with no extra network request.
     initialData: (() => {
-      const embedded = (store as any)?.store_settings;
-      if (!embedded) return undefined;
+      const embeddedRaw = (store as any)?.store_settings;
+      if (!embeddedRaw) return undefined;
       // Merge with local overrides (view mode, grid cols, etc.)
       const localKey = userId ? `posSettings_${storeId}_${userId}` : `posSettings_${storeId}`;
       const localStr = localStorage.getItem(localKey);
@@ -282,11 +282,23 @@ export const useStoreSettings = () => {
       // to force fetchSettings to run and pull from user_metadata.
       if (!localStr) return undefined;
 
+      const embedded = { ...embeddedRaw };
+      delete embedded.pos_view_mode;
+      delete embedded.pos_layout_mode;
+      delete embedded.pos_layout_grid_cols;
+
+      const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 1100;
+      const uiDefaults = {
+        pos_view_mode: isMobileDevice ? 'list' : 'grid',
+        pos_layout_mode: isMobileDevice ? 'catalog' : 'classic',
+        pos_layout_grid_cols: 4
+      };
+
       try {
         const local = JSON.parse(localStr);
-        return { ...embedded, ...local } as StoreSettings;
+        return { ...uiDefaults, ...embedded, ...local } as StoreSettings;
       } catch {
-        return embedded as StoreSettings;
+        return { ...uiDefaults, ...embedded } as StoreSettings;
       }
     })(),
     staleTime: 1000 * 60 * 60, // 60 minutes - store settings very rarely change

@@ -4,9 +4,10 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Clock, Save } from 'lucide-react';
+import { Clock, Save, Loader2 } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const DAYS = [
     { key: 'monday', label: 'Lunes' },
@@ -70,54 +71,58 @@ const StoreHoursSection = () => {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
+        <Card className="border border-border/40 shadow-lg rounded-2xl overflow-hidden">
+            <CardHeader className="bg-muted/10 border-b border-border/10 pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                    <Clock className="h-5 w-5 text-emerald-500" />
                     Horarios de Atención
                 </CardTitle>
                 <CardDescription>
                     Define los horarios en que tu tienda está abierta al público.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-4">
+            <CardContent className="p-4 sm:p-6 space-y-6 bg-card/10">
+                <div className="space-y-3">
                     {DAYS.map((day) => {
                         const dayConfig = hours[day.key] || DEFAULT_HOURS[day.key as keyof typeof DEFAULT_HOURS];
                         const isClosed = dayConfig.closed;
 
                         return (
-                            <div key={day.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 rounded-lg border bg-card/50">
-                                <div className="flex items-center gap-3 min-w-[120px]">
+                            <div key={day.key} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                                {/* Left side: Switch + Label */}
+                                <div className="flex items-center gap-2.5 flex-shrink-0">
                                     <Switch
                                         id={`closed-${day.key}`}
                                         checked={!isClosed}
                                         onCheckedChange={(checked) => handleToggleClosed(day.key, !checked)}
+                                        className="data-[state=checked]:bg-emerald-500 scale-90 sm:scale-100"
                                     />
-                                    <Label htmlFor={`closed-${day.key}`} className={`font-medium ${isClosed ? 'text-muted-foreground' : ''}`}>
+                                    <Label htmlFor={`closed-${day.key}`} className={cn("text-xs sm:text-sm font-bold cursor-pointer transition-colors", isClosed ? 'text-muted-foreground line-through opacity-65' : 'text-foreground')}>
                                         {day.label}
                                     </Label>
                                 </div>
 
-                                <div className="flex items-center gap-2 flex-1">
+                                {/* Right side: Inline inputs or Closed pill */}
+                                <div className="flex items-center justify-end flex-1 min-w-0">
                                     {isClosed ? (
-                                        <span className="text-sm text-muted-foreground italic px-2">Cerrado</span>
+                                        <span className="text-[10px] sm:text-xs text-muted-foreground/60 italic font-bold bg-muted/60 px-3 py-1 rounded-lg border border-border/20">
+                                            Cerrado
+                                        </span>
                                     ) : (
-                                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                                            <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
-                                                <Input
-                                                    type="time"
-                                                    value={dayConfig.open}
-                                                    onChange={(e) => handleTimeChange(day.key, 'open', e.target.value)}
-                                                    className="w-full sm:w-32"
-                                                />
-                                                <Input
-                                                    type="time"
-                                                    value={dayConfig.close}
-                                                    onChange={(e) => handleTimeChange(day.key, 'close', e.target.value)}
-                                                    className="w-full sm:w-32"
-                                                />
-                                            </div>
+                                        <div className="flex items-center gap-1.5 w-full max-w-[200px] sm:max-w-none justify-end">
+                                            <Input
+                                                type="time"
+                                                value={dayConfig.open}
+                                                onChange={(e) => handleTimeChange(day.key, 'open', e.target.value)}
+                                                className="w-20 sm:w-28 text-center px-1 text-xs sm:text-sm h-8 sm:h-9 [&::-webkit-calendar-picker-indicator]:hidden bg-background border-border/50 rounded-lg shadow-sm"
+                                            />
+                                            <span className="text-zinc-500 text-[10px] sm:text-xs font-semibold px-0.5 shrink-0">a</span>
+                                            <Input
+                                                type="time"
+                                                value={dayConfig.close}
+                                                onChange={(e) => handleTimeChange(day.key, 'close', e.target.value)}
+                                                className="w-20 sm:w-28 text-center px-1 text-xs sm:text-sm h-8 sm:h-9 [&::-webkit-calendar-picker-indicator]:hidden bg-background border-border/50 rounded-lg shadow-sm"
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -126,10 +131,23 @@ const StoreHoursSection = () => {
                     })}
                 </div>
 
-                <div className="flex justify-end pt-4">
-                    <Button onClick={handleSave} disabled={isUpdating}>
-                        <Save className="h-4 w-4 mr-2" />
-                        {isUpdating ? 'Guardando...' : 'Guardar Horarios'}
+                <div className="flex justify-end pt-2 border-t border-border/10">
+                    <Button 
+                        onClick={handleSave} 
+                        disabled={isUpdating}
+                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/10 rounded-xl font-bold"
+                    >
+                        {isUpdating ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Guardando...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="h-4 w-4 mr-2" />
+                                Guardar Horarios
+                            </>
+                        )}
                     </Button>
                 </div>
             </CardContent>

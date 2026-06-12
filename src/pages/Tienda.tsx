@@ -97,6 +97,7 @@ const Tienda: React.FC = () => {
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [profileDialogView, setProfileDialogView] = useState<'orders' | 'settings'>('orders');
   const [loyaltyData, setLoyaltyData] = useState<{ points: number, code: string } | null>(null);
 
   const { data: orders = [] } = useShopperOrders(
@@ -694,33 +695,33 @@ const Tienda: React.FC = () => {
           {/* Mobile Layout Premium Optimization */}
           <div className="md:hidden space-y-5">
             {/* Top Row: Brand & Actions */}
-            <div className="flex items-start justify-between pt-1">
+            <div className="flex items-center justify-between gap-3 pt-1">
               {/* Brand Identity */}
-              <div className="flex items-center gap-3">
-                <div className="relative group cursor-pointer">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="relative group cursor-pointer flex-shrink-0">
                   {companySettings?.logo_url ? (
                     <img
                       src={companySettings.logo_url}
                       alt="Logo"
-                      className="h-12 w-12 object-cover rounded-full bg-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      className="h-11 w-11 object-cover rounded-full bg-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
                     />
                   ) : (
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shadow-sm">
-                      <Store className="h-6 w-6 text-primary" />
+                    <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shadow-sm">
+                      <Store className="h-5.5 w-5.5 text-primary" />
                     </div>
                   )}
                   {/* Live Status Orb */}
-                  <span className="absolute bottom-0 right-0 flex h-3.5 w-3.5">
+                  <span className="absolute bottom-0 right-0 flex h-3 w-3">
                     <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isStoreCurrentlyOpen ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
-                    <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${isStoreCurrentlyOpen ? 'bg-emerald-500' : 'bg-red-500'} border-2 border-background shadow-sm`}></span>
+                    <span className={`relative inline-flex rounded-full h-3 w-3 ${isStoreCurrentlyOpen ? 'bg-emerald-500' : 'bg-red-500'} border-2 border-background shadow-sm`}></span>
                   </span>
                 </div>
 
-                <div className="flex flex-col justify-center">
-                  <h1 className="text-xl font-bold tracking-tight text-foreground leading-tight">
+                <div className="flex flex-col justify-center min-w-0">
+                  <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground leading-tight truncate">
                     {storeName}
                   </h1>
-                  <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 mt-0.5 tracking-wider uppercase">
+                  <p className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 mt-0.5 tracking-wider uppercase">
                     <span className={isStoreCurrentlyOpen ? "text-emerald-600 dark:text-emerald-500 font-bold" : "text-red-600 dark:text-red-500 font-bold"}>
                       {isStoreCurrentlyOpen ? "Abierto" : "Cerrado"}
                     </span>
@@ -731,26 +732,26 @@ const Tienda: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-1.5 flex-shrink-0">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 rounded-full bg-secondary/60 hover:bg-secondary text-foreground transition-all"
-                  onClick={() => setShowProfileDialog(true)}
+                  className="h-10 w-10 sm:h-9 sm:w-9 rounded-full bg-secondary/60 hover:bg-secondary text-foreground transition-all"
+                  onClick={() => { setProfileDialogView('orders'); setShowProfileDialog(true); }}
                 >
-                  <User className="h-5 w-5 opacity-80" />
+                  <User className="h-5 w-5 sm:h-4.5 sm:w-4.5 opacity-80" />
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowCart(true)}
-                  className={`relative h-10 w-10 rounded-full transition-all ${cartAnimations.length > 0 ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary/60 hover:bg-secondary text-foreground'}`}
+                  className={`relative h-10 w-10 sm:h-9 sm:w-9 rounded-full transition-all ${cartAnimations.length > 0 ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary/60 hover:bg-secondary text-foreground'}`}
                   aria-label="Ver carrito"
                 >
-                  <ShoppingBag className={`h-5 w-5 ${cartAnimations.length > 0 ? 'animate-bounce' : 'opacity-80'}`} />
+                  <ShoppingBag className={`h-5 w-5 sm:h-4.5 sm:w-4.5 ${cartAnimations.length > 0 ? 'animate-bounce' : 'opacity-80'}`} />
                   {cartItemCount > 0 && (
-                    <span className={`absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-destructive text-white text-[10px] font-black rounded-full flex items-center justify-center border border-background shadow-sm transition-transform duration-300 ${cartAnimations.length > 0 ? 'scale-110' : 'animate-in zoom-in'}`}>
+                    <span className={`absolute -top-0.5 -right-0.5 h-3.5 min-w-[14px] px-1 bg-destructive text-white text-[9px] font-black rounded-full flex items-center justify-center border border-background shadow-sm transition-transform duration-300 ${cartAnimations.length > 0 ? 'scale-110' : 'animate-in zoom-in'}`}>
                       {cartItemCount}
                     </span>
                   )}
@@ -1439,18 +1440,24 @@ const Tienda: React.FC = () => {
 
   {/* Cart Dialog */}
   <Dialog open={showCart} onOpenChange={setShowCart}>
-    <DialogContent className="w-[95vw] sm:max-w-md max-h-[85vh] flex flex-col rounded-[2rem] p-0 gap-0 overflow-hidden border-border/50 shadow-2xl bg-background/95 backdrop-blur-xl">
-      <DialogHeader className="px-6 py-5 border-b border-border/40">
+    <DialogContent 
+      centerOnMobile={false}
+      className="w-full sm:max-w-md max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-t-[2.5rem] rounded-b-none sm:rounded-[2rem] p-0 gap-0 overflow-hidden border border-border bg-card shadow-2xl"
+    >
+      {/* Mobile bottom-sheet drag indicator */}
+      <div className="w-12 h-1.5 bg-muted-foreground/20 rounded-full mx-auto my-3 block sm:hidden shrink-0 animate-pulse" />
+      
+      <DialogHeader className="px-6 py-5 border-b border-border bg-card/50">
         <DialogTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <ShoppingBag className="h-4.5 w-4.5 text-primary" />
+            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-md relative border border-white/10">
+              <ShoppingBag className="h-4.5 w-4.5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">Tu Carrito</span>
+            <span className="text-xl font-bold tracking-tight text-foreground">Tu Carrito</span>
           </div>
           {cartItemCount > 0 && (
-            <Badge variant="secondary" className="bg-secondary/60 text-[11px] font-bold rounded-full px-2.5 shadow-sm">
-              {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+            <Badge variant="secondary" className="bg-secondary/60 text-secondary-foreground text-[11px] font-bold rounded-full px-2.5 py-0.5 shadow-sm">
+              {cartItemCount} {cartItemCount === 1 ? 'ítem' : 'ítems'}
             </Badge>
           )}
         </DialogTitle>
@@ -1485,30 +1492,34 @@ const Tienda: React.FC = () => {
 
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <p className="font-bold text-[14px] leading-tight text-foreground line-clamp-2 pr-2">{item.product.name}</p>
-                    <p className="text-[13px] font-semibold text-muted-foreground mt-1">${item.product.price.toFixed(2)}</p>
+                    <p className="text-[13px] font-semibold text-primary mt-1.5 font-mono">${item.product.price.toFixed(2)}</p>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <div className="flex items-center bg-secondary/40 rounded-full border border-border/50 overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="flex items-center bg-secondary/40 rounded-full border border-border overflow-hidden shadow-sm">
                       <button 
-                        className="h-8 w-8 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-secondary/80 transition-colors active:bg-secondary" 
+                        type="button"
+                        className="h-8 w-8 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-secondary/80 transition-colors active:bg-secondary focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0" 
                         onClick={() => updateQuantity(item.product.id, -1)}
                       >
                         <Minus className="h-3 w-3" />
                       </button>
-                      <span className="w-6 text-center text-[13px] font-bold select-none">{item.quantity}</span>
+                      <span className="w-6 text-center text-[13px] font-bold select-none text-foreground">{item.quantity}</span>
                       <button 
-                        className="h-8 w-8 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-secondary/80 transition-colors active:bg-secondary" 
+                        type="button"
+                        className="h-8 w-8 flex items-center justify-center text-foreground/80 hover:text-foreground hover:bg-secondary/80 transition-colors active:bg-secondary focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0" 
                         onClick={() => updateQuantity(item.product.id, 1)}
                       >
                         <Plus className="h-3 w-3" />
                       </button>
                     </div>
                     <button 
-                      className="text-[10px] uppercase font-bold tracking-wider text-destructive/70 hover:text-destructive flex items-center gap-1 transition-colors px-2 py-1" 
+                      type="button"
+                      className="h-8 w-8 flex items-center justify-center rounded-full text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0" 
                       onClick={() => removeFromCart(item.product.id)}
+                      title="Remover"
                     >
-                      Remover
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -1519,31 +1530,29 @@ const Tienda: React.FC = () => {
           <div className="bg-card/50 px-6 py-4 border-t border-border/40 shadow-[0_-10px_20px_-15px_rgba(0,0,0,0.1)]">
             <div className="flex justify-between items-end mb-4">
               <span className="font-bold text-muted-foreground">Total</span>
-              <span className="text-2xl font-black text-primary">${cartTotal.toFixed(2)}</span>
+              <span className="text-2xl font-black text-primary font-mono">${cartTotal.toFixed(2)}</span>
             </div>
 
             <div className="w-full space-y-3">
               {!user ? (
                 <>
-                  <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/10 text-primary mb-2">
-                    <LogIn className="h-4 w-4 flex-shrink-0" />
-                    <p className="text-xs font-bold tracking-wide">
-                      Inicia sesión para pedir
-                    </p>
-                  </div>
                   <Button
                     size="lg"
-                    className="w-full h-12 rounded-full font-bold shadow-lg hover:shadow-primary/25 active:scale-95 transition-all text-[15px]"
-                    onClick={() => { setShowCart(false); setShowProfileDialog(true); }}
+                    className="w-full h-16 rounded-full font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all bg-primary hover:bg-primary/90 text-primary-foreground text-base md:text-[17px] border-0"
+                    onClick={() => { setShowCart(false); setProfileDialogView('orders'); setShowProfileDialog(true); }}
                   >
-                    <LogIn className="h-4.5 w-4.5 mr-2" />
+                    <LogIn className="h-5 w-5 mr-2" />
                     Iniciar Sesión / Registrarme
                   </Button>
                 </>
               ) : isProfileComplete(profile) ? (
                 <Button
                   size="lg"
-                  className={`w-full h-12 rounded-full font-bold shadow-lg active:scale-95 transition-all text-[15px] ${!isStoreCurrentlyOpen ? 'bg-muted text-muted-foreground' : 'shadow-primary/25 bg-primary hover:bg-primary/90'}`}
+                  className={`w-full h-16 rounded-full font-bold transition-all duration-300 scale-100 hover:scale-[1.02] active:scale-[0.98] text-base md:text-[17px] border-0 ${
+                    !isStoreCurrentlyOpen 
+                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none' 
+                      : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20'
+                  }`}
                   onClick={() => { setShowCart(false); setShowCheckout(true); }}
                   disabled={!isStoreCurrentlyOpen}
                 >
@@ -1558,7 +1567,7 @@ const Tienda: React.FC = () => {
                 </Button>
               ) : (
                 <div className="w-full space-y-3">
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-500">
+                  <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-500 mb-3">
                     <UserPlus className="h-5 w-5 flex-shrink-0 mt-0.5" />
                     <p className="text-xs font-semibold leading-relaxed">
                       Necesitas completar tu perfil (cédula y ubicación) para poder enviar el pedido.
@@ -1566,10 +1575,10 @@ const Tienda: React.FC = () => {
                   </div>
                   <Button
                     size="lg"
-                    className="w-full h-12 rounded-full font-bold shadow-md active:scale-95 transition-all"
-                    onClick={() => { setShowCart(false); setShowProfileDialog(true); }}
+                    className="w-full h-16 rounded-full font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all text-base md:text-[17px] border-0"
+                    onClick={() => { setShowCart(false); setProfileDialogView('settings'); setShowProfileDialog(true); }}
                   >
-                    <UserPlus className="h-4.5 w-4.5 mr-2" />
+                    <UserPlus className="h-5 w-5 mr-2" />
                     Completar mi Perfil
                   </Button>
                 </div>
@@ -1625,7 +1634,7 @@ const Tienda: React.FC = () => {
                   )}
                 </div>
                 <button
-                  onClick={() => { setShowCheckout(false); setShowProfileDialog(true); }}
+                  onClick={() => { setShowCheckout(false); setProfileDialogView('settings'); setShowProfileDialog(true); }}
                   className="text-[10px] text-emerald-600 font-bold hover:underline flex-shrink-0 mt-0.5"
                 >
                   Editar
@@ -1921,7 +1930,13 @@ const Tienda: React.FC = () => {
         requiresCompletion={!isProfileComplete(profile)}
         shopType={shopType}
         storeId={store?.id}
-        storeName={store?.store_name}
+        storeName={storeName}
+        logoUrl={companySettings?.logo_url}
+        companyPhone={companySettings?.phone}
+        companyAddress={companySettings?.address}
+        companyEmail={companySettings?.email}
+        companyDescription={companySettings?.meta_description}
+        defaultView={profileDialogView}
       />
 
   {/* Floating Cart Animations */}

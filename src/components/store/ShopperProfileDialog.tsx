@@ -38,6 +38,12 @@ interface ShopperProfileDialogProps {
     shopType?: string;
     storeId?: string;
     storeName?: string;
+    logoUrl?: string;
+    companyPhone?: string;
+    companyAddress?: string;
+    companyEmail?: string;
+    companyDescription?: string;
+    defaultView?: 'orders' | 'settings';
 }
 
 type AuthMode = 'login' | 'register';
@@ -75,6 +81,12 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     shopType,
     storeId,
     storeName,
+    logoUrl,
+    companyPhone,
+    companyAddress,
+    companyEmail,
+    companyDescription,
+    defaultView,
 }) => {
     const { user, loading: authLoading, signIn, signUp, signOut } = useShopperAuth();
     const { toast } = useToast();
@@ -118,7 +130,11 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     useEffect(() => {
         if (open) {
             if (user) {
-                setActiveView(requiresCompletion ? 'settings' : 'orders');
+                if (defaultView) {
+                    setActiveView(defaultView);
+                } else {
+                    setActiveView(requiresCompletion ? 'settings' : 'orders');
+                }
                 const base = currentProfile || emptyProfile();
                 reset(base);
                 if (user.email) setValue('email', user.email);
@@ -129,7 +145,7 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
                 setRegDone(false);
             }
         }
-    }, [open, user]);
+    }, [open, user, defaultView]);
 
     /* ── Auto-expand active orders ── */
     useEffect(() => {
@@ -299,17 +315,54 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     /* ── LOGIN ── */
     const renderLogin = () => (
         <div className="flex flex-col px-2">
-            <div className="flex flex-col items-center pt-10 pb-6 px-4 text-center">
-                <div className="relative mb-5">
-                    <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-lg relative border border-white/10">
-                        <User className="h-7 w-7 text-white" />
+            <div className="flex flex-col items-center pt-8 pb-5 px-4 text-center">
+                {logoUrl ? (
+                    <div className="relative mb-4">
+                        <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full" />
+                        <img 
+                            src={logoUrl} 
+                            alt={storeName || 'Logo'} 
+                            className="h-20 w-20 object-contain rounded-2xl bg-white p-2 border border-border shadow-md relative" 
+                        />
                     </div>
-                </div>
-                <h2 className="text-[22px] font-extrabold tracking-tight text-foreground">Bienvenido de vuelta</h2>
-                <p className="text-[13px] text-muted-foreground mt-1.5 max-w-[240px] leading-relaxed">
-                    Ingresa para ver tus pedidos y disfrutar de una experiencia rápida.
-                </p>
+                ) : (
+                    <div className="relative mb-4">
+                        <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-lg relative border border-white/10">
+                            <ShoppingBag className="h-7 w-7 text-white" />
+                        </div>
+                    </div>
+                )}
+                <h2 className="text-xl font-extrabold tracking-tight text-foreground">
+                    {storeName ? `Bienvenido a ${storeName}` : 'Bienvenido de vuelta'}
+                </h2>
+                
+                {companyDescription ? (
+                    <p className="text-xs text-muted-foreground mt-2 max-w-[280px] leading-relaxed italic">
+                        "{companyDescription}"
+                    </p>
+                ) : (
+                    <p className="text-[13px] text-muted-foreground mt-1.5 max-w-[240px] leading-relaxed">
+                        Ingresa para ver tus pedidos y disfrutar de una experiencia rápida.
+                    </p>
+                )}
+
+                {(companyPhone || companyAddress) && (
+                    <div className="flex flex-col gap-1 items-center mt-3 pt-3 border-t border-border/40 w-full max-w-[280px] text-[11px] text-muted-foreground">
+                        {companyAddress && (
+                            <div className="flex items-center gap-1.5 text-center justify-center">
+                                <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                                <span className="line-clamp-1">{companyAddress}</span>
+                            </div>
+                        )}
+                        {companyPhone && (
+                            <div className="flex items-center gap-1.5 justify-center">
+                                <Phone className="h-3 w-3 shrink-0 text-primary" />
+                                <span>{companyPhone}</span>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <form onSubmit={handleLoginSubmit} className="px-4 space-y-3">
@@ -410,7 +463,7 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-12 px-6 text-center gap-6 min-h-[480px]"
+            className="flex flex-col items-center justify-center py-8 sm:py-12 px-6 text-center gap-6 sm:min-h-[480px] min-h-[400px]"
         >
             <motion.div
                 initial={{ scale: 0 }}
@@ -446,7 +499,7 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
         if (regDone) return renderSuccess();
 
         return (
-            <div className="flex flex-col min-h-[520px]">
+            <div className="flex flex-col sm:min-h-[520px] min-h-[440px]">
                 {/* Header */}
                 <div className="flex flex-col items-center pt-8 pb-4 px-6 text-center">
                     <motion.div
@@ -904,7 +957,7 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
             </div>
 
             {/* Tab content */}
-            <ScrollArea className="flex-1 max-h-[460px]">
+            <ScrollArea className="flex-1 max-h-[calc(90dvh-170px)] sm:max-h-[460px]">
                 <div className="p-5">
                     <AnimatePresence mode="wait">
                         {activeView === 'orders' && (
@@ -945,11 +998,19 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     ═════════════════════════════════════════════════════════ */
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md p-0 overflow-hidden gap-0 [&>button]:hidden">
+            <DialogContent 
+                centerOnMobile={false} 
+                hideCloseButton={true} 
+                className="max-w-md p-0 sm:overflow-hidden max-sm:overflow-y-auto max-sm:overflow-x-hidden gap-0 sm:rounded-[2rem] rounded-t-[2.5rem] bg-card border-border shadow-2xl"
+            >
                 <DialogTitle className="sr-only">Perfil de Comprador</DialogTitle>
                 <DialogDescription className="sr-only">
                     Accede a tu historial de pedidos y configura tu información de entrega.
                 </DialogDescription>
+                
+                {/* Mobile bottom-sheet pull bar */}
+                <div className="w-12 h-1.5 bg-muted-foreground/20 rounded-full mx-auto my-3 block sm:hidden shrink-0 animate-pulse" />
+                
                 <AnimatePresence mode="wait">
                     {!user ? (
                         <motion.div key="unauth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
