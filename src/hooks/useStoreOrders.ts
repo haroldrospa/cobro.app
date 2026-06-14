@@ -91,6 +91,7 @@ export const useCreateStoreOrder = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['open-orders'] });
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['shopper-orders'] });
     }
   });
 };

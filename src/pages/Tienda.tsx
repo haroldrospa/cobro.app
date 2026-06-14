@@ -643,6 +643,10 @@ const Tienda: React.FC = () => {
       setCustomerEmail('');
       setNeedsChange(false);
       setAmountPayingWith('');
+
+      // Open the profile dialog immediately to show the order status tracking
+      setProfileDialogView('orders');
+      setShowProfileDialog(true);
     } catch (error) {
       toast({
         title: 'Error',

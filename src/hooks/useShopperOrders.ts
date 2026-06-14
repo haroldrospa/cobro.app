@@ -40,10 +40,9 @@ export const useShopperOrders = (email?: string, phone?: string) => {
         // but for now let's at least listen if we have one.
         if (!filter) return;
 
-        console.log('🔄 Subscribing to shopper orders realtime updates for:', filter);
-
+        const channelId = `shopper-orders-realtime-${email || phone}`;
         const channel = shopperSupabase
-            .channel('shopper-orders-realtime')
+            .channel(channelId)
             .on(
                 'postgres_changes',
                 {
