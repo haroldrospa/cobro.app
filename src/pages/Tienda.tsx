@@ -1941,6 +1941,9 @@ const Tienda: React.FC = () => {
         companyEmail={companySettings?.email}
         companyDescription={companySettings?.meta_description}
         defaultView={profileDialogView}
+        cartItemsCount={cartItemCount}
+        cartTotal={cartTotal}
+        onViewCart={() => setShowCart(true)}
       />
 
   {/* Floating Cart Animations */}

@@ -44,6 +44,9 @@ interface ShopperProfileDialogProps {
     companyEmail?: string;
     companyDescription?: string;
     defaultView?: 'orders' | 'settings';
+    cartItemsCount?: number;
+    cartTotal?: number;
+    onViewCart?: () => void;
 }
 
 type AuthMode = 'login' | 'register';
@@ -87,6 +90,9 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     companyEmail,
     companyDescription,
     defaultView,
+    cartItemsCount = 0,
+    cartTotal = 0,
+    onViewCart,
 }) => {
     const { user, loading: authLoading, signIn, signUp, signOut } = useShopperAuth();
     const { toast } = useToast();
@@ -720,92 +726,134 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
             </div>
         );
 
-        if (orders.length === 0) return (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-                <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
-                    <Package className="h-10 w-10 text-muted-foreground/40" />
+        const hasCart = cartItemsCount > 0;
+        const hasOrders = orders.length > 0;
+
+        if (!hasCart && !hasOrders) {
+            return (
+                <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+                        <Package className="h-10 w-10 text-muted-foreground/40" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-base">No tienes pedidos aún</h3>
+                        <p className="text-sm text-muted-foreground mt-1 max-w-[220px] mx-auto">
+                            Cuando realices tu primera compra, aquí verás su estado en tiempo real.
+                        </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                        Ir de compras
+                    </Button>
                 </div>
-                <div>
-                    <h3 className="font-bold text-base">No tienes pedidos aún</h3>
-                    <p className="text-sm text-muted-foreground mt-1 max-w-[220px] mx-auto">
-                        Cuando realices tu primera compra, aquí verás su estado en tiempo real.
-                    </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-                    Ir de compras
-                </Button>
-            </div>
-        );
+            );
+        }
 
         return (
-            <div className="space-y-3">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">
-                    {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
-                </p>
-                {orders.map((order: any) => {
-                    const isExpanded = expandedOrder === order.id;
-                    const isActive = !['delivered', 'cancelled', 'completed'].includes(order.order_status);
-                    return (
-                        <motion.div
-                            key={order.id}
-                            layout
-                            className={cn(
-                                'rounded-2xl border cursor-pointer transition-all',
-                                isExpanded ? 'border-primary/30 bg-primary/5 shadow-sm' : 'border-border/60 bg-card hover:border-primary/20'
-                            )}
-                            onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                        >
-                            <div className="flex items-center gap-3 p-4">
-                                <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0',
-                                    isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
-                                    <ShoppingBag className="h-5 w-5" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">#{order.order_number}</p>
-                                    <p className="text-sm font-bold truncate">{format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}</p>
-                                </div>
-                                <div className="flex flex-col items-end gap-1.5">
-                                    {getStatusBadge(order.order_status)}
-                                    <span className="text-base font-black text-primary">${order.total.toFixed(2)}</span>
-                                </div>
+            <div className="space-y-4">
+                {/* Active Cart Notification */}
+                {hasCart && (
+                    <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 space-y-3 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+                                <ShoppingBag className="h-5 w-5" />
                             </div>
-                            <AnimatePresence>
-                                {isExpanded && (
-                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                        <div className="border-t mx-4 pt-3 pb-4">
-                                            <OrderTracker status={order.order_status} shopType={shopType} />
-                                            <div className="flex justify-between items-center mt-3 pt-3 border-t border-dashed">
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                                    {order.payment_method?.toUpperCase()} • {order.source?.toUpperCase()}
-                                                </span>
-                                                {(storeId && storeName) && (
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm" 
-                                                        className="h-8 gap-2 rounded-xl text-xs font-bold border-primary/20 hover:bg-primary/5 relative"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setActiveChatOrderId(order.id);
-                                                        }}
-                                                    >
-                                                        <MessageCircle className="h-3.5 w-3.5" />
-                                                        Chat del Pedido
-                                                        {unreadCounts[order.id] > 0 && (
-                                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-background animate-pulse">
-                                                                {unreadCounts[order.id]}
-                                                            </span>
-                                                        )}
-                                                    </Button>
-                                                )}
-                                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-bold text-foreground">Pedido en el Carrito</h4>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    {cartItemsCount} {cartItemsCount === 1 ? 'producto' : 'productos'} · ${cartTotal?.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                        <Button 
+                            size="sm" 
+                            className="w-full text-xs font-bold h-9" 
+                            onClick={() => {
+                                onOpenChange(false);
+                                onViewCart?.();
+                            }}
+                        >
+                            Ver y Completar Pedido
+                        </Button>
+                    </div>
+                )}
+
+                {/* Orders Section */}
+                {hasOrders ? (
+                    <div className="space-y-3">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
+                            Historial de Pedidos ({orders.length})
+                        </p>
+                        {orders.map((order: any) => {
+                            const isExpanded = expandedOrder === order.id;
+                            const isActive = !['delivered', 'cancelled', 'completed'].includes(order.order_status);
+                            return (
+                                <motion.div
+                                    key={order.id}
+                                    layout
+                                    className={cn(
+                                        'rounded-2xl border cursor-pointer transition-all',
+                                        isExpanded ? 'border-primary/30 bg-primary/5 shadow-sm' : 'border-border/60 bg-card hover:border-primary/20'
+                                    )}
+                                    onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                                >
+                                    <div className="flex items-center gap-3 p-4">
+                                        <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0',
+                                            isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
+                                            <ShoppingBag className="h-5 w-5" />
                                         </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    );
-                })}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">#{order.order_number}</p>
+                                            <p className="text-sm font-bold truncate">{format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1.5">
+                                            {getStatusBadge(order.order_status)}
+                                            <span className="text-base font-black text-primary">${order.total.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    <AnimatePresence>
+                                        {isExpanded && (
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                                <div className="border-t mx-4 pt-3 pb-4">
+                                                    <OrderTracker status={order.order_status} shopType={shopType} />
+                                                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-dashed">
+                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                                            {order.payment_method?.toUpperCase()} • {order.source?.toUpperCase()}
+                                                        </span>
+                                                        {(storeId && storeName) && (
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="sm" 
+                                                                className="h-8 gap-2 rounded-xl text-xs font-bold border-primary/20 hover:bg-primary/5 relative"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveChatOrderId(order.id);
+                                                                }}
+                                                            >
+                                                                <MessageCircle className="h-3.5 w-3.5" />
+                                                                Chat del Pedido
+                                                                {unreadCounts[order.id] > 0 && (
+                                                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-background animate-pulse">
+                                                                        {unreadCounts[order.id]}
+                                                                    </span>
+                                                                )}
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="py-8 text-center border border-dashed rounded-2xl bg-muted/10 border-border/50">
+                        <Package className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">No tienes pedidos anteriores finalizados.</p>
+                    </div>
+                )}
 
                 {/* Chat Panel Overlay */}
                 <AnimatePresence>
