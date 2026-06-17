@@ -486,12 +486,12 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
     <div
       className={cn(
         "grid",
-        viewMode === 'list' ? "grid-cols-1 gap-3" : {
+        viewMode === 'list' ? "grid-cols-1 gap-2" : {
           1: "grid-cols-1 gap-3",
           2: "grid-cols-2 gap-2",
-          3: "grid-cols-3 gap-2",
-          4: "grid-cols-2 min-[420px]:grid-cols-3 gap-2"
-        }[gridCols] || "grid-cols-2 min-[420px]:grid-cols-3 gap-2"
+          3: "grid-cols-3 gap-1.5",
+          4: "grid-cols-2 min-[420px]:grid-cols-3 gap-1.5"
+        }[gridCols] || "grid-cols-2 min-[420px]:grid-cols-3 gap-1.5"
       )}
     >
       {filteredProducts.map((product) => {
@@ -504,29 +504,29 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
             key={product.id}
             onClick={() => canSelect && onSelect(product)}
             className={cn(
-              "group text-left overflow-hidden border transition-all duration-150 shadow-md relative flex",
+              "group text-left overflow-hidden border transition-all duration-150 shadow-sm relative flex",
               cartQty > 0 
-                ? "border-emerald-500 bg-emerald-500/[0.04] shadow-lg shadow-emerald-500/5" 
-                : "border-emerald-500/10 bg-zinc-900/40 hover:border-emerald-500/20",
-              gridCols >= 4 ? "rounded-2xl" : "rounded-[1.5rem]",
+                ? "border-emerald-500/40 bg-zinc-900/60 shadow-md" 
+                : "border-emerald-500/5 bg-zinc-900/30 hover:border-emerald-500/15",
+              gridCols >= 4 ? "rounded-xl" : "rounded-2xl",
               outOfStock && "opacity-30 grayscale pointer-events-none",
-              viewMode === 'list' ? "flex-row h-20" : "flex-col",
+              viewMode === 'list' ? "flex-row h-16" : "flex-col",
               canSelect && "cursor-pointer"
             )}
           >
             {/* Quantity Badge */}
             {cartQty > 0 && (
-              <div className="absolute top-2 right-2 z-10">
-                <span className="inline-flex items-center h-5 px-1.5 text-[9px] font-black uppercase tracking-tighter rounded-full bg-emerald-600 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)] border border-emerald-400/20">
-                  x{cartQty}
+              <div className="absolute top-1.5 right-1.5 z-10">
+                <span className="inline-flex items-center justify-center h-4.5 min-w-4.5 px-1 text-[8px] font-black rounded-full bg-emerald-600 text-white shadow-md border border-emerald-400/10">
+                  {cartQty}
                 </span>
               </div>
             )}
 
             {/* Image Area — no hover scale on mobile (jank) */}
             <div className={cn(
-              "relative bg-zinc-900/60 overflow-hidden shrink-0 border-r border-emerald-500/5",
-              viewMode === 'list' ? "w-20 h-full" : "aspect-square w-full"
+              "relative bg-zinc-900/40 overflow-hidden shrink-0 border-r border-emerald-500/5",
+              viewMode === 'list' ? "w-16 h-full" : "aspect-square w-full"
             )}>
               {product.image_url ? (
                 <img
@@ -538,14 +538,14 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center opacity-20">
-                  <Package className="h-12 w-12 text-emerald-500" />
+                  <Package className="h-10 w-10 text-emerald-500" />
                 </div>
               )}
 
               {product.track_inventory !== false && (
-                <div className="absolute top-2 left-2">
+                <div className="absolute top-1.5 left-1.5">
                   <span className={cn(
-                    "inline-flex items-center h-5 px-2 text-[9px] font-black uppercase tracking-tighter rounded-full shadow-sm",
+                    "inline-flex items-center h-4 px-1.5 text-[8px] font-black uppercase tracking-tighter rounded shadow-sm",
                     (product.stock || 0) > 10
                       ? "bg-emerald-600/30 text-emerald-400"
                       : "bg-red-600/30 text-red-400"
@@ -559,29 +559,28 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
             {/* Content Area */}
             <div className={cn(
               "p-1.5 flex flex-col justify-between min-w-0 flex-1",
-              viewMode === 'list' ? "p-2.5" : (gridCols >= 4 ? "h-24 sm:h-20" : "h-32")
+              viewMode === 'list' ? "p-2 py-1.5" : (gridCols >= 4 ? "h-22 sm:h-18" : "h-28")
             )}>
               <div className="space-y-0.5">
                 <h4 className={cn(
-                  "font-black leading-[1.2] line-clamp-2 uppercase tracking-tight text-white",
-                  viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[10px]" : "text-[13px]")
+                  "font-bold leading-[1.2] line-clamp-2 uppercase tracking-tight text-white",
+                  viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[9px]" : "text-[11px]")
                 )}>
                   {product.name}
                 </h4>
                 {product.category?.name && gridCols < 4 && viewMode !== 'list' && (
-                  <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600/60 truncate">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-emerald-600/60 truncate">
                     {product.category.name}
                   </p>
                 )}
               </div>
 
               <div className={cn(
-                "flex items-center justify-between border-t border-emerald-500/5",
-                viewMode === 'list' ? "mt-1 pt-1" : (gridCols >= 4 ? "mt-1 pt-1" : "mt-2 pt-2")
+                "flex items-center justify-between border-t border-emerald-500/5 mt-1 pt-1"
               )}>
                 <span className={cn(
-                  "font-black text-emerald-500 tracking-tighter",
-                  viewMode === 'list' ? "text-base" : (gridCols >= 4 ? "text-sm" : "text-xl")
+                  "font-bold text-emerald-500 tracking-tight",
+                  viewMode === 'list' ? "text-sm" : (gridCols >= 4 ? "text-xs" : "text-sm")
                 )}>
                   ${(product.price || 0).toLocaleString()}
                 </span>
@@ -589,7 +588,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                 {cartQty > 0 ? (
                   <div 
                     onClick={(e) => e.stopPropagation()} 
-                    className="flex items-center bg-zinc-800 border border-emerald-500/30 rounded-xl p-0.5"
+                    className="flex items-center bg-zinc-800 border border-emerald-500/20 rounded-lg p-0.5"
                   >
                     <button
                       type="button"
@@ -598,15 +597,15 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                         onUpdateQuantity?.(product.id, cartQty - 1);
                       }}
                       className={cn(
-                        "flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700/50 rounded-lg transition-colors",
-                        viewMode === 'list' ? "h-6 w-6" : (gridCols >= 4 ? "h-5 w-5" : "h-7 w-7")
+                        "flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700/50 rounded transition-colors",
+                        viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                       )}
                     >
-                      <Minus className="h-3 w-3" />
+                      <Minus className="h-2.5 w-2.5" />
                     </button>
                     <span className={cn(
-                      "text-center font-black text-white shrink-0",
-                      viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[10px]" : "w-6 text-xs")
+                      "text-center font-bold text-white shrink-0",
+                      viewMode === 'list' ? "w-5 text-[11px]" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
                     )}>
                       {cartQty}
                     </span>
@@ -617,21 +616,21 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                         onUpdateQuantity?.(product.id, cartQty + 1);
                       }}
                       className={cn(
-                        "flex items-center justify-center text-emerald-500 hover:bg-zinc-700/50 rounded-lg transition-colors",
-                        viewMode === 'list' ? "h-6 w-6" : (gridCols >= 4 ? "h-5 w-5" : "h-7 w-7")
+                        "flex items-center justify-center text-emerald-500 hover:bg-zinc-700/50 rounded transition-colors",
+                        viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                       )}
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-2.5 w-2.5" />
                     </button>
                   </div>
                 ) : (
                   <div className={cn(
-                    "rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm group-active:scale-90 transition-transform duration-100",
-                    viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-6 w-6" : "h-9 w-9")
+                    "rounded bg-emerald-600 flex items-center justify-center shadow-sm group-active:scale-90 transition-transform duration-100",
+                    viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                   )}>
                     <Plus className={cn(
                       "text-white",
-                      viewMode === 'list' ? "h-4 w-4" : (gridCols >= 4 ? "h-3.5 w-3.5" : "h-5 w-5")
+                      viewMode === 'list' ? "h-3.5 w-3.5" : (gridCols >= 4 ? "h-3 w-3" : "h-4 w-4")
                     )} />
                   </div>
                 )}
