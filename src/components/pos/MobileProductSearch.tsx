@@ -67,7 +67,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   } = props;
 
   const { searchTerm, setSearchTerm } = usePOSSearch();
-  const [searchType, setSearchType] = useState<SearchType>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [isVariablePriceDialogOpen, setIsVariablePriceDialogOpen] = useState(false);
   const [selectedVariableProduct, setSelectedVariableProduct] = useState<Product | null>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -86,11 +86,13 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     4: '75px'
   }[gridCols] || '140px';
 
-  const searchTypes = React.useMemo(() => [
-    { type: 'all' as const, label: 'Todo', icon: Asterisk },
-    { type: 'name' as const, label: 'Nombre', icon: Package },
-    { type: 'barcode' as const, label: 'Código', icon: Barcode },
-  ], []);
+  const categories = React.useMemo(() => {
+    const names = products
+      .map(p => p.category?.name)
+      .filter((name): name is string => typeof name === 'string' && name.trim() !== '');
+    return ['Todos', ...Array.from(new Set(names))];
+  }, [products]);
+
   const normalizedProducts = React.useMemo(() => {
     return products.map(p => ({
       ...p,
@@ -108,21 +110,23 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   // Debounce search for performance — only recalculate after user stops typing (150ms)
   const debouncedSearchTerm = useDebounce(searchTerm, 150);
 
-  // 2. Memoize search results to prevent recalculating on every re-render (e.g. when cart updates)
+  // Memoize search results to filter by category and search term
   const filteredProducts = React.useMemo(() => {
     const searchLower = debouncedSearchTerm.toLowerCase().trim();
     
-    if (mode === 'classic' && !searchLower) return [];
-    if (!searchLower) return normalizedProducts.slice(0, 40);
+    let list = normalizedProducts;
 
-    const filtered = normalizedProducts.filter(product => {
-      if (searchType === 'name') {
-        return product._name_lower.includes(searchLower);
-      }
-      if (searchType === 'barcode') {
-        return product._all_barcodes_lower.some(b => b.includes(searchLower));
-      }
-      // 'all' search type
+    // Filter by category if not 'Todos'
+    if (selectedCategory !== 'Todos') {
+      const catLower = selectedCategory.toLowerCase();
+      list = list.filter(product => product._category_lower === catLower);
+    }
+
+    if (!searchLower) {
+      return list.slice(0, 80);
+    }
+
+    const filtered = list.filter(product => {
       return (
         product._name_lower.includes(searchLower) ||
         product._all_barcodes_lower.some(b => b.includes(searchLower)) ||
@@ -131,9 +135,8 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
       );
     });
 
-    return filtered.slice(0, 50);
-  }, [normalizedProducts, debouncedSearchTerm, searchType, mode]);
-  const currentSearchType = searchTypes.find(st => st.type === searchType);
+    return filtered.slice(0, 80);
+  }, [normalizedProducts, debouncedSearchTerm, selectedCategory]);
 
   const handleProductSelect = (product: Product, preMatchedBundle?: any) => {
     if (product.is_variable_price) {
@@ -291,19 +294,19 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
         </div>
 
         {/* Category Pills - Premium Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto flex-nowrap pb-0.5 no-scrollbar w-full">
-          {searchTypes.map((st) => (
+        <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap pb-1 no-scrollbar w-full">
+          {categories.map((cat) => (
             <button
-              key={st.type}
-              onClick={() => setSearchType(st.type)}
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
               className={cn(
-                "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all border whitespace-nowrap shrink-0",
-                searchType === st.type
-                  ? "bg-emerald-600 border-emerald-500 text-white shadow-sm"
-                  : "bg-zinc-900/40 border-emerald-500/10 text-zinc-500 hover:border-emerald-500/30 hover:text-zinc-300"
+                "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border whitespace-nowrap shrink-0",
+                selectedCategory === cat
+                  ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/20"
+                  : "bg-zinc-900/40 border-emerald-500/10 text-zinc-400 hover:border-emerald-500/30 hover:text-zinc-200"
               )}
             >
-              {st.label}
+              {cat}
             </button>
           ))}
         </div>
@@ -439,6 +442,8 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
               viewMode={viewMode}
               gridCols={gridCols}
               onSelect={handleProductSelect}
+              cart={cart}
+              onUpdateQuantity={props.onUpdateQuantity}
             />
           )}
         </div>
@@ -459,13 +464,14 @@ MobileProductSearch.displayName = 'MobileProductSearch';
 export default React.memo(MobileProductSearch);
 
 // ── ISOLATED PRODUCT GRID — React.memo so cart changes never re-render this ──
-// This component receives NO cart prop, so adding/removing items from the cart
-// does NOT cause the product grid to re-render. This is the #1 perf fix.
+// This component receives cart and onUpdateQuantity props to show/adjust quantities on cards
 interface ProductGridProps {
   filteredProducts: any[];
   viewMode: 'grid' | 'list';
   gridCols: number;
   onSelect: (product: any) => void;
+  cart?: CartItem[];
+  onUpdateQuantity?: (id: string, q: number) => void;
 }
 
 const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
@@ -473,6 +479,8 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
   viewMode,
   gridCols,
   onSelect,
+  cart,
+  onUpdateQuantity,
 }) {
   return (
     <div
@@ -489,20 +497,32 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
       {filteredProducts.map((product) => {
         const outOfStock = product.track_inventory !== false && (product.stock || 0) <= 0;
         const canSelect = !outOfStock;
+        const cartQty = cart?.filter(item => item.id === product.id).reduce((sum, item) => sum + item.quantity, 0) || 0;
+
         return (
-          <button
+          <div
             key={product.id}
-            type="button"
-            disabled={!canSelect}
             onClick={() => canSelect && onSelect(product)}
             className={cn(
-              // Base: no backdrop-blur (too expensive per-card)
-              "group text-left overflow-hidden border border-emerald-500/10 bg-zinc-900/40 active:scale-[0.94] transition-transform duration-150 shadow-md",
+              "group text-left overflow-hidden border transition-all duration-150 shadow-md relative flex",
+              cartQty > 0 
+                ? "border-emerald-500 bg-emerald-500/[0.04] shadow-lg shadow-emerald-500/5" 
+                : "border-emerald-500/10 bg-zinc-900/40 hover:border-emerald-500/20",
               gridCols >= 4 ? "rounded-2xl" : "rounded-[1.5rem]",
               outOfStock && "opacity-30 grayscale pointer-events-none",
-              viewMode === 'list' ? "flex flex-row h-20" : "flex flex-col"
+              viewMode === 'list' ? "flex-row h-20" : "flex-col",
+              canSelect && "cursor-pointer"
             )}
           >
+            {/* Quantity Badge */}
+            {cartQty > 0 && (
+              <div className="absolute top-2 right-2 z-10">
+                <span className="inline-flex items-center h-5 px-1.5 text-[9px] font-black uppercase tracking-tighter rounded-full bg-emerald-600 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)] border border-emerald-400/20">
+                  x{cartQty}
+                </span>
+              </div>
+            )}
+
             {/* Image Area — no hover scale on mobile (jank) */}
             <div className={cn(
               "relative bg-zinc-900/60 overflow-hidden shrink-0 border-r border-emerald-500/5",
@@ -565,18 +585,59 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                 )}>
                   ${(product.price || 0).toLocaleString()}
                 </span>
-                <div className={cn(
-                  "rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm group-active:scale-90 transition-transform duration-100",
-                  viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-6 w-6" : "h-9 w-9")
-                )}>
-                  <Plus className={cn(
-                    "text-white",
-                    viewMode === 'list' ? "h-4 w-4" : (gridCols >= 4 ? "h-3.5 w-3.5" : "h-5 w-5")
-                  )} />
-                </div>
+                
+                {cartQty > 0 ? (
+                  <div 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="flex items-center bg-zinc-800 border border-emerald-500/30 rounded-xl p-0.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUpdateQuantity?.(product.id, cartQty - 1);
+                      }}
+                      className={cn(
+                        "flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700/50 rounded-lg transition-colors",
+                        viewMode === 'list' ? "h-6 w-6" : (gridCols >= 4 ? "h-5 w-5" : "h-7 w-7")
+                      )}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className={cn(
+                      "text-center font-black text-white shrink-0",
+                      viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[10px]" : "w-6 text-xs")
+                    )}>
+                      {cartQty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUpdateQuantity?.(product.id, cartQty + 1);
+                      }}
+                      className={cn(
+                        "flex items-center justify-center text-emerald-500 hover:bg-zinc-700/50 rounded-lg transition-colors",
+                        viewMode === 'list' ? "h-6 w-6" : (gridCols >= 4 ? "h-5 w-5" : "h-7 w-7")
+                      )}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm group-active:scale-90 transition-transform duration-100",
+                    viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-6 w-6" : "h-9 w-9")
+                  )}>
+                    <Plus className={cn(
+                      "text-white",
+                      viewMode === 'list' ? "h-4 w-4" : (gridCols >= 4 ? "h-3.5 w-3.5" : "h-5 w-5")
+                    )} />
+                  </div>
+                )}
               </div>
             </div>
-          </button>
+          </div>
         );
       })}
     </div>
