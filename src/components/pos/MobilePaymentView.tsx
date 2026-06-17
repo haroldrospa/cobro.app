@@ -8,13 +8,17 @@ import {
   UserPlus,
   ChevronUp,
   Tag,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
+  Search,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
 import AddCustomerDialog from './AddCustomerDialog';
@@ -35,6 +39,7 @@ interface GlobalDiscount {
 interface Customer {
   id: string;
   name: string;
+  rnc?: string | null;
   credit_used?: number | null;
 }
 
@@ -77,6 +82,17 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   isElectronic = false,
 }) => {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [isCustomerSelectOpen, setIsCustomerSelectOpen] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  const filteredCustomers = React.useMemo(() => {
+    const query = customerSearchQuery.toLowerCase().trim();
+    if (!query) return customers;
+    return customers.filter(c => 
+      c.name.toLowerCase().includes(query) || 
+      (c.rnc && c.rnc.toLowerCase().includes(query))
+    );
+  }, [customers, customerSearchQuery]);
 
   const { data: customerBalance } = useCustomerBalance(selectedCustomer);
 
@@ -215,28 +231,110 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
             </button>
           </div>
 
-          <Select value={selectedCustomer || "none"} onValueChange={(value) => onCustomerChange(value === "none" ? "" : value)}>
-            <SelectTrigger className="w-full h-auto bg-zinc-900/50 border border-white/5 hover:border-white/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all">
-              <div className="flex items-center gap-2.5">
-                <div className={cn("p-1.5 sm:p-2 rounded-xl transition-colors", selectedCustomer ? "bg-green-500/10 text-green-500" : "bg-zinc-800 text-zinc-500")}>
-                  <User className="h-4 w-4" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs sm:text-sm font-black text-white truncate max-w-[200px]">
-                    {selectedCustomerData?.name || 'Clientes Varios'}
-                  </span>
-                </div>
+          <button
+            onClick={() => {
+              setCustomerSearchQuery('');
+              setIsCustomerSelectOpen(true);
+            }}
+            className="w-full h-auto bg-zinc-900/50 border border-white/5 hover:border-white/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className={cn("p-1.5 sm:p-2 rounded-xl transition-colors", selectedCustomer ? "bg-green-500/10 text-green-500" : "bg-zinc-800 text-zinc-500")}>
+                <User className="h-4 w-4" />
               </div>
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-white/10 rounded-xl">
-              <SelectItem value="none" className="font-bold">Clientes Varios (Público General)</SelectItem>
-              {customers.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="font-bold">
-                  {c.name} {c.rnc ? `(RNC: ${c.rnc})` : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <div className="flex flex-col">
+                <span className="text-xs sm:text-sm font-black text-white truncate max-w-[200px]">
+                  {selectedCustomerData?.name || 'Clientes Varios'}
+                </span>
+              </div>
+            </div>
+            <ChevronDown className="h-4 w-4 text-zinc-600 shrink-0" />
+          </button>
+
+          <Dialog open={isCustomerSelectOpen} onOpenChange={setIsCustomerSelectOpen}>
+            <DialogContent className="max-w-md bg-zinc-950 border-white/5 p-6 rounded-[2rem] max-h-[85vh] overflow-hidden flex flex-col">
+              <DialogHeader className="mb-2 shrink-0">
+                <DialogTitle className="text-lg font-black text-white tracking-tight uppercase">
+                  Buscar Cliente
+                </DialogTitle>
+              </DialogHeader>
+
+              {/* Search Input */}
+              <div className="relative mb-4 shrink-0">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por nombre o RNC..."
+                  className="pl-9 bg-zinc-900 border-zinc-800 focus:border-green-500 text-xs font-bold h-10 rounded-xl"
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  autoComplete="off"
+                  autoFocus
+                />
+              </div>
+
+              {/* Customer List */}
+              <div className="flex-1 overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
+                {/* Clientes Varios (Público General) Option */}
+                <button
+                  onClick={() => {
+                    onCustomerChange('');
+                    setIsCustomerSelectOpen(false);
+                  }}
+                  className={cn(
+                    "w-full text-left p-3 rounded-xl transition-colors flex items-center justify-between border border-transparent",
+                    !selectedCustomer
+                      ? "bg-green-500/10 border-green-500/20 text-white"
+                      : "hover:bg-zinc-900 hover:border-white/5 text-zinc-300"
+                  )}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm">Clientes Varios (Público General)</span>
+                  </div>
+                  {!selectedCustomer && <Check className="h-4 w-4 text-green-500" />}
+                </button>
+
+                {filteredCustomers.length > 0 ? (
+                  filteredCustomers.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        onCustomerChange(c.id);
+                        setIsCustomerSelectOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left p-3 rounded-xl transition-colors flex items-center justify-between border border-transparent",
+                        selectedCustomer === c.id
+                          ? "bg-green-500/10 border-green-500/20 text-white"
+                          : "hover:bg-zinc-900 hover:border-white/5 text-zinc-300"
+                      )}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm">{c.name}</span>
+                        {c.rnc && <span className="text-[10px] text-zinc-400 font-mono mt-0.5">RNC: {c.rnc}</span>}
+                      </div>
+                      {selectedCustomer === c.id && <Check className="h-4 w-4 text-green-500" />}
+                    </button>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <span className="text-xs font-bold text-zinc-500 mb-3">No se encontraron clientes</span>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setIsCustomerSelectOpen(false);
+                        setShowAddCustomer(true);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs"
+                    >
+                      <UserPlus className="h-3.5 w-3.5 mr-1" />
+                      Nuevo Cliente
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Customer info badges below the selector */}
           {selectedCustomerData && (
