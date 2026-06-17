@@ -6,7 +6,6 @@ import {
   DollarSign,
   CreditCard,
   UserPlus,
-  ChevronDown,
   ChevronUp,
   Tag,
   ArrowRight
@@ -190,7 +189,6 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                   </span>
                 </div>
               </div>
-              <ChevronDown className="h-4 w-4 text-zinc-600" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-white/10 rounded-xl">
               {mappedInvoiceTypes
@@ -229,7 +227,6 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                   </span>
                 </div>
               </div>
-              <ChevronDown className="h-4 w-4 text-zinc-600" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-white/10 rounded-xl">
               <SelectItem value="none" className="font-bold">Clientes Varios (Público General)</SelectItem>
