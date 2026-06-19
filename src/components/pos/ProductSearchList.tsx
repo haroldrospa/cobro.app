@@ -550,9 +550,13 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     }
   }, [selectedVariableProduct, onAddToCart, setSearchTerm]);
 
-  const handleVariablePriceConfirm = useCallback((price: number) => {
+  const handleVariablePriceConfirm = useCallback((price: number, name?: string) => {
     if (selectedVariableProduct) {
-      onAddToCart({ ...selectedVariableProduct, price });
+      onAddToCart({ 
+        ...selectedVariableProduct, 
+        price,
+        name: name || selectedVariableProduct.name
+      });
       setSearchTerm('');
       setSelectedVariableProduct(null);
     }

@@ -170,9 +170,13 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     setSearchTerm('');
   };
 
-  const handleVariablePriceConfirm = (price: number) => {
+  const handleVariablePriceConfirm = (price: number, name?: string) => {
     if (selectedVariableProduct) {
-      const productWithPrice = { ...selectedVariableProduct, price: price };
+      const productWithPrice = { 
+        ...selectedVariableProduct, 
+        price: price,
+        name: name || selectedVariableProduct.name
+      };
       onAddToCart(productWithPrice);
       setSearchTerm('');
       setSelectedVariableProduct(null);

@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 interface VariablePriceDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (price: number) => void;
+    onConfirm: (price: number, name?: string) => void;
     product: Product | null;
 }
 
@@ -21,11 +21,13 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
     product
 }) => {
     const [price, setPrice] = useState<string>('');
+    const [customName, setCustomName] = useState<string>('');
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (isOpen) {
             setPrice('');
+            setCustomName(product?.name || '');
             setTimeout(() => {
                 inputRef.current?.focus();
             }, 100);
@@ -35,7 +37,7 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
     const handleConfirm = () => {
         const numericPrice = parseFloat(price);
         if (!isNaN(numericPrice) && numericPrice >= 0) {
-            onConfirm(numericPrice);
+            onConfirm(numericPrice, customName);
             onClose();
         }
     };
@@ -70,11 +72,19 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                     </div>
 
                     <div className="p-5 pt-1 space-y-4">
-                        <div className="p-2.5 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Producto</span>
-                            <span className="font-bold text-xs text-zinc-200 truncate max-w-[200px]" title={product.name}>
-                                {product.name}
-                            </span>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="custom-name" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">
+                                Nombre del Producto
+                            </Label>
+                            <Input
+                                id="custom-name"
+                                type="text"
+                                value={customName}
+                                onChange={(e) => setCustomName(e.target.value)}
+                                className="bg-white/5 border-white/5 text-xs text-white focus-visible:ring-green-500/50 rounded-xl"
+                                placeholder="Nombre del producto"
+                                autoComplete="off"
+                            />
                         </div>
 
                         <div className="relative group">

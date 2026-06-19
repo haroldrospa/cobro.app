@@ -29,7 +29,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
       {/* 1. Info del Producto (Izquierda) */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 leading-none">
-          <h4 className="font-black text-[15px] text-foreground truncate group-hover:text-primary transition-colors tracking-tight" title={item.name}>
+          <h4 className="font-black text-[15px] text-foreground break-words group-hover:text-primary transition-colors tracking-tight" title={item.name}>
             {item.name}
           </h4>
           {onUpdateComment && (

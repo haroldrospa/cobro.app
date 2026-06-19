@@ -443,138 +443,165 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Save className="h-5 w-5" />
-            {isEditing ? 'Actualizar Pedido' : 'Guardar Pedido'}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? `Actualizando pedido ${existingOrderNumber}`
-              : 'Guarda el pedido actual para cobrarlo después'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Cliente</Label>
-            <Popover open={isCustomerPopoverOpen} onOpenChange={setIsCustomerPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={isCustomerPopoverOpen}
-                  className="w-full justify-between"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <User className="h-4 w-4 shrink-0 opacity-50" />
-                    {selectedCustomerId 
-                      ? customers.find(c => c.id === selectedCustomerId)?.name 
-                      : customerName || "Seleccionar o escribir cliente..."}
-                  </div>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Buscar cliente..." />
-                  <CommandList>
-                    <CommandEmpty>No se encontró cliente.</CommandEmpty>
-                    <CommandGroup>
-                      {customers.map((customer) => (
-                        <CommandItem
-                          key={customer.id}
-                          value={`${customer.name} ${customer.phone || ''} ${customer.id}`}
-                          onSelect={() => handleCustomerSelect(customer)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span>{customer.name}</span>
-                            {customer.phone && (
-                              <span className="text-xs text-muted-foreground">{customer.phone}</span>
-                            )}
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+      <DialogContent className="sm:max-w-md bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-0 overflow-hidden rounded-2xl shadow-2xl">
+        <div className="relative">
+          {/* Header Area */}
+          <div className="bg-gradient-to-b from-green-500/10 to-transparent p-5 pb-2">
+            <DialogHeader>
+              <div className="flex items-center justify-between mb-2">
+                <div className="bg-green-500/20 p-1.5 rounded-lg w-fit">
+                  <Save className="h-4 w-4 text-green-500" />
+                </div>
+              </div>
+              <DialogTitle className="text-lg font-bold text-white tracking-tight uppercase">
+                {isEditing ? 'Actualizar Pedido' : 'Guardar Pedido'}
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400 text-xs mt-0.5">
+                {isEditing
+                  ? `Actualizando pedido ${existingOrderNumber}`
+                  : 'Guarda el pedido actual para cobrarlo después'}
+              </DialogDescription>
+            </DialogHeader>
           </div>
 
-          {!selectedCustomerId && (
-            <div className="space-y-2">
-              <Label htmlFor="customerName">Nombre Manual</Label>
-              <Input
-                id="customerName"
-                placeholder="Nombre del cliente..."
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
+          <div className="p-5 pt-1 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Cliente</Label>
+              <Popover open={isCustomerPopoverOpen} onOpenChange={setIsCustomerPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isCustomerPopoverOpen}
+                    className="w-full justify-between bg-white/5 border-white/5 text-xs text-white hover:bg-white/10 hover:text-white rounded-xl h-10 focus:ring-green-500/50"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <User className="h-4 w-4 shrink-0 text-green-500/60" />
+                      {selectedCustomerId 
+                        ? customers.find(c => c.id === selectedCustomerId)?.name 
+                        : customerName || "Seleccionar o escribir cliente..."}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-zinc-500" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-zinc-950 border-white/10 rounded-xl shadow-2xl" align="start">
+                  <Command className="bg-transparent text-white">
+                    <CommandInput placeholder="Buscar cliente..." className="border-white/5 text-white" />
+                    <CommandList className="max-h-[160px] overflow-y-auto">
+                      <CommandEmpty className="text-zinc-500 text-xs py-4">No se encontró cliente.</CommandEmpty>
+                      <CommandGroup>
+                        {customers.map((customer) => (
+                          <CommandItem
+                            key={customer.id}
+                            value={`${customer.name} ${customer.phone || ''} ${customer.id}`}
+                            onSelect={() => handleCustomerSelect(customer)}
+                            className="text-zinc-200 hover:bg-white/5 focus:bg-white/5 cursor-pointer rounded-lg py-2"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4 text-green-500",
+                                selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-bold text-xs">{customer.name}</span>
+                              {customer.phone && (
+                                <span className="text-[10px] text-zinc-500 mt-0.5">{customer.phone}</span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {!selectedCustomerId && (
+              <div className="space-y-1.5">
+                <Label htmlFor="customerName" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Nombre Manual</Label>
+                <Input
+                  id="customerName"
+                  placeholder="Nombre del cliente..."
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl h-10"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+
+            {isDelivery && (
+              <div className="grid grid-cols-1 gap-4 border border-white/5 p-3 rounded-xl bg-white/5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="customerPhone" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Teléfono de Delivery</Label>
+                  <Input
+                    id="customerPhone"
+                    placeholder="Ej: 809-555-0123"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl h-10"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="customerAddress" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Ubicación / Dirección</Label>
+                  <Textarea
+                    id="customerAddress"
+                    placeholder="Dirección completa del cliente..."
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="notes" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Notas (opcional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Notas adicionales..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl"
+                rows={3}
               />
             </div>
-          )}
 
-          {isDelivery && (
-            <div className="grid grid-cols-1 gap-4 border p-3 rounded-lg bg-muted/20">
-              <div className="space-y-2">
-                <Label htmlFor="customerPhone">Teléfono de Delivery</Label>
-                <Input
-                  id="customerPhone"
-                  placeholder="Ej: 809-555-0123"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerAddress">Ubicación / Dirección</Label>
-                <Textarea
-                  id="customerAddress"
-                  placeholder="Dirección completa del cliente..."
-                  value={customerAddress}
-                  onChange={(e) => setCustomerAddress(e.target.value)}
-                  rows={2}
-                />
-              </div>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Productos en el carrito</span>
+              <span className="font-bold text-xs text-zinc-200">{cart.length} productos</span>
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas (opcional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Notas adicionales..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          <div className="bg-muted/50 rounded-lg p-3">
-            <div className="text-sm text-muted-foreground">Productos en el carrito</div>
-            <div className="font-semibold">{cart.length} productos</div>
+            <DialogFooter className="flex flex-row gap-2.5 !mt-6">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={onClose}
+                className="flex-1 h-11 rounded-xl font-bold text-zinc-500 hover:text-zinc-100 hover:bg-white/5 text-sm"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={saveOrderMutation.isPending || cart.length === 0}
+                className={cn(
+                  "flex-1 h-11 rounded-xl text-white font-bold shadow-md active:scale-95 transition-all text-sm gap-2", 
+                  isDelivery 
+                    ? "bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400" 
+                    : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400"
+                )}
+              >
+                {isDelivery ? <Bike className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                {isDelivery ? 'Enviar Pedido' : (isEditing ? 'Actualizar' : 'Guardar') + ' Pedido'}
+              </Button>
+            </DialogFooter>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saveOrderMutation.isPending || cart.length === 0}
-            className={cn("gap-2", isDelivery && "bg-emerald-600 hover:bg-emerald-700")}
-          >
-            {isDelivery ? <Bike className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-            {isDelivery ? 'Enviar Pedido' : (isEditing ? 'Actualizar' : 'Guardar') + ' Pedido'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

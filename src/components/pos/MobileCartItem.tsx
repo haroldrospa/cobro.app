@@ -54,7 +54,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 )}
                             </div>
                             <div className="min-w-0 flex-1">
-                                <h4 className="font-bold text-[11px] uppercase tracking-tight truncate leading-tight" title={item.name}>
+                                <h4 className="font-bold text-[11px] uppercase tracking-tight leading-tight break-words" title={item.name}>
                                     {item.name}
                                 </h4>
                                 <div className="flex items-center gap-1.5 mt-0.5">
