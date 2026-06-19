@@ -446,6 +446,14 @@ const POSContent: React.FC = () => {
     setCart(prevCart => prevCart.map(item => item.id === id ? { ...item, comment } : item));
   }, []);
 
+  const updateDiscount = useCallback((id: string, value: number, type: 'percentage' | 'amount') => {
+    setCart(prevCart => prevCart.map(item =>
+      item.id === id
+        ? { ...item, discount: value > 0 ? { value, type } : undefined }
+        : item
+    ));
+  }, []);
+
   const removeFromCart = useCallback((id: string) => {
     setCart(prevCart => prevCart.filter(item => item.id !== id));
   }, []);
@@ -1480,6 +1488,7 @@ const POSContent: React.FC = () => {
               cart={cartWithOffers}
               onUpdateQuantity={updateQuantity}
               onUpdateComment={updateComment}
+              onUpdateDiscount={updateDiscount}
               onRemoveFromCart={removeFromCart}
               calculateItemTotal={calculateItemTotal}
               currentOrderInfo={currentOrderInfo}
@@ -1756,6 +1765,7 @@ const POSContent: React.FC = () => {
                     cart={cartWithOffers}
                     onUpdateQuantity={updateQuantity}
                     onUpdateComment={updateComment}
+                    onUpdateDiscount={updateDiscount}
                     onRemoveFromCart={removeFromCart}
                     calculateItemTotal={calculateItemTotal}
                     currentOrderInfo={currentOrderInfo}
@@ -1823,6 +1833,7 @@ const POSContent: React.FC = () => {
                     cart={cartWithOffers}
                     onUpdateQuantity={updateQuantity}
                     onUpdateComment={updateComment}
+                    onUpdateDiscount={updateDiscount}
                     onRemoveFromCart={removeFromCart}
                     calculateItemTotal={calculateItemTotal}
                     currentOrderInfo={currentOrderInfo}

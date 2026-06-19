@@ -2,7 +2,14 @@
 import { CartItem, GlobalDiscount } from '@/types/pos';
 
 export const calculateItemTotal = (item: CartItem): number => {
-  const itemTotalGross = item.price * item.quantity;
+  let itemTotalGross = item.price * item.quantity;
+  if (item.discount && item.discount.value > 0) {
+    if (item.discount.type === 'percentage') {
+      itemTotalGross = Math.max(0, itemTotalGross - (itemTotalGross * (item.discount.value / 100)));
+    } else {
+      itemTotalGross = Math.max(0, itemTotalGross - item.discount.value);
+    }
+  }
   if (item.cost_includes_tax) {
     return itemTotalGross;
   }
@@ -11,22 +18,40 @@ export const calculateItemTotal = (item: CartItem): number => {
 };
 
 export const calculateTotals = (cart: CartItem[], globalDiscount?: GlobalDiscount) => {
-  // 1. Calcular Subtotal Bruto (Suma de precios de lista)
+  // 1. Calcular Subtotal Bruto (Suma de precios de lista * cantidad)
   const grossSubtotal = cart.reduce((sum, item) => {
     return sum + (item.price * item.quantity);
   }, 0);
 
+  // Calcular el total de descuentos individuales aplicados en los items
+  const individualDiscountTotal = cart.reduce((sum, item) => {
+    if (item.discount && item.discount.value > 0) {
+      if (item.discount.type === 'percentage') {
+        return sum + ((item.price * item.quantity) * (item.discount.value / 100));
+      } else {
+        return sum + item.discount.value;
+      }
+    }
+    return sum;
+  }, 0);
+
+  // Subtotal después de aplicar descuentos individuales
+  const subtotalAfterIndividualDiscounts = Math.max(0, grossSubtotal - individualDiscountTotal);
+
   // 2. Calcular Descuento Global
-  let discountTotal = 0;
+  let globalDiscountAmount = 0;
   if (globalDiscount && globalDiscount.value > 0) {
     if (globalDiscount.type === 'percentage') {
-      discountTotal = grossSubtotal * (globalDiscount.value / 100);
+      globalDiscountAmount = subtotalAfterIndividualDiscounts * (globalDiscount.value / 100);
     } else {
-      discountTotal = globalDiscount.value;
+      globalDiscountAmount = globalDiscount.value;
     }
   }
 
-  // 3. Calcular ITBIS y Total Final
+  // Descuento total = Descuentos individuales + Descuento global
+  const discountTotal = individualDiscountTotal + globalDiscountAmount;
+
+  // 3. Calcular ITBIS y Total Final distribuyendo los descuentos
   let taxTotal = 0;
   let finalTotal = 0;
 
@@ -34,40 +59,39 @@ export const calculateTotals = (cart: CartItem[], globalDiscount?: GlobalDiscoun
     const taxRate = item.tax || 0.18;
     const itemTotalGross = item.price * item.quantity;
 
-    // Proporción de este item en el total bruto para distribuir el descuento
-    const itemProportion = grossSubtotal > 0 ? (itemTotalGross / grossSubtotal) : 0;
-    const itemDiscountGross = discountTotal * itemProportion;
+    // Descuento individual de este item
+    let itemIndividualDiscount = 0;
+    if (item.discount && item.discount.value > 0) {
+      if (item.discount.type === 'percentage') {
+        itemIndividualDiscount = itemTotalGross * (item.discount.value / 100);
+      } else {
+        itemIndividualDiscount = item.discount.value;
+      }
+    }
+
+    // Parte proporcional del descuento global que le corresponde a este item
+    const itemRemainingGross = Math.max(0, itemTotalGross - itemIndividualDiscount);
+    const itemProportion = subtotalAfterIndividualDiscounts > 0 ? (itemRemainingGross / subtotalAfterIndividualDiscounts) : 0;
+    const itemGlobalDiscount = globalDiscountAmount * itemProportion;
+
+    // Descuento total asignado a este item
+    const itemDiscountTotal = itemIndividualDiscount + itemGlobalDiscount;
 
     if (item.cost_includes_tax) {
       // ===== PRODUCTO CON IMPUESTO INCLUIDO =====
-      // El precio YA incluye el impuesto, no debemos sumarlo de nuevo
-
-      // Aplicamos el descuento directo al precio con impuesto incluido
-      const itemTotalAfterDiscount = Math.max(0, itemTotalGross - itemDiscountGross);
-
-      // Calculamos cuánto del precio es impuesto (solo para mostrarlo, NO para sumarlo)
+      const itemTotalAfterDiscount = Math.max(0, itemTotalGross - itemDiscountTotal);
       const itemBaseNet = itemTotalAfterDiscount / (1 + taxRate);
       const itemTax = itemTotalAfterDiscount - itemBaseNet;
 
       taxTotal += itemTax;
-      // El total final ES el precio con impuesto incluido (después del descuento)
       finalTotal += itemTotalAfterDiscount;
-
     } else {
       // ===== PRODUCTO SIN IMPUESTO INCLUIDO =====
-      // El precio NO incluye impuesto, debemos calcularlo y sumarlo
-
-      // Base imponible es el precio sin impuesto
       const itemBaseNet = itemTotalGross;
-
-      // Aplicar descuento a la base
-      const itemBaseAfterDiscount = Math.max(0, itemBaseNet - itemDiscountGross);
-
-      // Calcular impuesto sobre la base después del descuento
+      const itemBaseAfterDiscount = Math.max(0, itemBaseNet - itemDiscountTotal);
       const itemTax = itemBaseAfterDiscount * taxRate;
 
       taxTotal += itemTax;
-      // Total = Base + Impuesto
       finalTotal += (itemBaseAfterDiscount + itemTax);
     }
   });

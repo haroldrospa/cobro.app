@@ -8,6 +8,10 @@ export interface CartItem {
   image_url?: string;
   comment?: string;
   originalPrice?: number;
+  discount?: {
+    value: number;
+    type: 'percentage' | 'amount';
+  };
   offerApplied?: {
     id: string;
     name?: string;
