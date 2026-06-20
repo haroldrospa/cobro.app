@@ -1441,14 +1441,14 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       </div>
 
       {/* Centered Tab Selector */}
-      <div className="flex justify-center mb-6">
-        <div className="inline-flex p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm">
+      <div className="flex justify-center mb-6 w-full px-2">
+        <div className="flex items-center gap-1 p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm overflow-x-auto no-scrollbar max-w-full flex-nowrap">
           <Button
             variant={activeTab === 'products' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('products')}
             className={cn(
-              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest",
+              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
               activeTab === 'products' && "bg-background shadow-lg"
             )}
           >
@@ -1461,7 +1461,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               size="sm"
               onClick={() => setActiveTab('inventory')}
               className={cn(
-                "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest",
+                "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
                 activeTab === 'inventory' && "bg-background shadow-lg"
               )}
             >
@@ -1474,7 +1474,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
             size="sm"
             onClick={() => setActiveTab('history')}
             className={cn(
-              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest",
+              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
               activeTab === 'history' && "bg-background shadow-lg"
             )}
           >
