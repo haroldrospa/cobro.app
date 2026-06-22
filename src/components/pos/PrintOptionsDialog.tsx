@@ -142,6 +142,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [showPrinterSelection, setShowPrinterSelection] = useState(false);
   const [invoiceContentForPrint, setInvoiceContentForPrint] = useState<string>('');
+  const [whatsAppPhone, setWhatsAppPhone] = useState('');
+  const [showWhatsAppInput, setShowWhatsAppInput] = useState(false);
   const { toast } = useToast();
   const { printSettings, companyInfo: dbCompanyInfo } = usePrintSettings();
   const { settings: storeSettings } = useStoreSettings();
@@ -177,8 +179,67 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     return rawSaleData;
   })();
 
-  // Use the invoice number from the sale data (already saved in database, prefers e-NCF if available)
-  const invoiceNumber = saleData.encf || saleData.invoice_number || saleData.invoiceNumber || '000001';
+  const invoiceNumber = saleData?.encf || saleData?.invoice_number || saleData?.invoiceNumber || '000001';
+
+  const handleSendWhatsApp = (customPhone?: string) => {
+    const targetPhone = customPhone || saleData?.customer?.phone;
+    if (!targetPhone) {
+      toast({
+        title: "Número requerido",
+        description: "Por favor ingrese un número de teléfono.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    let phone = targetPhone.replace(/\D/g, '');
+    if (phone.length === 10) {
+      phone = `1${phone}`;
+    }
+
+    let itemsList = '';
+    const items = saleData?.items || [];
+    items.forEach((item: any) => {
+      itemsList += `• ${item.quantity}x ${item.name || item.product?.name || 'Producto'} - $${((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`;
+    });
+
+    const isCredit = saleData?.paymentMethod === 'credit';
+    const formattedDueDate = saleData?.dueDate ? new Date(saleData.dueDate).toLocaleDateString('es-DO') : 'N/A';
+    const formattedInvoiceTotal = (saleData?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    const totalDebtValue = saleData?.customerDebt || (isCredit ? (saleData?.total || 0) : 0);
+    const formattedTotalDebt = totalDebtValue.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+    const message = encodeURIComponent(
+      `*FACTURA ${isCredit ? 'A CRÉDITO' : 'DE VENTA'}* 📄\n\n` +
+      `Estimado/a *${saleData?.customer?.name || 'Cliente'}*,\n\n` +
+      `Le informamos que se ha generado la factura *#${invoiceNumber}* por un monto de *$${formattedInvoiceTotal}*.\n\n` +
+      `*Detalle de la compra:*\n${itemsList}\n` +
+      (isCredit ? `📅 *Fecha de vencimiento:* ${formattedDueDate}\n` : '') +
+      (isCredit ? `💰 *Balance total pendiente:* *$${formattedTotalDebt}*\n\n` : '') +
+      `Le agradecemos su atención. Si tiene alguna pregunta, no dude en contactarnos.\n\n` +
+      `Atentamente,\n*${dbCompanyInfo?.name || 'La Gerencia'}*\n\n` +
+      `*(Mensaje enviado desde Cobro App)*`
+    );
+
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  };
+
+  useEffect(() => {
+    if (saleData?.customer?.phone) {
+      setWhatsAppPhone(saleData.customer.phone);
+    } else {
+      setWhatsAppPhone('');
+    }
+  }, [saleData?.customer]);
+
+  useEffect(() => {
+    if (isOpen && saleData?.paymentMethod === 'credit' && saleData?.customer?.phone) {
+      const timer = setTimeout(() => {
+        handleSendWhatsApp();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, saleData?.id, saleData?.paymentMethod, saleData?.customer?.phone]);
   
   const isElectronic = invoiceNumber.startsWith('E') || saleData.is_electronic || !!saleData.encf;
   const displayInvoiceType = isElectronic 
@@ -1463,6 +1524,21 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                   <span className="ml-2 font-semibold text-sm">Enviar por correo</span>
                 </Button>
               </Card>
+
+              <Card className="group hover:shadow-sm transition-all duration-200 hover:border-primary/50 cursor-pointer">
+                <Button
+                  onClick={() => setShowWhatsAppInput(!showWhatsAppInput)}
+                  className="w-full justify-start h-auto py-2 px-3 hover:bg-transparent"
+                  variant="ghost"
+                >
+                  <div className="p-1.5 rounded-md bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors shrink-0">
+                    <svg className="h-4 w-4 text-emerald-500 fill-current" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.858.002-2.635-1.023-5.11-2.884-6.974C16.526 1.808 14.056.782 11.42.782c-5.449 0-9.883 4.432-9.886 9.876-.001 1.77.464 3.5 1.349 5.018l-.985 3.598 3.69-.968zm13.125-9.33c-.302-.15-1.787-.88-2.063-.98-.276-.1-.477-.15-.677.15-.2.3-.777.98-.95 1.18-.178.2-.355.22-.657.07-1.373-.687-2.39-1.2-3.344-2.83-.252-.43.252-.4.72-.1.42.27.47.45.72.1.25-.35.12-.65-.02-.8-.15-.15-.677-1.63-.927-2.23-.243-.58-.49-.5-.677-.51H9.98c-.177 0-.464.07-.707.33-.243.26-.927.9-1.08 2.2-.153 1.3.8 2.56.913 2.72.113.15 1.565 2.4 3.75 3.34 2.185.94 2.185.62 2.628.58.443-.04 1.426-.58 1.628-1.14.202-.56.202-1.04.14-1.14-.06-.1-.24-.15-.54-.3z"/>
+                    </svg>
+                  </div>
+                  <span className="ml-2 font-semibold text-sm">Enviar por WhatsApp</span>
+                </Button>
+              </Card>
             </div>
 
             {showEmailInput && (
@@ -1493,6 +1569,36 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       variant="outline"
                       onClick={() => setShowEmailInput(false)}
                       disabled={isEmailLoading}
+                      className="h-8 text-xs px-3"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {showWhatsAppInput && (
+              <Card className="p-2 bg-accent/10 border-accent">
+                <div className="space-y-1.5">
+                  <div className="text-[10px] text-muted-foreground font-medium">WhatsApp (con código de área, ej: 8091234567):</div>
+                  <div className="flex gap-1.5">
+                    <Input
+                      type="text"
+                      placeholder="8091234567"
+                      value={whatsAppPhone}
+                      onChange={(e) => setWhatsAppPhone(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    <Button
+                      onClick={() => handleSendWhatsApp(whatsAppPhone)}
+                      className="h-8 text-xs px-4 bg-emerald-600 hover:bg-emerald-500 text-white"
+                    >
+                      Enviar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowWhatsAppInput(false)}
                       className="h-8 text-xs px-3"
                     >
                       Cancelar
