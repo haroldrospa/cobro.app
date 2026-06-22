@@ -208,7 +208,16 @@ const POSContent: React.FC = () => {
   };
 
   const { data: activeSession, isLoading: isLoadingSession, isFetching: isFetchingSession } = useActiveSession();
-  const { profile, isLoading: isLoadingProfile, isPending: isPendingProfile } = useUserProfile();
+  const { profile: rawProfile, isLoading: isLoadingProfile, isPending: isPendingProfile } = useUserProfile();
+  const profile = rawProfile || {
+    id: '00000000-0000-0000-0000-000000000000',
+    full_name: 'Usuario',
+    email: '',
+    user_number: '',
+    store_id: '00000000-0000-0000-0000-000000000000',
+    role: 'admin',
+    is_active: true,
+  };
 
   const { data: allProducts = [], isLoading: productsQueryLoading, isFetching: productsQueryFetching } = useProductsOffline();
   // Solo mostrar pantalla de carga si NO hay ningún producto en caché todavía
@@ -220,8 +229,61 @@ const POSContent: React.FC = () => {
   const { data: invoiceTypes = [] } = useInvoiceTypes();
   const createSale = useCreateSaleOffline();
   const { toast } = useToast();
-  const { data: store, isLoading: isLoadingStore, isPending: isPendingStore } = useUserStore();
-  const { settings: storeSettings, loadingSettings, updateSettings } = useStoreSettings();
+  const { data: rawStore, isLoading: isLoadingStore, isPending: isPendingStore } = useUserStore();
+  const store = rawStore || {
+    id: profile?.store_id || '00000000-0000-0000-0000-000000000000',
+    store_code: 'STORE',
+    store_name: 'Mi Tienda',
+    slug: 'mi-tienda',
+    is_active: true,
+  };
+  const { settings: rawStoreSettings, loadingSettings, updateSettings } = useStoreSettings();
+  const storeSettings = {
+    invoice_prefix: 'FAC-',
+    auto_increment: true,
+    show_tax: true,
+    default_tax_rate: 18,
+    currency: 'DOP',
+    payment_terms: 15,
+    invoice_footer_text: 'Gracias por su preferencia',
+    payment_methods: [
+      { id: 'cash', name: 'Efectivo', enabled: true },
+      { id: 'card', name: 'Tarjeta', enabled: true, surcharge_percentage: 0 },
+      { id: 'transfer', name: 'Transferencia', enabled: true },
+      { id: 'check', name: 'Cheque', enabled: true },
+      { id: 'credit', name: 'Crédito', enabled: true }
+    ],
+    low_stock_alert: true,
+    low_stock_threshold: 10,
+    notifications_enabled: true,
+    auto_backup: false,
+    theme: 'light',
+    language: 'es',
+    timezone: 'America/Santo_Domingo',
+    paper_size: '80mm',
+    use_thermal_printer: false,
+    thermal_printer_name: null,
+    show_barcode: false,
+    invoice_font_size: 12,
+    web_order_sound_enabled: true,
+    web_order_sound_type: 'chime',
+    web_order_sound_volume: 0.7,
+    afp_rate: 2.87,
+    sfs_rate: 3.04,
+    isr_rate: 0,
+    infotep_rate: 1.0,
+    enable_afp: true,
+    enable_sfs: true,
+    enable_isr: false,
+    enable_infotep: false,
+    afp_type: 'percentage',
+    sfs_type: 'percentage',
+    isr_type: 'percentage',
+    infotep_type: 'percentage',
+    pos_view_mode: 'grid',
+    pos_layout_mode: 'catalog',
+    ...rawStoreSettings
+  } as any;
   const { config: alanubeConfig } = useAlanubeConfig();
   const isElectronicActive = alanubeConfig?.is_active || false;
 
