@@ -200,7 +200,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     let itemsList = '';
     const items = saleData?.items || [];
     items.forEach((item: any) => {
-      itemsList += `• ${item.quantity}x ${item.name || item.product?.name || 'Producto'} - $${((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`;
+      itemsList += `• ${item.quantity}x ${item.name || item.product?.name || 'Producto'} ($${((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })})\n`;
     });
 
     const isCredit = saleData?.paymentMethod === 'credit';
@@ -209,16 +209,22 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const totalDebtValue = saleData?.customerDebt || (isCredit ? (saleData?.total || 0) : 0);
     const formattedTotalDebt = totalDebtValue.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
+    const companyName = (dbCompanyInfo?.name || 'La Gerencia').toUpperCase();
+
     const message = encodeURIComponent(
-      `*FACTURA ${isCredit ? 'A CRÉDITO' : 'DE VENTA'}* 📄\n\n` +
+      `*${companyName}*\n` +
+      `*Notificación de Facturación*\n` +
+      `---------------------------------------------\n\n` +
       `Estimado/a *${saleData?.customer?.name || 'Cliente'}*,\n\n` +
-      `Le informamos que se ha generado la factura *#${invoiceNumber}* por un monto de *$${formattedInvoiceTotal}*.\n\n` +
-      `*Detalle de la compra:*\n${itemsList}\n` +
-      (isCredit ? `📅 *Fecha de vencimiento:* ${formattedDueDate}\n` : '') +
-      (isCredit ? `💰 *Balance total pendiente:* *$${formattedTotalDebt}*\n\n` : '') +
-      `Le agradecemos su atención. Si tiene alguna pregunta, no dude en contactarnos.\n\n` +
-      `Atentamente,\n*${dbCompanyInfo?.name || 'La Gerencia'}*\n\n` +
-      `*(Mensaje enviado desde Cobro App)*`
+      `Se ha registrado una nueva factura ${isCredit ? 'a crédito' : 'de venta'} en su cuenta:\n\n` +
+      `• *Factura:* #${invoiceNumber}\n` +
+      `• *Monto:* $${formattedInvoiceTotal}\n` +
+      (isCredit ? `• *Vencimiento:* ${formattedDueDate}\n\n` : '\n') +
+      `*Detalle de compra:*\n${itemsList}\n` +
+      (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\n` : '') +
+      `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
+      `¡Gracias por su preferencia!\n\n` +
+      `_(Mensaje automático)_`
     );
 
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');

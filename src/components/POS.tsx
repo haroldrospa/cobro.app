@@ -698,23 +698,30 @@ const POSContent: React.FC = () => {
 
         let itemsList = '';
         cartWithOffers.forEach(item => {
-          itemsList += `• ${item.quantity}x ${item.name} - $${(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`;
+          itemsList += `• ${item.quantity}x ${item.name} ($${(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2 })})\n`;
         });
 
         const formattedDueDate = dueDate ? new Date(dueDate).toLocaleDateString('es-DO') : 'N/A';
         const formattedInvoiceTotal = finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
         const formattedTotalDebt = finalSaleData.customerDebt.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
+        const companyName = (companyInfo?.name || 'La Gerencia').toUpperCase();
+
         const message = encodeURIComponent(
-          `*FACTURA A CRÉDITO* 📄\n\n` +
+          `*${companyName}*\n` +
+          `*Notificación de Facturación*\n` +
+          `---------------------------------------------\n\n` +
           `Estimado/a *${selectedCustomerData.name}*,\n\n` +
-          `Le informamos que se ha generado la factura a crédito *#${saleResult.invoice_number}* por un monto de *$${formattedInvoiceTotal}*.\n\n` +
-          `*Detalle de la compra:*\n${itemsList}\n` +
-          `📅 *Fecha de vencimiento:* ${formattedDueDate}\n` +
-          `💰 *Balance total pendiente:* *$${formattedTotalDebt}*\n\n` +
-          `Le agradecemos su atención. Si tiene alguna pregunta, no dude en contactarnos.\n\n` +
-          `Atentamente,\n*${companyInfo?.name || 'La Gerencia'}*\n\n` +
-          `*(Mensaje automático enviado desde Cobro App)*`
+          `Se ha registrado una nueva factura a crédito en su cuenta:\n\n` +
+          `• *Factura:* #${saleResult.invoice_number}\n` +
+          `• *Monto:* $${formattedInvoiceTotal}\n` +
+          `• *Vencimiento:* ${formattedDueDate}\n\n` +
+          `*Detalle de compra:*\n${itemsList}\n` +
+          `*Balance Pendiente:*\n` +
+          `Su deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\n` +
+          `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
+          `¡Gracias por su preferencia!\n\n` +
+          `_(Mensaje automático)_`
         );
 
         window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
