@@ -627,6 +627,37 @@ const POSContent: React.FC = () => {
       // Show success IMMEDIATELY
       setSaleData(finalSaleData);
 
+      // Enviar notificación de WhatsApp automáticamente para ventas a crédito
+      if (paymentMethod === 'credit' && selectedCustomerData?.phone) {
+        let phone = selectedCustomerData.phone.replace(/\D/g, '');
+        if (phone.length === 10) {
+          phone = `1${phone}`;
+        }
+
+        let itemsList = '';
+        cartWithOffers.forEach(item => {
+          itemsList += `• ${item.quantity}x ${item.name} - $${(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`;
+        });
+
+        const formattedDueDate = dueDate ? new Date(dueDate).toLocaleDateString('es-DO') : 'N/A';
+        const formattedInvoiceTotal = finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        const formattedTotalDebt = finalSaleData.customerDebt.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+        const message = encodeURIComponent(
+          `*FACTURA A CRÉDITO* 📄\n\n` +
+          `Estimado/a *${selectedCustomerData.name}*,\n\n` +
+          `Le informamos que se ha generado la factura a crédito *#${saleResult.invoice_number}* por un monto de *$${formattedInvoiceTotal}*.\n\n` +
+          `*Detalle de la compra:*\n${itemsList}\n` +
+          `📅 *Fecha de vencimiento:* ${formattedDueDate}\n` +
+          `💰 *Balance total pendiente:* *$${formattedTotalDebt}*\n\n` +
+          `Le agradecemos su atención. Si tiene alguna pregunta, no dude en contactarnos.\n\n` +
+          `Atentamente,\n*${companyInfo?.name || 'La Gerencia'}*\n\n` +
+          `*(Mensaje automático enviado desde Cobro App)*`
+        );
+
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      }
+
       // Reset state for next sale
       setCart([]);
       setSelectedCustomer('');
