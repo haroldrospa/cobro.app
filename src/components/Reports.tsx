@@ -108,7 +108,8 @@ const Reports = () => {
 
   const { data: sales = [] } = useSales({
     dateFrom: dateRange?.from,
-    dateTo: dateRange?.to
+    dateTo: dateRange?.to,
+    includeItems: true
   });
   const { data: products = [] } = useProducts();
   const { data: customers = [] } = useCustomers();

@@ -130,6 +130,7 @@ const Dashboard: React.FC = () => {
   const { data: currentMonthSales = [] } = useSales({
     dateFrom: currentMonthDates.from,
     dateTo: currentMonthDates.to,
+    includeItems: true,
   });
   
   const monthlyInvoices = currentMonthSales.length;

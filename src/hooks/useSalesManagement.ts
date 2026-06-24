@@ -63,6 +63,7 @@ export interface SalesFilters {
   dateTo?: Date;
   minAmount?: number;
   maxAmount?: number;
+  includeItems?: boolean;
 }
 
 export const useSales = (filters: SalesFilters = {}) => {
@@ -79,13 +80,15 @@ export const useSales = (filters: SalesFilters = {}) => {
         .eq('id', user.id)
         .maybeSingle();
 
-      let query = supabase
-        .from('sales')
-        .select(`
-          *,
-          customer:customers(name, rnc, phone, email),
-          profile:profiles(full_name),
-          invoice_type:invoice_types(name, code),
+      let selectFields = `
+        *,
+        customer:customers(name, rnc, phone, email),
+        profile:profiles(full_name),
+        invoice_type:invoice_types(name, code)
+      `;
+
+      if (filters.includeItems) {
+        selectFields += `,
           sale_items:sale_items(
             id,
             product_id,
@@ -99,7 +102,12 @@ export const useSales = (filters: SalesFilters = {}) => {
             total,
             product:products(name, image_url)
           )
-        `)
+        `;
+      }
+
+      let query = supabase
+        .from('sales')
+        .select(selectFields)
         .order('created_at', { ascending: false });
 
       // Filter by store_id

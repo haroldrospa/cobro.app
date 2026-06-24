@@ -31,6 +31,19 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
   const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
   const [selectedSaleForPreview, setSelectedSaleForPreview] = React.useState<Sale | null>(null);
 
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 50;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [sales.length]);
+
+  const totalPages = Math.ceil(sales.length / itemsPerPage);
+  const paginatedSales = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sales.slice(startIndex, startIndex + itemsPerPage);
+  }, [sales, currentPage]);
+
   const handlePreview = (sale: Sale) => {
     setSelectedSaleForPreview(sale);
     setPreviewDialogOpen(true);
@@ -138,7 +151,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sales.map((sale) => (
+              {paginatedSales.map((sale) => (
                 <TableRow 
                   key={sale.id} 
                   className="hover:bg-muted/30 transition-colors cursor-pointer" 
@@ -205,7 +218,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
 
         {/* Mobile View (Cards) */}
         <div className="md:hidden divide-y divide-border">
-          {sales.map((sale) => (
+          {paginatedSales.map((sale) => (
             <div 
               key={sale.id} 
               className="p-4 space-y-4 hover:bg-muted/20 transition-colors cursor-pointer" 
@@ -262,6 +275,38 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
             </div>
           ))}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-border/40 bg-muted/10">
+            <span className="text-xs text-muted-foreground">
+              Mostrando del {((currentPage - 1) * itemsPerPage) + 1} al {Math.min(currentPage * itemsPerPage, sales.length)} de {sales.length} facturas
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="h-8 rounded-xl text-xs font-bold"
+              >
+                Anterior
+              </Button>
+              <span className="text-xs font-bold px-2">
+                Página {currentPage} de {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="h-8 rounded-xl text-xs font-bold"
+              >
+                Siguiente
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
 
       {selectedSaleForPrint && (
