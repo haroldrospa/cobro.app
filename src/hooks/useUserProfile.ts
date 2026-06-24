@@ -12,6 +12,7 @@ export interface UserProfile {
   is_active: boolean | null;
   avatar_url?: string | null;
   rnc?: string | null;
+  phone?: string | null;
 }
 
 const PROFILE_CACHE_KEY = 'cobro_user_profile_cache_v2';
@@ -54,7 +55,7 @@ const fetchUserProfile = async (): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, email, user_number, store_id, role')
+      .select('id, full_name, email, user_number, store_id, role, phone')
       .eq('id', userId)
       .maybeSingle();
 
@@ -82,13 +83,15 @@ const fetchUserProfile = async (): Promise<UserProfile | null> => {
       }
     }
 
-    // Get avatar and rnc from auth metadata (no extra fetch needed)
+    // Get avatar, rnc and phone from auth metadata if not in profiles
     let avatarUrl: string | null = null;
     let rnc: string | null = null;
+    let metadataPhone: string | null = null;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       avatarUrl = user?.user_metadata?.avatar_url ?? null;
       rnc = user?.user_metadata?.rnc ?? null;
+      metadataPhone = user?.user_metadata?.phone ?? null;
     } catch { /* ignore */ }
 
     const profile: UserProfile = {
@@ -101,6 +104,7 @@ const fetchUserProfile = async (): Promise<UserProfile | null> => {
       is_active: null,
       avatar_url: avatarUrl,
       rnc: rnc,
+      phone: data.phone || metadataPhone,
     };
 
     // Persist to localStorage for next boot

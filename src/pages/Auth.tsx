@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
 import { z } from 'zod';
 import cobroLogo from '@/assets/cobro-logo-light.png';
 
@@ -19,7 +19,8 @@ const loginSchema = z.object({
 
 const step1Schema = z.object({
   fullName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  email: z.string().email('Email inválido')
+  email: z.string().email('Email inválido'),
+  phone: z.string().min(10, 'El teléfono debe tener al menos 10 dígitos')
 });
 
 const step2Schema = z.object({
@@ -40,6 +41,7 @@ const signupSchema = z.object({
   companyName: z.string().min(2, 'El nombre de la empresa debe tener al menos 2 caracteres'),
   rnc: z.string().min(9, 'El RNC/Cédula es obligatorio y debe tener mínimo 9 dígitos'),
   email: z.string().email('Email inválido'),
+  phone: z.string().min(10, 'El teléfono debe tener al menos 10 dígitos'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   confirmPassword: z.string()
 }).refine(data => data.password === data.confirmPassword, {
@@ -56,6 +58,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [rnc, setRnc] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('basic');
@@ -176,7 +179,7 @@ const Auth = () => {
     setErrors({});
     let hasError = false;
     try {
-      if (step === 1) step1Schema.parse({ fullName, email });
+      if (step === 1) step1Schema.parse({ fullName, email, phone });
       if (step === 2) step2Schema.parse({ companyName, rnc });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -205,7 +208,7 @@ const Auth = () => {
     e.preventDefault();
     setErrors({});
     try {
-      signupSchema.parse({ fullName, companyName, rnc, email, password, confirmPassword });
+      signupSchema.parse({ fullName, companyName, rnc, email, phone, password, confirmPassword });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -232,6 +235,7 @@ const Auth = () => {
             full_name: fullName,
             company_name: companyName,
             rnc: rnc,
+            phone: phone,
             plan_id: 'basic',
             shop_type: selectedBusinessType,
             onboarding_completed: true
@@ -465,6 +469,22 @@ const Auth = () => {
                           />
                         </div>
                         {errors.email && <p className="text-[10px] text-red-400">{errors.email}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-phone" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Teléfono móvil</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
+                          <Input
+                            id="signup-phone"
+                            type="tel"
+                            placeholder="Ej. 8095551234"
+                            value={phone}
+                            onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 15))}
+                            className={inputCls}
+                          />
+                        </div>
+                        {errors.phone && <p className="text-[10px] text-red-400">{errors.phone}</p>}
                       </div>
 
                       <Button
