@@ -222,15 +222,15 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   };
 
   return (
-    <div className="h-full flex flex-col bg-zinc-950/20 backdrop-blur-xl relative">
+    <div className="h-full flex flex-col bg-background relative">
       {/* ── PREMIUM EBONY & EMERALD SEARCH BAR ── */}
-      <div className="px-3 py-2 space-y-2 bg-zinc-950/40 backdrop-blur-2xl border-b border-emerald-500/10 sticky top-0 z-40">
+      <div className="px-3 py-2 space-y-2 bg-card border-b border-emerald-500/10 sticky top-0 z-40">
         {/* Top Header Row: Menu, Profile, Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {menuButton && <div className="shrink-0">{menuButton}</div>}
             {companyLogo && (
-              <div className="hidden sm:flex h-10 w-10 relative shrink-0 rounded-xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/5 items-center justify-center p-1 shadow-xl">
+              <div className="hidden sm:flex h-10 w-10 relative shrink-0 rounded-xl overflow-hidden bg-muted border border-border items-center justify-center p-1 shadow-xl">
                 <img 
                   src={companyLogo} 
                   alt="Logo" 
@@ -241,7 +241,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
             {userName && (
               <div className="hidden sm:flex flex-col shrink-0">
                 <span className="text-[9px] text-emerald-500/60 font-black uppercase tracking-widest leading-none mb-1">Cajero(a)</span>
-                <span className="text-[12px] font-bold text-white/90 truncate max-w-[150px] leading-none">{userName}</span>
+                <span className="text-[12px] font-bold text-foreground/90 truncate max-w-[150px] leading-none">{userName}</span>
               </div>
             )}
           </div>
@@ -261,17 +261,17 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-800/50 text-zinc-400">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted text-muted-foreground">
                   <Settings2 className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 p-3 rounded-[2rem] bg-zinc-900/95 border-emerald-500/20 backdrop-blur-2xl">
+              <DropdownMenuContent align="end" className="w-56 p-3 rounded-[2rem] bg-popover border-emerald-500/20 shadow-2xl">
                 <DropdownMenuLabel className="px-2 pb-3 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500/70">Diseño POS</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={() => onViewModeChange?.('grid')} className="rounded-2xl py-3 focus:bg-emerald-500/10 text-zinc-300">
+                <DropdownMenuItem onSelect={() => onViewModeChange?.('grid')} className="rounded-2xl py-3 focus:bg-emerald-500/10 text-foreground">
                   <div className="flex items-center gap-3 font-bold text-sm uppercase tracking-wider"><LayoutGrid className="h-4 w-4" /> Cuadrícula</div>
                   {viewMode === 'grid' && <div className="ml-auto h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onViewModeChange?.('list')} className="rounded-2xl py-3 focus:bg-emerald-500/10 text-zinc-300">
+                <DropdownMenuItem onSelect={() => onViewModeChange?.('list')} className="rounded-2xl py-3 focus:bg-emerald-500/10 text-foreground">
                   <div className="flex items-center gap-3 font-bold text-sm uppercase tracking-wider"><ListIcon className="h-4 w-4" /> Lista</div>
                   {viewMode === 'list' && <div className="ml-auto h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
                 </DropdownMenuItem>
@@ -288,7 +288,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
             ref={searchInputRef}
             type="text"
             placeholder="Escanear o buscar producto..."
-            className="pl-9 pr-3 h-10 bg-zinc-900/60 dark:bg-zinc-950/60 backdrop-blur-xl border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all rounded-xl shadow-md font-bold text-xs tracking-tight placeholder:text-zinc-500 w-full"
+            className="pl-9 pr-3 h-10 bg-background border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all rounded-xl shadow-md font-bold text-xs tracking-tight placeholder:text-muted-foreground text-foreground w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -307,7 +307,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
                 "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border whitespace-nowrap shrink-0",
                 selectedCategory === cat
                   ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/20"
-                  : "bg-zinc-900/40 border-emerald-500/10 text-zinc-400 hover:border-emerald-500/30 hover:text-zinc-200"
+                  : "bg-muted border-emerald-500/10 text-muted-foreground hover:border-emerald-500/30 hover:text-foreground"
               )}
             >
               {cat}
@@ -510,8 +510,8 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
             className={cn(
               "group text-left overflow-hidden border transition-all duration-150 shadow-sm relative flex",
               cartQty > 0 
-                ? "border-emerald-500/40 bg-zinc-900/60 shadow-md" 
-                : "border-emerald-500/5 bg-zinc-900/30 hover:border-emerald-500/15",
+                ? "border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-500/20 shadow-md" 
+                : "border-border bg-card hover:border-emerald-500/20",
               gridCols >= 4 ? "rounded-xl" : "rounded-2xl",
               outOfStock && "opacity-30 grayscale pointer-events-none",
               viewMode === 'list' ? "flex-row h-16" : "flex-col",
@@ -529,7 +529,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
 
             {/* Image Area — no hover scale on mobile (jank) */}
             <div className={cn(
-              "relative bg-zinc-900/40 overflow-hidden shrink-0 border-r border-emerald-500/5",
+              "relative bg-muted overflow-hidden shrink-0 border-r border-border",
               viewMode === 'list' ? "w-16 h-full" : "aspect-square w-full"
             )}>
               {product.image_url ? (
@@ -551,8 +551,8 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                   <span className={cn(
                     "inline-flex items-center h-4 px-1.5 text-[8px] font-black uppercase tracking-tighter rounded shadow-sm",
                     (product.stock || 0) > 10
-                      ? "bg-emerald-600/30 text-emerald-400"
-                      : "bg-red-600/30 text-red-400"
+                      ? "bg-emerald-600/30 text-emerald-600 dark:text-emerald-400"
+                      : "bg-red-600/30 text-red-600 dark:text-red-400"
                   )}>
                     {product.stock || 0}
                   </span>
@@ -567,7 +567,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
             )}>
               <div className="space-y-0.5">
                 <h4 className={cn(
-                  "font-bold leading-[1.2] line-clamp-2 uppercase tracking-tight text-white",
+                  "font-bold leading-[1.2] line-clamp-2 uppercase tracking-tight text-foreground",
                   viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[9px]" : "text-[11px]")
                 )}>
                   {product.name}
@@ -580,10 +580,10 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
               </div>
 
               <div className={cn(
-                "flex items-center justify-between border-t border-emerald-500/5 mt-1 pt-1"
+                "flex items-center justify-between border-t border-border mt-1 pt-1"
               )}>
                 <span className={cn(
-                  "font-bold text-emerald-500 tracking-tight",
+                  "font-bold text-emerald-600 dark:text-emerald-500 tracking-tight",
                   viewMode === 'list' ? "text-sm" : (gridCols >= 4 ? "text-xs" : "text-sm")
                 )}>
                   ${(product.price || 0).toLocaleString()}
@@ -592,7 +592,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                 {cartQty > 0 ? (
                   <div 
                     onClick={(e) => e.stopPropagation()} 
-                    className="flex items-center bg-zinc-800 border border-emerald-500/20 rounded-lg p-0.5"
+                    className="flex items-center bg-muted border border-emerald-500/20 rounded-lg p-0.5"
                   >
                     <button
                       type="button"
@@ -601,14 +601,14 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                         onUpdateQuantity?.(product.id, cartQty - 1);
                       }}
                       className={cn(
-                        "flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700/50 rounded transition-colors",
+                        "flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded transition-colors",
                         viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                       )}
                     >
                       <Minus className="h-2.5 w-2.5" />
                     </button>
                     <span className={cn(
-                      "text-center font-bold text-white shrink-0",
+                      "text-center font-bold text-foreground shrink-0",
                       viewMode === 'list' ? "w-5 text-[11px]" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
                     )}>
                       {cartQty}
@@ -620,7 +620,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                         onUpdateQuantity?.(product.id, cartQty + 1);
                       }}
                       className={cn(
-                        "flex items-center justify-center text-emerald-500 hover:bg-zinc-700/50 rounded transition-colors",
+                        "flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-accent/50 rounded transition-colors",
                         viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                       )}
                     >
@@ -629,7 +629,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                   </div>
                 ) : (
                   <div className={cn(
-                    "rounded bg-emerald-600 flex items-center justify-center shadow-sm group-active:scale-90 transition-transform duration-100",
+                    "rounded bg-primary flex items-center justify-center shadow-sm group-active:scale-90 transition-transform duration-100",
                     viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                   )}>
                     <Plus className={cn(

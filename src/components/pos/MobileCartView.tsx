@@ -52,7 +52,7 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
           <div className="absolute -inset-4 bg-green-500/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
           
           {/* Main icon container */}
-          <div className="relative bg-zinc-900/60 backdrop-blur-3xl rounded-[3rem] p-10 border border-white/5 shadow-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+          <div className="relative bg-card rounded-[3rem] p-10 border border-border shadow-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
             <PackageSearch className="h-20 w-20 text-green-500/40 relative z-10" />
             <div className="absolute -top-2 -right-2 bg-green-500 h-8 w-8 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/40 border border-white/20">
               <ShoppingCart className="h-4 w-4 text-white" />
@@ -60,14 +60,14 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
           </div>
         </div>
 
-        <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic mb-3">
+        <h3 className="text-3xl font-black text-foreground uppercase tracking-tighter italic mb-3">
           Carrito Vacío
         </h3>
         <div className="space-y-1 max-w-[240px]">
-          <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-[0.3em]">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
             Tu orden está esperando
           </p>
-          <p className="text-[10px] font-medium text-green-500/50 uppercase tracking-widest leading-relaxed">
+          <p className="text-[10px] font-medium text-emerald-500/70 uppercase tracking-widest leading-relaxed">
             Agrega productos desde el catálogo para iniciar una nueva venta
           </p>
         </div>
@@ -90,10 +90,10 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
 
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Items en orden</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Items en orden</p>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-black text-white">{cart.length}</span>
-              <span className="text-zinc-500 font-bold">productos</span>
+              <span className="text-2xl font-black text-foreground">{cart.length}</span>
+              <span className="text-muted-foreground font-bold">productos</span>
             </div>
           </div>
 
@@ -103,7 +103,7 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={onSaveOrder}
-                className="h-8 rounded-full bg-zinc-800/80 border-green-500/30 text-green-500 hover:bg-green-500/10 hover:text-green-400 font-black uppercase tracking-widest text-[10px] px-4 shadow-sm"
+                className="h-8 rounded-full bg-secondary border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10 font-black uppercase tracking-widest text-[10px] px-4 shadow-sm"
               >
                 {currentOrderInfo ? 'Actualizar Pedido' : 'Guardar Pedido'}
               </Button>
@@ -119,7 +119,7 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full text-zinc-500 hover:text-white"
+                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
                     onClick={onClearOrder}
                   >
                     <X className="h-4 w-4" />
@@ -132,14 +132,14 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
 
         {/* Order Type Toggle */}
         {onOrderTypeChange && (isRestaurant || isStore || isSupermarket) && (
-          <div className="flex bg-zinc-900/50 p-1.5 rounded-2xl mt-4 border border-white/5 shadow-inner">
+          <div className="flex bg-muted p-1.5 rounded-2xl mt-4 border border-border">
             <button
               onClick={() => onOrderTypeChange('dine-in')}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                 orderType === 'dine-in' 
-                  ? "bg-zinc-800 text-green-500 shadow-xl border border-white/5" 
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border shadow-md" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {(isStore || isSupermarket) ? <Tag className="h-3.5 w-3.5" /> : <Utensils className="h-3.5 w-3.5" />}
@@ -150,8 +150,8 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                 orderType === 'takeout' 
-                  ? "bg-zinc-800 text-green-500 shadow-xl border border-white/5" 
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border shadow-md" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <ShoppingBag className="h-3.5 w-3.5" />

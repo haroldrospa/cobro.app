@@ -50,13 +50,13 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
 
     return (
         <div className="mb-2 animate-in fade-in duration-200">
-            <div className="overflow-hidden border border-white/5 bg-zinc-900/40 rounded-xl">
+            <div className="overflow-hidden border border-border bg-card rounded-xl">
                 <div className="flex flex-col">
                     {/* Main Row */}
-                    <div className="flex items-center justify-between gap-2 p-2 text-zinc-100">
+                    <div className="flex items-center justify-between gap-2 p-2 text-foreground">
                         {/* Left: Image & Name */}
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="w-12 h-12 bg-zinc-800 flex-shrink-0 flex items-center justify-center relative overflow-hidden rounded-lg">
+                            <div className="w-12 h-12 bg-muted flex-shrink-0 flex items-center justify-center relative overflow-hidden rounded-lg">
                                 {item.image_url ? (
                                     <img
                                         src={item.image_url}
@@ -66,7 +66,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <Package className="h-5 w-5 text-white/10" />
+                                    <Package className="h-5 w-5 text-muted-foreground/30" />
                                 )}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -74,11 +74,11 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     {item.name}
                                 </h4>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[9px] text-zinc-500 font-medium">
+                                    <span className="text-[9px] text-muted-foreground font-medium">
                                         ${(item.price || 0).toFixed(2)} c/u
                                     </span>
                                     {item.offerApplied && (
-                                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[8px] font-black uppercase tracking-widest px-1 py-0 h-3.5">
+                                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[8px] font-black uppercase tracking-widest px-1 py-0 h-3.5">
                                             PROMO
                                         </Badge>
                                     )}
@@ -89,17 +89,17 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                         {/* Right: Quantity controls, Price, Actions */}
                         <div className="flex items-center gap-1.5 shrink-0">
                             {/* Quantity Controls */}
-                            <div className="flex items-center bg-zinc-800/50 rounded-lg p-0.5 border border-white/5">
+                            <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-zinc-400 hover:text-white"
+                                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
                                 >
                                     <Minus className="h-3 w-3" />
                                 </Button>
                                 <div
-                                    className="w-7 text-center text-xs font-black text-green-500 cursor-pointer"
+                                    className="w-7 text-center text-xs font-black text-emerald-600 dark:text-emerald-500 cursor-pointer"
                                     onClick={() => setIsQuantityDialogOpen(true)}
                                 >
                                     {item.quantity}
@@ -107,7 +107,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-green-500 hover:text-green-400"
+                                    className="h-6 w-6 text-emerald-600 dark:text-emerald-500 hover:text-emerald-400"
                                     onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                                 >
                                     <Plus className="h-3 w-3" />
@@ -124,7 +124,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
 
                             {/* Total Price */}
                             <div className="min-w-[60px] text-right">
-                                <p className="font-black text-xs text-zinc-100">
+                                <p className="font-black text-xs text-foreground">
                                     ${(calculateItemTotal(item) || 0).toFixed(2)}
                                 </p>
                             </div>
@@ -136,7 +136,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     size="icon"
                                     className={cn(
                                         "h-7 w-7 rounded-lg transition-colors shrink-0",
-                                        item.comment ? "bg-green-500/20 text-green-500" : "text-zinc-500 hover:bg-zinc-800"
+                                        item.comment ? "bg-green-500/20 text-green-600 dark:text-green-500" : "text-muted-foreground hover:bg-muted"
                                     )}
                                     onClick={() => setIsEditingComment(!isEditingComment)}
                                 >
@@ -151,7 +151,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     size="icon"
                                     className={cn(
                                         "h-7 w-7 rounded-lg transition-colors shrink-0",
-                                        item.discount && item.discount.value > 0 ? "bg-emerald-500/20 text-emerald-400" : "text-zinc-500 hover:bg-zinc-800"
+                                        item.discount && item.discount.value > 0 ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "text-muted-foreground hover:bg-muted"
                                     )}
                                     onClick={() => setIsEditingDiscount(!isEditingDiscount)}
                                 >
@@ -163,7 +163,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-zinc-500 hover:text-destructive transition-colors shrink-0"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                                 onClick={() => onRemoveFromCart(item.id)}
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -181,7 +181,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                         value={item.comment || ''}
                                         onChange={(e) => onUpdateComment?.(item.id, e.target.value)}
                                         placeholder="Nota para la orden..."
-                                        className="h-8 pl-8 pr-4 text-[10px] bg-zinc-800/50 border-white/5 rounded-lg focus:ring-green-500/20 focus:border-green-500 text-zinc-100"
+                                        className="h-8 pl-8 pr-4 text-[10px] bg-background border-border rounded-lg focus:ring-green-500/20 focus:border-green-500 text-foreground"
                                         autoFocus
                                         onBlur={() => !item.comment && setIsEditingComment(false)}
                                         onKeyDown={(e) => e.key === 'Enter' && setIsEditingComment(false)}
@@ -189,7 +189,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 </div>
                             ) : item.comment && (
                                 <div
-                                    className="text-[9px] font-bold uppercase tracking-wider text-green-600/70 bg-green-600/5 px-2 py-1 rounded-lg flex items-center gap-1.5 border border-green-600/10 cursor-pointer hover:bg-green-600/10 transition-colors"
+                                    className="text-[9px] font-bold uppercase tracking-wider text-green-600 dark:text-green-500 bg-green-500/5 px-2 py-1 rounded-lg flex items-center gap-1.5 border border-green-600/10 cursor-pointer hover:bg-green-600/10 transition-colors"
                                     onClick={() => setIsEditingComment(true)}
                                 >
                                     <MessageSquare className="h-2.5 w-2.5" />
@@ -203,20 +203,20 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                     {(isEditingDiscount || (item.discount && item.discount.value > 0)) && (
                         <div className="p-2 pt-0 animate-in fade-in slide-in-from-top-1 duration-150">
                             {isEditingDiscount ? (
-                                <div className="flex items-center gap-1.5 bg-zinc-800/30 p-1.5 rounded-lg border border-white/5">
+                                <div className="flex items-center gap-1.5 bg-muted/30 p-1.5 rounded-lg border border-border">
                                     <Percent className="h-3 w-3 text-emerald-500" />
                                     <Input
                                         type="number"
                                         value={tempDiscountValue}
                                         onChange={(e) => setTempDiscountValue(e.target.value)}
                                         placeholder="0"
-                                        className="h-8 w-16 text-center text-xs bg-zinc-900 border-white/5 rounded-lg text-white"
+                                        className="h-8 w-16 text-center text-xs bg-background border-border rounded-lg text-foreground"
                                         autoFocus
                                     />
                                     <select
                                         value={tempDiscountType}
                                         onChange={(e) => setTempDiscountType(e.target.value as 'percentage' | 'amount')}
-                                        className="h-8 bg-zinc-900 border border-white/5 rounded-lg text-[11px] text-white px-1 focus:ring-0"
+                                        className="h-8 bg-background border border-border rounded-lg text-[11px] text-foreground px-1 focus:ring-0"
                                     >
                                         <option value="percentage">%</option>
                                         <option value="amount">$</option>
@@ -232,7 +232,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 px-1.5 text-zinc-500 hover:text-zinc-300 text-[10px]"
+                                        className="h-8 px-1.5 text-muted-foreground hover:text-foreground text-[10px]"
                                         onClick={() => setIsEditingDiscount(false)}
                                     >
                                         X
@@ -240,7 +240,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 </div>
                             ) : item.discount && item.discount.value > 0 && (
                                 <div
-                                    className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg flex items-center justify-between border border-emerald-500/20 cursor-pointer hover:bg-emerald-500/20 transition-colors"
+                                    className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg flex items-center justify-between border border-emerald-500/20 cursor-pointer hover:bg-emerald-500/20 transition-colors"
                                     onClick={() => {
                                         setTempDiscountValue(String(item.discount?.value || ''));
                                         setTempDiscountType(item.discount?.type || 'percentage');
@@ -252,7 +252,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                         <span>Descuento: {item.discount.type === 'percentage' ? `${item.discount.value}%` : `$${item.discount.value}`}</span>
                                     </span>
                                     <span 
-                                        className="text-[8px] text-zinc-500 font-bold hover:text-red-400" 
+                                        className="text-[8px] text-muted-foreground font-bold hover:text-red-400" 
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onUpdateDiscount?.(item.id, 0, 'percentage');

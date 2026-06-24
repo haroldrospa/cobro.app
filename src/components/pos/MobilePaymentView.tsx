@@ -121,48 +121,48 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   const displayDebt = customerBalance?.totalDebt || 0;
 
   return (
-    <div className="min-h-full flex flex-col bg-zinc-950 p-3 sm:p-4 pb-4 sm:pb-6 gap-3 sm:gap-4 overflow-x-hidden">
+    <div className="min-h-full flex flex-col bg-background p-3 sm:p-4 pb-4 sm:pb-6 gap-3 sm:gap-4 overflow-x-hidden">
       {/* ── TOTALS CARD (Modern Glassmorphism - More Compact) ── */}
-      <Card className="bg-gradient-to-br from-zinc-900 to-black border-white/5 relative overflow-hidden shadow-2xl rounded-2xl">
+      <Card className="bg-card border border-border relative overflow-hidden shadow-md rounded-2xl">
         <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 blur-[60px] rounded-full -mr-16 -mt-16" />
         <CardContent className="p-3.5 sm:p-5 relative z-10">
           <div className="flex flex-col gap-2.5 sm:gap-3.5">
             <div className="flex items-center justify-between opacity-60">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Resumen de Cargo</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Resumen de Cargo</span>
               <Calculator className="h-4 w-4 text-green-500" />
             </div>
             
             <div className="space-y-1.5 sm:space-y-2.5">
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-muted-foreground">
                 <span className="text-xs sm:text-sm font-medium">Subtotal Bruto</span>
-                <span className="text-xs sm:text-sm font-black text-white">${totals.subtotal}</span>
+                <span className="text-xs sm:text-sm font-black text-foreground">${totals.subtotal}</span>
               </div>
               
-              <div className="flex justify-between items-center text-zinc-400">
+              <div className="flex justify-between items-center text-muted-foreground">
                 <span className="text-xs sm:text-sm font-medium">Descuento Global</span>
                 <span className="text-xs sm:text-sm font-black text-green-500">-${totals.discount}</span>
               </div>
 
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-muted-foreground">
                 <span className="text-xs sm:text-sm font-medium">ITBIS Aplicado (18%)</span>
-                <span className="text-xs sm:text-sm font-black text-white">${totals.tax}</span>
+                <span className="text-xs sm:text-sm font-black text-foreground">${totals.tax}</span>
               </div>
             </div>
 
             {/* Dedicated Discount Editor Bar - Compact */}
-            <div className="flex items-center gap-2 bg-zinc-950/60 p-2 rounded-xl border border-white/5 shadow-inner">
+            <div className="flex items-center gap-2 bg-muted p-2 rounded-xl border border-border shadow-inner">
               <Tag className="h-3.5 w-3.5 text-green-500" />
-              <span className="text-[11px] font-bold text-zinc-400">Aplicar Descuento</span>
-              <div className="flex items-center bg-zinc-900 rounded-lg p-0.5 border border-white/5 ml-auto">
+              <span className="text-[11px] font-bold text-muted-foreground">Aplicar Descuento</span>
+              <div className="flex items-center bg-background rounded-lg p-0.5 border border-border ml-auto">
                 <button 
                   onClick={() => onDiscountChange({ ...globalDiscount, type: 'percentage', value: 0 })}
-                  className={cn("px-1.5 py-0.5 rounded text-[9px] font-black transition-all", globalDiscount.type === 'percentage' ? "bg-green-600 text-white" : "text-zinc-500")}
+                  className={cn("px-1.5 py-0.5 rounded text-[9px] font-black transition-all", globalDiscount.type === 'percentage' ? "bg-green-600 text-white" : "text-muted-foreground")}
                 >
                   %
                 </button>
                 <button 
                   onClick={() => onDiscountChange({ ...globalDiscount, type: 'amount', value: 0 })}
-                  className={cn("px-1.5 py-0.5 rounded text-[9px] font-black transition-all", globalDiscount.type === 'amount' ? "bg-green-600 text-white" : "text-zinc-500")}
+                  className={cn("px-1.5 py-0.5 rounded text-[9px] font-black transition-all", globalDiscount.type === 'amount' ? "bg-green-600 text-white" : "text-muted-foreground")}
                 >
                   $
                 </button>
@@ -171,16 +171,16 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                 type="number"
                 value={globalDiscount.value || ''}
                 onChange={(e) => handleDiscountValueChange(parseFloat(e.target.value) || 0)}
-                className="w-14 h-7 text-xs bg-zinc-900 border-white/5 text-right font-black text-green-500 focus-visible:ring-1 focus-visible:ring-green-500/30 rounded-lg"
+                className="w-14 h-7 text-xs bg-background border-border text-right font-black text-green-500 focus-visible:ring-1 focus-visible:ring-green-500/30 rounded-lg"
                 placeholder="0"
               />
             </div>
 
-            <div className="h-px bg-white/5 my-0.5" />
+            <div className="h-px bg-border my-0.5" />
 
             <div className="flex justify-between items-end">
-              <span className="text-xs font-black text-zinc-500 uppercase tracking-wide pb-0.5">Total Final</span>
-              <span className="text-2xl sm:text-3xl font-black text-white tracking-tighter">
+              <span className="text-xs font-black text-muted-foreground uppercase tracking-wide pb-0.5">Total Final</span>
+              <span className="text-2xl sm:text-3xl font-black text-foreground tracking-tighter">
                 ${totals.total}
               </span>
             </div>
@@ -192,21 +192,21 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
       <div className="flex flex-col gap-3 sm:gap-4">
         {/* ── INVOICE TYPE (Tipo de Comprobante) ── */}
         <div className="flex flex-col gap-1">
-          <span className="text-[9px] uppercase font-black tracking-widest text-zinc-500 px-1">Comprobante Fiscal</span>
+          <span className="text-[9px] uppercase font-black tracking-widest text-muted-foreground px-1">Comprobante Fiscal</span>
           <Select value={selectedInvoiceType} onValueChange={onInvoiceTypeChange}>
-            <SelectTrigger className="w-full h-auto bg-zinc-900/50 border border-white/5 hover:border-white/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all">
+            <SelectTrigger className="w-full h-auto bg-card border border-border hover:bg-accent/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 sm:p-2 rounded-xl bg-green-500/10 text-green-500">
                   <FileText className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs sm:text-sm font-black text-white">
+                  <span className="text-xs sm:text-sm font-black text-foreground">
                     {selectedType ? `${selectedType.name} (${selectedType.code})` : 'Consumidor Final (B02)'}
                   </span>
                 </div>
               </div>
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-white/10 rounded-xl">
+            <SelectContent className="bg-popover border-border rounded-xl">
               {mappedInvoiceTypes
                 .filter(type => ['B01', 'E31', 'B02', 'E32'].includes(type.code))
                 .map((type) => (
@@ -221,7 +221,7 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
         {/* ── CUSTOMER (Comprobante para) ── */}
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center px-1">
-            <span className="text-[9px] uppercase font-black tracking-widest text-zinc-500">Cliente</span>
+            <span className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">Cliente</span>
             <button 
               onClick={() => setShowAddCustomer(true)}
               className="text-[9px] uppercase font-black tracking-widest text-green-500 hover:text-green-400 flex items-center gap-1 active:scale-95 transition-transform"
@@ -236,36 +236,36 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
               setCustomerSearchQuery('');
               setIsCustomerSelectOpen(true);
             }}
-            className="w-full h-auto bg-zinc-900/50 border border-white/5 hover:border-white/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all"
+            className="w-full h-auto bg-card border border-border hover:bg-accent/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all"
           >
             <div className="flex items-center gap-2.5">
-              <div className={cn("p-1.5 sm:p-2 rounded-xl transition-colors", selectedCustomer ? "bg-green-500/10 text-green-500" : "bg-zinc-800 text-zinc-500")}>
+              <div className={cn("p-1.5 sm:p-2 rounded-xl transition-colors", selectedCustomer ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground")}>
                 <User className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs sm:text-sm font-black text-white truncate max-w-[200px]">
+                <span className="text-xs sm:text-sm font-black text-foreground truncate max-w-[200px]">
                   {selectedCustomerData?.name || 'Clientes Varios'}
                 </span>
               </div>
             </div>
-            <ChevronDown className="h-4 w-4 text-zinc-600 shrink-0" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
 
           <Dialog open={isCustomerSelectOpen} onOpenChange={setIsCustomerSelectOpen}>
-            <DialogContent className="max-w-md bg-zinc-950 border-white/5 p-6 rounded-[2rem] max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogContent className="max-w-md bg-card border-border p-6 rounded-[2rem] max-h-[85vh] overflow-hidden flex flex-col">
               <DialogHeader className="mb-2 shrink-0">
-                <DialogTitle className="text-lg font-black text-white tracking-tight uppercase">
+                <DialogTitle className="text-lg font-black text-foreground tracking-tight uppercase">
                   Buscar Cliente
                 </DialogTitle>
               </DialogHeader>
 
               {/* Search Input */}
               <div className="relative mb-4 shrink-0">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
                   placeholder="Buscar por nombre o RNC..."
-                  className="pl-9 bg-zinc-900 border-zinc-800 focus:border-green-500 text-xs font-bold h-10 rounded-xl"
+                  className="pl-9 bg-background border-border focus:border-green-500 text-xs font-bold h-10 rounded-xl text-foreground"
                   value={customerSearchQuery}
                   onChange={(e) => setCustomerSearchQuery(e.target.value)}
                   autoComplete="off"
@@ -284,8 +284,8 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                   className={cn(
                     "w-full text-left p-3 rounded-xl transition-colors flex items-center justify-between border border-transparent",
                     !selectedCustomer
-                      ? "bg-green-500/10 border-green-500/20 text-white"
-                      : "hover:bg-zinc-900 hover:border-white/5 text-zinc-300"
+                      ? "bg-green-500/10 border-green-500/20 text-foreground"
+                      : "hover:bg-muted hover:border-border text-foreground"
                   )}
                 >
                   <div className="flex flex-col">
@@ -305,20 +305,20 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                       className={cn(
                         "w-full text-left p-3 rounded-xl transition-colors flex items-center justify-between border border-transparent",
                         selectedCustomer === c.id
-                          ? "bg-green-500/10 border-green-500/20 text-white"
-                          : "hover:bg-zinc-900 hover:border-white/5 text-zinc-300"
+                          ? "bg-green-500/10 border-green-500/20 text-foreground"
+                          : "hover:bg-muted hover:border-border text-foreground"
                       )}
                     >
                       <div className="flex flex-col">
                         <span className="font-bold text-sm">{c.name}</span>
-                        {c.rnc && <span className="text-[10px] text-zinc-400 font-mono mt-0.5">RNC: {c.rnc}</span>}
+                        {c.rnc && <span className="text-[10px] text-muted-foreground font-mono mt-0.5">RNC: {c.rnc}</span>}
                       </div>
                       {selectedCustomer === c.id && <Check className="h-4 w-4 text-green-500" />}
                     </button>
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <span className="text-xs font-bold text-zinc-500 mb-3">No se encontraron clientes</span>
+                    <span className="text-xs font-bold text-muted-foreground mb-3">No se encontraron clientes</span>
                     <Button
                       size="sm"
                       onClick={() => {
@@ -383,7 +383,7 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
             "w-full h-14 sm:h-16 rounded-2xl text-base sm:text-lg font-black group transition-all relative overflow-hidden",
             canCheckout 
               ? "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-[0_0_40px_rgba(34,197,94,0.3)]" 
-              : "bg-zinc-800 text-zinc-600 border border-white/5"
+              : "bg-muted text-muted-foreground border border-border"
           )}
         >
           <div className="flex items-center justify-between w-full px-4">

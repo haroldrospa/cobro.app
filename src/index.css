@@ -374,11 +374,65 @@ img {
 
 /* ── Mobile-specific performance optimizations ── */
 @media (max-width: 768px) {
-  /* Reduce backdrop-blur intensity on mobile — this is the #1 GPU killer on mid-range phones */
-  .backdrop-blur-2xl { backdrop-filter: blur(8px) !important; }
-  .backdrop-blur-xl  { backdrop-filter: blur(6px) !important; }
-  .backdrop-blur-lg  { backdrop-filter: blur(4px) !important; }
-  .backdrop-blur-md  { backdrop-filter: blur(3px) !important; }
+  /* Disable backdrop-filter completely on mobile to fix visual glitches (white shadows/halos) and boost FPS */
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Override background opacities to be solid/opaque on mobile to ensure legibility and speed */
+  .bg-background\/80,
+  .bg-background\/95 {
+    background-color: hsl(var(--background)) !important;
+  }
+  .bg-card\/80,
+  .bg-card\/60,
+  .bg-card\/50 {
+    background-color: hsl(var(--card)) !important;
+  }
+  .bg-popover\/95 {
+    background-color: hsl(var(--popover)) !important;
+  }
+  .bg-white\/80,
+  .bg-white\/90,
+  .bg-white\/95 {
+    background-color: #ffffff !important;
+  }
+  .dark .bg-white\/80,
+  .dark .bg-white\/90,
+  .dark .bg-white\/95 {
+    background-color: hsl(var(--card)) !important;
+  }
+  .bg-zinc-900\/95,
+  .bg-zinc-950\/95 {
+    background-color: #18181b !important;
+  }
+  .dark .bg-zinc-900\/95,
+  .dark .bg-zinc-950\/95 {
+    background-color: #09090b !important;
+  }
+  .bg-zinc-900\/60,
+  .bg-zinc-950\/60,
+  .bg-zinc-950\/40,
+  .bg-zinc-950\/20,
+  .bg-zinc-900\/30,
+  .bg-zinc-900\/40 {
+    background-color: hsl(var(--card)) !important;
+  }
+  .dark .bg-zinc-900\/60,
+  .dark .bg-zinc-950\/60,
+  .dark .bg-zinc-950\/40,
+  .dark .bg-zinc-950\/20,
+  .dark .bg-zinc-900\/30,
+  .dark .bg-zinc-900\/40 {
+    background-color: hsl(var(--card)) !important;
+  }
 
   /* Force GPU compositing on scrollable containers */
   [data-radix-scroll-area-viewport],

@@ -71,7 +71,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
               </Badge>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest font-black text-muted-foreground/60 leading-none mb-1">Total a Pagar</p>
+              <p className="text-[10px] uppercase tracking-widest font-black text-white/60 leading-none mb-1">Total a Pagar</p>
               <p className="text-xl font-black text-white leading-none">${cartTotal}</p>
             </div>
           </button>
