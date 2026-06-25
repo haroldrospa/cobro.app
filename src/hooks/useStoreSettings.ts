@@ -102,6 +102,7 @@ export type StoreSettings = {
   kitchen_alert_threshold?: number;
   subscription_notification_email?: string;
   ai_api_key?: string | null;
+  label_templates?: any[];
 }
 
 export const useStoreSettings = () => {

@@ -8,6 +8,7 @@ import { Printer, Loader2, Settings, Search, ChevronDown, ChevronUp } from 'luci
 import { Product } from '@/hooks/useProducts';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useUserStore } from '@/hooks/useUserStore';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import JsBarcode from 'jsbarcode';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -65,6 +66,7 @@ interface PrintLabelsDialogProps {
 export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductIds }: PrintLabelsDialogProps) {
   const { settings } = useCompanySettings();
   const { data: userStore } = useUserStore();
+  const { settings: storeSettings, updateSettings } = useStoreSettings();
   const [isPrinting, setIsPrinting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 200);
@@ -80,16 +82,20 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
     return {};
   }, []);
 
-  // Plantillas personalizadas guardadas en localStorage
-  const [customTemplates, setCustomTemplates] = useState<any[]>(() => {
+  // Plantillas personalizadas sincronizadas en Base de Datos con Fallback a localStorage
+  const customTemplates = useMemo(() => {
+    const dbTemplates = storeSettings?.label_templates;
+    if (Array.isArray(dbTemplates) && dbTemplates.length > 0) {
+      return dbTemplates;
+    }
     try {
       const saved = localStorage.getItem('cobro_label_custom_templates');
       if (saved) return JSON.parse(saved);
     } catch (e) {
-      console.error("Error loading custom templates", e);
+      console.error("Error loading custom templates from localStorage", e);
     }
     return [];
-  });
+  }, [storeSettings?.label_templates]);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(() => savedSettings.selectedTemplateId ?? '');
   const [isConfigExpanded, setIsConfigExpanded] = useState<boolean>(() => !savedSettings.selectedTemplateId);
@@ -213,7 +219,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
     }
   }, [customTemplates]);
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     const name = prompt("Introduce el nombre de la planilla de configuración (ej: Rollo 30x20):");
     if (!name || !name.trim()) return;
 
@@ -239,7 +245,11 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
     };
 
     const updated = [...customTemplates, newTemplate];
-    setCustomTemplates(updated);
+    try {
+      await updateSettings({ label_templates: updated });
+    } catch (e) {
+      console.error("Error saving template to DB:", e);
+    }
     localStorage.setItem('cobro_label_custom_templates', JSON.stringify(updated));
     setSelectedTemplateId(newTemplate.id);
     toast({
@@ -248,13 +258,17 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
     });
   };
 
-  const handleDeleteTemplate = () => {
+  const handleDeleteTemplate = async () => {
     const template = customTemplates.find(t => t.id === selectedTemplateId);
     if (!template) return;
     
     if (confirm(`¿Estás seguro de eliminar la planilla de configuración "${template.name}"?`)) {
       const updated = customTemplates.filter(t => t.id !== selectedTemplateId);
-      setCustomTemplates(updated);
+      try {
+        await updateSettings({ label_templates: updated });
+      } catch (e) {
+        console.error("Error deleting template from DB:", e);
+      }
       localStorage.setItem('cobro_label_custom_templates', JSON.stringify(updated));
       setSelectedTemplateId('');
       toast({
