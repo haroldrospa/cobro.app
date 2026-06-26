@@ -481,14 +481,14 @@ const Auth = () => {
                 </Button>
               </form>
             ) : (
-              <Tabs value={authView} onValueChange={(val) => setAuthView(val as any)} className="w-full">
+              <Tabs value={authView === 'signup' ? 'signup' : 'login'} onValueChange={(val) => setAuthView(val as any)} className="w-full">
                 <TabsList className="flex justify-center w-full mb-8 bg-transparent border-b border-white/[0.06] p-0 rounded-none gap-8 h-10 relative">
                 <TabsTrigger
                   value="login"
                   className="relative pb-3 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors duration-200 outline-none focus-visible:ring-0 !bg-transparent data-[state=active]:!bg-transparent data-[state=active]:!text-emerald-400 data-[state=active]:!shadow-none data-[state=active]:!border-0 rounded-none px-1"
                 >
                   Iniciar Sesión
-                  {activeTab === 'login' && (
+                  {authView === 'login' && (
                     <motion.div
                       layoutId="activeTabUnderline"
                       className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 rounded-full"
@@ -501,7 +501,7 @@ const Auth = () => {
                   className="relative pb-3 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors duration-200 outline-none focus-visible:ring-0 !bg-transparent data-[state=active]:!bg-transparent data-[state=active]:!text-emerald-400 data-[state=active]:!shadow-none data-[state=active]:!border-0 rounded-none px-1"
                 >
                   Registrarse
-                  {activeTab === 'signup' && (
+                  {authView === 'signup' && (
                     <motion.div
                       layoutId="activeTabUnderline"
                       className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 rounded-full"
