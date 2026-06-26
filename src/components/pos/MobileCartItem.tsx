@@ -51,55 +51,70 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
     return (
         <div className="mb-2 animate-in fade-in duration-200">
             <div className="overflow-hidden border border-border bg-card rounded-xl">
-                <div className="flex flex-col">
-                    {/* Main Row */}
-                    <div className="flex items-center justify-between gap-2 p-2 text-foreground">
-                        {/* Left: Image & Name */}
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="w-12 h-12 bg-muted flex-shrink-0 flex items-center justify-center relative overflow-hidden rounded-lg">
-                                {item.image_url ? (
-                                    <img
-                                        src={item.image_url}
-                                        alt={item.name}
-                                        loading="lazy"
-                                        decoding="async"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <Package className="h-5 w-5 text-muted-foreground/30" />
+                <div className="flex flex-col p-2.5 gap-2">
+                    {/* Top Row: Image, Name + price per unit, and Delete button */}
+                    <div className="flex items-start gap-2.5 min-w-0 w-full">
+                        {/* Image Container */}
+                        <div className="w-12 h-12 bg-muted flex-shrink-0 flex items-center justify-center relative overflow-hidden rounded-lg border border-border/40">
+                            {item.image_url ? (
+                                <img
+                                    src={item.image_url}
+                                    alt={item.name}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <Package className="h-5 w-5 text-muted-foreground/30" />
+                            )}
+                        </div>
+
+                        {/* Name and Price */}
+                        <div className="min-w-0 flex-1 flex flex-col justify-center min-h-[48px]">
+                            <h4 className="font-bold text-xs uppercase tracking-tight leading-tight text-white break-words" title={item.name}>
+                                {item.name}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-zinc-500 font-medium">
+                                    ${(item.price || 0).toFixed(2)} c/u
+                                </span>
+                                {item.offerApplied && (
+                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[8px] font-black uppercase tracking-widest px-1 py-0 h-3.5">
+                                        PROMO
+                                    </Badge>
                                 )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <h4 className="font-bold text-[11px] uppercase tracking-tight leading-tight break-words" title={item.name}>
-                                    {item.name}
-                                </h4>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[9px] text-muted-foreground font-medium">
-                                        ${(item.price || 0).toFixed(2)} c/u
-                                    </span>
-                                    {item.offerApplied && (
-                                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[8px] font-black uppercase tracking-widest px-1 py-0 h-3.5">
-                                            PROMO
-                                        </Badge>
-                                    )}
-                                </div>
                             </div>
                         </div>
 
-                        {/* Right: Quantity controls, Price, Actions */}
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Delete Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-zinc-500 hover:text-destructive transition-colors shrink-0 rounded-full"
+                            onClick={() => onRemoveFromCart(item.id)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+
+                    {/* Subtle Divider */}
+                    <div className="h-px bg-border/50 w-full" />
+
+                    {/* Bottom Row: Quantity Controls & Action Buttons on left, Total Price on right */}
+                    <div className="flex items-center justify-between gap-2 w-full pt-0.5">
+                        <div className="flex items-center gap-2">
                             {/* Quantity Controls */}
-                            <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
+                            <div className="flex items-center bg-zinc-800/85 rounded-lg p-0.5 border border-white/5">
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                    className="h-7 w-7 text-zinc-400 hover:text-white"
                                     onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
                                 >
-                                    <Minus className="h-3 w-3" />
+                                    <Minus className="h-3.5 w-3.5" />
                                 </Button>
                                 <div
-                                    className="w-7 text-center text-xs font-black text-emerald-600 dark:text-emerald-500 cursor-pointer"
+                                    className="w-8 text-center text-xs font-black text-emerald-500 cursor-pointer"
                                     onClick={() => setIsQuantityDialogOpen(true)}
                                 >
                                     {item.quantity}
@@ -107,10 +122,10 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-emerald-600 dark:text-emerald-500 hover:text-emerald-400"
+                                    className="h-7 w-7 text-emerald-500 hover:text-emerald-400"
                                     onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                                 >
-                                    <Plus className="h-3 w-3" />
+                                    <Plus className="h-3.5 w-3.5" />
                                 </Button>
 
                                 <QuantityDialog
@@ -122,25 +137,18 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 />
                             </div>
 
-                            {/* Total Price */}
-                            <div className="min-w-[60px] text-right">
-                                <p className="font-black text-xs text-foreground">
-                                    ${(calculateItemTotal(item) || 0).toFixed(2)}
-                                </p>
-                            </div>
-
                             {/* Comment Trigger */}
                             {onUpdateComment && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     className={cn(
-                                        "h-7 w-7 rounded-lg transition-colors shrink-0",
-                                        item.comment ? "bg-green-500/20 text-green-600 dark:text-green-500" : "text-muted-foreground hover:bg-muted"
+                                        "h-8 w-8 rounded-lg transition-colors shrink-0",
+                                        item.comment ? "bg-green-500/20 text-green-500" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
                                     )}
                                     onClick={() => setIsEditingComment(!isEditingComment)}
                                 >
-                                    <MessageSquare className="h-3.5 w-3.5" />
+                                    <MessageSquare className="h-4 w-4" />
                                 </Button>
                             )}
 
@@ -150,24 +158,22 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     variant="ghost"
                                     size="icon"
                                     className={cn(
-                                        "h-7 w-7 rounded-lg transition-colors shrink-0",
-                                        item.discount && item.discount.value > 0 ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "text-muted-foreground hover:bg-muted"
+                                        "h-8 w-8 rounded-lg transition-colors shrink-0",
+                                        item.discount && item.discount.value > 0 ? "bg-emerald-500/20 text-emerald-400" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
                                     )}
                                     onClick={() => setIsEditingDiscount(!isEditingDiscount)}
                                 >
-                                    <Percent className="h-3.5 w-3.5" />
+                                    <Percent className="h-4 w-4" />
                                 </Button>
                             )}
+                        </div>
 
-                            {/* Delete Button */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                                onClick={() => onRemoveFromCart(item.id)}
-                            >
-                                <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                        {/* Total Price */}
+                        <div className="text-right">
+                            <p className="text-[9px] uppercase tracking-wider font-bold text-zinc-500">Subtotal</p>
+                            <p className="font-black text-sm text-emerald-500">
+                                ${(calculateItemTotal(item) || 0).toFixed(2)}
+                            </p>
                         </div>
                     </div>
 
