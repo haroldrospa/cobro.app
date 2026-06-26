@@ -530,16 +530,7 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="login-password" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Contraseña</Label>
-                      <button
-                        type="button"
-                        onClick={() => setAuthView('forgot-password')}
-                        className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-wide hover:underline cursor-pointer"
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </button>
-                    </div>
+                    <Label htmlFor="login-password" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Contraseña</Label>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                       <Input
@@ -560,6 +551,15 @@ const Auth = () => {
                       >
                         {showPassword ? <EyeOff className="h-4.5 w-4.5" strokeWidth={1.75} /> : <Eye className="h-4.5 w-4.5" strokeWidth={1.75} />}
                       </Button>
+                    </div>
+                    <div className="flex justify-end mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setAuthView('forgot-password')}
+                        className="text-[11px] text-slate-400 hover:text-emerald-400 transition-colors duration-200 font-medium cursor-pointer"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
                     </div>
                     {errors.password && <p className="text-[10px] text-red-400 mt-1">{errors.password}</p>}
                   </div>
