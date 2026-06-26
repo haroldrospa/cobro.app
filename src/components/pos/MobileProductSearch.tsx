@@ -70,6 +70,30 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [isVariablePriceDialogOpen, setIsVariablePriceDialogOpen] = useState(false);
   const [selectedVariableProduct, setSelectedVariableProduct] = useState<Product | null>(null);
+  const [visibleCount, setVisibleCount] = useState(24);
+  const loadMoreRef = React.useRef<HTMLDivElement>(null);
+
+  // Reset visible products on search or category filter change
+  React.useEffect(() => {
+    setVisibleCount(24);
+  }, [debouncedSearchTerm, selectedCategory]);
+
+  // Infinite scroll observer sentinel
+  React.useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && filteredProducts.length > visibleCount) {
+          setVisibleCount(prev => prev + 24);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [filteredProducts.length, visibleCount]);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
 
@@ -138,7 +162,12 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     return filtered.slice(0, 80);
   }, [normalizedProducts, debouncedSearchTerm, selectedCategory]);
 
-  const handleProductSelect = (product: Product, preMatchedBundle?: any) => {
+  // Slice results for infinite scrolling/performance
+  const slicedProducts = React.useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
+
+  const handleProductSelect = React.useCallback((product: Product, preMatchedBundle?: any) => {
     if (product.is_variable_price) {
       setSelectedVariableProduct(product);
       setIsVariablePriceDialogOpen(true);
@@ -168,7 +197,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     }
 
     setSearchTerm('');
-  };
+  }, [searchTerm, onAddToCart, setSearchTerm]);
 
   const handleVariablePriceConfirm = (price: number, name?: string) => {
     if (selectedVariableProduct) {
@@ -442,13 +471,20 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
             )
           ) : (
             <ProductGrid
-              filteredProducts={filteredProducts}
+              filteredProducts={slicedProducts}
               viewMode={viewMode}
               gridCols={gridCols}
               onSelect={handleProductSelect}
               cart={cart}
               onUpdateQuantity={props.onUpdateQuantity}
             />
+          )}
+          {filteredProducts.length > visibleCount && (
+            <div ref={loadMoreRef} className="py-4 flex justify-center items-center w-full">
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 animate-pulse">
+                Cargando más productos...
+              </span>
+            </div>
           )}
         </div>
       </div>
@@ -486,6 +522,17 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
   cart,
   onUpdateQuantity,
 }) {
+  // Precompute cart quantity mapping to optimize inside-loop lookups from O(C) to O(1)
+  const cartMap = React.useMemo(() => {
+    const map = new Map<string, number>();
+    if (cart) {
+      for (const item of cart) {
+        map.set(item.id, (map.get(item.id) || 0) + item.quantity);
+      }
+    }
+    return map;
+  }, [cart]);
+
   return (
     <div
       className={cn(
@@ -501,7 +548,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
       {filteredProducts.map((product) => {
         const outOfStock = product.track_inventory !== false && (product.stock || 0) <= 0;
         const canSelect = !outOfStock;
-        const cartQty = cart?.filter(item => item.id === product.id).reduce((sum, item) => sum + item.quantity, 0) || 0;
+        const cartQty = cartMap.get(product.id) || 0;
 
         return (
           <div

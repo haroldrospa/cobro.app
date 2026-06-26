@@ -8,59 +8,70 @@ import React, { useEffect, useRef } from 'react';
 export const useSavedCart = () => {
   const { data: userStore } = useUserStore();
   const { profile } = useUserProfile();
-  const queryClient = useQueryClient();
 
-  const { data: savedCartData, isLoading } = useQuery({
-    queryKey: ['saved-cart', userStore?.id, profile?.id],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !userStore?.id) return null;
+  const cacheKey = React.useMemo(() => {
+    return `saved_cart_${userStore?.id || 'default'}_${profile?.id || 'default'}`;
+  }, [userStore?.id, profile?.id]);
 
-      const { data, error } = await supabase
-        .from('saved_carts')
-        .select('cart_data')
-        .eq('profile_id', user.id)
-        .eq('store_id', userStore.id)
-        .maybeSingle();
+  const [savedCartData, setSavedCartData] = React.useState<SavedCartData | null>(() => {
+    try {
+      const stored = localStorage.getItem(`saved_cart_${userStore?.id || 'default'}_${profile?.id || 'default'}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
-      if (error) {
-        console.error('Error loading saved cart:', error);
-        return null;
+  // Sync cache data when store or profile changes
+  React.useEffect(() => {
+    if (userStore?.id && profile?.id) {
+      try {
+        const stored = localStorage.getItem(cacheKey);
+        setSavedCartData(stored ? JSON.parse(stored) : null);
+      } catch (e) {
+        console.error('Error parsing local cart:', e);
       }
+    }
+  }, [cacheKey, userStore?.id, profile?.id]);
 
-      return (data?.cart_data as unknown as SavedCartData) || null;
-    },
-    enabled: !!userStore?.id && !!profile?.id,
-  });
+  const saveCart = React.useCallback((cartData: SavedCartData) => {
+    if (!userStore?.id || !profile?.id) return;
 
-  const saveCartMutation = useMutation({
-    mutationFn: async (cartData: SavedCartData) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !userStore?.id) throw new Error('No user or store');
+    // Save locally immediately (takes <1ms, completely offline-capable)
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(cartData));
+      setSavedCartData(cartData);
+    } catch (e) {
+      console.error('Error writing cart to localStorage:', e);
+    }
 
-      const { error } = await supabase
-        .from('saved_carts')
-        .upsert({
-          profile_id: user.id,
-          store_id: userStore.id,
-          cart_data: cartData as any,
-        }, {
-          onConflict: 'store_id,profile_id'
-        });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saved-cart', userStore?.id, profile?.id] });
-    },
-  });
+    // Backup to Supabase in the background (fire-and-forget, non-blocking)
+    const syncToCloud = async () => {
+      try {
+        const storeId = userStore.id;
+        const profileId = profile.id;
+        await supabase
+          .from('saved_carts')
+          .upsert({
+            profile_id: profileId,
+            store_id: storeId,
+            cart_data: cartData as any,
+          }, {
+            onConflict: 'store_id,profile_id'
+          });
+      } catch (err) {
+        console.warn('Background saved_carts sync failed (offline or network error):', err);
+      }
+    };
+    syncToCloud();
+  }, [cacheKey, userStore?.id, profile?.id]);
 
   return React.useMemo(() => ({
     savedCartData,
-    isLoading,
-    saveCart: saveCartMutation.mutate,
-    isSaving: saveCartMutation.isPending,
-  }), [savedCartData, isLoading, saveCartMutation.mutate, saveCartMutation.isPending]);
+    isLoading: false,
+    saveCart,
+    isSaving: false,
+  }), [savedCartData, saveCart]);
 };
 
 // Hook para auto-guardar el carrito completo con metadata

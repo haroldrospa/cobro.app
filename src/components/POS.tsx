@@ -639,7 +639,8 @@ const POSContent: React.FC = () => {
         split_method: paymentMethod === 'split' ? splitMethodParam : null,
         payment_status: paymentStatus,
         due_date: dueDate,
-        items: saleItems
+        items: saleItems,
+        profile_id: profile?.id
       });
 
       // Si se incluyó la deuda anterior, marcar las facturas pendientes como pagadas

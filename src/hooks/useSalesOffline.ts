@@ -28,6 +28,7 @@ interface CreateSaleData {
     items: CartItem[];
     store_id?: string;
     id?: string;
+    profile_id?: string;
 }
 
 export const useCreateSaleOffline = () => {
@@ -42,15 +43,19 @@ export const useCreateSaleOffline = () => {
             // Obtener store_id local
             const storeId = await getLocalStoreId();
 
-            // Obtener usuario actual para profile_id
-            const { data: { user } } = await supabase.auth.getUser();
+            // Obtener usuario actual para profile_id de forma local/rápida sin peticiones de red
+            let profileId = saleData.profile_id;
+            if (!profileId) {
+                const { data: sessionData } = await supabase.auth.getSession();
+                profileId = sessionData.session?.user?.id || null;
+            }
 
             // Preparar la venta completa
             const completeSale = {
                 id: saleId,
                 invoice_number: localInvoiceNumber,
                 customer_id: saleData.customer_id || null,
-                profile_id: user?.id || null, // Guardar ID del usuario creador
+                profile_id: profileId, // Guardar ID del usuario creador
                 invoice_type_id: saleData.invoice_type_id,
                 subtotal: saleData.subtotal,
                 discount_total: saleData.discount_total,
@@ -78,7 +83,7 @@ export const useCreateSaleOffline = () => {
             if (validItems.length > 0) {
                 const productsToUpdate: any[] = [];
                 const movementsToInsert: any[] = [];
-                const userName = user?.email || 'Sistema';
+                const userName = 'Sistema';
 
                 for (const item of validItems) {
                     const product = await offlineDB.get<any>(OfflineStore.PRODUCTS, item.id);
@@ -94,7 +99,7 @@ export const useCreateSaleOffline = () => {
                             id: crypto.randomUUID(),
                             store_id: storeId,
                             product_id: item.id,
-                            profile_id: user?.id || null,
+                            profile_id: profileId,
                             user_name: userName,
                             quantity_changed: -item.quantity,
                             previous_stock: previousStock,
@@ -329,8 +334,12 @@ async function getLocalStoreId(): Promise<string | null> {
 
 // Función para guardar venta en Supabase (cuando hay conexión)
 async function saveSaleToSupabase(saleData: CreateSaleData) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuario no autenticado');
+    let profileId = saleData.profile_id;
+    if (!profileId) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        profileId = sessionData.session?.user?.id;
+    }
+    if (!profileId) throw new Error('Usuario no autenticado');
 
     // 0. VERIFICACIÓN PREVENTIVA: Si ya tenemos un ID, revisar si ya existe la venta
     if (saleData.id) {
@@ -397,7 +406,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             p_payment_status: saleData.payment_status || 'paid',
             p_due_date: saleData.due_date || null,
             p_store_id: storeId,
-            p_profile_id: user.id,
+            p_profile_id: profileId,
             p_items: rpcItems
         });
 
@@ -533,7 +542,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                     payment_status: saleData.payment_status || 'paid',
                     due_date: saleData.due_date || null,
                     store_id: storeId || null,
-                    profile_id: user.id
+                    profile_id: profileId
                 }])
                 .select()
                 .single();
