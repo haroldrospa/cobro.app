@@ -311,8 +311,8 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
 
         {/* Search Bar Row */}
         <div className="relative w-full group">
-          <div className="absolute inset-0 bg-emerald-500/5 blur-xl group-focus-within:bg-emerald-500/15 transition-all rounded-2xl" />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-500/40 transition-colors group-focus-within:text-emerald-500 z-10" />
+          <div className="absolute inset-0 bg-emerald-500/5 blur-xl group-focus-within:bg-emerald-500/15 transition-all rounded-2xl pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-500/40 transition-colors group-focus-within:text-emerald-500 z-10 pointer-events-none" />
           <Input
             ref={searchInputRef}
             type="text"
