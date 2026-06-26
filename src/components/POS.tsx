@@ -128,12 +128,6 @@ const POSContent: React.FC = () => {
     localStorage.setItem('pos_mobile_view_mode', mode);
   }, []);
 
-  const handleSearchFocus = useCallback(() => {
-    if (!activeSession) {
-      setUserClosedRegisterDialog(false);
-    }
-  }, [activeSession]);
-
   const [globalDiscount, setGlobalDiscount] = useState<GlobalDiscount>({ value: 0, type: 'percentage' });
   const { data: userStore } = useUserStore();
   const [isWebSalesDialogOpen, setIsWebSalesDialogOpen] = useState(false);
@@ -214,6 +208,12 @@ const POSContent: React.FC = () => {
   };
 
   const { data: activeSession, isLoading: isLoadingSession, isFetching: isFetchingSession } = useActiveSession();
+
+  const handleSearchFocus = useCallback(() => {
+    if (!activeSession) {
+      setUserClosedRegisterDialog(false);
+    }
+  }, [activeSession]);
   const { profile: rawProfile, isLoading: isLoadingProfile, isPending: isPendingProfile } = useUserProfile();
   const profile = rawProfile || {
     id: '00000000-0000-0000-0000-000000000000',
