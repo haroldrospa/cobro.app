@@ -75,27 +75,6 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   const [visibleCount, setVisibleCount] = useState(24);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
 
-  // Reset visible products on search or category filter change
-  React.useEffect(() => {
-    setVisibleCount(24);
-  }, [debouncedSearchTerm, selectedCategory]);
-
-  // Infinite scroll observer sentinel
-  React.useEffect(() => {
-    if (!loadMoreRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && filteredProducts.length > visibleCount) {
-          setVisibleCount(prev => prev + 24);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, [filteredProducts.length, visibleCount]);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
 
@@ -165,6 +144,28 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   const slicedProducts = React.useMemo(() => {
     return filteredProducts.slice(0, visibleCount);
   }, [filteredProducts, visibleCount]);
+
+  // Reset visible products on search or category filter change
+  React.useEffect(() => {
+    setVisibleCount(24);
+  }, [debouncedSearchTerm, selectedCategory]);
+
+  // Infinite scroll observer sentinel
+  React.useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && filteredProducts.length > visibleCount) {
+          setVisibleCount(prev => prev + 24);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [filteredProducts.length, visibleCount]);
 
   const handleProductSelect = React.useCallback((product: Product, preMatchedBundle?: any) => {
     if (product.is_variable_price) {
