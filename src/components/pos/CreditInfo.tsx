@@ -154,21 +154,21 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
   };
 
   return (
-    <div className="space-y-2">
-      <div className="bg-muted p-2 rounded-lg space-y-1">
-        <div className="flex justify-between items-center text-xs">
-          <span className="font-medium">Cliente:</span>
-          <span>{customer?.name}</span>
+    <div className="space-y-2 [@media(max-height:580px)]:space-y-1">
+      <div className="bg-muted p-2 rounded-lg space-y-1 [@media(max-height:580px)]:p-1 [@media(max-height:580px)]:space-y-0.5">
+        <div className="flex justify-between items-center text-xs [@media(max-height:580px)]:text-[10px]">
+          <span className="font-medium text-muted-foreground">Cliente:</span>
+          <span className="font-semibold text-foreground">{customer?.name}</span>
         </div>
-        <div className="flex justify-between items-center text-xs">
-          <span className="font-medium">Deuda Total:</span>
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-center text-xs [@media(max-height:580px)]:text-[10px]">
+          <span className="font-medium text-muted-foreground">Deuda Total:</span>
+          <div className="flex items-center gap-2 [@media(max-height:580px)]:gap-1">
             <span className="font-bold text-blue-500">
               ${(balance?.totalDebt || 0).toFixed(2)}
             </span>
             {balance?.totalDebt && balance.totalDebt > 0 ? (
-              <Button size="icon" variant="outline" className="h-6 w-6 rounded-sm bg-background/50 hover:bg-background shadow-xs hover:text-primary transition-colors border-primary/20" onClick={(e) => { e.preventDefault(); handlePrintStatement(); }} title="Imprimir Estado de Cuenta">
-                <Printer className="h-3 w-3" />
+              <Button size="icon" variant="outline" className="h-6 w-6 rounded-sm bg-background/50 hover:bg-background shadow-xs hover:text-primary transition-colors border-primary/20 [@media(max-height:580px)]:h-5 [@media(max-height:580px)]:w-5" onClick={(e) => { e.preventDefault(); handlePrintStatement(); }} title="Imprimir Estado de Cuenta">
+                <Printer className="h-3 w-3 [@media(max-height:580px)]:h-2.5 [@media(max-height:580px)]:w-2.5" />
               </Button>
             ) : null}
           </div>
@@ -226,8 +226,8 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
         )}
       </div>
 
-      <div>
-        <label className="text-xs font-medium mb-1 block">Días de Crédito:</label>
+      <div className="[@media(max-height:580px)]:flex [@media(max-height:580px)]:items-center [@media(max-height:580px)]:justify-between [@media(max-height:580px)]:gap-2">
+        <label className="text-xs font-medium mb-1 block [@media(max-height:580px)]:text-[10px] [@media(max-height:580px)]:mb-0 [@media(max-height:580px)]:flex-shrink-0">Días de Crédito:</label>
         <Input
           type="number"
           value={creditDays}
@@ -235,9 +235,9 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
           min="1"
           max="180"
           placeholder="30"
-          className="h-8 text-sm"
+          className="h-8 text-sm [@media(max-height:580px)]:h-7 [@media(max-height:580px)]:text-xs"
         />
-        <p className="text-[10px] text-muted-foreground mt-0.5">
+        <p className="text-[10px] text-muted-foreground mt-0.5 [@media(max-height:580px)]:hidden">
           Vence: {new Date(Date.now() + creditDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
         </p>
       </div>
