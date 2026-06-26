@@ -11,6 +11,7 @@ import { useBusinessType } from '@/hooks/useBusinessType';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 import VariablePriceDialog from './VariablePriceDialog';
+import QuantityDialog from './QuantityDialog';
 import appLogo from '@/assets/cobro-logo.png';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { usePOSSearch } from '@/contexts/POSSearchContext';
@@ -74,6 +75,9 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   const [selectedVariableProduct, setSelectedVariableProduct] = useState<Product | null>(null);
   const [visibleCount, setVisibleCount] = useState(24);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
+
+  const [isQuantityDialogOpen, setIsQuantityDialogOpen] = useState(false);
+  const [selectedQuantityProduct, setSelectedQuantityProduct] = useState<{ id: string; name: string; currentQuantity: number } | null>(null);
 
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
@@ -212,6 +216,19 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
       setIsVariablePriceDialogOpen(false);
     }
   };
+
+  const handleQuantityClick = React.useCallback((id: string, name: string, currentQuantity: number) => {
+    setSelectedQuantityProduct({ id, name, currentQuantity });
+    setIsQuantityDialogOpen(true);
+  }, []);
+
+  const handleQuantityConfirm = React.useCallback((quantity: number) => {
+    if (selectedQuantityProduct) {
+      props.onUpdateQuantity?.(selectedQuantityProduct.id, quantity);
+      setIsQuantityDialogOpen(false);
+      setSelectedQuantityProduct(null);
+    }
+  }, [selectedQuantityProduct, props.onUpdateQuantity]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -408,7 +425,12 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
                           >
                              <Minus className="h-3 w-3 md:h-4 md:w-4" />
                           </button>
-                          <span className="w-6 md:w-8 text-center text-xs md:text-sm font-bold text-white shrink-0">{item.quantity}</span>
+                           <span 
+                             className="w-6 md:w-8 text-center text-xs md:text-sm font-bold text-white shrink-0 cursor-pointer hover:text-emerald-400 transition-colors"
+                             onClick={() => handleQuantityClick(item.id, item.name, item.quantity)}
+                           >
+                             {item.quantity}
+                           </span>
                           <button 
                             className="h-6 w-6 md:h-8 md:w-8 flex items-center justify-center text-emerald-500 active:bg-zinc-700/50 rounded-md transition-colors"
                             onClick={() => props.onUpdateQuantity?.(item.id, item.quantity + 1)}
@@ -477,6 +499,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
               onSelect={handleProductSelect}
               cart={cart}
               onUpdateQuantity={props.onUpdateQuantity}
+              onQuantityClick={handleQuantityClick}
             />
           )}
           {filteredProducts.length > visibleCount && (
@@ -495,6 +518,14 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
         onConfirm={handleVariablePriceConfirm}
         product={selectedVariableProduct}
       />
+
+      <QuantityDialog
+        isOpen={isQuantityDialogOpen}
+        onClose={() => setIsQuantityDialogOpen(false)}
+        onConfirm={handleQuantityConfirm}
+        itemName={selectedQuantityProduct?.name || ''}
+        currentQuantity={selectedQuantityProduct?.currentQuantity || 0}
+      />
     </div>
   );
 });
@@ -512,6 +543,7 @@ interface ProductGridProps {
   onSelect: (product: any) => void;
   cart?: CartItem[];
   onUpdateQuantity?: (id: string, q: number) => void;
+  onQuantityClick?: (id: string, name: string, qty: number) => void;
 }
 
 const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
@@ -521,6 +553,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
   onSelect,
   cart,
   onUpdateQuantity,
+  onQuantityClick,
 }) {
   // Precompute cart quantity mapping to optimize inside-loop lookups from O(C) to O(1)
   const cartMap = React.useMemo(() => {
@@ -657,10 +690,16 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                     >
                       <Minus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
                     </button>
-                    <span className={cn(
-                      "text-center font-bold text-foreground shrink-0",
-                      viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
-                    )}>
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onQuantityClick?.(product.id, product.name, cartQty);
+                      }}
+                      className={cn(
+                        "text-center font-bold text-foreground shrink-0 cursor-pointer hover:text-emerald-500 transition-colors active:scale-95",
+                        viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
+                      )}
+                    >
                       {cartQty}
                     </span>
                     <button
