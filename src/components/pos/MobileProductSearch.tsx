@@ -298,7 +298,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
         </div>
 
         {/* Category Pills - Premium Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap pb-1 no-scrollbar w-full">
+        <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full -mx-3 px-3">
           {categories.map((cat) => (
             <button
               key={cat}
