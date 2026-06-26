@@ -605,14 +605,14 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                       }}
                       className={cn(
                         "flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-card rounded-full transition-all active:scale-90",
-                        viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+                        viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                       )}
                     >
-                      <Minus className="h-2.5 w-2.5" />
+                      <Minus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
                     </button>
                     <span className={cn(
                       "text-center font-bold text-foreground shrink-0",
-                      viewMode === 'list' ? "w-5 text-[11px]" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
+                      viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
                     )}>
                       {cartQty}
                     </span>
@@ -624,10 +624,10 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                       }}
                       className={cn(
                         "flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:bg-card rounded-full transition-all active:scale-90",
-                        viewMode === 'list' ? "h-5 w-5" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+                        viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                       )}
                     >
-                      <Plus className="h-2.5 w-2.5" />
+                      <Plus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
                     </button>
                   </div>
                 ) : (
