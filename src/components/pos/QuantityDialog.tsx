@@ -87,12 +87,17 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
                   <Input
                     id="quantity-input"
                     ref={inputRef}
-                    type="number"
-                    step="0.001"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
                     value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="text-5xl font-black h-20 text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-800"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                        setQuantity(val);
+                      }
+                    }}
+                    className="text-5xl md:text-5xl font-black h-20 text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-800"
                     placeholder="0.000"
                     autoComplete="off"
                   />

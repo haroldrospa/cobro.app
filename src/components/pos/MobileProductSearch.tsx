@@ -364,7 +364,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
 
       {/* ── PRODUCTS FEED ── */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-        <div className="px-2 pb-36 pt-4">
+        <div className={cn("px-2 pt-4", cart && cart.length > 0 ? "pb-28" : "pb-6")}>
           {filteredProducts.length === 0 ? (
             cart && cart.length > 0 ? (
               <div className="flex flex-col gap-3 py-6 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full min-w-0 max-w-full overflow-x-hidden">
