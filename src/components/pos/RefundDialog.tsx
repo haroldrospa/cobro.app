@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, RefreshCcw, AlertTriangle, ReceiptText } from 'lucide-react';
+import { Search, RefreshCcw, AlertTriangle, ReceiptText, ChevronLeft } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useCreateSale } from '@/hooks/useSales';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
@@ -128,13 +128,13 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                 className="!flex !flex-col !p-0 !overflow-hidden !max-w-[95vw] sm:!max-w-3xl lg:!max-w-4xl w-full !h-[90dvh] !max-h-[90dvh] bg-[#0a0a0a] border-zinc-900 !rounded-[2rem] shadow-2xl"
                 centerOnMobile={true}
             >
-                <div className="p-4 sm:p-6 border-b border-zinc-900 bg-transparent flex flex-col gap-3 shrink-0">
+                <div className="p-4 sm:p-6 border-b border-zinc-900 bg-transparent flex flex-col gap-3 shrink-0 [@media(max-height:580px)]:p-2 [@media(max-height:580px)]:gap-2">
                     <DialogHeader>
                         <DialogTitle className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
                             <RefreshCcw className="h-4 sm:h-5 w-4 sm:w-5 text-emerald-500" />
                             Procesar Devolución / Reembolso
                         </DialogTitle>
-                        <DialogDescription className="text-zinc-500 text-[9px] sm:text-[10px] font-medium">
+                        <DialogDescription className="text-zinc-500 text-[9px] sm:text-[10px] font-medium [@media(max-height:580px)]:hidden">
                             Busque la factura original para generar una Nota de Crédito
                         </DialogDescription>
                     </DialogHeader>
@@ -150,11 +150,11 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-hidden px-3 sm:px-6 flex flex-col sm:flex-row gap-4 min-h-0">
+                <div className="flex-1 overflow-hidden px-3 sm:px-6 flex flex-col sm:flex-row gap-4 min-h-0 [@media(max-height:580px)]:px-2 [@media(max-height:580px)]:gap-2">
                     {/* List of Results */}
                     <div className={cn(
                         "transition-all duration-300 border border-zinc-900 rounded-2xl overflow-y-auto bg-zinc-950/20 flex-1 min-h-0 no-scrollbar",
-                        selectedSale ? "w-full sm:w-1/2 max-h-[160px] sm:max-h-[450px]" : "w-full max-h-[360px] sm:max-h-[450px]"
+                        selectedSale ? "hidden sm:block sm:w-1/2 sm:max-h-[450px]" : "w-full max-h-[360px] sm:max-h-[450px]"
                     )}>
                         <Table>
                             <TableHeader className="bg-zinc-900/50 backdrop-blur sticky top-0 z-10">
@@ -200,25 +200,33 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
 
                     {/* Selected Sale Details */}
                     {selectedSale && (
-                        <div className="w-full sm:w-1/2 flex flex-col min-h-0 overflow-y-auto border border-zinc-900 rounded-2xl bg-zinc-900/10 p-4 gap-3 animate-in fade-in slide-in-from-bottom-5 sm:slide-in-from-right-10">
+                        <div className="w-full sm:w-1/2 flex flex-col min-h-0 overflow-y-auto border border-zinc-900 rounded-2xl bg-zinc-900/10 p-4 gap-3 animate-in fade-in slide-in-from-bottom-5 sm:slide-in-from-right-10 [@media(max-height:580px)]:p-2 [@media(max-height:580px)]:gap-1.5">
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setSelectedSale(null)}
+                                className="sm:hidden h-8 px-2 text-zinc-400 hover:text-white self-start flex items-center gap-1 -ml-2 mb-1 shrink-0"
+                            >
+                                <ChevronLeft className="h-4 w-4 text-emerald-500" /> Volver al listado
+                            </Button>
                             <div>
-                                <h3 className="font-bold text-sm text-white mb-2 flex items-center gap-1.5">
+                                <h3 className="font-bold text-sm text-white mb-2 flex items-center gap-1.5 [@media(max-height:580px)]:mb-1">
                                     <ReceiptText className="h-4 w-4 text-zinc-500" />
                                     Detalles de Factura
                                 </h3>
-                                <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-950/20 p-3 border border-zinc-900 rounded-xl">
+                                <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-950/20 p-3 border border-zinc-900 rounded-xl [@media(max-height:580px)]:gap-1 [@media(max-height:580px)]:p-1.5">
                                     <div>
-                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Cliente</p>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider [@media(max-height:580px)]:text-[8px]">Cliente</p>
                                         <p className="font-semibold text-zinc-300 truncate">{selectedSale.customer?.name || 'Cliente General'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Fecha</p>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider [@media(max-height:580px)]:text-[8px]">Fecha</p>
                                         <p className="font-semibold text-zinc-300 truncate">{format(new Date(selectedSale.created_at), 'dd/MM/yy hh:mm a')}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="border border-zinc-900 rounded-xl bg-zinc-950/20 overflow-hidden mb-1 flex-1 min-h-[100px] overflow-y-auto no-scrollbar">
+                            <div className="border border-zinc-900 rounded-xl bg-zinc-950/20 overflow-hidden mb-1 flex-1 min-h-[80px] overflow-y-auto no-scrollbar [@media(max-height:580px)]:max-h-[100px]">
                                 <Table>
                                     <TableHeader className="bg-zinc-900/30">
                                         <TableRow className="border-zinc-900/60">
@@ -260,7 +268,7 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                     )}
                 </div>
 
-                <div className="shrink-0 flex justify-end p-4 border-t border-zinc-900 mt-2">
+                <div className="shrink-0 flex justify-end p-4 border-t border-zinc-900 mt-2 [@media(max-height:580px)]:p-2 [@media(max-height:580px)]:mt-1">
                     <Button variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-white rounded-lg">Cancelar</Button>
                 </div>
             </DialogContent>

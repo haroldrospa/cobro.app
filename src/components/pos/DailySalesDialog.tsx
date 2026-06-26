@@ -236,21 +236,21 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                 centerOnMobile={true}
             >
                     {/* Header Section */}
-                    <div className="p-4 sm:p-6 border-b border-zinc-900 bg-transparent flex flex-col gap-3 sm:gap-4">
+                    <div className="p-4 sm:p-6 border-b border-zinc-900 bg-transparent flex flex-col gap-3 sm:gap-4 [@media(max-height:580px)]:p-2 [@media(max-height:580px)]:gap-2 shrink-0">
                         <div className="flex justify-between items-center">
                             <div className="space-y-0.5">
                                 <DialogTitle className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
                                     <ReceiptText className="h-4 sm:h-5 w-4 sm:w-5 text-emerald-500" />
                                     Historial de Facturación
                                 </DialogTitle>
-                                <DialogDescription className="text-zinc-500 text-[9px] sm:text-[10px] font-medium">
+                                <DialogDescription className="text-zinc-500 text-[9px] sm:text-[10px] font-medium [@media(max-height:580px)]:hidden">
                                     {activeSession ? "Monitor de ventas activas del turno actual" : "Ventas de la última sesión finalizada"}
                                 </DialogDescription>
                             </div>
                         </div>
 
                         {/* Summary Cards */}
-                        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                        <div className="grid grid-cols-3 gap-2 sm:gap-3 [@media(max-height:580px)]:hidden">
                             <div className="bg-zinc-900/50 border border-zinc-800/80 p-2 sm:p-4 rounded-xl transition-all hover:border-zinc-700">
                                 <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                                     <span className="text-[8px] sm:text-[10px] font-semibold text-zinc-500 uppercase tracking-wider truncate">
@@ -343,8 +343,8 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                     </div>
 
                     {/* Table Section */}
-                    <div className="flex-1 overflow-hidden px-3 sm:px-6 pb-3 sm:pb-6 flex flex-col min-h-0">
-                        <div className="flex-1 bg-transparent border border-zinc-900/60 rounded-2xl overflow-hidden flex flex-col mt-2 min-h-0">
+                    <div className="flex-1 overflow-hidden px-3 sm:px-6 pb-3 sm:pb-6 flex flex-col min-h-0 [@media(max-height:580px)]:px-2 [@media(max-height:580px)]:pb-2">
+                        <div className="flex-1 bg-transparent border border-zinc-900/60 rounded-2xl overflow-hidden flex flex-col mt-2 min-h-0 [@media(max-height:580px)]:mt-1">
                             <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
                                 {isLoading ? (
                                     <div className="flex flex-col items-center justify-center h-full gap-4 opacity-50">
