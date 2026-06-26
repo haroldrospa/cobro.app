@@ -168,12 +168,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, prefilledValues, onC
     <>
       {/* Backdrop — clic afuera cierra (con confirmación si hay cambios) */}
       <div
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-40"
         onClick={handleBackdropClick}
       >
         {/* Stoppage propagation: clic dentro del Card NO cierra */}
         <Card
-          className="w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden"
+          className="w-full max-w-md max-h-[75vh] md:max-h-[90vh] mb-[76px] md:mb-0 flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <CardHeader className="flex flex-row items-center justify-between bg-card z-10 border-b flex-shrink-0">
