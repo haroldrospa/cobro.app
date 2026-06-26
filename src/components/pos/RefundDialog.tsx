@@ -124,51 +124,53 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent 
-                className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full max-h-[90vh] flex flex-col bg-[#0a0a0a] border-zinc-900 rounded-[2rem] shadow-2xl"
+                className="!flex !flex-col !p-0 !overflow-hidden !max-w-[95vw] sm:!max-w-3xl lg:!max-w-4xl w-full !h-[90dvh] !max-h-[90dvh] bg-[#0a0a0a] border-zinc-900 !rounded-[2rem] shadow-2xl"
                 centerOnMobile={true}
             >
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <RefreshCcw className="h-5 w-5" />
-                        Procesar Devolución / Reembolso
-                    </DialogTitle>
-                    <DialogDescription>
-                        Busque la factura original para generar una Nota de Crédito
-                    </DialogDescription>
-                </DialogHeader>
+                <div className="p-4 sm:p-6 border-b border-zinc-900 bg-transparent flex flex-col gap-3 shrink-0">
+                    <DialogHeader>
+                        <DialogTitle className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
+                            <RefreshCcw className="h-4 sm:h-5 w-4 sm:w-5 text-emerald-500" />
+                            Procesar Devolución / Reembolso
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-500 text-[9px] sm:text-[10px] font-medium">
+                            Busque la factura original para generar una Nota de Crédito
+                        </DialogDescription>
+                    </DialogHeader>
 
-                <div className="flex gap-2 my-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <div className="relative group">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 sm:h-4 w-3.5 sm:w-4 text-zinc-600 group-focus-within:text-emerald-500 transition-colors" />
                         <Input
                             placeholder="Buscar por NCF (ej. B02...)"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
+                            className="h-10 pl-10 bg-zinc-900 border-zinc-800/80 rounded-lg text-white placeholder:text-zinc-600 focus:ring-1 focus:ring-emerald-500/30 text-xs sm:text-sm"
                         />
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto min-h-[300px] flex gap-4">
+                <div className="flex-1 overflow-hidden px-3 sm:px-6 flex flex-col sm:flex-row gap-4 min-h-0">
                     {/* List of Results */}
-                    <div className={`${selectedSale ? 'w-1/2' : 'w-full'} transition-all duration-300 border rounded-lg overflow-y-auto max-h-[450px]`}>
+                    <div className={cn(
+                        "transition-all duration-300 border border-zinc-900 rounded-2xl overflow-y-auto bg-zinc-950/20 flex-1 min-h-0 no-scrollbar",
+                        selectedSale ? "w-full sm:w-1/2 max-h-[160px] sm:max-h-[450px]" : "w-full max-h-[360px] sm:max-h-[450px]"
+                    )}>
                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>NCF</TableHead>
-                                    <TableHead>Fecha</TableHead>
-                                    <TableHead className="text-right">Total</TableHead>
-                                    <TableHead></TableHead>
+                            <TableHeader className="bg-zinc-900/50 backdrop-blur sticky top-0 z-10">
+                                <TableRow className="border-zinc-900 hover:bg-transparent">
+                                    <TableHead className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider py-2.5">NCF</TableHead>
+                                    <TableHead className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Fecha</TableHead>
+                                    <TableHead className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider text-right">Total</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Buscando...</TableCell>
+                                        <TableCell colSpan={3} className="text-center py-8 text-zinc-500 text-xs font-bold uppercase tracking-wider">Buscando...</TableCell>
                                     </TableRow>
                                 ) : sales.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableCell colSpan={3} className="text-center py-8 text-zinc-600 text-xs font-semibold">
                                             {searchTerm.length > 2 ? 'No se encontraron facturas' : 'Ingrese al menos 3 caracteres'}
                                         </TableCell>
                                     </TableRow>
@@ -176,16 +178,17 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                                     sales.map((sale: any) => (
                                         <TableRow
                                             key={sale.id}
-                                            className={`cursor-pointer ${selectedSale?.id === sale.id ? 'bg-muted' : ''}`}
+                                            className={cn(
+                                                "border-zinc-900/60 hover:bg-zinc-900/40 transition-colors cursor-pointer",
+                                                selectedSale?.id === sale.id ? "bg-zinc-900/60" : ""
+                                            )}
                                             onClick={() => handleSelectSale(sale)}
                                         >
-                                            <TableCell className="font-medium">{sale.invoice_number}</TableCell>
-                                            <TableCell>{format(new Date(sale.created_at), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell className="text-right font-bold text-green-600">
-                                                RD$ {sale.total.toLocaleString()}
-                                            </TableCell>
-                                            <TableCell>
-                                                {sale.total < 0 && <Badge variant="destructive" className="text-xs">Reembolso</Badge>}
+                                            <TableCell className="font-semibold text-xs text-white">{sale.invoice_number}</TableCell>
+                                            <TableCell className="text-xs text-zinc-400">{format(new Date(sale.created_at), 'dd/MM/yyyy')}</TableCell>
+                                            <TableCell className="text-right font-black text-xs text-emerald-500">
+                                                RD$ {sale.total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                {sale.total < 0 && <span className="block text-[7px] text-red-500 font-bold uppercase tracking-wider mt-0.5">Reembolso</span>}
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -196,49 +199,54 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
 
                     {/* Selected Sale Details */}
                     {selectedSale && (
-                        <div className="w-1/2 flex flex-col space-y-4 animate-in fade-in slide-in-from-right-10">
-                            <Card className="p-4 bg-muted/30">
-                                <h3 className="font-bold text-lg mb-2">Detalles de Factura</h3>
-                                <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                        <div className="w-full sm:w-1/2 flex flex-col min-h-0 overflow-y-auto border border-zinc-900 rounded-2xl bg-zinc-900/10 p-4 gap-3 animate-in fade-in slide-in-from-bottom-5 sm:slide-in-from-right-10">
+                            <div>
+                                <h3 className="font-bold text-sm text-white mb-2 flex items-center gap-1.5">
+                                    <ReceiptText className="h-4 w-4 text-zinc-500" />
+                                    Detalles de Factura
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-950/20 p-3 border border-zinc-900 rounded-xl">
                                     <div>
-                                        <p className="text-muted-foreground">Cliente</p>
-                                        <p className="font-medium">{selectedSale.customer?.name || 'Cliente General'}</p>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Cliente</p>
+                                        <p className="font-semibold text-zinc-300 truncate">{selectedSale.customer?.name || 'Cliente General'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-muted-foreground">Fecha</p>
-                                        <p className="font-medium">{format(new Date(selectedSale.created_at), 'PP p')}</p>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Fecha</p>
+                                        <p className="font-semibold text-zinc-300 truncate">{format(new Date(selectedSale.created_at), 'dd/MM/yy hh:mm a')}</p>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="border rounded-md bg-background overflow-hidden mb-4">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="h-8 py-1">Item</TableHead>
-                                                <TableHead className="h-8 py-1 text-right">Cant</TableHead>
-                                                <TableHead className="h-8 py-1 text-right">Total</TableHead>
+                            <div className="border border-zinc-900 rounded-xl bg-zinc-950/20 overflow-hidden mb-1 flex-1 min-h-[100px] overflow-y-auto no-scrollbar">
+                                <Table>
+                                    <TableHeader className="bg-zinc-900/30">
+                                        <TableRow className="border-zinc-900/60">
+                                            <TableHead className="h-8 py-1 text-[8px] font-bold text-zinc-500 uppercase tracking-wider">Item</TableHead>
+                                            <TableHead className="h-8 py-1 text-[8px] font-bold text-zinc-500 uppercase tracking-wider text-right">Cant</TableHead>
+                                            <TableHead className="h-8 py-1 text-[8px] font-bold text-zinc-500 uppercase tracking-wider text-right">Total</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedSale.sale_items?.map((item: any) => (
+                                            <TableRow key={item.id} className="border-zinc-900/40 hover:bg-transparent">
+                                                <TableCell className="py-1.5 text-xs text-zinc-300 font-medium truncate max-w-[120px]">{item.product?.name || 'Item'}</TableCell>
+                                                <TableCell className="py-1.5 text-xs text-zinc-400 text-right font-semibold">{item.quantity}</TableCell>
+                                                <TableCell className="py-1.5 text-xs text-zinc-200 text-right font-black">RD$ {item.total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {selectedSale.sale_items?.map((item: any) => (
-                                                <TableRow key={item.id}>
-                                                    <TableCell className="py-2 text-xs">{item.product?.name || 'Item'}</TableCell>
-                                                    <TableCell className="py-2 text-xs text-right">{item.quantity}</TableCell>
-                                                    <TableCell className="py-2 text-xs text-right">${item.total.toLocaleString()}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
 
+                            <div className="mt-auto shrink-0">
                                 {selectedSale.total < 0 ? (
-                                    <div className="flex items-center justify-center p-4 bg-yellow-500/10 text-yellow-600 rounded-lg">
-                                        <AlertTriangle className="h-5 w-5 mr-2" />
+                                    <div className="flex items-center justify-center p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs">
+                                        <AlertTriangle className="h-4 w-4 mr-2" />
                                         <span>Esta factura ya es un reembolso</span>
                                     </div>
                                 ) : (
                                     <Button
-                                        className="w-full"
+                                        className="w-full h-auto py-2.5 px-4 whitespace-normal text-xs font-bold leading-tight rounded-xl flex items-center justify-center"
                                         variant="destructive"
                                         onClick={handleProcessRefund}
                                         disabled={isProcessing}
@@ -246,13 +254,13 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                                         {isProcessing ? 'Procesando...' : 'Generar Nota de Crédito (Reembolso Total)'}
                                     </Button>
                                 )}
-                            </Card>
+                            </div>
                         </div>
                     )}
                 </div>
 
-                <div className="flex justify-end mt-4">
-                    <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+                <div className="shrink-0 flex justify-end p-4 border-t border-zinc-900 mt-2">
+                    <Button variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-white rounded-lg">Cancelar</Button>
                 </div>
             </DialogContent>
         </Dialog>
