@@ -19,6 +19,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import BarcodesManager from './BarcodesManager';
 import { ProductBarcode } from '@/hooks/useProducts';
+import { useBusinessType } from '@/hooks/useBusinessType';
 
 interface ProductFormFieldsProps {
   register: UseFormRegister<ProductFormData>;
@@ -42,6 +43,7 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
   extraBarcodes,
   onExtraBarcodesChange,
 }) => {
+  const { isStore } = useBusinessType();
   const selectedCategoryId = watch('category_id');
   const costIncludesTax = watch('cost_includes_tax');
   const isFeatured = watch('is_featured');
@@ -112,34 +114,38 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
       </div>
 
       <div className="space-y-4 border rounded-lg p-4 bg-card">
-        <div className="flex items-center space-x-2 pb-2">
-          <Checkbox
-            id="is_variable_price"
-            checked={watch('is_variable_price')}
-            onCheckedChange={(checked) => {
-              setValue('is_variable_price', !!checked);
-              if (checked) {
-                setValue('price', 0); // Reset price to 0 to avoid validation errors
-              }
-            }}
-          />
-          <Label htmlFor="is_variable_price" className="text-sm font-medium cursor-pointer">
-            Precio Variado (Se define al momento de vender)
-          </Label>
-        </div>
+        {!isStore && (
+          <>
+            <div className="flex items-center space-x-2 pb-2">
+              <Checkbox
+                id="is_variable_price"
+                checked={watch('is_variable_price')}
+                onCheckedChange={(checked) => {
+                  setValue('is_variable_price', !!checked);
+                  if (checked) {
+                    setValue('price', 0); // Reset price to 0 to avoid validation errors
+                  }
+                }}
+              />
+              <Label htmlFor="is_variable_price" className="text-sm font-medium cursor-pointer">
+                Precio Variado (Se define al momento de vender)
+              </Label>
+            </div>
 
-        <div className="flex items-center space-x-2 pb-2">
-          <Checkbox
-            id="is_variable_quantity"
-            checked={watch('is_variable_quantity')}
-            onCheckedChange={(checked) => {
-              setValue('is_variable_quantity', !!checked);
-            }}
-          />
-          <Label htmlFor="is_variable_quantity" className="text-sm font-medium cursor-pointer">
-            Cantidad Variada / Pesar (Preguntar cantidad al vender)
-          </Label>
-        </div>
+            <div className="flex items-center space-x-2 pb-2">
+              <Checkbox
+                id="is_variable_quantity"
+                checked={watch('is_variable_quantity')}
+                onCheckedChange={(checked) => {
+                  setValue('is_variable_quantity', !!checked);
+                }}
+              />
+              <Label htmlFor="is_variable_quantity" className="text-sm font-medium cursor-pointer">
+                Cantidad Variada / Pesar (Preguntar cantidad al vender)
+              </Label>
+            </div>
+          </>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           {/* 1. COSTO o GANANCIA (Dependiendo del modo) */}
