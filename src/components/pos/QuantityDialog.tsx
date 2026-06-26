@@ -48,7 +48,7 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[400px] bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-0 overflow-hidden rounded-[2rem]">
+      <DialogContent hideCloseButton className="sm:max-w-[400px] bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-0 overflow-hidden rounded-[2rem]">
         <div className="relative">
           {/* Header Area with Subtle Gradient */}
           <div className="bg-gradient-to-b from-green-500/10 to-transparent p-6 pb-2">
