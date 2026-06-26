@@ -67,10 +67,15 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>(isSignup ? 'signup' : 'login');
+  const [authView, setAuthView] = useState<'login' | 'signup' | 'forgot-password' | 'update-password'>(() => {
+    const isRecovery = window.location.hash.includes('type=recovery') || 
+                       window.location.href.includes('recovery') || 
+                       window.location.search.includes('type=recovery');
+    return isRecovery ? 'update-password' : (isSignup ? 'signup' : 'login');
+  });
 
   useEffect(() => {
-    setActiveTab(isSignup ? 'signup' : 'login');
+    setAuthView(isSignup ? 'signup' : 'login');
   }, [isSignup]);
   
   // Wizard state
@@ -90,15 +95,24 @@ const Auth = () => {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) handleRedirect(session);
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthView('update-password');
+      } else if (session && event !== 'PASSWORD_RECOVERY' && authView !== 'update-password') {
+        handleRedirect(session);
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) handleRedirect(session);
+      const isRecovery = window.location.hash.includes('type=recovery') || 
+                         window.location.href.includes('recovery') || 
+                         window.location.search.includes('type=recovery');
+      if (session && !isRecovery && authView !== 'update-password') {
+        handleRedirect(session);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, authView]);
 
   useEffect(() => {
     // Force dark mode on document element for the Auth page to keep styling premium and dark
@@ -272,6 +286,68 @@ const Auth = () => {
     }
   };
 
+  const handleRequestPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+    if (!email || !email.trim()) {
+      setErrors({ email: 'El correo electrónico es requerido' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      toast({
+        title: "Correo enviado",
+        description: "Revisa tu bandeja de entrada para restablecer tu contraseña.",
+      });
+      setAuthView('login');
+    } catch (error: any) {
+      toast({
+        title: "Error al enviar correo",
+        description: error.message || "Ha ocurrido un error inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+    if (password.length < 6) {
+      setErrors({ password: 'La contraseña debe tener al menos 6 caracteres' });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrors({ confirmPassword: 'Las contraseñas no coinciden' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      toast({
+        title: "Contraseña actualizada",
+        description: "Tu contraseña ha sido restablecida con éxito.",
+      });
+      // Clear hash/params to prevent loops
+      window.location.hash = '';
+      navigate('/app', { replace: true });
+    } catch (error: any) {
+      toast({
+        title: "Error al actualizar",
+        description: error.message || "Ha ocurrido un error al actualizar la contraseña.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Clean input style using dark glass background and emerald accents
   const inputCls = "pl-10 h-12 text-sm !bg-slate-950/40 !border-white/[0.08] text-white placeholder:text-slate-600 focus:!bg-slate-950/60 focus:!border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 focus-visible:ring-offset-0 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 transition-all rounded-xl";
 
@@ -319,8 +395,94 @@ const Auth = () => {
 
         <Card className="bg-[#1e252b]/95 backdrop-blur-xl border border-white/[0.06] border-t-emerald-500/20 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.6)] overflow-hidden relative rounded-2xl w-full">
           <CardContent className="p-6 sm:p-8 relative z-10">
-            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'login' | 'signup')} className="w-full">
-              <TabsList className="flex justify-center w-full mb-8 bg-transparent border-b border-white/[0.06] p-0 rounded-none gap-8 h-10 relative">
+            {authView === 'forgot-password' ? (
+              <form onSubmit={handleRequestPasswordReset} className="space-y-4">
+                <div className="space-y-2 mb-4">
+                  <h3 className="text-lg font-bold text-white">Recuperar Contraseña</h3>
+                  <p className="text-xs text-slate-400">Ingresa tu correo electrónico y te enviaremos un enlace de recuperación.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Correo electrónico</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="tu@email.com"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      disabled={loading}
+                      className={inputCls}
+                    />
+                  </div>
+                  {errors.email && <p className="text-[10px] text-red-400 mt-1">{errors.email}</p>}
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all active:scale-[0.98] rounded-xl mt-6 text-sm"
+                  disabled={loading}
+                >
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : 'Enviar enlace de recuperación'}
+                </Button>
+                <div className="text-center mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setAuthView('login')}
+                    className="text-xs text-slate-400 hover:text-white transition-colors"
+                  >
+                    Volver a iniciar sesión
+                  </button>
+                </div>
+              </form>
+            ) : authView === 'update-password' ? (
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="space-y-2 mb-4">
+                  <h3 className="text-lg font-bold text-white">Establecer Nueva Contraseña</h3>
+                  <p className="text-xs text-slate-400">Ingresa tu nueva contraseña para acceder a tu cuenta.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="update-password-input" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Nueva Contraseña</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
+                    <Input
+                      id="update-password-input"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      disabled={loading}
+                      className={inputCls}
+                    />
+                  </div>
+                  {errors.password && <p className="text-[10px] text-red-400 mt-1">{errors.password}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="update-confirm-input" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Confirmar Contraseña</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
+                    <Input
+                      id="update-confirm-input"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      disabled={loading}
+                      className={inputCls}
+                    />
+                  </div>
+                  {errors.confirmPassword && <p className="text-[10px] text-red-400 mt-1">{errors.confirmPassword}</p>}
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all active:scale-[0.98] rounded-xl mt-6 text-sm"
+                  disabled={loading}
+                >
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : 'Actualizar y Entrar'}
+                </Button>
+              </form>
+            ) : (
+              <Tabs value={authView} onValueChange={(val) => setAuthView(val as any)} className="w-full">
+                <TabsList className="flex justify-center w-full mb-8 bg-transparent border-b border-white/[0.06] p-0 rounded-none gap-8 h-10 relative">
                 <TabsTrigger
                   value="login"
                   className="relative pb-3 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors duration-200 outline-none focus-visible:ring-0 !bg-transparent data-[state=active]:!bg-transparent data-[state=active]:!text-emerald-400 data-[state=active]:!shadow-none data-[state=active]:!border-0 rounded-none px-1"
@@ -368,7 +530,16 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login-password" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Contraseña</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="login-password" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Contraseña</Label>
+                      <button
+                        type="button"
+                        onClick={() => setAuthView('forgot-password')}
+                        className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-wide hover:underline cursor-pointer"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
                       <Input
@@ -695,6 +866,7 @@ const Auth = () => {
                 </AnimatePresence>
               </TabsContent>
             </Tabs>
+            )}
           </CardContent>
         </Card>
 

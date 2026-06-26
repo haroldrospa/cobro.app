@@ -49,7 +49,8 @@ import {
     Filter,
     AlertCircle,
     Settings,
-    History
+    History,
+    Trash2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -261,6 +262,34 @@ const SuperAdmin = () => {
             toast.error("Error al actualizar: " + err.message);
         }
     });
+
+    // 6. Eliminar tienda y usuario dueño
+    const deleteStoreMutation = useMutation({
+        mutationFn: async (storeId: string) => {
+            // @ts-ignore
+            const { data, error } = await supabase.rpc("delete_store_and_owner", {
+                p_store_id: storeId
+            });
+            if (error) throw error;
+            if (data && !(data as any).success) {
+                throw new Error((data as any).message || "Error al eliminar");
+            }
+            return data;
+        },
+        onSuccess: () => {
+            toast.success("Tienda y usuario eliminados permanentemente");
+            queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
+        },
+        onError: (err: any) => {
+            toast.error("Error al eliminar la tienda: " + err.message);
+        }
+    });
+
+    const handleDeleteStore = (storeId: string, storeName: string) => {
+        if (confirm(`¿Estás seguro de que deseas eliminar permanentemente la tienda "${storeName}" y su usuario asociado? Esta acción borrará todas las ventas, productos y configuraciones del comercio, y no se puede deshacer.`)) {
+            deleteStoreMutation.mutate(storeId);
+        }
+    };
 
     const getPublicUrl = (path: string) => {
         if (!path) return "";
@@ -939,6 +968,16 @@ const SuperAdmin = () => {
                                                                 onCheckedChange={() => toggleStoreMutation.mutate({ id: store.id, currentState: store.is_active })}
                                                                 disabled={toggleStoreMutation.isPending}
                                                             />
+
+                                                            <Button 
+                                                                size="icon" 
+                                                                variant="ghost" 
+                                                                className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                                                disabled={deleteStoreMutation.isPending}
+                                                                onClick={() => handleDeleteStore(store.id, store.store_name)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
