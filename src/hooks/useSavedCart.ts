@@ -6,36 +6,34 @@ import { useUserProfile } from './useUserProfile';
 import React, { useEffect, useRef } from 'react';
 
 export const useSavedCart = () => {
-  const { data: userStore } = useUserStore();
-  const { profile } = useUserProfile();
+  const { data: userStore, isLoading: isStoreLoading } = useUserStore();
+  const { profile, isLoading: isProfileLoading } = useUserProfile();
+
+  const isLoading = isStoreLoading || isProfileLoading || !userStore?.id || !profile?.id;
 
   const cacheKey = React.useMemo(() => {
-    return `saved_cart_${userStore?.id || 'default'}_${profile?.id || 'default'}`;
+    if (!userStore?.id || !profile?.id) return null;
+    return `saved_cart_${userStore.id}_${profile.id}`;
   }, [userStore?.id, profile?.id]);
 
-  const [savedCartData, setSavedCartData] = React.useState<SavedCartData | null>(() => {
-    try {
-      const stored = localStorage.getItem(`saved_cart_${userStore?.id || 'default'}_${profile?.id || 'default'}`);
-      return stored ? JSON.parse(stored) : null;
-    } catch (e) {
-      return null;
-    }
-  });
+  const [savedCartData, setSavedCartData] = React.useState<SavedCartData | null>(null);
 
   // Sync cache data when store or profile changes
   React.useEffect(() => {
-    if (userStore?.id && profile?.id) {
+    if (cacheKey) {
       try {
         const stored = localStorage.getItem(cacheKey);
         setSavedCartData(stored ? JSON.parse(stored) : null);
       } catch (e) {
         console.error('Error parsing local cart:', e);
       }
+    } else {
+      setSavedCartData(null);
     }
-  }, [cacheKey, userStore?.id, profile?.id]);
+  }, [cacheKey]);
 
   const saveCart = React.useCallback((cartData: SavedCartData) => {
-    if (!userStore?.id || !profile?.id) return;
+    if (!cacheKey || !userStore?.id || !profile?.id) return;
 
     // Save locally immediately (takes <1ms, completely offline-capable)
     try {
@@ -68,10 +66,10 @@ export const useSavedCart = () => {
 
   return React.useMemo(() => ({
     savedCartData,
-    isLoading: false,
+    isLoading,
     saveCart,
     isSaving: false,
-  }), [savedCartData, saveCart]);
+  }), [savedCartData, isLoading, saveCart]);
 };
 
 // Hook para auto-guardar el carrito completo con metadata
