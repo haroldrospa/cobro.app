@@ -67,6 +67,8 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   } = props;
 
   const { searchTerm, setSearchTerm } = usePOSSearch();
+  // Debounce search for performance — only recalculate after user stops typing (150ms)
+  const debouncedSearchTerm = useDebounce(searchTerm, 150);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [isVariablePriceDialogOpen, setIsVariablePriceDialogOpen] = useState(false);
   const [selectedVariableProduct, setSelectedVariableProduct] = useState<Product | null>(null);
@@ -130,9 +132,6 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
       ].filter(Boolean) as string[]
     }));
   }, [products]);
-
-  // Debounce search for performance — only recalculate after user stops typing (150ms)
-  const debouncedSearchTerm = useDebounce(searchTerm, 150);
 
   // Memoize search results to filter by category and search term
   const filteredProducts = React.useMemo(() => {
