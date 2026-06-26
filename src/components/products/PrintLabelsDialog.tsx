@@ -180,14 +180,33 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
       setGapX(0);
       setGapY(4);
       setRotation(180);
+      setShowBusinessName(true);
+      setShowProductName(true);
+      setShowPrice(true);
+      setShowBarcodeText(true);
+      setBnameSize(10);
+      setPnameSize(11);
+      setPriceSize(16);
+      setBarcodeFontSize(12);
+      setBarHeight(40);
+      setBarWidth(1.6);
     } else if (profileId === 'thermal_small') {
       setLabelWidth(30);
       setLabelHeight(20);
       setColumns(1);
       setGapX(0);
       setGapY(2);
-      setShowBusinessName(false);
       setRotation(180);
+      setShowBusinessName(false);
+      setShowProductName(true);
+      setShowPrice(true);
+      setShowBarcodeText(true);
+      setBnameSize(8);
+      setPnameSize(9);
+      setPriceSize(11);
+      setBarcodeFontSize(9);
+      setBarHeight(25);
+      setBarWidth(1.2);
     } else if (profileId === 'a4_3x10') {
       setLabelWidth(66);
       setLabelHeight(25);
@@ -195,6 +214,16 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
       setGapX(2);
       setGapY(2);
       setRotation(0);
+      setShowBusinessName(true);
+      setShowProductName(true);
+      setShowPrice(true);
+      setShowBarcodeText(true);
+      setBnameSize(10);
+      setPnameSize(11);
+      setPriceSize(16);
+      setBarcodeFontSize(12);
+      setBarHeight(40);
+      setBarWidth(1.6);
     } else {
       // Buscar plantilla personalizada
       const template = customTemplates.find(t => t.id === profileId);
