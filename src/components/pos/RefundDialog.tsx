@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { Search, RefreshCcw, AlertTriangle, ReceiptText } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useCreateSale } from '@/hooks/useSales';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface RefundDialogProps {
     isOpen: boolean;
