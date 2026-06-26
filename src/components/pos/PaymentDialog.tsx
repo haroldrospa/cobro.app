@@ -410,6 +410,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     <Input
                       ref={amountInputRef}
                       type="number"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={amountReceived}
                       onChange={(e) => onAmountReceivedChange(e.target.value)}
