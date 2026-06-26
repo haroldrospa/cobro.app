@@ -1594,12 +1594,12 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
         <CardContent className="p-4">
           <div className="space-y-4">
             {/* Botones de tipo de búsqueda */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-5">
               <Button
                 variant={searchType === 'all' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSearchType('all')}
-                className="flex items-center justify-center gap-2"
+                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
               >
                 <Asterisk className="h-4 w-4" />
                 <span>Todo</span>
@@ -1608,7 +1608,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 variant={searchType === 'name' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSearchType('name')}
-                className="flex items-center justify-center gap-2"
+                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
               >
                 <Package className="h-4 w-4" />
                 <span>Nombre</span>
@@ -1617,7 +1617,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 variant={searchType === 'barcode' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSearchType('barcode')}
-                className="flex items-center justify-center gap-2"
+                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
               >
                 <Barcode className="h-4 w-4" />
                 <span>Código de barras</span>
@@ -1626,7 +1626,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 variant={searchType === 'id' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSearchType('id')}
-                className="flex items-center justify-center gap-2"
+                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
               >
                 <Hash className="h-4 w-4" />
                 <span>Código interno</span>
@@ -1635,7 +1635,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 variant={searchType === 'category' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSearchType('category')}
-                className="flex items-center justify-center gap-2"
+                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
               >
                 <Tag className="h-4 w-4" />
                 <span>Categoría</span>
