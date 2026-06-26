@@ -123,10 +123,16 @@ const POSContent: React.FC = () => {
     return (saved as 'grid' | 'list') || 'list';
   });
 
-  const handleMobileViewModeChange = (mode: 'grid' | 'list') => {
+  const handleMobileViewModeChange = useCallback((mode: 'grid' | 'list') => {
     setMobileViewMode(mode);
     localStorage.setItem('pos_mobile_view_mode', mode);
-  };
+  }, []);
+
+  const handleSearchFocus = useCallback(() => {
+    if (!activeSession) {
+      setUserClosedRegisterDialog(false);
+    }
+  }, [activeSession]);
 
   const [globalDiscount, setGlobalDiscount] = useState<GlobalDiscount>({ value: 0, type: 'percentage' });
   const { data: userStore } = useUserStore();
@@ -1280,6 +1286,20 @@ const POSContent: React.FC = () => {
     toast({ title: "Sincronizando", description: "Cargando productos actualizados..." });
   }, [queryClient, toast]);
 
+  const handleRefreshMobile = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    toast({ title: "Sincronizando", description: "Actualizando catálogo móvil..." });
+  }, [queryClient, toast]);
+
+  const handleGridColsChangeMobile = useCallback((cols: number) => {
+    updateSettings({ pos_layout_grid_cols: cols });
+  }, [updateSettings]);
+
+  const handleLayoutModeChangeMobile = useCallback((mode: 'classic' | 'catalog') => {
+    updateSettings({ pos_layout_mode: mode });
+    handleMobileViewModeChange(mode === 'classic' ? 'list' : 'grid');
+  }, [updateSettings, handleMobileViewModeChange]);
+
   const totals = React.useMemo(() => calculateTotals(cartWithOffers, globalDiscount), [cartWithOffers, globalDiscount]);
   const baseTotal = parseFloat(totals.total) || 0;
 
@@ -1435,7 +1455,7 @@ const POSContent: React.FC = () => {
   }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings]);
 
   // Action buttons as a stable React.memo component reference
-  const actionButtons = (
+  const actionButtons = useMemo(() => (
     <POSActionButtons
       profileName={profile?.full_name}
       cartLength={cart.length}
@@ -1448,7 +1468,7 @@ const POSContent: React.FC = () => {
       onShowWebSales={memoHandleShowWebSales}
       onToggleFullscreen={memoHandleToggleFullscreen}
     />
-  );
+  ), [profile?.full_name, cart.length, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
 
   // Treat as loading if pending (no data yet) or actively loading for the first time
   const storeLoading = isPendingStore || isLoadingStore;
@@ -1558,27 +1578,17 @@ const POSContent: React.FC = () => {
               onRemoveFromCart={removeFromCart}
               orderType={posOrderType}
               onOrderTypeChange={setPosOrderType}
-              onSearchFocus={() => {
-                if (!activeSession) {
-                  setUserClosedRegisterDialog(false);
-                }
-              }}
-              onRefresh={() => {
-                queryClient.invalidateQueries({ queryKey: ['products'] });
-                toast({ title: "Sincronizando", description: "Actualizando catálogo móvil..." });
-              }}
+              onSearchFocus={handleSearchFocus}
+              onRefresh={handleRefreshMobile}
               isLoading={loadingProducts}
               menuButton={menuButton}
               actionButton={actionButtons}
               gridCols={storeSettings?.pos_layout_grid_cols || 4}
               viewMode={mobileViewMode}
               onViewModeChange={handleMobileViewModeChange}
-              onGridColsChange={(cols) => updateSettings({ pos_layout_grid_cols: cols })}
+              onGridColsChange={handleGridColsChangeMobile}
               mode={storeSettings?.pos_layout_mode || 'catalog'}
-              onLayoutModeChange={(mode) => {
-                updateSettings({ pos_layout_mode: mode });
-                handleMobileViewModeChange(mode === 'classic' ? 'list' : 'grid');
-              }}
+              onLayoutModeChange={handleLayoutModeChangeMobile}
               companyLogo={companyInfo?.logo}
               userName={profile?.full_name}
             />
@@ -1841,11 +1851,7 @@ const POSContent: React.FC = () => {
                     ref={searchInputRef}
                     products={products}
                     onAddToCart={addToCart}
-                    onSearchFocus={() => {
-                      if (!activeSession) {
-                        setUserClosedRegisterDialog(false);
-                      }
-                    }}
+                    onSearchFocus={handleSearchFocus}
                     menuButton={menuButton}
                     actionButton={actionButtons}
                     gridCols={storeSettings?.pos_layout_grid_cols || 4}
