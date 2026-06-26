@@ -1441,8 +1441,8 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       </div>
 
       {/* Centered Tab Selector */}
-      <div className="flex justify-center mb-6 w-full px-2">
-        <div className="flex items-center gap-1 p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm overflow-x-auto no-scrollbar max-w-full flex-nowrap">
+      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] mb-6 px-2">
+        <div className="flex items-center gap-1 p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm w-max mx-auto flex-nowrap">
           <Button
             variant={activeTab === 'products' ? 'default' : 'ghost'}
             size="sm"
