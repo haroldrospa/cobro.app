@@ -111,7 +111,7 @@ export const MobileBottomNav: React.FC = () => {
       {/* Overlay oscuro cuando el menú "Más" está abierto */}
       {moreOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          className="fixed inset-0 z-[42] bg-black/60 md:hidden"
           onClick={() => setMoreOpen(false)}
         />
       )}
@@ -119,7 +119,7 @@ export const MobileBottomNav: React.FC = () => {
       {/* Sheet "Más" que sube desde abajo */}
       <div
         className={cn(
-          'fixed bottom-16 left-0 right-0 z-50 md:hidden',
+          'fixed bottom-16 left-0 right-0 z-[45] md:hidden',
           'bg-card border border-border rounded-t-2xl shadow-2xl',
           'transition-transform duration-300 ease-out',
           moreOpen ? 'translate-y-0' : 'translate-y-full pointer-events-none'
@@ -177,7 +177,7 @@ export const MobileBottomNav: React.FC = () => {
       </div>
 
       {/* Barra de tabs inferior */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t border-border">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-card border-t border-border">
         <div className="flex items-stretch" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {primaryItems.map(item => {
             const Icon = item.icon;
