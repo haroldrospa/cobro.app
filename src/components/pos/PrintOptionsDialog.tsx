@@ -323,13 +323,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         pageMargin: '0mm', // Zero margin for @page, handling padding in body
         pageSize: '80mm auto' // Auto height for continuous roll
       },
-      '50mm': {
+      '58mm': {
         width: '45mm', // Reduced slightly
         height: 'auto',
         fontSize: '9px',
         logoSize: Math.floor(logoSize * 0.6),
         pageMargin: '0mm',
-        pageSize: '50mm auto'
+        pageSize: '58mm auto'
       },
       'A4': {
         width: '210mm',
@@ -368,7 +368,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               padding: 0;
             }
             @page { 
-              size: ${paperSize === '80mm' || paperSize === '50mm' ? 'auto' : styles.pageSize}; 
+              size: ${paperSize === '80mm' || paperSize === '58mm' ? 'auto' : styles.pageSize}; 
               margin: 0mm; 
             }
             @media print {
@@ -409,70 +409,70 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               object-fit: contain;
             }
             .company-name {
-              font-size: ${paperSize === '50mm' ? '14px' : paperSize === 'A4' || paperSize === 'carta' ? '24px' : '18px'}; 
+              font-size: ${paperSize === '58mm' ? '14px' : paperSize === 'A4' || paperSize === 'carta' ? '24px' : '18px'}; 
               font-weight: bold; 
               margin: 8px 0; 
               text-transform: uppercase; 
               letter-spacing: 1px;
             }
             .company-info {
-              font-size: ${paperSize === '50mm' ? '8px' : paperSize === 'A4' || paperSize === 'carta' ? '12px' : '10px'};
+              font-size: ${paperSize === '58mm' ? '8px' : paperSize === 'A4' || paperSize === 'carta' ? '12px' : '10px'};
               line-height: 1.2;
               margin-bottom: 8px;
             }
             .invoice-header {
               background: #f0f0f0;
-              padding: ${paperSize === '50mm' ? '4px' : '8px'};
-              margin: ${paperSize === '50mm' ? '5px 0' : '10px 0'};
+              padding: ${paperSize === '58mm' ? '4px' : '8px'};
+              margin: ${paperSize === '58mm' ? '5px 0' : '10px 0'};
               border: 1px solid #000;
               text-align: center;
               font-size: ${paperSize === 'A4' || paperSize === 'carta' ? '16px' : 'inherit'};
             }
             .items-table {
               width: 100%;
-              margin: ${paperSize === '50mm' ? '5px 0' : '10px 0'};
+              margin: ${paperSize === '58mm' ? '5px 0' : '10px 0'};
               border-collapse: collapse;
-              font-size: ${paperSize === '50mm' ? '8px' : 'inherit'};
+              font-size: ${paperSize === '58mm' ? '8px' : 'inherit'};
             }
             .items-table th,
             .items-table td {
-              padding: ${paperSize === '50mm' ? '2px' : paperSize === 'A4' || paperSize === 'carta' ? '8px 4px' : '4px 2px'};
+              padding: ${paperSize === '58mm' ? '2px' : paperSize === 'A4' || paperSize === 'carta' ? '8px 4px' : '4px 2px'};
               text-align: ${paperSize === 'A4' || paperSize === 'carta' ? 'left' : 'left'};
               border-bottom: 1px solid #ddd;
             }
             .totals-section {
-              margin-top: ${paperSize === '50mm' ? '5px' : '10px'};
-              padding-top: ${paperSize === '50mm' ? '5px' : '10px'};
+              margin-top: ${paperSize === '58mm' ? '5px' : '10px'};
+              padding-top: ${paperSize === '58mm' ? '5px' : '10px'};
               border-top: 2px solid #000;
-              font-size: ${paperSize === '50mm' ? '9px' : paperSize === 'A4' || paperSize === 'carta' ? '14px' : 'inherit'};
+              font-size: ${paperSize === '58mm' ? '9px' : paperSize === 'A4' || paperSize === 'carta' ? '14px' : 'inherit'};
             }
             .total-line {
               display: flex;
               justify-content: space-between;
-              padding: ${paperSize === '50mm' ? '2px 0' : '4px 0'};
+              padding: ${paperSize === '58mm' ? '2px 0' : '4px 0'};
             }
             .total-final {
               font-weight: bold;
-              font-size: ${paperSize === '50mm' ? '11px' : paperSize === 'A4' || paperSize === 'carta' ? '18px' : '14px'};
-              margin-top: ${paperSize === '50mm' ? '3px' : '8px'};
-              padding-top: ${paperSize === '50mm' ? '3px' : '8px'};
+              font-size: ${paperSize === '58mm' ? '11px' : paperSize === 'A4' || paperSize === 'carta' ? '18px' : '14px'};
+              margin-top: ${paperSize === '58mm' ? '3px' : '8px'};
+              padding-top: ${paperSize === '58mm' ? '3px' : '8px'};
               border-top: 1px solid #000;
             }
             .barcode-section {
               text-align: center;
-              margin-top: ${paperSize === '50mm' ? '8px' : '15px'};
+              margin-top: ${paperSize === '58mm' ? '8px' : '15px'};
               border-top: 1px dashed #000;
-              padding-top: ${paperSize === '50mm' ? '5px' : '10px'};
+              padding-top: ${paperSize === '58mm' ? '5px' : '10px'};
             }
             .barcode-img {
               max-width: 100%;
               height: auto;
-              transform: ${paperSize === '50mm' ? 'scale(0.7)' : 'scale(1)'};
+              transform: ${paperSize === '58mm' ? 'scale(0.7)' : 'scale(1)'};
             }
             .footer-text {
               text-align: center;
-              margin-top: ${paperSize === '50mm' ? '5px' : '10px'};
-              font-size: ${paperSize === '50mm' ? '7px' : paperSize === 'A4' || paperSize === 'carta' ? '12px' : '9px'};
+              margin-top: ${paperSize === '58mm' ? '5px' : '10px'};
+              font-size: ${paperSize === '58mm' ? '7px' : paperSize === 'A4' || paperSize === 'carta' ? '12px' : '9px'};
               font-style: italic;
             }
           </style>
@@ -638,7 +638,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
     // Determine format from settings
     let format: '80mm' | '58mm' | 'A4' = '80mm';
-    if (printSettings.paperSize === '50mm' || printSettings.paperSize === '58mm') {
+    if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
       format = '58mm'; // Mapped to 58mm class
     } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
       format = 'A4';
@@ -830,7 +830,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
       // Determine format from settings
       let format: '80mm' | '58mm' | 'A4' = '80mm';
-      if (printSettings.paperSize === '50mm' || printSettings.paperSize === '58mm') {
+      if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
         format = '58mm';
       } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
         format = 'A4';
@@ -1328,7 +1328,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       };
 
       // Print to thermal printer - ensure we map PaperSize to what the thermal printer supports
-      const printerWidth = (thermalPrintSettings.paperSize === '50mm' ? '50mm' : '80mm') as '80mm' | '50mm';
+      const printerWidth = (thermalPrintSettings.paperSize === '58mm' ? '58mm' : '80mm') as '80mm' | '58mm';
       const result = await thermalPrinter.printInvoice(invoiceData, printerWidth);
 
       if (result.success) {
@@ -1449,7 +1449,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       const paperSize = printSettings.paperSize || '80mm';
                       const sizes: Record<string, string> = {
                         '80mm': '80mm',
-                        '50mm': '50mm',
+                        '58mm': '58mm',
                         'A4': 'A4',
                         'carta': 'Carta'
                       };

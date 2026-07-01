@@ -9,13 +9,11 @@ import { Globe, Save, Server, Link, Key, Hash, FileText, Printer } from 'lucide-
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 export default function BillingMethodSection({ onModeChange }: { onModeChange?: (mode: 'ncf' | 'e-ncf') => void }) {
   const { config, isLoading, isUpdating, updateConfig } = useAlanubeConfig();
   const { toast } = useToast();
-  const { printSettings, companyInfo } = usePrintSettings();
   const { settings: storeSettings } = useStoreSettings();
 
   const [billingMode, setBillingMode] = useState<'ncf' | 'e-ncf'>('ncf');
@@ -77,119 +75,6 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         title: 'Error al guardar',
         description: 'No se pudo guardar la configuración.',
         variant: 'destructive'
-      });
-    }
-  };
-
-  const handleTestPrint = async () => {
-    toast({
-      title: "Generando...",
-      description: "Preparando comprobante de prueba...",
-    });
-
-    try {
-      const { handlePrint, injectPrintStyles, markContentAsPrintable } = await import('@/utils/printHandler');
-      const { generateCleanInvoiceHTML } = await import('@/utils/generateCleanInvoiceHTML');
-      const JsBarcode = (await import('jsbarcode')).default;
-
-      // Generate barcode if needed (only for NCF)
-      let barcodeDataUrl: string | undefined;
-      const showBarcode = billingMode === 'e-ncf' ? false : (storeSettings?.show_barcode || false);
-      if (showBarcode) {
-        try {
-          const canvas = document.createElement('canvas');
-          JsBarcode(canvas, billingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001', {
-            format: "CODE128",
-            width: 2,
-            height: 50,
-            displayValue: true,
-            fontSize: 12,
-            margin: 5
-          });
-          barcodeDataUrl = canvas.toDataURL();
-        } catch (error) {
-          console.error('Error generating barcode:', error);
-        }
-      }
-
-      // Ensure styles are injected
-      injectPrintStyles();
-
-      // Determine format from settings
-      let format: '80mm' | '58mm' | '50mm' | 'A4' = '80mm';
-      if (printSettings.paperSize === '50mm' || printSettings.paperSize === '58mm') {
-        format = '58mm';
-      } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
-        format = 'A4';
-      }
-
-      // Generate HTML
-      const htmlContent = generateCleanInvoiceHTML(
-        {
-          name: companyInfo.name,
-          logo: companyInfo.logo,
-          logoSize: companyInfo.logoInvoiceSize || 120,
-          rnc: companyInfo.rnc,
-          phone: companyInfo.phone,
-          address: companyInfo.address,
-          pageMargin: printSettings.pageMargin,
-          containerPadding: printSettings.containerPadding,
-          logoMarginBottom: printSettings.logoMarginBottom,
-          fontSize: printSettings.fontSize,
-        },
-        {
-          invoiceNumber: billingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001',
-          invoicePrefix: billingMode === 'e-ncf' ? 'E31' : 'B02',
-          date: new Date(),
-          items: [
-            { name: 'Producto Ejemplo 1', quantity: 1, price: 100.00, total: 100.00 },
-            { name: 'Servicio Ejemplo 2', quantity: 2, price: 75.00, total: 150.00 }
-          ],
-          subtotal: 250.00,
-          tax: 45.00,
-          taxRate: 18,
-          total: 295.00,
-          currency: storeSettings?.currency || 'DOP',
-          paymentTerms: storeSettings?.payment_terms?.toString() || '15',
-          footerText: storeSettings?.invoice_footer_text || 'Gracias por su preferencia',
-          showBarcode: showBarcode,
-          barcodeDataUrl: barcodeDataUrl,
-          isElectronic: billingMode === 'e-ncf',
-          encf: billingMode === 'e-ncf' ? 'E310000000001' : undefined,
-          securityCode: billingMode === 'e-ncf' ? 'A1B2C3' : undefined,
-          signatureDate: billingMode === 'e-ncf' ? new Date().toISOString() : undefined,
-          qrCodeUrl: billingMode === 'e-ncf' ? 'https://dgii.gov.do/ecf/E310000000001' : undefined,
-        }
-      );
-
-      // Create print container
-      let printContainer = document.getElementById('temp-print-container');
-      if (!printContainer) {
-        printContainer = document.createElement('div');
-        printContainer.id = 'temp-print-container';
-        document.body.appendChild(printContainer);
-      }
-
-      printContainer.innerHTML = htmlContent;
-      markContentAsPrintable('temp-print-container');
-
-      await handlePrint(format);
-
-      // Clean up
-      if (printContainer.parentNode) {
-        printContainer.parentNode.removeChild(printContainer);
-      }
-
-      toast({
-        title: "Impresión exitosa",
-        description: `Comprobante de prueba (${billingMode === 'e-ncf' ? 'e-CF' : 'NCF'}) enviado.`,
-      });
-    } catch (error: any) {
-      console.error("Error printing test invoice:", error);
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo realizar la prueba de impresión",
-        variant: "destructive",
       });
     }
   };
@@ -378,14 +263,6 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
           <Button onClick={handleSave} disabled={isUpdating} className="w-full sm:w-auto">
             <Save className="mr-2 h-4 w-4" />
             {isUpdating ? 'Guardando...' : 'Guardar Método de Facturación'}
-          </Button>
-          <Button 
-            onClick={handleTestPrint} 
-            variant="outline" 
-            className="w-full sm:w-auto border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950/30"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Realizar Prueba de Impresión
           </Button>
         </div>
       </CardContent>

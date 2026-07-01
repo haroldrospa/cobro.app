@@ -407,7 +407,7 @@ const SuperAdmin = () => {
             {/* KPI CARDS - Diseño Minimalista "Enterprise" */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {/* Clientes Activos */}
-                <Card className="shadow-sm hover:shadow transition-shadow duration-200">
+                <Card className="shadow-none border border-border/30 hover:border-primary/30 transition-colors bg-card/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Clientes Activos
@@ -427,7 +427,7 @@ const SuperAdmin = () => {
                 {/* Espacio reservado o simplemente omitir inactivos como pidió el usuario */}
 
                 {/* Ingreso Mensual Recurrente (MRR) */}
-                <Card className="shadow-sm hover:shadow transition-shadow duration-200">
+                <Card className="shadow-none border border-border/30 hover:border-primary/30 transition-colors bg-card/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Ingreso Mensual (MRR)
@@ -459,7 +459,7 @@ const SuperAdmin = () => {
 
                 {/* Pagos por Revisar */}
                 <Card 
-                    className={`shadow-sm hover:shadow transition-shadow duration-200 cursor-pointer ${statusFilter === 'pending_payment' ? 'ring-2 ring-orange-500 bg-orange-50/50' : ''}`}
+                    className={`shadow-none border border-border/30 hover:border-primary/30 transition-colors bg-card/50 cursor-pointer ${statusFilter === 'pending_payment' ? 'ring-1 ring-orange-500 bg-orange-500/5' : ''}`}
                     onClick={() => setStatusFilter(statusFilter === 'pending_payment' ? 'all' : 'pending_payment')}
                 >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -481,7 +481,7 @@ const SuperAdmin = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Distribución de Planes - Diseño Compacto */}
-                <Card className="lg:col-span-2 shadow-sm">
+                <Card className="lg:col-span-2 shadow-none border border-border/30 bg-card/50">
                     <CardHeader className="pb-3 border-b">
                         <CardTitle className="text-base font-semibold">Distribución de Suscripciones</CardTitle>
                     </CardHeader>
@@ -506,7 +506,7 @@ const SuperAdmin = () => {
                                                 {count} ({percentage}%) <span className="mx-1">•</span> RD$ {(count * plan.price).toLocaleString()}
                                             </span>
                                         </div>
-                                        <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                                        <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
                                             <div
                                                 className={`h-full ${plan.color} rounded-full transition-all duration-500`}
                                                 style={{ width: `${percentage}%` }}
@@ -528,7 +528,7 @@ const SuperAdmin = () => {
                                             <span className="font-medium text-muted-foreground">Sin Plan Asignado</span>
                                             <span className="text-muted-foreground">{count} ({percentage}%)</span>
                                         </div>
-                                        <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                                        <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-gray-400 rounded-full transition-all duration-500"
                                                 style={{ width: `${percentage}%` }}
@@ -542,7 +542,7 @@ const SuperAdmin = () => {
                 </Card>
 
                 {/* Métricas Resumidas */}
-                <Card className="shadow-sm flex flex-col justify-between">
+                <Card className="shadow-none border border-border/30 bg-card/50 flex flex-col justify-between">
                     <CardHeader className="pb-3 border-b">
                         <CardTitle className="text-base font-semibold">Resumen Total</CardTitle>
                     </CardHeader>
@@ -871,14 +871,14 @@ const SuperAdmin = () => {
                                     <p>No se encontraron tiendas con estos filtros.</p>
                                 </div>
                             ) : (
-                                <Table>
+                                <Table className="border-collapse">
                                     <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Nombre Tienda</TableHead>
-                                            <TableHead>Dueño (Email)</TableHead>
-                                            <TableHead>Plan</TableHead>
-                                            <TableHead>Vence</TableHead>
-                                            <TableHead className="text-right">Estado</TableHead>
+                                        <TableRow className="border-b border-border/40 hover:bg-transparent">
+                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Nombre Tienda</TableHead>
+                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Dueño (Email)</TableHead>
+                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Plan</TableHead>
+                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Vence</TableHead>
+                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-right">Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -887,7 +887,7 @@ const SuperAdmin = () => {
                                             const hasPlan = !!store.plan_name;
 
                                             return (
-                                                <TableRow key={store.id}>
+                                                <TableRow key={store.id} className="hover:bg-muted/30 transition-colors border-b border-border/20 group">
                                                     <TableCell className="font-medium">
                                                         <div className="flex flex-col">
                                                             <div className="flex items-center gap-2">
@@ -904,16 +904,20 @@ const SuperAdmin = () => {
                                                     <TableCell className="text-xs text-muted-foreground">
                                                         {store.owner_email || "Desconocido"}
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="py-4">
                                                         {hasPlan ? (
-                                                            <Badge variant="outline" className="border-blue-500 text-blue-500">
+                                                            <Badge variant="secondary" className={`border-0 shadow-none font-medium ${
+                                                                store.plan_name === 'basic' ? 'bg-emerald-500/10 text-emerald-500' :
+                                                                store.plan_name === 'pro' ? 'bg-blue-500/10 text-blue-500' :
+                                                                store.plan_name === 'enterprise' ? 'bg-violet-500/10 text-violet-500' : ''
+                                                            }`}>
                                                                 {store.plan_name === 'basic' ? 'Emprendedor' :
                                                                     store.plan_name === 'pro' ? 'Negocio' :
                                                                         store.plan_name === 'enterprise' ? 'Corporativo' :
                                                                             store.plan_name}
                                                             </Badge>
                                                         ) : (
-                                                            <Badge variant="secondary">Sin Plan</Badge>
+                                                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 shadow-none font-medium">Sin Plan</Badge>
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
@@ -930,8 +934,8 @@ const SuperAdmin = () => {
                                                             "-"
                                                         )}
                                                     </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="flex justify-end items-center gap-3">
+                                                    <TableCell className="text-right py-4">
+                                                        <div className="flex justify-end items-center gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
                                                             <Select 
                                                                 defaultValue={store.plan_name || "basic"}
                                                                 onValueChange={(newPlan) => updateSubscriptionMutation.mutate({ 
@@ -952,8 +956,8 @@ const SuperAdmin = () => {
 
                                                             <Button 
                                                                 size="sm" 
-                                                                variant="outline" 
-                                                                className="h-8 text-[11px]"
+                                                                variant="ghost" 
+                                                                className="h-8 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted"
                                                                 onClick={() => updateSubscriptionMutation.mutate({
                                                                     companyId: store.id,
                                                                     planId: store.plan_name || 'basic',
@@ -972,7 +976,7 @@ const SuperAdmin = () => {
                                                             <Button 
                                                                 size="icon" 
                                                                 variant="ghost" 
-                                                                className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-full"
                                                                 disabled={deleteStoreMutation.isPending}
                                                                 onClick={() => handleDeleteStore(store.id, store.store_name)}
                                                             >

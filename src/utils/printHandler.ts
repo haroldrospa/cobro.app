@@ -1,9 +1,9 @@
 /**
  * Sistema de impresión con soporte multi-formato
- * Soporta: 80mm (papel térmico), 58mm/50mm (papel térmico pequeño), A4 (estándar)
+ * Soporta: 80mm (papel térmico), 58mm/58mm (papel térmico pequeño), A4 (estándar)
  */
 
-export type PrintFormat = '80mm' | '58mm' | '50mm' | 'A4';
+export type PrintFormat = '80mm' | '58mm' | '58mm' | 'A4';
 
 /**
  * Maneja la impresión aplicando estilos específicos según el formato
@@ -204,18 +204,18 @@ export const injectPrintStyles = (): void => {
     
     @media print {
       body.print-58mm,
-      body.print-50mm {
+      body.print-58mm {
         width: 58mm !important;
         max-width: 58mm !important;
       }
       
       body.print-58mm *,
-      body.print-50mm * {
+      body.print-58mm * {
         max-width: 58mm !important;
       }
       
       body.print-58mm .printable-content,
-      body.print-50mm .printable-content {
+      body.print-58mm .printable-content {
         width: 58mm !important;
         max-width: 58mm !important;
         font-family: 'Courier New', Courier, monospace;
@@ -226,33 +226,33 @@ export const injectPrintStyles = (): void => {
       }
       
       body.print-58mm h1,
-      body.print-50mm h1 {
+      body.print-58mm h1 {
         font-size: ${Math.max(10, sizeH1 - 2)}px;
         margin: 1mm 0;
         text-align: center;
       }
       
       body.print-58mm h2,
-      body.print-50mm h2 {
+      body.print-58mm h2 {
         font-size: ${Math.max(9, sizeH2 - 2)}px;
         margin: 0.8mm 0;
       }
       
       body.print-58mm h3,
-      body.print-50mm h3 {
+      body.print-58mm h3 {
         font-size: ${Math.max(8, sizeH3 - 2)}px;
         margin: 0.5mm 0;
       }
       
       body.print-58mm p,
       body.print-58mm div,
-      body.print-50mm p,
-      body.print-50mm div {
+      body.print-58mm p,
+      body.print-58mm div {
         margin: 0.3mm 0;
       }
       
       body.print-58mm table,
-      body.print-50mm table {
+      body.print-58mm table {
         width: 100%;
         border-collapse: collapse;
         font-size: ${Math.max(7, sizeTable - 2)}px;
@@ -260,8 +260,8 @@ export const injectPrintStyles = (): void => {
       
       body.print-58mm td,
       body.print-58mm th,
-      body.print-50mm td,
-      body.print-50mm th {
+      body.print-58mm td,
+      body.print-58mm th {
         padding: 0.5mm;
         text-align: left;
       }

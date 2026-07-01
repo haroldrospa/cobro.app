@@ -1,7 +1,7 @@
 import { isElectron, printToSystemPrinter } from './electronPrinter';
 
 export interface ThermalPrinterConfig {
-  paperWidth: '80mm' | '50mm';
+  paperWidth: '80mm' | '58mm';
   connected: boolean;
   deviceName?: string;
 }
@@ -275,7 +275,7 @@ class ThermalPrinterManager {
     return `<html><body>TEST</body></html>`;
   }
 
-  async printTest(paperWidth: '80mm' | '50mm'): Promise<{ success: boolean; error?: string }> {
+  async printTest(paperWidth: '80mm' | '58mm'): Promise<{ success: boolean; error?: string }> {
     if (!this.isConnected()) {
       const reconnected = await this.tryReconnect();
       if (!reconnected) {
@@ -314,7 +314,7 @@ class ThermalPrinterManager {
     securityCode?: string;
     signatureDate?: string;
     qrcodeUrl?: string;
-  }, paperWidth: '80mm' | '50mm'): Promise<{ success: boolean; error?: string }> {
+  }, paperWidth: '80mm' | '58mm'): Promise<{ success: boolean; error?: string }> {
 
     if (!this.isConnected()) {
       const reconnected = await this.tryReconnect();

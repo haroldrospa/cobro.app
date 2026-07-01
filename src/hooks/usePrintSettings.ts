@@ -2,7 +2,7 @@ import { useStoreSettings } from './useStoreSettings';
 import { useCompanySettings } from './useCompanySettings';
 import { useUserStore } from './useUserStore';
 
-export type PaperSize = '50mm' | '80mm' | 'A4' | 'carta';
+export type PaperSize = '58mm' | '80mm' | 'A4' | 'carta';
 
 export interface PrintSettings {
   paperSize: PaperSize;

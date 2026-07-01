@@ -78,7 +78,7 @@ export const PrinterSelectionDialog: React.FC<PrinterSelectionDialogProps> = ({
           address: dbCompanyInfo.address,
         };
 
-        const paperSize = (printSettings.paperSize === '50mm' || printSettings.paperSize === '80mm')
+        const paperSize = (printSettings.paperSize === '58mm' || printSettings.paperSize === '80mm')
           ? printSettings.paperSize
           : '80mm';
 
@@ -195,7 +195,7 @@ export const PrinterSelectionDialog: React.FC<PrinterSelectionDialogProps> = ({
 
       // Determine size from settings
       let format: '80mm' | '58mm' | 'A4' = '80mm';
-      if (printSettings.paperSize === '50mm' || printSettings.paperSize === '58mm') {
+      if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
         format = '58mm';
       } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
         format = 'A4';

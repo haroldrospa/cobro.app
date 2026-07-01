@@ -36,7 +36,7 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
       injectPrintStyles();
 
       let printFormat: '80mm' | '58mm' | 'A4' = '80mm';
-      if (printSettings.paperSize === '50mm' || printSettings.paperSize === '58mm') {
+      if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
         printFormat = '58mm';
       } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
         printFormat = 'A4';

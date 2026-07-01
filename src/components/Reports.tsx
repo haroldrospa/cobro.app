@@ -106,7 +106,7 @@ const Reports = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterUser, setFilterUser] = useState('all');
 
-  const { data: sales = [] } = useSales({
+  const { data: sales = [], isFetching: isFetchingSales } = useSales({
     dateFrom: dateRange?.from,
     dateTo: dateRange?.to,
     includeItems: true
@@ -166,6 +166,19 @@ const Reports = () => {
     });
   };
 
+  // Hash maps for O(1) lookups to fix performance bottlenecks
+  const productsMap = useMemo(() => {
+    const map = new Map();
+    products.forEach(p => map.set(p.id, p));
+    return map;
+  }, [products]);
+
+  const categoriesMap = useMemo(() => {
+    const map = new Map();
+    categories.forEach(c => map.set(c.id, c));
+    return map;
+  }, [categories]);
+
   // --- DATA DERIVATIONS ---
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
@@ -187,7 +200,7 @@ const Reports = () => {
       // 5. Category Filter (Check if ANY item in sale belongs to category)
       if (filterCategory !== 'all') {
         const hasCategoryItem = s.sale_items?.some(item => {
-          const product = products.find(p => p.id === item.product_id);
+          const product = productsMap.get(item.product_id);
           return product?.category_id === filterCategory;
         });
         if (!hasCategoryItem) return false;
@@ -195,7 +208,7 @@ const Reports = () => {
 
       return true;
     });
-  }, [sales, dateRange, filterCustomer, filterPaymentMethod, filterUser, filterCategory, products]);
+  }, [sales, dateRange, filterCustomer, filterPaymentMethod, filterUser, filterCategory, productsMap]);
 
   const salesB01 = useMemo(() => filteredSales.filter(s => s.invoice_type?.code === '01' || (s.invoice_number || '').startsWith('B01') || (s.invoice_number || '').startsWith('E31')), [filteredSales]);
   const salesB02 = useMemo(() => filteredSales.filter(s => s.invoice_type?.code === '02' || (s.invoice_number || '').startsWith('B02') || (s.invoice_number || '').startsWith('E32')), [filteredSales]);
@@ -290,7 +303,7 @@ const Reports = () => {
       totalRevenue += (sale.total || 0) - (sale.tax_total || 0);
 
       sale.sale_items?.forEach(item => {
-        const product = products.find(p => p.id === item.product_id);
+        const product = productsMap.get(item.product_id);
         if (product && product.cost) {
           if (product.is_variable_price) {
             totalCost += (product.cost / 100) * (item.total || 0);
@@ -305,7 +318,7 @@ const Reports = () => {
     const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
     return { totalRevenue, totalCost, profit, margin };
-  }, [filteredSales, products]);
+  }, [filteredSales, productsMap]);
 
   // --- Productos Vendidos ---
   const soldProductsData = useMemo(() => {
@@ -315,14 +328,14 @@ const Reports = () => {
       (sale.sale_items || []).forEach((item: any) => {
         const name = item.product?.name || item.product_name || 'Desconocido';
         const key = item.product_id || name;
-        const product = products.find(p => p.id === item.product_id);
-        const cat = product ? (categories.find(c => c.id === product.category_id)?.name || 'Sin categoría') : 'Sin categoría';
+        const product = productsMap.get(item.product_id);
+        const catName = product ? (categoriesMap.get(product.category_id)?.name || 'Sin categoría') : 'Sin categoría';
         const catId = product?.category_id || 'none';
         const itemCost = product?.is_variable_price
           ? ((product.cost || 0) / 100) * (item.total || 0)
           : (product?.cost || 0) * (item.quantity || 0);
         const itemRevenue = item.total || 0;
-        if (!map[key]) map[key] = { name, quantity: 0, revenue: 0, cost: 0, profit: 0, category: cat, categoryId: catId };
+        if (!map[key]) map[key] = { name, quantity: 0, revenue: 0, cost: 0, profit: 0, category: catName, categoryId: catId };
         map[key].quantity += item.quantity || 0;
         map[key].revenue += itemRevenue;
         map[key].cost += itemCost;
@@ -332,7 +345,7 @@ const Reports = () => {
 
     return Object.values(map)
       .sort((a, b) => b.quantity - a.quantity);
-  }, [filteredSales, products, categories]);
+  }, [filteredSales, productsMap, categoriesMap]);
 
 
   // --- HELPERS: CLOSING MOVEMENTS ---
@@ -1477,37 +1490,37 @@ const Reports = () => {
               <CardDescription>Mostrando {currentList.length} comprobantes emitidos en el periodo.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
+              <Table className="border-collapse">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>NCF</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>RNC/Cédula</TableHead>
-                    <TableHead className="text-right">ITBIS</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                  <TableRow className="border-b border-border/40 hover:bg-transparent">
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Fecha</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">NCF</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Cliente</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 hidden sm:table-cell">RNC/Cédula</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-right hidden sm:table-cell">ITBIS</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-right">Total</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentList.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No se encontraron facturas de este tipo.</TableCell></TableRow> :
+                  {currentList.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No se encontraron facturas de este tipo.</TableCell></TableRow> :
                     currentList.map(s => (
-                      <TableRow key={s.id} onClick={() => setSelectedSale(s)} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell>{format(new Date(s.created_at), 'dd/MM/yyyy')}</TableCell>
-                        <TableCell className="font-mono">{s.invoice_number}</TableCell>
-                        <TableCell>{s.customer?.name || 'Consumidor Final'}</TableCell>
-                        <TableCell>{s.customer?.rnc || '-'}</TableCell>
-                        <TableCell className="text-right">${(s.tax_total || 0).toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-bold text-green-600">${s.total.toLocaleString()}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button size="icon" variant="outline" className="h-8 w-8 text-green-600 border-green-200 hover:bg-green-50" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
+                      <TableRow key={s.id} onClick={() => setSelectedSale(s)} className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/20 group">
+                        <TableCell className="py-4 text-sm text-muted-foreground">{format(new Date(s.created_at), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell className="py-4 text-xs font-mono text-muted-foreground tracking-tight">{s.invoice_number}</TableCell>
+                        <TableCell className="py-4 text-sm font-medium">{s.customer?.name || 'Consumidor Final'}</TableCell>
+                        <TableCell className="py-4 text-sm text-muted-foreground hidden sm:table-cell">{s.customer?.rnc || '-'}</TableCell>
+                        <TableCell className="py-4 text-right text-sm text-muted-foreground hidden sm:table-cell">${(s.tax_total || 0).toLocaleString()}</TableCell>
+                        <TableCell className="py-4 text-right text-sm font-semibold">${s.total.toLocaleString()}</TableCell>
+                        <TableCell className="py-4 text-center">
+                          <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
                               <Printer className="h-4 w-4" />
                             </Button>
-                            <Button size="icon" variant="outline" className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
                               <Mail className="h-4 w-4" />
                             </Button>
-                            <Button size="icon" variant="outline" className="h-8 w-8 text-gray-600 border-gray-200 hover:bg-gray-100" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
                               <Download className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1516,11 +1529,11 @@ const Reports = () => {
                     ))
                   }
                 </TableBody>
-                <TableFooter>
-                  <TableRow className="bg-muted/50 font-bold">
-                    <TableCell colSpan={4} className="text-right">TOTAL GENERAL</TableCell>
-                    <TableCell className="text-right">${totalTax.toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-lg text-primary">${totalAmount.toLocaleString()}</TableCell>
+                <TableFooter className="bg-transparent border-t border-border/50">
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={4} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-6">Total General</TableCell>
+                    <TableCell className="text-right text-sm font-semibold text-muted-foreground hidden sm:table-cell">${totalTax.toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-lg font-black text-primary">${totalAmount.toLocaleString()}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
                 </TableFooter>
@@ -2012,6 +2025,14 @@ const Reports = () => {
                 <div className="h-px w-8 bg-primary/30" />
               </div>
             </div>
+
+            {/* Loading Indicator for large data sets */}
+            {isFetchingSales && (
+              <div className="flex items-center justify-center gap-2 text-primary text-sm font-bold bg-primary/10 px-4 py-2 rounded-full animate-pulse shadow-sm border border-primary/20">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Cargando datos del periodo seleccionado...
+              </div>
+            )}
 
             {/* Centered Report Selector */}
             <div className="w-full md:hidden">

@@ -294,7 +294,7 @@ export const generateProfessionalPDF = async (companyInfo: CompanyInfo, saleData
 
 export const generatePreCheckPDF = (companyInfo: CompanyInfo, order: any, paperSize: string = '80mm') => {
     // Detect paper settings
-    const isSmall = paperSize === '58mm' || paperSize === '50mm';
+    const isSmall = paperSize === '58mm' || paperSize === '58mm';
     const width = isSmall ? 58 : 80;
     const margin = isSmall ? 3 : 5;
     const contentWidth = width - (margin * 2);

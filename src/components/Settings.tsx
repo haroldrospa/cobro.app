@@ -12,7 +12,9 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
 import { useInvoiceSequences, useUpdateInvoiceSequence, useMaxInvoiceNumbers } from '@/hooks/useInvoiceSequences';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { offlineDB, OfflineStore } from "@/lib/offlineDB";
 import { useUserStore } from '@/hooks/useUserStore';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useStoreSettings, PaymentMethod } from '@/hooks/useStoreSettings';
@@ -611,12 +613,12 @@ const Settings = () => {
             /* Page setup */
             @page {
               margin: 0;
-              size: ${printSettings.paperSize === '80mm' || printSettings.paperSize === '50mm' ? 'auto' : printSettings.paperSize === 'carta' ? 'letter' : 'auto'};
+              size: ${printSettings.paperSize === '80mm' || printSettings.paperSize === '58mm' ? 'auto' : printSettings.paperSize === 'carta' ? 'letter' : 'auto'};
             }
 
             @media print {
               html, body {
-                width: ${printSettings.paperSize === '80mm' ? '72mm' : printSettings.paperSize === '50mm' ? '48mm' : '100%'};
+                width: ${printSettings.paperSize === '80mm' ? '72mm' : printSettings.paperSize === '58mm' ? '48mm' : '100%'};
                 margin: 0; /* Important for thermal */
               }
             }
@@ -625,9 +627,9 @@ const Settings = () => {
               font-family: 'Courier New', Courier, monospace;
               margin: 0;
               width: ${printSettings.paperSize === '80mm' ? '72mm' :
-        printSettings.paperSize === '50mm' ? '48mm' : '100%'};
+        printSettings.paperSize === '58mm' ? '48mm' : '100%'};
               /* Add a small margin for the content itself inside the paper */
-              padding: ${printSettings.paperSize === '80mm' || printSettings.paperSize === '50mm' ? '2mm' : '20px'};
+              padding: ${printSettings.paperSize === '80mm' || printSettings.paperSize === '58mm' ? '2mm' : '20px'};
               color: #000;
               background: #fff;
             }
@@ -879,7 +881,7 @@ const Settings = () => {
 
       // Determine format from settings
       let format: '80mm' | '58mm' | 'A4' = '80mm';
-      if (printSettings.paperSize === '50mm' || printSettings.paperSize === '58mm') {
+      if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
         format = '58mm';
       } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
         format = 'A4';
@@ -1138,7 +1140,13 @@ const Settings = () => {
           'customers', 'invoice_sequences', 'store_settings', 'company_settings'
         ];
 
-        // 1. Delete existing data for this store in correct order (children first)
+        // 1. Clear IndexedDB first to prevent offlineSync from uploading deleted items
+        const localStores = Object.values(OfflineStore);
+        for (const store of localStores) {
+          await offlineDB.clear(store as OfflineStore);
+        }
+
+        // 2. Delete existing data for this store in correct order (children first)
         for (const table of tables) {
           await supabase.from(table as any).delete().eq('store_id', userStore.id);
         }
@@ -1167,18 +1175,21 @@ const Settings = () => {
 
         toast({
           title: "Restauración exitosa",
-          description: "Tus datos han sido restaurados correctamente.",
+          description: "Tus datos han sido restaurados correctamente. Recargando el sistema...",
         });
 
-        queryClient.invalidateQueries();
+        // Force a complete reload to clear RAM, React Query cache, and contexts
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
       } catch (error: any) {
         toast({
           title: "Error al importar",
           description: "El archivo no es válido o está dañado.",
           variant: "destructive",
         });
-      } finally {
         setLoading(false);
+      } finally {
         // Reset input
         event.target.value = '';
       }
@@ -1206,6 +1217,12 @@ const Settings = () => {
         'customers', 'invoice_sequences'
       ];
 
+      // Clear local database to prevent ghostly syncs
+      const localStores = Object.values(OfflineStore);
+      for (const store of localStores) {
+        await offlineDB.clear(store as OfflineStore);
+      }
+
       for (const table of tables) {
         await supabase.from(table as any).delete().eq('store_id', userStore.id);
       }
@@ -1223,10 +1240,13 @@ const Settings = () => {
 
       toast({
         title: "Sistema reseteado",
-        description: "Se han eliminado todos los datos. Puedes empezar de cero.",
+        description: "Se han eliminado todos los datos. Reiniciando sistema...",
       });
 
-      queryClient.invalidateQueries();
+      // Force a complete reload to clear RAM, React Query cache, and contexts
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1512,7 +1532,7 @@ const Settings = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="80mm">80mm (Térmica Estándar)</SelectItem>
-              <SelectItem value="50mm">50mm (Térmica Pequeña)</SelectItem>
+              <SelectItem value="58mm">58mm (Térmica Pequeña)</SelectItem>
               <SelectItem value="A4">A4</SelectItem>
               <SelectItem value="carta">Carta</SelectItem>
             </SelectContent>
@@ -1621,9 +1641,9 @@ const Settings = () => {
                 <p className="text-[11px]"><strong>Método:</strong> Impresión directa</p>
               </>
             )}
-            {printSettings.paperSize === '50mm' && (
+            {printSettings.paperSize === '58mm' && (
               <>
-                <p className="text-[11px]"><strong>Ancho:</strong> 50mm (2")</p>
+                <p className="text-[11px]"><strong>Ancho:</strong> 58mm (2")</p>
                 <p className="text-[11px]"><strong>Tipo:</strong> Térmica portátil</p>
                 <p className="text-[11px]"><strong>Método:</strong> Impresión directa</p>
               </>
@@ -3153,128 +3173,11 @@ const Settings = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="80mm">80mm (Impresora Térmica Estándar)</SelectItem>
-                      <SelectItem value="50mm">50mm (Impresora Térmica Pequeña)</SelectItem>
+                      <SelectItem value="58mm">58mm (Impresora Térmica Pequeña)</SelectItem>
                       <SelectItem value="A4">A4 (210 x 297 mm)</SelectItem>
                       <SelectItem value="carta">Carta (8.5 x 11 in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3">
-                    <p className="text-xs text-blue-600 dark:text-blue-400">
-                      💡 <span className="font-semibold">Importante:</span> Esta configuración se aplica a "Imprimir directamente" en el POS. Para impresoras térmicas como 2connet 2C-POS80, selecciona <strong>80mm</strong>.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="page-margin">Margen de Página</Label>
-                    <Select
-                      value={printSettings.pageMargin}
-                      onValueChange={(value) => setPrintSettings({ ...printSettings, pageMargin: value })}
-                    >
-                      <SelectTrigger id="page-margin">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0mm">Sin margen (0mm)</SelectItem>
-                        <SelectItem value="2mm">Pequeño (2mm)</SelectItem>
-                        <SelectItem value="4mm">Medio (4mm)</SelectItem>
-                        <SelectItem value="6mm">Grande (6mm)</SelectItem>
-                        <SelectItem value="8mm">Muy grande (8mm)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Espacio alrededor del recibo completo
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="container-padding">Padding Interno</Label>
-                    <Select
-                      value={printSettings.containerPadding}
-                      onValueChange={(value) => setPrintSettings({ ...printSettings, containerPadding: value })}
-                    >
-                      <SelectTrigger id="container-padding">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0px">Sin padding (0px)</SelectItem>
-                        <SelectItem value="4px">Pequeño (4px)</SelectItem>
-                        <SelectItem value="8px">Medio (8px)</SelectItem>
-                        <SelectItem value="12px">Grande (12px)</SelectItem>
-                        <SelectItem value="16px">Muy grande (16px)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Espacio interno del contenido
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="logo-margin-bottom">Margen Logo (Inferior)</Label>
-                    <Select
-                      value={printSettings.logoMarginBottom}
-                      onValueChange={(value) => setPrintSettings({ ...printSettings, logoMarginBottom: value })}
-                    >
-                      <SelectTrigger id="logo-margin-bottom">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0px">Sin espacio (0px)</SelectItem>
-                        <SelectItem value="2px">Muy pequeño (2px)</SelectItem>
-                        <SelectItem value="4px">Pequeño (4px)</SelectItem>
-                        <SelectItem value="6px">Normal (6px)</SelectItem>
-                        <SelectItem value="8px">Medio (8px)</SelectItem>
-                        <SelectItem value="12px">Grande (12px)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Espacio entre el logo y el texto debajo
-                    </p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center">
-                    <Printer className="mr-2 h-4 w-4" />
-                    Información del Formato Seleccionado
-                  </h4>
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
-                    {printSettings.paperSize === '80mm' && (
-                      <>
-                        <p className="text-sm"><strong>Ancho:</strong> 80mm (3.15 pulgadas)</p>
-                        <p className="text-sm"><strong>Uso recomendado:</strong> Tickets de venta, facturas de punto de venta</p>
-                        <p className="text-sm"><strong>Tipo de impresora:</strong> Térmica de 80mm (Epson TM, Star TSP, 2connet 2C-POS80, etc.)</p>
-                        <p className="text-sm"><strong>Método de impresión:</strong> Usa "Imprimir directamente" en el POS</p>
-                      </>
-                    )}
-                    {printSettings.paperSize === '50mm' && (
-                      <>
-                        <p className="text-sm"><strong>Ancho:</strong> 50mm (2 pulgadas)</p>
-                        <p className="text-sm"><strong>Uso recomendado:</strong> Tickets pequeños, recibos compactos</p>
-                        <p className="text-sm"><strong>Tipo de impresora:</strong> Térmica de 50mm (portátil)</p>
-                        <p className="text-sm"><strong>Método de impresión:</strong> Usa "Imprimir directamente" en el POS</p>
-                      </>
-                    )}
-                    {printSettings.paperSize === 'A4' && (
-                      <>
-                        <p className="text-sm"><strong>Dimensiones:</strong> 210 x 297 mm</p>
-                        <p className="text-sm"><strong>Uso recomendado:</strong> Facturas formales, documentos oficiales</p>
-                        <p className="text-sm"><strong>Tipo de impresora:</strong> Láser o inyección de tinta</p>
-                        <p className="text-sm"><strong>Método de impresión:</strong> Usa "Imprimir directamente" en el POS</p>
-                      </>
-                    )}
-                    {printSettings.paperSize === 'carta' && (
-                      <>
-                        <p className="text-sm"><strong>Dimensiones:</strong> 8.5 x 11 pulgadas (215.9 x 279.4 mm)</p>
-                        <p className="text-sm"><strong>Uso recomendado:</strong> Facturas formales, documentos oficiales (estándar USA)</p>
-                        <p className="text-sm"><strong>Tipo de impresora:</strong> Láser o inyección de tinta</p>
-                        <p className="text-sm"><strong>Método de impresión:</strong> Usa "Imprimir directamente" en el POS</p>
-                      </>
-                    )}
-                  </div>
                 </div>
 
                 <Separator />
@@ -3780,23 +3683,6 @@ const Settings = () => {
                   </div>
                 </div>
 
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Respaldo Automático</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Crear respaldos automáticos de los datos
-                      </p>
-                    </div>
-                    <Switch
-                      checked={systemSettings.autoBackup}
-                      onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, autoBackup: checked })}
-                    />
-                  </div>
-                </div>
-
                 <Button onClick={() => handleSaveSettings('sistema')} disabled={loading || isUpdatingStoreSettings}>
                   <Save className="mr-2 h-4 w-4" />
                   Guardar Configuración del Sistema
@@ -4013,6 +3899,19 @@ const Settings = () => {
                     type="number"
                     value={systemSettings.retentionDays}
                     onChange={(e) => setSystemSettings({ ...systemSettings, retentionDays: e.target.value })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between border border-emerald-500/20 p-4 rounded-lg bg-emerald-500/5">
+                  <div className="space-y-0.5">
+                    <Label>Respaldo Automático</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Crear respaldos automáticos de los datos
+                    </p>
+                  </div>
+                  <Switch
+                    checked={systemSettings.autoBackup}
+                    onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, autoBackup: checked })}
                   />
                 </div>
 
