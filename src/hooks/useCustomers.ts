@@ -31,8 +31,8 @@ export const useCustomers = () => {
 
   return useQuery({
     queryKey: ['customers'],
-    staleTime: 1000 * 60 * 30, // 30 MINUTES - Customers don't change often
-    gcTime: 1000 * 60 * 60 * 24, // 24 HOURS
+    staleTime: Infinity, // MasterData: Never refetch automatically
+    gcTime: Infinity, // MasterData: Keep in cache indefinitely
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {

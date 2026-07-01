@@ -223,7 +223,7 @@ export const useSales = (filters: SalesFilters = {}) => {
     },
     staleTime: 1000 * 30, // 30 seconds - refresh often so new sales appear quickly
     refetchOnWindowFocus: true, // Refetch when switching back to the tab
-    refetchInterval: 1000 * 30, // Poll every 30 seconds as fallback
+    refetchInterval: false, // Egress Optimization: Stop aggressive polling
   });
 };
 

@@ -11,8 +11,8 @@ export interface Category {
 export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
-    staleTime: 1000 * 60 * 20, // 20 minutes - categories change infrequently
-    gcTime: 1000 * 60 * 60 * 2, // 2 hours in cache
+    staleTime: Infinity, // MasterData: Never refetch automatically
+    gcTime: Infinity, // MasterData: Keep in cache indefinitely
     refetchOnWindowFocus: false,
     queryFn: async () => {
       // Get current user's store_id to ensure complete isolation

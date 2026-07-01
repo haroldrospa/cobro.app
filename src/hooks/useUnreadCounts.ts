@@ -27,6 +27,6 @@ export const useUnreadCounts = (orderIds: string[], role: 'store' | 'customer') 
             return counts;
         },
         enabled: orderIds.length > 0,
-        refetchInterval: 10000, // Refetch every 10 seconds as a fallback
+        refetchInterval: false, // Egress Optimization: Stop aggressive polling
     });
 };

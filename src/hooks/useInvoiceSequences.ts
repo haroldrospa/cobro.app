@@ -21,6 +21,8 @@ export const useInvoiceSequences = () => {
       if (error) throw error;
       return data as InvoiceSequence[];
     },
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 2, // 2 hours
   });
 };
 
@@ -53,6 +55,8 @@ export const useMaxInvoiceNumbers = () => {
 
       return maxNumbers;
     },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
   });
 };
 

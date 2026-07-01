@@ -11,6 +11,7 @@ import { shopperSupabase } from "@/integrations/supabase/shopperClient";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRedirect from "./components/RoleRedirect";
 import { ScrollUnlocker } from "./components/ScrollUnlocker";
+import { MasterDataProvider } from "@/providers/MasterDataProvider";
 
 // Lazy load components for code splitting
 const Layout = lazy(() => import("./components/Layout"));
@@ -105,7 +106,8 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <MasterDataProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollUnlocker />
           <OfflineIndicator />
           <Suspense fallback={<PageLoader />}>
@@ -181,6 +183,7 @@ const App = () => {
             </Routes>
           </Suspense>
         </BrowserRouter>
+        </MasterDataProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -4,8 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CartItem, GlobalDiscount } from '@/types/pos';
 import { calculateItemTotal, calculateTotals } from '@/utils/posCalculations';
-import { useProductsOffline } from '@/hooks/useProductsOffline';
-import { useCustomers } from '@/hooks/useCustomers';
+import { useMasterData } from '@/providers/MasterDataProvider';
+import { Customer } from '@/hooks/useCustomers';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
 import { useCreateSaleOffline } from '@/hooks/useSalesOffline';
@@ -225,12 +225,11 @@ const POSContent: React.FC = () => {
     is_active: true,
   };
 
-  const { data: allProducts = [], isLoading: productsQueryLoading, isFetching: productsQueryFetching } = useProductsOffline();
-  // Solo mostrar pantalla de carga si NO hay ningún producto en caché todavía
-  // Una vez que IndexedDB tiene datos, el POS abre inmediatamente aunque Supabase siga sincronizando
+  const { products: allProducts, customers = [] } = useMasterData();
+  const productsQueryLoading = false;
+  const productsQueryFetching = false;
   const loadingProducts = (productsQueryLoading || productsQueryFetching) && allProducts.length === 0;
   const products = React.useMemo(() => allProducts.filter(p => p.status !== 'inactive'), [allProducts]);
-  const { data: customers = [] } = useCustomers();
   const { data: customerBalance } = useCustomerBalance(selectedCustomer);
   const { data: invoiceTypes = [] } = useInvoiceTypes();
   const createSale = useCreateSaleOffline();

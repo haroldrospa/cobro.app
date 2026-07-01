@@ -32,7 +32,7 @@ export const useWebOrdersCount = () => {
       return count || 0;
     },
     enabled: !!userStore?.id,
-    refetchInterval: 5000, // Refetch every 5 seconds for near-realtime backup
+    refetchInterval: false, // Egress Optimization: Disabled 5s polling, rely on Supabase Realtime
     refetchOnWindowFocus: true,
   });
 };
