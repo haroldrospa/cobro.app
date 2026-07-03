@@ -17,6 +17,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { offlineDB, OfflineStore } from "@/lib/offlineDB";
 import { useUserStore } from '@/hooks/useUserStore';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { Slider } from '@/components/ui/slider';
 import { useStoreSettings, PaymentMethod } from '@/hooks/useStoreSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
