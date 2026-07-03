@@ -65,6 +65,7 @@ import { useBusinessType } from '@/hooks/useBusinessType';
 import { useRecipeAvailability } from '@/hooks/useRecipeAvailability';
 import { useAwardLoyaltyPoints, calculatePointsValue } from '@/hooks/useLoyaltyPoints';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
+import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 
 class SimpleErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -753,7 +754,21 @@ const POSContent: React.FC = () => {
           `_(Mensaje automático)_`
         );
 
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+          toast({ title: 'Enviando WhatsApp...', description: 'El mensaje se está enviando en segundo plano.' });
+          sendEvolutionWhatsAppMessage(phone, decodeURIComponent(message), {
+            url: storeSettings.evolution_api_url,
+            instanceName: storeSettings.evolution_instance_name,
+            apiKey: storeSettings.evolution_api_key
+          }).then(() => {
+            toast({ title: 'WhatsApp Enviado', description: 'El mensaje fue entregado correctamente.', variant: 'default' });
+          }).catch((err) => {
+            toast({ title: 'Error al enviar WhatsApp', description: err.message || 'Se abrirá la ventana manual como respaldo.', variant: 'destructive' });
+            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+          });
+        } else {
+          window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        }
       }
 
       // Reset state for next sale

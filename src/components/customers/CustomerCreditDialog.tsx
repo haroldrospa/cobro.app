@@ -22,6 +22,8 @@ import { useCustomerBalance } from '@/hooks/useCustomerBalance';
 import { useUpdateCustomer, useCustomers, Customer } from '@/hooks/useCustomers';
 import { useCreateCashMovement } from '@/hooks/useCashMovements';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '@/hooks/useUserStore';
@@ -423,7 +425,11 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
   const updateCustomer = useUpdateCustomer();
   const createCashMovement = useCreateCashMovement();
   const queryClient = useQueryClient();
-  const { printSettings, companyInfo } = usePrintSettings();
+  const { userStore } = useUserStore();
+  const { storeSettings } = useStoreSettings();
+  const { companyInfo } = usePrintSettings();
+  
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const { data: userData } = useUserStore();
 
   if (!customer) return null;
@@ -462,7 +468,26 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       `Atentamente,\n*${companyInfo?.name || 'La Gerencia'}*\n\n` +
       `*(Este es un mensaje automático de Cobro App)*`
     );
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    
+    if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+      setIsSendingWhatsApp(true);
+      toast('Enviando estado de cuenta por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano.' });
+      
+      sendEvolutionWhatsAppMessage(phone, decodeURIComponent(message), {
+        url: storeSettings.evolution_api_url,
+        instanceName: storeSettings.evolution_instance_name,
+        apiKey: storeSettings.evolution_api_key
+      }).then(() => {
+        toast.success('Estado de cuenta enviado por WhatsApp');
+      }).catch((err: any) => {
+        toast.error('Error al enviar WhatsApp automático', { description: 'Se abrirá la ventana manual como respaldo.' });
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      }).finally(() => {
+        setIsSendingWhatsApp(false);
+      });
+    } else {
+      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    }
   };
 
   const selectedTotal = pendingSales

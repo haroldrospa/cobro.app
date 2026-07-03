@@ -1069,6 +1069,10 @@ export type Database = {
           email_reports_frequency: string | null
           email_reports_last_sent: string | null
           email_reports_recipient: string | null
+          evolution_api_key: string | null
+          evolution_api_url: string | null
+          evolution_enabled: boolean | null
+          evolution_instance_name: string | null
           id: string
           invoice_footer_text: string | null
           invoice_prefix: string | null
@@ -1104,6 +1108,10 @@ export type Database = {
           email_reports_frequency?: string | null
           email_reports_last_sent?: string | null
           email_reports_recipient?: string | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          evolution_enabled?: boolean | null
+          evolution_instance_name?: string | null
           id?: string
           invoice_footer_text?: string | null
           invoice_prefix?: string | null
@@ -1139,6 +1147,10 @@ export type Database = {
           email_reports_frequency?: string | null
           email_reports_last_sent?: string | null
           email_reports_recipient?: string | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          evolution_enabled?: boolean | null
+          evolution_instance_name?: string | null
           id?: string
           invoice_footer_text?: string | null
           invoice_prefix?: string | null

@@ -17,6 +17,7 @@ import html2canvas from 'html2canvas';
 import { PrinterSelectionDialog } from './PrinterSelectionDialog';
 import { generateCleanInvoiceHTML } from '@/utils/generateCleanInvoiceHTML';
 import appLogo from '@/assets/cobro-logo.png';
+import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 
 interface PrintOptionsDialogProps {
   isOpen: boolean;
@@ -143,6 +144,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const [showPrinterSelection, setShowPrinterSelection] = useState(false);
   const [invoiceContentForPrint, setInvoiceContentForPrint] = useState<string>('');
   const [whatsAppPhone, setWhatsAppPhone] = useState('');
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [showWhatsAppInput, setShowWhatsAppInput] = useState(false);
   const { toast } = useToast();
   const { printSettings, companyInfo: dbCompanyInfo } = usePrintSettings();
@@ -227,7 +230,26 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       `_(Mensaje automático)_`
     );
 
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+      setIsSendingWhatsApp(true);
+      toast({ title: 'Enviando WhatsApp...', description: 'El mensaje se está enviando en segundo plano.' });
+      
+      try {
+        await sendEvolutionWhatsAppMessage(phone, decodeURIComponent(message), {
+          url: storeSettings.evolution_api_url,
+          instanceName: storeSettings.evolution_instance_name,
+          apiKey: storeSettings.evolution_api_key
+        });
+        toast({ title: 'WhatsApp Enviado', description: 'El mensaje fue entregado correctamente.', variant: 'default' });
+      } catch (err: any) {
+        toast({ title: 'Error al enviar WhatsApp', description: err.message || 'Se abrirá la ventana manual como respaldo.', variant: 'destructive' });
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      } finally {
+        setIsSendingWhatsApp(false);
+      }
+    } else {
+      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    }
   };
 
   useEffect(() => {
