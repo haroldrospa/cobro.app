@@ -27,7 +27,9 @@ import BannerSettingsSection from '@/components/settings/BannerSettingsSection';
 import StoreHoursSection from '@/components/settings/StoreHoursSection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InvoiceSequenceInput } from '@/components/settings/InvoiceSequenceInput';
+import { EvolutionQRDialog } from '@/components/settings/EvolutionQRDialog';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import {
@@ -76,6 +78,8 @@ const Settings = () => {
   const isMobile = useIsMobile();
   const [mobileActiveSection, setMobileActiveSection] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isUpdatingStoreSettings, setIsUpdatingStoreSettings] = useState(false);
+  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [creatingStore, setCreatingStore] = useState(false);
   const [storeName, setStoreName] = useState('');
   const queryClient = useQueryClient();
@@ -3602,6 +3606,21 @@ const Settings = () => {
                           onChange={(e) => updateStoreSettings({ evolution_api_key: e.target.value })}
                         />
                       </div>
+
+                      {storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key && (
+                        <div className="pt-2">
+                          <Button 
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                            onClick={() => setIsQRDialogOpen(true)}
+                          >
+                            <QrCode className="w-4 h-4 mr-2" />
+                            Escanear QR / Conectar WhatsApp
+                          </Button>
+                          <p className="text-[10px] text-zinc-500 text-center mt-2">
+                            Asegúrate de guardar los cambios antes de escanear el código QR.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -3989,6 +4008,15 @@ const Settings = () => {
         onOpenChange={setShowPrinterDialog}
         onConnect={handlePrinterConnected}
       />
+      {storeSettings && (
+        <EvolutionQRDialog
+          isOpen={isQRDialogOpen}
+          onClose={() => setIsQRDialogOpen(false)}
+          apiUrl={storeSettings.evolution_api_url || ''}
+          apiKey={storeSettings.evolution_api_key || ''}
+          instanceName={storeSettings.evolution_instance_name || ''}
+        />
+      )}
     </div>
   );
 };
