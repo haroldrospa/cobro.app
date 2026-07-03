@@ -22,7 +22,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
   onPrint,
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { data: saleDetails } = useSaleDetails(sale.id);
+  const { data: saleDetails, isLoading } = useSaleDetails(sale.id);
   const { printSettings, companyInfo } = usePrintSettings();
   const { settings: storeSettings } = useStoreSettings();
 
@@ -115,6 +115,17 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
     };
     return map[method] || method;
   };
+
+  if (isLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent hideCloseButton className="sm:max-w-md w-full p-16 flex flex-col items-center justify-center gap-4 rounded-2xl border-border/40 bg-background shadow-2xl">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          <p className="text-sm font-medium text-muted-foreground">Cargando factura...</p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
