@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar as CalendarIcon, DollarSign, StickyNote, ChevronDown, ChevronUp, RefreshCcw } from 'lucide-react';
+import { Plus, Trash2, Calendar as CalendarIcon, DollarSign, StickyNote, ChevronDown, ChevronUp, RefreshCcw, Building2, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserStore } from '@/hooks/useUserStore';
+import { useSuppliers } from '@/hooks/useSuppliers';
 
 export interface QuickNote {
     id: string;
@@ -21,6 +23,7 @@ export interface QuickNote {
     amount: number;
     dueDate: string;
     store_id: string;
+    supplier_name?: string;
 }
 
 export const useQuickNotes = () => {
@@ -48,27 +51,26 @@ export const useQuickNotes = () => {
                 name: n.name,
                 amount: Number(n.amount),
                 dueDate: n.due_date,
-                store_id: n.store_id
+                store_id: n.store_id,
+                supplier_name: n.supplier_name || undefined
             })) as QuickNote[];
         },
         enabled: !!storeId && !!userId
     });
 
     const addMutation = useMutation({
-        mutationFn: async ({ name, amount, dueDate }: Omit<QuickNote, 'id' | 'store_id'>) => {
-            // Re-fetch current storeId to ensure it's not stale from closure
+        mutationFn: async ({ name, amount, dueDate, supplier_name }: Omit<QuickNote, 'id' | 'store_id'>) => {
             const currentStoreId = storeId;
             if (!currentStoreId) throw new Error("No se encontró el ID de la tienda. Por favor, recarga la página.");
             
-            console.log("Intentando guardar nota:", { name, amount, dueDate, storeId: currentStoreId });
-
             const { data, error } = await supabase
                 .from('pos_quick_notes' as any)
                 .insert({
                     store_id: currentStoreId,
                     name,
                     amount: isNaN(Number(amount)) ? 0 : Number(amount),
-                    due_date: dueDate
+                    due_date: dueDate,
+                    supplier_name: supplier_name || null
                 })
                 .select();
             
@@ -89,9 +91,7 @@ export const useQuickNotes = () => {
         onError: (error: any) => {
             console.error("Error detallado al agregar nota:", error);
             
-            // Extract the best possible error message
             let errorMessage = "Error desconocido";
-            
             if (!error) {
                 errorMessage = "Objeto de error nulo o indefinido";
             } else if (typeof error === 'string') {
@@ -103,7 +103,6 @@ export const useQuickNotes = () => {
             } else if (error.error_description) {
                 errorMessage = error.error_description;
             } else {
-                // Try toString() which is better for native Error objects that stringify as {}
                 const strError = String(error);
                 if (strError && strError !== "[object Object]") {
                     errorMessage = strError;
@@ -154,15 +153,14 @@ export const useQuickNotes = () => {
 
     const today = format(new Date(), 'yyyy-MM-dd');
     const totalNotes = notes.reduce((acc, current) => acc + (current.amount || 0), 0);
-    // Incluir notas vencidas (dueDate <= hoy) en el total de hoy
     const todayTotal = notes
         .filter(n => n.dueDate <= today)
         .reduce((acc, n) => acc + (n.amount || 0), 0);
 
     return { 
         notes, 
-        addNote: async (name: string, amount: number, dueDate: string) => {
-            return addMutation.mutateAsync({ name, amount, dueDate });
+        addNote: async (name: string, amount: number, dueDate: string, supplier_name?: string) => {
+            return addMutation.mutateAsync({ name, amount, dueDate, supplier_name });
         }, 
         removeNote: (id: string) => removeMutation.mutate(id),
         totalNotes,
@@ -176,11 +174,21 @@ export const useQuickNotes = () => {
 
 const QuickNotesSection: React.FC = () => {
     const { notes, addNote, removeNote, totalNotes, todayTotal, isLoading, isAdding, isRemoving, storeId } = useQuickNotes();
+    const { suppliers } = useSuppliers();
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState<Date>(new Date());
     const [isExpanded, setIsExpanded] = useState(true);
+    const [selectedSupplier, setSelectedSupplier] = useState<string>(''); // supplier name
+    const [supplierOpen, setSupplierOpen] = useState(false);
     const { toast } = useToast();
+
+    // When a supplier is selected, pre-fill the concept
+    const handleSelectSupplier = (supplierName: string) => {
+        setSelectedSupplier(supplierName);
+        if (!name) setName(supplierName);
+        setSupplierOpen(false);
+    };
 
     const handleAdd = async () => {
         if (!storeId) {
@@ -202,10 +210,11 @@ const QuickNotesSection: React.FC = () => {
         }
 
         try {
-            await addNote(name, parseFloat(amount), format(date, 'yyyy-MM-dd'));
+            await addNote(name, parseFloat(amount), format(date, 'yyyy-MM-dd'), selectedSupplier || undefined);
             setName('');
             setAmount('');
             setDate(new Date());
+            setSelectedSupplier('');
         } catch (error) {
             // Error is handled in the mutation onSuccess/onError
         }
@@ -226,6 +235,63 @@ const QuickNotesSection: React.FC = () => {
             
             {isExpanded && (
                 <CardContent className="p-3 space-y-3">
+                    {/* Supplier selector row */}
+                    <div className="pb-2 border-b border-border/30">
+                        <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className={cn(
+                                        "w-full h-8 text-xs justify-between font-normal bg-background px-2",
+                                        !selectedSupplier && "text-muted-foreground"
+                                    )}
+                                >
+                                    <span className="flex items-center gap-1.5 truncate">
+                                        <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                        {selectedSupplier || "Proveedor (opcional)"}
+                                    </span>
+                                    <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Buscar proveedor..." className="h-8 text-xs" />
+                                    <CommandList>
+                                        <CommandEmpty className="text-xs py-4 text-center text-muted-foreground">
+                                            No se encontraron proveedores.
+                                        </CommandEmpty>
+                                        <CommandGroup>
+                                            {/* Option to clear selection */}
+                                            {selectedSupplier && (
+                                                <CommandItem
+                                                    onSelect={() => {
+                                                        setSelectedSupplier('');
+                                                        setSupplierOpen(false);
+                                                    }}
+                                                    className="text-xs text-muted-foreground italic"
+                                                >
+                                                    — Sin proveedor
+                                                </CommandItem>
+                                            )}
+                                            {suppliers.map((s) => (
+                                                <CommandItem
+                                                    key={s.id}
+                                                    value={s.name}
+                                                    onSelect={() => handleSelectSupplier(s.name)}
+                                                    className="text-xs"
+                                                >
+                                                    <Building2 className="h-3 w-3 mr-2 text-muted-foreground" />
+                                                    {s.name}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+
+                    {/* Note form row */}
                     <div className="grid grid-cols-12 gap-2 pb-2 border-b border-border/40">
                         <div className="col-span-4">
                             <Input
@@ -296,7 +362,6 @@ const QuickNotesSection: React.FC = () => {
                                 const today = format(new Date(), 'yyyy-MM-dd');
                                 const isToday = note.dueDate === today;
                                 const isOverdue = note.dueDate < today;
-                                const isDue = isToday || isOverdue;
                                 return (
                                     <div key={note.id} className={cn(
                                         "flex items-center justify-between group p-2 rounded-md border transition-all",
@@ -318,6 +383,12 @@ const QuickNotesSection: React.FC = () => {
                                             </div>
                                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
                                                 <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {format(parseISO(note.dueDate), 'dd/MM/yyyy')}</span>
+                                                {note.supplier_name && (
+                                                    <span className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded font-medium">
+                                                        <Building2 className="h-2.5 w-2.5" />
+                                                        {note.supplier_name}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 ml-4 shrink-0">
