@@ -3964,7 +3964,6 @@ const Settings = () => {
                 </Button>
               </CardContent>
             </Card>
-          </div>
         </TabsContent>
           </div>
         </Tabs>
