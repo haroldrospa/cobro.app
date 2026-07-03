@@ -2056,32 +2056,46 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto w-full px-4">
-        <Tabs defaultValue="invoices" className="space-y-12">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 h-auto">
-          <TabsTrigger value="billing-method">Método de Facturación</TabsTrigger>
-          <TabsTrigger value="invoices">Facturas</TabsTrigger>
-          <TabsTrigger value="payments">Pagos</TabsTrigger>
-          <TabsTrigger value="products">Productos</TabsTrigger>
-          <TabsTrigger value="store">Mi Tienda</TabsTrigger>
-          <TabsTrigger value="company">Empresa</TabsTrigger>
-          <TabsTrigger value="print">Impresión</TabsTrigger>
-          <TabsTrigger value="notifications">Alertas</TabsTrigger>
-          {(shopType === 'restaurant') && (
-            <TabsTrigger value="cocina">Cocina</TabsTrigger>
-          )}
-          <TabsTrigger value="system">Sistema</TabsTrigger>
-          <TabsTrigger value="advanced">Avanzado</TabsTrigger>
-          <TabsTrigger value="subscription">Suscripción</TabsTrigger>
-        </TabsList>
+      <div className="max-w-[1400px] mx-auto w-full px-4 pb-20">
+        <Tabs defaultValue="invoices" className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+          {/* Sidebar */}
+          <div className="w-full lg:w-64 shrink-0 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] overflow-y-auto pr-2 custom-scrollbar">
+            <TabsList className="flex flex-col w-full h-auto bg-transparent items-start space-y-1 p-0">
+              
+              <div className="mb-2 mt-4 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">🏢 General</div>
+              <TabsTrigger value="store" className="w-full justify-start text-left data-[state=active]:bg-muted">Mi Tienda</TabsTrigger>
+              <TabsTrigger value="company" className="w-full justify-start text-left data-[state=active]:bg-muted">Empresa</TabsTrigger>
+              <TabsTrigger value="subscription" className="w-full justify-start text-left data-[state=active]:bg-muted">Suscripción</TabsTrigger>
+              
+              <div className="mb-2 mt-6 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">💰 Ventas y Facturación</div>
+              <TabsTrigger value="invoices" className="w-full justify-start text-left data-[state=active]:bg-muted">Preferencias de Factura</TabsTrigger>
+              <TabsTrigger value="billing-method" className="w-full justify-start text-left data-[state=active]:bg-muted">Métodos y NCF</TabsTrigger>
+              <TabsTrigger value="payments" className="w-full justify-start text-left data-[state=active]:bg-muted">Métodos de Pago</TabsTrigger>
+              <TabsTrigger value="products" className="w-full justify-start text-left data-[state=active]:bg-muted">Productos</TabsTrigger>
+              
+              <div className="mb-2 mt-6 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">🔌 Integraciones</div>
+              <TabsTrigger value="print" className="w-full justify-start text-left data-[state=active]:bg-muted">Impresión</TabsTrigger>
+              <TabsTrigger value="notifications" className="w-full justify-start text-left data-[state=active]:bg-muted">Comunicaciones</TabsTrigger>
+              {(shopType === 'restaurant') && (
+                <TabsTrigger value="cocina" className="w-full justify-start text-left data-[state=active]:bg-muted">Cocina (KDS)</TabsTrigger>
+              )}
 
-        {/* Subscription Settings */}
-        <TabsContent value="subscription">
-          <SubscriptionOverview />
-        </TabsContent>
+              <div className="mb-2 mt-6 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">⚙️ Sistema</div>
+              <TabsTrigger value="system" className="w-full justify-start text-left data-[state=active]:bg-muted">Apariencia y Sistema</TabsTrigger>
+              <TabsTrigger value="advanced" className="w-full justify-start text-left data-[state=active]:bg-muted">Avanzado</TabsTrigger>
+
+            </TabsList>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 w-full min-w-0">
+            {/* Subscription Settings */}
+            <TabsContent value="subscription" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              <SubscriptionOverview />
+            </TabsContent>
 
         {/* Store Settings - Mi Tienda */}
-        <TabsContent value="store" className="space-y-6">
+        <TabsContent value="store" className="mt-0 space-y-6 focus-visible:outline-none focus-visible:ring-0">
           {/* ── Módulos activos ── */}
           <Card>
             <CardHeader>
@@ -3998,6 +4012,7 @@ const Settings = () => {
             </Card>
           </div>
         </TabsContent>
+          </div>
         </Tabs>
       </div>
 
