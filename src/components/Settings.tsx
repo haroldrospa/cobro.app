@@ -17,7 +17,6 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { offlineDB, OfflineStore } from "@/lib/offlineDB";
 import { useUserStore } from '@/hooks/useUserStore';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
-import { Slider } from '@/components/ui/slider';
 import { useStoreSettings, PaymentMethod } from '@/hooks/useStoreSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -245,29 +244,9 @@ const Settings = () => {
     alertThreshold: 15
   });
 
-  const [communicationsSettings, setCommunicationsSettings] = useState({
-    evolutionEnabled: false,
-    evolutionApiUrl: '',
-    evolutionInstanceName: '',
-    evolutionApiKey: '',
-    subscriptionNotificationEmail: '',
-    emailReportsRecipient: '',
-    webOrderSoundVolume: 1.0,
-  });
-
   // Sync system settings from database
   useEffect(() => {
     if (storeSettings) {
-      setCommunicationsSettings({
-        evolutionEnabled: storeSettings.evolution_enabled ?? false,
-        evolutionApiUrl: storeSettings.evolution_api_url || '',
-        evolutionInstanceName: storeSettings.evolution_instance_name || '',
-        evolutionApiKey: storeSettings.evolution_api_key || '',
-        subscriptionNotificationEmail: storeSettings.subscription_notification_email || '',
-        emailReportsRecipient: storeSettings.email_reports_recipient || '',
-        webOrderSoundVolume: storeSettings.web_order_sound_volume ?? 1.0,
-      });
-
       setSystemSettings({
         notifications: storeSettings.notifications_enabled ?? true,
         autoBackup: storeSettings.auto_backup ?? false,
@@ -557,16 +536,6 @@ const Settings = () => {
           kitchen_red_threshold: kitchenSettings.redThreshold,
           kitchen_alert_threshold: kitchenSettings.alertThreshold,
         });
-      } else if (section === 'comunicaciones') {
-        await updateStoreSettings({
-          evolution_enabled: communicationsSettings.evolutionEnabled,
-          evolution_api_url: communicationsSettings.evolutionApiUrl,
-          evolution_instance_name: communicationsSettings.evolutionInstanceName,
-          evolution_api_key: communicationsSettings.evolutionApiKey,
-          subscription_notification_email: communicationsSettings.subscriptionNotificationEmail,
-          email_reports_recipient: communicationsSettings.emailReportsRecipient,
-          web_order_sound_volume: communicationsSettings.webOrderSoundVolume
-        });
       }
 
       const sectionNames: Record<string, string> = {
@@ -577,8 +546,7 @@ const Settings = () => {
         'sistema': 'Sistema',
         'impresion': 'Impresión',
         'tienda': 'Tienda',
-        'cocina': 'Cocina',
-        'comunicaciones': 'Comunicaciones y Alertas'
+        'cocina': 'Cocina'
       };
 
       let toastTitle = "Configuración guardada";
@@ -1821,15 +1789,17 @@ const Settings = () => {
               <div className="flex items-center justify-between">
                 <Label>Volumen</Label>
                 <span className="text-sm text-muted-foreground">
-                  {Math.round((communicationsSettings.webOrderSoundVolume) * 100)}%
+                  {Math.round((storeSettings?.web_order_sound_volume ?? 0.7) * 100)}%
                 </span>
               </div>
-              <Slider
-                defaultValue={[1.0]}
-                value={[communicationsSettings.webOrderSoundVolume]}
-                max={1}
-                step={0.1}
-                onValueChange={(val) => setCommunicationsSettings({ ...communicationsSettings, webOrderSoundVolume: val[0] })}
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={storeSettings?.web_order_sound_volume ?? 0.7}
+                onChange={(e) => updateStoreSettings({ web_order_sound_volume: parseFloat(e.target.value) })}
+                className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
               />
             </div>
           </div>
@@ -2086,46 +2056,45 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto w-full px-4 pb-20">
-        <Tabs defaultValue="invoices" className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-          {/* Sidebar */}
-          <div className="w-full lg:w-64 shrink-0 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="max-w-7xl mx-auto w-full px-4">
+        <Tabs defaultValue="invoices" className="flex flex-col md:flex-row gap-8 space-y-0">
+          
+          <div className="w-full md:w-64 shrink-0">
             <TabsList className="flex flex-col w-full h-auto bg-transparent items-start space-y-1 p-0">
               
-              <div className="mb-2 mt-4 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">🏢 General</div>
-              <TabsTrigger value="store" className="w-full justify-start text-left data-[state=active]:bg-muted">Mi Tienda</TabsTrigger>
-              <TabsTrigger value="company" className="w-full justify-start text-left data-[state=active]:bg-muted">Empresa</TabsTrigger>
-              <TabsTrigger value="subscription" className="w-full justify-start text-left data-[state=active]:bg-muted">Suscripción</TabsTrigger>
-              
-              <div className="mb-2 mt-6 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">💰 Ventas y Facturación</div>
-              <TabsTrigger value="invoices" className="w-full justify-start text-left data-[state=active]:bg-muted">Preferencias de Factura</TabsTrigger>
-              <TabsTrigger value="billing-method" className="w-full justify-start text-left data-[state=active]:bg-muted">Métodos y NCF</TabsTrigger>
-              <TabsTrigger value="payments" className="w-full justify-start text-left data-[state=active]:bg-muted">Métodos de Pago</TabsTrigger>
-              <TabsTrigger value="products" className="w-full justify-start text-left data-[state=active]:bg-muted">Productos</TabsTrigger>
-              
-              <div className="mb-2 mt-6 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">🔌 Integraciones</div>
-              <TabsTrigger value="print" className="w-full justify-start text-left data-[state=active]:bg-muted">Impresión</TabsTrigger>
-              <TabsTrigger value="notifications" className="w-full justify-start text-left data-[state=active]:bg-muted">Comunicaciones</TabsTrigger>
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-4 mx-2 first:mt-0">General</div>
+              <TabsTrigger value="store" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Mi Tienda</TabsTrigger>
+              <TabsTrigger value="company" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Empresa</TabsTrigger>
+              <TabsTrigger value="subscription" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Suscripción</TabsTrigger>
+
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mx-2">Ventas y Facturación</div>
+              <TabsTrigger value="billing-method" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Método de Factura</TabsTrigger>
+              <TabsTrigger value="invoices" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Preferencias</TabsTrigger>
+              <TabsTrigger value="payments" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Métodos de Pago</TabsTrigger>
+              <TabsTrigger value="products" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Productos</TabsTrigger>
+
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mx-2">Dispositivos y Coms.</div>
+              <TabsTrigger value="print" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Impresión</TabsTrigger>
+              <TabsTrigger value="notifications" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Comunicaciones</TabsTrigger>
               {(shopType === 'restaurant') && (
-                <TabsTrigger value="cocina" className="w-full justify-start text-left data-[state=active]:bg-muted">Cocina (KDS)</TabsTrigger>
+                <TabsTrigger value="cocina" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Cocina KDS</TabsTrigger>
               )}
 
-              <div className="mb-2 mt-6 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground w-full border-b border-border/50 pb-2">⚙️ Sistema</div>
-              <TabsTrigger value="system" className="w-full justify-start text-left data-[state=active]:bg-muted">Apariencia y Sistema</TabsTrigger>
-              <TabsTrigger value="advanced" className="w-full justify-start text-left data-[state=active]:bg-muted">Avanzado</TabsTrigger>
-
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mx-2">Sistema</div>
+              <TabsTrigger value="system" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Apariencia</TabsTrigger>
+              <TabsTrigger value="advanced" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Avanzado</TabsTrigger>
+              
             </TabsList>
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 w-full min-w-0">
+          <div className="flex-1 w-full max-w-4xl min-w-0">
             {/* Subscription Settings */}
-            <TabsContent value="subscription" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent value="subscription" className="mt-0">
               <SubscriptionOverview />
             </TabsContent>
 
-        {/* Store Settings - Mi Tienda */}
-        <TabsContent value="store" className="mt-0 space-y-6 focus-visible:outline-none focus-visible:ring-0">
+            {/* Store Settings - Mi Tienda */}
+            <TabsContent value="store" className="space-y-6 mt-0">
           {/* ── Módulos activos ── */}
           <Card>
             <CardHeader>
@@ -2221,7 +2190,7 @@ const Settings = () => {
         </TabsContent>
 
         {/* Company Settings */}
-        <TabsContent value="company">
+        <TabsContent value="company" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -2435,9 +2404,8 @@ const Settings = () => {
         </TabsContent>
 
         {/* Billing Method Settings */}
-        <TabsContent value="billing-method">
-          <div className="space-y-6">
-            <BillingMethodSection onModeChange={setLocalBillingMode} />
+        <TabsContent value="billing-method" className="space-y-6 mt-0">
+          <BillingMethodSection onModeChange={setLocalBillingMode} />
 
             <Card>
               <CardHeader>
@@ -2543,13 +2511,11 @@ const Settings = () => {
                   )}
                 </CardContent>
               </Card>
-          </div>
         </TabsContent>
 
         {/* Invoice Settings */}
-        <TabsContent value="invoices">
-          <div className="space-y-6">
-            <Card>
+        <TabsContent value="invoices" className="space-y-6 mt-0">
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <FileText className="mr-2 h-5 w-5" />
@@ -2927,49 +2893,10 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Printer className="mr-2 h-5 w-5" />
-                  Configuración de Impresión
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tamaño de Papel</Label>
-                    <Select defaultValue="a4">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="a4">A4</SelectItem>
-                        <SelectItem value="letter">Carta</SelectItem>
-                        <SelectItem value="thermal">Térmico 80mm</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Impresora Predeterminada</Label>
-                    <Select defaultValue="default">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="default">Impresora del Sistema</SelectItem>
-                        <SelectItem value="thermal">Impresora Térmica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         {/* Payment Settings */}
-        <TabsContent value="payments">
+        <TabsContent value="payments" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -3037,7 +2964,7 @@ const Settings = () => {
         </TabsContent>
 
         {/* Product Settings */}
-        <TabsContent value="products">
+        <TabsContent value="products" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -3195,7 +3122,7 @@ const Settings = () => {
         </TabsContent>
 
         {/* Print Settings */}
-        <TabsContent value="print">
+        <TabsContent value="print" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -3345,7 +3272,7 @@ const Settings = () => {
         </TabsContent>
 
         {/* Notifications Settings */}
-        <TabsContent value="notifications">
+        <TabsContent value="notifications" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -3418,15 +3345,17 @@ const Settings = () => {
                       <div className="flex items-center justify-between">
                         <Label>Volumen</Label>
                         <span className="text-sm text-muted-foreground">
-                          {Math.round((communicationsSettings.webOrderSoundVolume) * 100)}%
+                          {Math.round((storeSettings?.web_order_sound_volume ?? 0.7) * 100)}%
                         </span>
                       </div>
-                      <Slider
-                        defaultValue={[1.0]}
-                        value={[communicationsSettings.webOrderSoundVolume]}
-                        max={1}
-                        step={0.1}
-                        onValueChange={(val) => setCommunicationsSettings({ ...communicationsSettings, webOrderSoundVolume: val[0] })}
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={storeSettings?.web_order_sound_volume ?? 0.7}
+                        onChange={(e) => updateStoreSettings({ web_order_sound_volume: parseFloat(e.target.value) })}
+                        className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
                       />
                       <p className="text-xs text-muted-foreground">
                         Ajusta el volumen del sonido de notificación
@@ -3488,9 +3417,9 @@ const Settings = () => {
                       <Input
                         id="email-recipient"
                         type="email"
-                        placeholder="Ej: reportes@miempresa.com"
-                        value={communicationsSettings.emailReportsRecipient}
-                        onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, emailReportsRecipient: e.target.value })}
+                        placeholder="tu@email.com"
+                        value={storeSettings?.email_reports_recipient || ''}
+                        onChange={(e) => updateStoreSettings({ email_reports_recipient: e.target.value })}
                       />
                       <p className="text-xs text-muted-foreground">
                         Los informes se enviarán a este correo
@@ -3521,9 +3450,9 @@ const Settings = () => {
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        disabled={!communicationsSettings.emailReportsRecipient || isUpdatingStoreSettings}
+                        disabled={!storeSettings?.email_reports_recipient || isUpdatingStoreSettings}
                         onClick={async () => {
-                          if (!communicationsSettings.emailReportsRecipient || !userStore?.id) {
+                          if (!storeSettings?.email_reports_recipient || !userStore?.id) {
                             toast({
                               title: "Error",
                               description: "Ingresa un correo de destino válido",
@@ -3535,14 +3464,14 @@ const Settings = () => {
                             const { error } = await supabase.functions.invoke('send-daily-report', {
                               body: {
                                 store_id: userStore.id,
-                                recipient_email: communicationsSettings.emailReportsRecipient,
+                                recipient_email: storeSettings.email_reports_recipient,
                                 report_type: storeSettings.email_reports_frequency || 'daily'
                               }
                             });
                             if (error) throw error;
                             toast({
                               title: "Informe enviado",
-                              description: `Se ha enviado el informe a ${communicationsSettings.emailReportsRecipient}`,
+                              description: `Se ha enviado el informe a ${storeSettings.email_reports_recipient}`,
                             });
                           } catch (err: any) {
                             console.error('Error sending report:', err);
@@ -3584,9 +3513,9 @@ const Settings = () => {
                   <Input
                     id="subscription-email"
                     type="email"
-                    placeholder="Ej: facturacion@miempresa.com"
-                    value={communicationsSettings.subscriptionNotificationEmail}
-                    onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, subscriptionNotificationEmail: e.target.value })}
+                    placeholder="Haroldrospa@gmail.com"
+                    value={storeSettings?.subscription_notification_email || ''}
+                    onChange={(e) => updateStoreSettings({ subscription_notification_email: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">
                     Este correo recibirá las notificaciones de nuevos pagos pendientes para revisión.
@@ -3612,8 +3541,8 @@ const Settings = () => {
                       </p>
                     </div>
                     <Switch
-                      checked={communicationsSettings.evolutionEnabled}
-                      onCheckedChange={(checked) => setCommunicationsSettings({ ...communicationsSettings, evolutionEnabled: checked })}
+                      checked={storeSettings?.evolution_enabled ?? false}
+                      onCheckedChange={(checked) => updateStoreSettings({ evolution_enabled: checked })}
                     />
                   </div>
 
@@ -3623,8 +3552,8 @@ const Settings = () => {
                         <Label>URL de Evolution API</Label>
                         <Input
                           placeholder="ej: https://api.mi-evolution.com"
-                          value={communicationsSettings.evolutionApiUrl}
-                          onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, evolutionApiUrl: e.target.value })}
+                          value={storeSettings?.evolution_api_url || ''}
+                          onChange={(e) => updateStoreSettings({ evolution_api_url: e.target.value })}
                         />
                       </div>
                       
@@ -3632,8 +3561,8 @@ const Settings = () => {
                         <Label>Nombre de la Instancia</Label>
                         <Input
                           placeholder="ej: CobroApp"
-                          value={communicationsSettings.evolutionInstanceName}
-                          onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, evolutionInstanceName: e.target.value })}
+                          value={storeSettings?.evolution_instance_name || ''}
+                          onChange={(e) => updateStoreSettings({ evolution_instance_name: e.target.value })}
                         />
                       </div>
 
@@ -3642,12 +3571,12 @@ const Settings = () => {
                         <Input
                           type="password"
                           placeholder="Tu API Key"
-                          value={communicationsSettings.evolutionApiKey}
-                          onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, evolutionApiKey: e.target.value })}
+                          value={storeSettings?.evolution_api_key || ''}
+                          onChange={(e) => updateStoreSettings({ evolution_api_key: e.target.value })}
                         />
                       </div>
 
-                      {communicationsSettings.evolutionApiUrl && communicationsSettings.evolutionInstanceName && communicationsSettings.evolutionApiKey && (
+                      {storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key && (
                         <div className="pt-2">
                           <Button 
                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
@@ -3667,11 +3596,6 @@ const Settings = () => {
 
               </div>
             </CardContent>
-            <div className="p-6 pt-0 mt-4 flex justify-end">
-              <Button onClick={() => handleSaveSettings('comunicaciones')} disabled={loading}>
-                {loading ? "Guardando..." : "Guardar Cambios"}
-              </Button>
-            </div>
           </Card>
         </TabsContent>
 
@@ -3682,7 +3606,7 @@ const Settings = () => {
           if (normalizedType !== 'restaurant') return null;
 
           return (
-            <TabsContent value="cocina">
+            <TabsContent value="cocina" className="space-y-6 mt-0">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -3767,9 +3691,8 @@ const Settings = () => {
         })()}
 
         {/* System Settings */}
-        <TabsContent value="system">
-          <div className="space-y-6">
-            <Card>
+        <TabsContent value="system" className="space-y-6 mt-0">
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <SettingsIcon className="mr-2 h-5 w-5" />
@@ -3926,13 +3849,11 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
         </TabsContent>
 
         {/* Advanced Settings */}
-        <TabsContent value="advanced">
-          <div className="space-y-6">
-            <Card>
+        <TabsContent value="advanced" className="space-y-6 mt-0">
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Database className="mr-2 h-5 w-5" />
