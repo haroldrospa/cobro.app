@@ -393,6 +393,8 @@ function AccountingContent() {
 
     const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
     const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({});
+    const [supplierSearch, setSupplierSearch] = useState('');
+    const [supplierDebtFilter, setSupplierDebtFilter] = useState<'all' | 'with_debt' | 'no_debt'>('all');
     // Expense type: 'reinversion' = Inventario, 'operativo' = all others
     const [expenseType, setExpenseType] = useState<'reinversion' | 'operativo'>('reinversion');
 
@@ -1355,81 +1357,209 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     </div>
                 </TabsContent>
 
-                <TabsContent value="suppliers" className="space-y-4">
-                    <div className="flex justify-between">
-                        <h3 className="text-lg font-medium">Directorio de Proveedores</h3>
-                        <Button variant="outline" size="sm" onClick={() => setIsAddSupplierOpen(true)}>
-                            <Plus className="mr-2 h-4 w-4" />
+                <TabsContent value="suppliers" className="space-y-5 animate-in fade-in duration-300">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <h3 className="text-lg font-bold tracking-tight">Proveedores</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                {suppliers.length} proveedor{suppliers.length !== 1 ? 'es' : ''} registrado{suppliers.length !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+                        <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2 h-9 px-4 rounded-xl shadow-sm"
+                            onClick={() => setIsAddSupplierOpen(true)}
+                        >
+                            <Plus className="h-4 w-4" />
                             Nuevo Proveedor
                         </Button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {suppliers.map((supplier) => (
-                            <Card key={supplier.id}>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <div className="flex items-center gap-2">
-                                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                                        <CardTitle className="text-base font-medium truncate max-w-[150px]">{supplier.name}</CardTitle>
-                                    </div>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0" 
-                                        onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </CardHeader>
-                                <CardContent className="mt-2 text-sm">
-                                    <div className="grid gap-1">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">RNC:</span>
-                                            <span>{supplier.rnc || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Contacto:</span>
-                                            <span>{supplier.contact || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center mt-1 pt-1 border-t border-border/50">
-                                            <span className="text-muted-foreground font-medium">Pagos Pendientes:</span>
-                                            {(() => {
-                                                const outstanding = getSupplierOutstandingDebt(supplier.id);
-                                                if (outstanding > 0) {
-                                                    return <span className="font-extrabold text-red-500">${outstanding.toLocaleString()}</span>;
-                                                } else {
-                                                    return <span className="font-extrabold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-lg text-xs">Sin deuda</span>;
-                                                }
-                                            })()}
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 mt-4 pt-2 border-t border-border/30">
-                                        <Button
-                                            size="sm"
-                                            className="flex-1 rounded-xl text-xs"
-                                            onClick={() => {
-                                                setSelectedSupplierForDebt(supplier);
-                                                setDebtForm({ amount: '', description: '', category: 'Inventario', due_date: '' });
-                                                setIsAddDebtOpen(true);
-                                            }}
-                                        >
-                                            <Plus className="mr-1 h-3 w-3" /> Registrar Deuda
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex-1 rounded-xl text-xs"
-                                            onClick={() => {
-                                                setSelectedSupplierForView(supplier);
-                                                setIsViewDebtsOpen(true);
-                                            }}
-                                        >
-                                            <Eye className="mr-1 h-3 w-3" /> Ver Deudas
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+
+                    {/* Summary Cards */}
+                    {(() => {
+                        const withDebt = suppliers.filter(s => getSupplierOutstandingDebt(s.id) > 0);
+                        const totalDebt = suppliers.reduce((sum, s) => sum + getSupplierOutstandingDebt(s.id), 0);
+                        return (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="rounded-xl border border-border/30 bg-card/50 p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Proveedores</p>
+                                    <p className="text-2xl font-black mt-1">{suppliers.length}</p>
+                                </div>
+                                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-red-500">Con Deuda Pendiente</p>
+                                    <p className="text-2xl font-black mt-1 text-red-500">{withDebt.length}</p>
+                                </div>
+                                <div className="rounded-xl border border-border/30 bg-card/50 p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Deuda Total</p>
+                                    <p className="text-2xl font-black mt-1">${totalDebt.toLocaleString()}</p>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Search & Filter */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar proveedor por nombre, RNC o contacto..."
+                                value={supplierSearch}
+                                onChange={(e) => setSupplierSearch(e.target.value)}
+                                className="pl-9 h-9 bg-muted/20 border-border/40 rounded-xl text-sm"
+                            />
+                        </div>
+                        <div className="flex gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/30">
+                            {([
+                                { key: 'all', label: 'Todos' },
+                                { key: 'with_debt', label: 'Con Deuda' },
+                                { key: 'no_debt', label: 'Sin Deuda' },
+                            ] as const).map(({ key, label }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setSupplierDebtFilter(key)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                        supplierDebtFilter === key
+                                            ? 'bg-background shadow-sm text-foreground border border-border/40'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+
+                    {/* Table */}
+                    {(() => {
+                        const filtered = suppliers
+                            .filter(s => {
+                                const term = supplierSearch.toLowerCase();
+                                const matchSearch = !term ||
+                                    s.name?.toLowerCase().includes(term) ||
+                                    (s.rnc || '').toLowerCase().includes(term) ||
+                                    (s.contact || '').toLowerCase().includes(term);
+                                const debt = getSupplierOutstandingDebt(s.id);
+                                const matchFilter =
+                                    supplierDebtFilter === 'all' ||
+                                    (supplierDebtFilter === 'with_debt' && debt > 0) ||
+                                    (supplierDebtFilter === 'no_debt' && debt === 0);
+                                return matchSearch && matchFilter;
+                            })
+                            .sort((a, b) => {
+                                // Sort by debt amount descending (debtors first)
+                                return getSupplierOutstandingDebt(b.id) - getSupplierOutstandingDebt(a.id);
+                            });
+
+                        if (loadingSuppliers) {
+                            return (
+                                <div className="flex justify-center items-center py-16">
+                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                </div>
+                            );
+                        }
+
+                        if (filtered.length === 0) {
+                            return (
+                                <div className="text-center py-16 text-muted-foreground">
+                                    <Building2 className="h-10 w-10 mx-auto opacity-20 mb-3" />
+                                    <p className="text-sm font-medium">
+                                        {supplierSearch || supplierDebtFilter !== 'all'
+                                            ? 'No se encontraron proveedores con esos filtros.'
+                                            : 'Aún no tienes proveedores registrados.'}
+                                    </p>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div className="rounded-2xl border border-border/40 overflow-hidden bg-card shadow-sm">
+                                <Table className="border-collapse">
+                                    <TableHeader>
+                                        <TableRow className="border-b border-border/40 hover:bg-transparent">
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3 pl-5">Proveedor</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3">RNC</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3">Contacto</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3 text-right">Deuda Pendiente</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3 text-center pr-5">Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filtered.map((supplier) => {
+                                            const outstanding = getSupplierOutstandingDebt(supplier.id);
+                                            const hasDebt = outstanding > 0;
+                                            return (
+                                                <TableRow key={supplier.id} className="hover:bg-muted/20 transition-colors border-b border-border/20 group">
+                                                    <TableCell className="py-4 pl-5">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black ${
+                                                                hasDebt ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'
+                                                            }`}>
+                                                                {supplier.name?.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <span className="font-semibold text-sm">{supplier.name}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="py-4 text-sm text-muted-foreground font-mono">
+                                                        {supplier.rnc || <span className="text-border">—</span>}
+                                                    </TableCell>
+                                                    <TableCell className="py-4 text-sm text-muted-foreground">
+                                                        {supplier.contact || <span className="text-border">—</span>}
+                                                    </TableCell>
+                                                    <TableCell className="py-4 text-right">
+                                                        {hasDebt ? (
+                                                            <span className="inline-flex items-center gap-1 text-sm font-black text-red-500 bg-red-500/10 px-2.5 py-1 rounded-lg">
+                                                                ${outstanding.toLocaleString()}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
+                                                                Sin deuda
+                                                            </span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="py-4 pr-5">
+                                                        <div className="flex items-center justify-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-8 px-3 rounded-xl text-xs font-bold gap-1.5 text-primary hover:bg-primary/10"
+                                                                onClick={() => {
+                                                                    setSelectedSupplierForDebt(supplier);
+                                                                    setDebtForm({ amount: '', description: '', category: 'Inventario', due_date: '' });
+                                                                    setIsAddDebtOpen(true);
+                                                                }}
+                                                            >
+                                                                <Plus className="h-3.5 w-3.5" /> Deuda
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-8 px-3 rounded-xl text-xs font-bold gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                                onClick={() => {
+                                                                    setSelectedSupplierForView(supplier);
+                                                                    setIsViewDebtsOpen(true);
+                                                                }}
+                                                            >
+                                                                <Eye className="h-3.5 w-3.5" /> Ver
+                                                            </Button>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                                                                onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        );
+                    })()}
                 </TabsContent>
 
                 <TabsContent value="reports" className="space-y-4">

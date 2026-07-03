@@ -405,7 +405,7 @@ const SuperAdmin = () => {
             </div>
 
             {/* KPI CARDS - Diseño Minimalista "Enterprise" */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-8">
                 {/* Clientes Activos */}
                 <Card className="shadow-none border border-border/30 hover:border-primary/30 transition-colors bg-card/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
