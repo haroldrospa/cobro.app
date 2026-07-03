@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CartItem, GlobalDiscount } from '@/types/pos';
 import { calculateItemTotal, calculateTotals } from '@/utils/posCalculations';
 import { useMasterData } from '@/providers/MasterDataProvider';
-import { Customer } from '@/hooks/useCustomers';
+import { Customer, useUpdateCustomer } from '@/hooks/useCustomers';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
 import { useCreateSaleOffline } from '@/hooks/useSalesOffline';
@@ -159,7 +159,11 @@ const POSContent: React.FC = () => {
   const [selectedCustomerForDebt, setSelectedCustomerForDebt] = useState<any | null>(null);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
 
-
+  // Phone warning dialog state
+  const [showNoPhoneDialog, setShowNoPhoneDialog] = useState(false);
+  const [noPhoneCustomer, setNoPhoneCustomer] = useState<Customer | null>(null);
+  const [quickPhoneInput, setQuickPhoneInput] = useState('');
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
 
 
   // Loyalty Points state
@@ -226,6 +230,7 @@ const POSContent: React.FC = () => {
   };
 
   const { products: allProducts, customers = [] } = useMasterData();
+  const updateCustomerMutation = useUpdateCustomer();
   const productsQueryLoading = false;
   const productsQueryFetching = false;
   const loadingProducts = (productsQueryLoading || productsQueryFetching) && allProducts.length === 0;
@@ -234,6 +239,24 @@ const POSContent: React.FC = () => {
   const { data: invoiceTypes = [] } = useInvoiceTypes();
   const createSale = useCreateSaleOffline();
   const { toast } = useToast();
+
+  // Detect when a customer without phone is selected
+  useEffect(() => {
+    if (!selectedCustomer) {
+      setShowNoPhoneDialog(false);
+      setNoPhoneCustomer(null);
+      return;
+    }
+    const found = customers.find(c => c.id === selectedCustomer);
+    if (found && !found.phone) {
+      setNoPhoneCustomer(found);
+      setQuickPhoneInput('');
+      setShowNoPhoneDialog(true);
+    } else {
+      setShowNoPhoneDialog(false);
+      setNoPhoneCustomer(null);
+    }
+  }, [selectedCustomer, customers]);
   const { data: rawStore, isLoading: isLoadingStore, isPending: isPendingStore } = useUserStore();
   const store = rawStore || {
     id: profile?.store_id || '00000000-0000-0000-0000-000000000000',
@@ -2182,6 +2205,87 @@ const POSContent: React.FC = () => {
           description="Has llegado al máximo de facturas permitidas en tu plan este mes. Para seguir facturando, necesitas un plan superior."
           limitType="invoices"
         />
+
+        {/* ── NO PHONE WARNING DIALOG ── */}
+        <Dialog open={showNoPhoneDialog} onOpenChange={(open) => { if (!open) setShowNoPhoneDialog(false); }}>
+          <DialogContent className="max-w-sm rounded-2xl border border-amber-500/30 bg-card shadow-2xl p-0 overflow-hidden gap-0">
+            {/* Amber accent bar */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 to-orange-400" />
+            <div className="p-6 space-y-4">
+              <DialogHeader className="space-y-2 pb-0">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-base font-bold text-foreground leading-snug">
+                      Teléfono de contacto faltante
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground mt-1">
+                      El cliente <strong className="text-foreground">{noPhoneCustomer?.name}</strong> no tiene número de teléfono registrado.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  ¿Deseas agregar el número de contacto ahora? Es importante para comunicaciones y seguimiento de crédito.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    placeholder="Ej: 809-555-0000"
+                    value={quickPhoneInput}
+                    onChange={(e) => setQuickPhoneInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && quickPhoneInput.trim() && (async () => {
+                      if (!noPhoneCustomer || !quickPhoneInput.trim()) return;
+                      setIsSavingPhone(true);
+                      try {
+                        await updateCustomerMutation.mutateAsync({ id: noPhoneCustomer.id, phone: quickPhoneInput.trim() } as any);
+                        toast({ title: 'Teléfono guardado', description: `Número agregado para ${noPhoneCustomer.name}.` });
+                        setShowNoPhoneDialog(false);
+                      } catch (e) {
+                        toast({ title: 'Error', description: 'No se pudo guardar el teléfono.', variant: 'destructive' });
+                      } finally { setIsSavingPhone(false); }
+                    })()}
+                    className="flex-1 h-9 px-3 rounded-xl bg-muted/40 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/50 transition-all"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    disabled={!quickPhoneInput.trim() || isSavingPhone}
+                    className="h-9 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold shrink-0"
+                    onClick={async () => {
+                      if (!noPhoneCustomer || !quickPhoneInput.trim()) return;
+                      setIsSavingPhone(true);
+                      try {
+                        await updateCustomerMutation.mutateAsync({ id: noPhoneCustomer.id, phone: quickPhoneInput.trim() } as any);
+                        toast({ title: 'Teléfono guardado', description: `Número agregado para ${noPhoneCustomer.name}.` });
+                        setShowNoPhoneDialog(false);
+                      } catch (e) {
+                        toast({ title: 'Error', description: 'No se pudo guardar el teléfono.', variant: 'destructive' });
+                      } finally { setIsSavingPhone(false); }
+                    }}
+                  >
+                    {isSavingPhone ? 'Guardando...' : 'Guardar'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground hover:text-foreground h-8"
+                  onClick={() => setShowNoPhoneDialog(false)}
+                >
+                  Omitir por ahora
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div >
     </SimpleErrorBoundary >
   );
