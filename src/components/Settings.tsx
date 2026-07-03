@@ -244,9 +244,29 @@ const Settings = () => {
     alertThreshold: 15
   });
 
+  const [communicationsSettings, setCommunicationsSettings] = useState({
+    evolutionEnabled: false,
+    evolutionApiUrl: '',
+    evolutionInstanceName: '',
+    evolutionApiKey: '',
+    subscriptionNotificationEmail: '',
+    emailReportsRecipient: '',
+    webOrderSoundVolume: 1.0,
+  });
+
   // Sync system settings from database
   useEffect(() => {
     if (storeSettings) {
+      setCommunicationsSettings({
+        evolutionEnabled: storeSettings.evolution_enabled ?? false,
+        evolutionApiUrl: storeSettings.evolution_api_url || '',
+        evolutionInstanceName: storeSettings.evolution_instance_name || '',
+        evolutionApiKey: storeSettings.evolution_api_key || '',
+        subscriptionNotificationEmail: storeSettings.subscription_notification_email || '',
+        emailReportsRecipient: storeSettings.email_reports_recipient || '',
+        webOrderSoundVolume: storeSettings.web_order_sound_volume ?? 1.0,
+      });
+
       setSystemSettings({
         notifications: storeSettings.notifications_enabled ?? true,
         autoBackup: storeSettings.auto_backup ?? false,
@@ -536,6 +556,16 @@ const Settings = () => {
           kitchen_red_threshold: kitchenSettings.redThreshold,
           kitchen_alert_threshold: kitchenSettings.alertThreshold,
         });
+      } else if (section === 'comunicaciones') {
+        await updateStoreSettings({
+          evolution_enabled: communicationsSettings.evolutionEnabled,
+          evolution_api_url: communicationsSettings.evolutionApiUrl,
+          evolution_instance_name: communicationsSettings.evolutionInstanceName,
+          evolution_api_key: communicationsSettings.evolutionApiKey,
+          subscription_notification_email: communicationsSettings.subscriptionNotificationEmail,
+          email_reports_recipient: communicationsSettings.emailReportsRecipient,
+          web_order_sound_volume: communicationsSettings.webOrderSoundVolume
+        });
       }
 
       const sectionNames: Record<string, string> = {
@@ -546,7 +576,8 @@ const Settings = () => {
         'sistema': 'Sistema',
         'impresion': 'Impresión',
         'tienda': 'Tienda',
-        'cocina': 'Cocina'
+        'cocina': 'Cocina',
+        'comunicaciones': 'Comunicaciones y Alertas'
       };
 
       let toastTitle = "Configuración guardada";
@@ -1789,17 +1820,15 @@ const Settings = () => {
               <div className="flex items-center justify-between">
                 <Label>Volumen</Label>
                 <span className="text-sm text-muted-foreground">
-                  {Math.round((storeSettings?.web_order_sound_volume ?? 0.7) * 100)}%
+                  {Math.round((communicationsSettings.webOrderSoundVolume) * 100)}%
                 </span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={storeSettings?.web_order_sound_volume ?? 0.7}
-                onChange={(e) => updateStoreSettings({ web_order_sound_volume: parseFloat(e.target.value) })}
-                className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
+              <Slider
+                defaultValue={[1.0]}
+                value={[communicationsSettings.webOrderSoundVolume]}
+                max={1}
+                step={0.1}
+                onValueChange={(val) => setCommunicationsSettings({ ...communicationsSettings, webOrderSoundVolume: val[0] })}
               />
             </div>
           </div>
@@ -3388,17 +3417,15 @@ const Settings = () => {
                       <div className="flex items-center justify-between">
                         <Label>Volumen</Label>
                         <span className="text-sm text-muted-foreground">
-                          {Math.round((storeSettings?.web_order_sound_volume ?? 0.7) * 100)}%
+                          {Math.round((communicationsSettings.webOrderSoundVolume) * 100)}%
                         </span>
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={storeSettings?.web_order_sound_volume ?? 0.7}
-                        onChange={(e) => updateStoreSettings({ web_order_sound_volume: parseFloat(e.target.value) })}
-                        className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
+                      <Slider
+                        defaultValue={[1.0]}
+                        value={[communicationsSettings.webOrderSoundVolume]}
+                        max={1}
+                        step={0.1}
+                        onValueChange={(val) => setCommunicationsSettings({ ...communicationsSettings, webOrderSoundVolume: val[0] })}
                       />
                       <p className="text-xs text-muted-foreground">
                         Ajusta el volumen del sonido de notificación
@@ -3460,9 +3487,9 @@ const Settings = () => {
                       <Input
                         id="email-recipient"
                         type="email"
-                        placeholder="tu@email.com"
-                        value={storeSettings?.email_reports_recipient || ''}
-                        onChange={(e) => updateStoreSettings({ email_reports_recipient: e.target.value })}
+                        placeholder="Ej: reportes@miempresa.com"
+                        value={communicationsSettings.emailReportsRecipient}
+                        onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, emailReportsRecipient: e.target.value })}
                       />
                       <p className="text-xs text-muted-foreground">
                         Los informes se enviarán a este correo
@@ -3493,9 +3520,9 @@ const Settings = () => {
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        disabled={!storeSettings?.email_reports_recipient || isUpdatingStoreSettings}
+                        disabled={!communicationsSettings.emailReportsRecipient || isUpdatingStoreSettings}
                         onClick={async () => {
-                          if (!storeSettings?.email_reports_recipient || !userStore?.id) {
+                          if (!communicationsSettings.emailReportsRecipient || !userStore?.id) {
                             toast({
                               title: "Error",
                               description: "Ingresa un correo de destino válido",
@@ -3507,14 +3534,14 @@ const Settings = () => {
                             const { error } = await supabase.functions.invoke('send-daily-report', {
                               body: {
                                 store_id: userStore.id,
-                                recipient_email: storeSettings.email_reports_recipient,
+                                recipient_email: communicationsSettings.emailReportsRecipient,
                                 report_type: storeSettings.email_reports_frequency || 'daily'
                               }
                             });
                             if (error) throw error;
                             toast({
                               title: "Informe enviado",
-                              description: `Se ha enviado el informe a ${storeSettings.email_reports_recipient}`,
+                              description: `Se ha enviado el informe a ${communicationsSettings.emailReportsRecipient}`,
                             });
                           } catch (err: any) {
                             console.error('Error sending report:', err);
@@ -3556,9 +3583,9 @@ const Settings = () => {
                   <Input
                     id="subscription-email"
                     type="email"
-                    placeholder="Haroldrospa@gmail.com"
-                    value={storeSettings?.subscription_notification_email || ''}
-                    onChange={(e) => updateStoreSettings({ subscription_notification_email: e.target.value })}
+                    placeholder="Ej: facturacion@miempresa.com"
+                    value={communicationsSettings.subscriptionNotificationEmail}
+                    onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, subscriptionNotificationEmail: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">
                     Este correo recibirá las notificaciones de nuevos pagos pendientes para revisión.
@@ -3584,8 +3611,8 @@ const Settings = () => {
                       </p>
                     </div>
                     <Switch
-                      checked={storeSettings?.evolution_enabled ?? false}
-                      onCheckedChange={(checked) => updateStoreSettings({ evolution_enabled: checked })}
+                      checked={communicationsSettings.evolutionEnabled}
+                      onCheckedChange={(checked) => setCommunicationsSettings({ ...communicationsSettings, evolutionEnabled: checked })}
                     />
                   </div>
 
@@ -3595,8 +3622,8 @@ const Settings = () => {
                         <Label>URL de Evolution API</Label>
                         <Input
                           placeholder="ej: https://api.mi-evolution.com"
-                          value={storeSettings?.evolution_api_url || ''}
-                          onChange={(e) => updateStoreSettings({ evolution_api_url: e.target.value })}
+                          value={communicationsSettings.evolutionApiUrl}
+                          onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, evolutionApiUrl: e.target.value })}
                         />
                       </div>
                       
@@ -3604,8 +3631,8 @@ const Settings = () => {
                         <Label>Nombre de la Instancia</Label>
                         <Input
                           placeholder="ej: CobroApp"
-                          value={storeSettings?.evolution_instance_name || ''}
-                          onChange={(e) => updateStoreSettings({ evolution_instance_name: e.target.value })}
+                          value={communicationsSettings.evolutionInstanceName}
+                          onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, evolutionInstanceName: e.target.value })}
                         />
                       </div>
 
@@ -3614,12 +3641,12 @@ const Settings = () => {
                         <Input
                           type="password"
                           placeholder="Tu API Key"
-                          value={storeSettings?.evolution_api_key || ''}
-                          onChange={(e) => updateStoreSettings({ evolution_api_key: e.target.value })}
+                          value={communicationsSettings.evolutionApiKey}
+                          onChange={(e) => setCommunicationsSettings({ ...communicationsSettings, evolutionApiKey: e.target.value })}
                         />
                       </div>
 
-                      {storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key && (
+                      {communicationsSettings.evolutionApiUrl && communicationsSettings.evolutionInstanceName && communicationsSettings.evolutionApiKey && (
                         <div className="pt-2">
                           <Button 
                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
@@ -3639,6 +3666,11 @@ const Settings = () => {
 
               </div>
             </CardContent>
+            <div className="p-6 pt-0 mt-4 flex justify-end">
+              <Button onClick={() => handleSaveSettings('comunicaciones')} disabled={loading}>
+                {loading ? "Guardando..." : "Guardar Cambios"}
+              </Button>
+            </div>
           </Card>
         </TabsContent>
 
