@@ -184,7 +184,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
   const invoiceNumber = saleData?.encf || saleData?.invoice_number || saleData?.invoiceNumber || '000001';
 
-  const handleSendWhatsApp = (customPhone?: string) => {
+  const handleSendWhatsApp = async (customPhone?: string) => {
     const targetPhone = customPhone || saleData?.customer?.phone;
     if (!targetPhone) {
       toast({

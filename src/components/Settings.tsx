@@ -27,7 +27,6 @@ import BannerSettingsSection from '@/components/settings/BannerSettingsSection';
 import StoreHoursSection from '@/components/settings/StoreHoursSection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InvoiceSequenceInput } from '@/components/settings/InvoiceSequenceInput';
 import { EvolutionQRDialog } from '@/components/settings/EvolutionQRDialog';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
@@ -78,7 +77,6 @@ const Settings = () => {
   const isMobile = useIsMobile();
   const [mobileActiveSection, setMobileActiveSection] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isUpdatingStoreSettings, setIsUpdatingStoreSettings] = useState(false);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [creatingStore, setCreatingStore] = useState(false);
   const [storeName, setStoreName] = useState('');
