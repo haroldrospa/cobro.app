@@ -19,7 +19,7 @@ const formatPhoneNumber = (phone: string): string => {
     cleaned = `1${cleaned}`;
   }
   
-  return `${cleaned}@s.whatsapp.net`;
+  return cleaned;
 };
 
 export const sendEvolutionWhatsAppMessage = async (

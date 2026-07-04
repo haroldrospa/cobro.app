@@ -457,8 +457,7 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       invoicesList += `• Factura *${sale.invoice_number}*: *$${sale.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}*\n`;
     });
 
-    const message = encodeURIComponent(
-      `Estimado/a ${customer.name},\n\n` +
+    const message = `Estimado/a ${customer.name},\n\n` +
       `Esperamos que se encuentre muy bien.\n\n` +
       `Le contactamos de manera cordial de parte de *${companyInfo?.name || 'nuestra empresa'}* para comunicarle que su balance total pendiente es de *$${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })}*.\n\n` +
       `A continuación, le detallamos las facturas correspondientes:\n` +
@@ -466,14 +465,13 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       `Le agradecemos profundamente su pronta atención a este estado de cuenta. Si ya realizó el pago, por favor omita este mensaje.\n\n` +
       `¡Que tenga un excelente día!\n\n` +
       `Atentamente,\n*${companyInfo?.name || 'La Gerencia'}*\n\n` +
-      `*(Este es un mensaje automático de Cobro App)*`
-    );
+      `*(Este es un mensaje automático de Cobro App)*`;
     
     if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
       setIsSendingWhatsApp(true);
       toast('Enviando estado de cuenta por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano.' });
       
-      sendEvolutionWhatsAppMessage(phone, decodeURIComponent(message), {
+      sendEvolutionWhatsAppMessage(phone, message, {
         url: storeSettings.evolution_api_url,
         instanceName: storeSettings.evolution_instance_name,
         apiKey: storeSettings.evolution_api_key
