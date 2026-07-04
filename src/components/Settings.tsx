@@ -3611,21 +3611,53 @@ const Settings = () => {
                                   setIsTestingWhatsApp(true);
                                   toast({ title: 'Probando...', description: 'Enviando mensaje de prueba...' });
                                   try {
+                                    // Send format 1: Just the number with 1
                                     await sendEvolutionWhatsAppMessage(
                                       testWhatsAppPhone, 
-                                      'Este es un mensaje de prueba desde CobroApp. Si recibes esto, tu API de Evolution está configurada correctamente. 🎉', 
+                                      'Prueba Formato 1 (Con 1): Si recibes esto, Evolution API usa este formato. 🎉', 
                                       {
                                         url: storeSettings.evolution_api_url!,
                                         instanceName: storeSettings.evolution_instance_name!,
                                         apiKey: storeSettings.evolution_api_key!
-                                      }
+                                      },
+                                      'format1'
                                     );
-                                    toast({ title: '¡Éxito!', description: 'El mensaje de prueba se envió correctamente a WhatsApp.', variant: 'default' });
-                                  } catch (err: any) {
-                                    toast({ title: 'Error en la prueba', description: err.message, variant: 'destructive' });
-                                  } finally {
-                                    setIsTestingWhatsApp(false);
-                                  }
+                                  } catch (e) { console.error(e) }
+
+                                  try {
+                                    // Send format 2: The number with 1 and @s.whatsapp.net
+                                    await sendEvolutionWhatsAppMessage(
+                                      testWhatsAppPhone, 
+                                      'Prueba Formato 2 (Con @s.whatsapp.net): Si recibes esto, Evolution API necesita el sufijo. 🎉', 
+                                      {
+                                        url: storeSettings.evolution_api_url!,
+                                        instanceName: storeSettings.evolution_instance_name!,
+                                        apiKey: storeSettings.evolution_api_key!
+                                      },
+                                      'format2'
+                                    );
+                                  } catch (e) { console.error(e) }
+
+                                  try {
+                                    // Send format 3: The number WITHOUT 1
+                                    await sendEvolutionWhatsAppMessage(
+                                      testWhatsAppPhone, 
+                                      'Prueba Formato 3 (Sin 1): Si recibes esto, Evolution API usa formato local. 🎉', 
+                                      {
+                                        url: storeSettings.evolution_api_url!,
+                                        instanceName: storeSettings.evolution_instance_name!,
+                                        apiKey: storeSettings.evolution_api_key!
+                                      },
+                                      'format3'
+                                    );
+                                  } catch (e) { console.error(e) }
+
+                                  toast({ title: '¡Éxito!', description: 'Se enviaron 3 formatos de prueba. Verifica cuál llegó a WhatsApp.', variant: 'default' });
+                                } catch (err: any) {
+                                  toast({ title: 'Error en la prueba', description: err.message, variant: 'destructive' });
+                                } finally {
+                                  setIsTestingWhatsApp(false);
+                                }
                                 }}
                                 className="bg-emerald-600 hover:bg-emerald-500 text-white"
                               >

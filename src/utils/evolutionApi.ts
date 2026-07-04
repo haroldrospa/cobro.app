@@ -25,13 +25,20 @@ const formatPhoneNumber = (phone: string): string => {
 export const sendEvolutionWhatsAppMessage = async (
   phone: string,
   message: string,
-  config: EvolutionApiConfig
+  config: EvolutionApiConfig,
+  formatOverride?: 'format1' | 'format2' | 'format3'
 ): Promise<boolean> => {
   if (!config.url || !config.instanceName || !config.apiKey) {
     throw new Error('Configuración de Evolution API incompleta.');
   }
 
-  const formattedPhone = formatPhoneNumber(phone);
+  let formattedPhone = formatPhoneNumber(phone);
+  if (formatOverride === 'format2') {
+    formattedPhone = `${formattedPhone}@s.whatsapp.net`;
+  } else if (formatOverride === 'format3') {
+    // Return original phone cleaned without prepending 1
+    formattedPhone = phone.replace(/\D/g, '');
+  }
   
   // Clean URL (remove trailing slash and ensure protocol)
   let baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
