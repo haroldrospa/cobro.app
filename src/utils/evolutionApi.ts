@@ -54,6 +54,11 @@ export const sendEvolutionWhatsAppMessage = async (
     // enviamos AMBOS campos en el mismo payload. El servidor ignorará el que no necesita.
     const payload = {
       number: formattedPhone,
+      options: {
+        delay: 1200,
+        presence: 'composing',
+        linkPreview: false
+      },
       text: message,
       textMessage: {
         text: message
