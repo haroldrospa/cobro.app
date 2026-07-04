@@ -3610,9 +3610,13 @@ const Settings = () => {
                                   try {
                                     toast({ title: 'Ejecutando diagnóstico...', description: 'Verificando estado de la instancia y número.' });
                                     
-                                    const baseUrl = storeSettings.evolution_api_url!.endsWith('/') 
+                                    let baseUrl = storeSettings.evolution_api_url!.endsWith('/') 
                                       ? storeSettings.evolution_api_url!.slice(0, -1) 
                                       : storeSettings.evolution_api_url!;
+                                      
+                                    if (!/^https?:\/\//i.test(baseUrl)) {
+                                      baseUrl = `https://${baseUrl}`;
+                                    }
                                       
                                     // 1. Connection State
                                     const stateRes = await fetch(`${baseUrl}/instance/connectionState/${storeSettings.evolution_instance_name}`, {

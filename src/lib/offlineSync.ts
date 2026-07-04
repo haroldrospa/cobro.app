@@ -398,7 +398,7 @@ class OfflineSyncManager {
                 console.log(`🔢 ${sequences.length} secuencias sincronizadas`);
             }
 
-            // Sincronizar movimientos de inventario (historial de auditoría)
+            /* Sincronizar movimientos de inventario (comentado porque la tabla aún no existe en Supabase y da error 500)
             let movementsQuery = supabase
                 .from('inventory_movements' as any)
                 .select('*')
@@ -426,6 +426,7 @@ class OfflineSyncManager {
                 }
                 console.log(`📦 ${invMovements.length} movimientos de inventario sincronizados`);
             }
+            */
 
             // Sincronizar gastos fijos mensuales
             let fixedExpensesQuery = supabase
