@@ -47,18 +47,20 @@ export const sendEvolutionWhatsAppMessage = async (
   }
   const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
 
-  const sendWithFormat = async (isV1: boolean) => {
-    const payload = isV1 
-      ? {
-          number: formattedPhone,
-          textMessage: { text: message }
-        }
-      : {
-          number: formattedPhone,
-          text: message
-        };
+  try {
+    // En Evolution API v1.x se usa textMessage.text
+    // En Evolution API v2.x se usa text
+    // Para evitar falsos positivos donde v1 acepta el payload de v2 pero envía un mensaje vacío (200 OK silencioso),
+    // enviamos AMBOS campos en el mismo payload. El servidor ignorará el que no necesita.
+    const payload = {
+      number: formattedPhone,
+      text: message,
+      textMessage: {
+        text: message
+      }
+    };
 
-    console.log(`[Evolution API] Sending to ${endpoint} with format ${isV1 ? 'v1' : 'v2'}:`, JSON.stringify(payload, null, 2));
+    console.log(`[Evolution API] Sending to ${endpoint}:`, JSON.stringify(payload, null, 2));
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -70,42 +72,14 @@ export const sendEvolutionWhatsAppMessage = async (
     });
 
     if (!response.ok) {
-      let errorData;
-      const rawText = await response.text();
-      try {
-        errorData = JSON.parse(rawText);
-      } catch (e) {
-        errorData = { rawText };
-      }
-      console.error(`[Evolution API] Response failed with status ${response.status}. Raw body:`, rawText);
-      throw { status: response.status, data: errorData };
+      const errorText = await response.text();
+      console.error(`[Evolution API] Response failed with status ${response.status}. Raw body:`, errorText);
+      throw new Error(`Evolution API (${response.status}): ${errorText.slice(0, 100)}`);
     }
-    return true;
-  };
 
-  try {
-    // Try Evolution API v2 format first
-    return await sendWithFormat(false);
+    return true;
   } catch (error: any) {
-    console.warn('Evolution API v2 format failed, trying v1 format...', error);
-    
-    try {
-      // Fallback to Evolution API v1 format
-      return await sendWithFormat(true);
-    } catch (fallbackError: any) {
-      console.error('Error from Evolution API (both formats failed):', fallbackError);
-      
-      const errorData = fallbackError.data || {};
-      let errorMessage = 'Error al enviar mensaje';
-      if (errorData?.message) {
-        errorMessage = Array.isArray(errorData.message) ? errorData.message.join(', ') : errorData.message;
-      } else if (errorData?.error) {
-        errorMessage = errorData.error;
-      } else if (Object.keys(errorData).length > 0) {
-        errorMessage = JSON.stringify(errorData);
-      }
-      
-      throw new Error(`Evolution API (500): ${errorMessage}`);
-    }
+    console.error('[Evolution API] General Error:', error);
+    throw error;
   }
 };
