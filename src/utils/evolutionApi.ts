@@ -48,7 +48,12 @@ export const sendEvolutionWhatsAppMessage = async (
         }
       : {
           number: formattedPhone,
-          text: message
+          text: message,
+          options: {
+            delay: 1200,
+            presence: "composing",
+            linkPreview: false
+          }
         };
 
     const response = await fetch(endpoint, {
@@ -85,9 +90,11 @@ export const sendEvolutionWhatsAppMessage = async (
         errorMessage = Array.isArray(errorData.message) ? errorData.message.join(', ') : errorData.message;
       } else if (errorData?.error) {
         errorMessage = errorData.error;
+      } else if (Object.keys(errorData).length > 0) {
+        errorMessage = JSON.stringify(errorData);
       }
       
-      throw new Error(`API Error (${fallbackError.status}): ${errorMessage}`);
+      throw new Error(`Evolution API (500): ${errorMessage}`);
     }
   }
 };
