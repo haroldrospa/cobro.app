@@ -48,15 +48,14 @@ export const sendEvolutionWhatsAppMessage = async (
   const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
 
   try {
-    // Híbrido: v1 usa textMessage.text, v2 usa text.
-    // SIN OPCIONES DE DELAY: Si enviamos un "delay", Evolution API intenta usar Redis/BullMQ para encolar el mensaje.
-    // Si la cola falla, el mensaje se queda en "PENDING" para siempre.
+    // Formato estricto para Evolution API v1.8.2
+    // NO usamos "text" en la raíz para evitar que Baileys genere un mensaje protobuf malformado
+    // que los servidores de WhatsApp puedan descartar silenciosamente.
     const payload = {
       number: formattedPhone,
       textMessage: {
         text: message
-      },
-      text: message
+      }
     };
 
     console.log(`[Evolution API] Sending to ${endpoint}:`, JSON.stringify(payload, null, 2));
