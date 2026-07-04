@@ -650,16 +650,21 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
 
             {/* Content Area */}
             <div className={cn(
-              "flex flex-col justify-between min-w-0 flex-1",
-              viewMode === 'list' ? "pl-3 pr-4 py-1.5 h-full" : (gridCols >= 4 ? "p-2 h-22 sm:h-18 gap-1" : "p-3 h-28 gap-2")
+              "flex min-w-0 flex-1",
+              viewMode === 'list' ? "flex-row items-center justify-between pl-3 pr-4 py-1.5 h-full" : (gridCols >= 4 ? "flex-col justify-between p-2 h-22 sm:h-18 gap-1" : "flex-col justify-between p-3 h-28 gap-2")
             )}>
-              <div className="space-y-0.5 min-w-0">
+              <div className={cn("min-w-0", viewMode === 'list' ? "flex flex-col justify-center" : "space-y-0.5")}>
                 <h4 className={cn(
                   "font-semibold leading-snug line-clamp-2 tracking-tight text-foreground group-hover:text-emerald-500 transition-colors duration-200",
                   viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[9px]" : "text-[11px]")
                 )}>
                   {product.name}
                 </h4>
+                {viewMode === 'list' && (
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight text-xs mt-0.5">
+                    ${(product.price || 0).toLocaleString()}
+                  </span>
+                )}
                 {product.category?.name && gridCols < 4 && viewMode !== 'list' && (
                   <p className="text-[8px] font-bold uppercase tracking-wider text-emerald-600/60 truncate">
                     {product.category.name}
@@ -668,15 +673,17 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
               </div>
 
               <div className={cn(
-                "flex items-center justify-between mt-auto",
-                viewMode === 'list' ? "pt-0" : "border-t border-border/50 pt-1.5"
+                "flex items-center",
+                viewMode === 'list' ? "ml-2 shrink-0" : "justify-between mt-auto border-t border-border/50 pt-1.5 w-full"
               )}>
-                <span className={cn(
-                  "font-bold text-emerald-600 dark:text-emerald-400 tracking-tight",
-                  viewMode === 'list' ? "text-sm" : (gridCols >= 4 ? "text-xs" : "text-sm")
-                )}>
-                  ${(product.price || 0).toLocaleString()}
-                </span>
+                {viewMode !== 'list' && (
+                  <span className={cn(
+                    "font-bold text-emerald-600 dark:text-emerald-400 tracking-tight",
+                    gridCols >= 4 ? "text-xs" : "text-sm"
+                  )}>
+                    ${(product.price || 0).toLocaleString()}
+                  </span>
+                )}
                 
                 {cartQty > 0 ? (
                   <div 
