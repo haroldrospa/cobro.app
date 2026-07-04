@@ -275,6 +275,18 @@ const ProductItem = React.memo<ProductItemProps>(({
       </div>
     </Card>
   );
+}, (prev, next) => {
+  return (
+    prev.product.id === next.product.id &&
+    prev.product.stock === next.product.stock &&
+    prev.product.price === next.product.price &&
+    prev.viewMode === next.viewMode &&
+    prev.minCardWidth === next.minCardWidth &&
+    prev.isFocused === next.isFocused &&
+    prev.matchedBundle === next.matchedBundle &&
+    // Shallow check on recipeAvailability since it's a stable Map reference
+    prev.recipeAvailability === next.recipeAvailability
+  );
 });
 
 ProductItem.displayName = 'ProductItem';

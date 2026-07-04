@@ -190,27 +190,27 @@ const POSContent: React.FC = () => {
 
   // When a customer is found via RNC in the loyalty panel, also select them
   // as the invoice customer so credit payment works without manual re-selection.
-  const handleLoyaltyCustomerFound = (customerId: string) => {
+  const handleLoyaltyCustomerFound = useCallback((customerId: string) => {
     setLoyaltyCustomerId(customerId);
     setSelectedCustomer(customerId); // Sync with invoice customer field
-  };
+  }, []);
 
-  const handleLoyaltyPointsRedeemed = (discountAmount: number, pointsUsed: number) => {
+  const handleLoyaltyPointsRedeemed = useCallback((discountAmount: number, pointsUsed: number) => {
     setLoyaltyRedeemedPoints(pointsUsed);
     setLoyaltyDiscountAmount(discountAmount);
     // Apply as a fixed discount
     setGlobalDiscount({ value: discountAmount, type: 'amount' });
-  };
+  }, []);
 
-  const handleLoyaltyClearRedemption = () => {
+  const handleLoyaltyClearRedemption = useCallback(() => {
     setLoyaltyRedeemedPoints(0);
     setLoyaltyDiscountAmount(0);
     setGlobalDiscount({ value: 0, type: 'percentage' });
-  };
+  }, []);
 
-  const handleLoyaltyPointsBalance = (currentPoints: number) => {
+  const handleLoyaltyPointsBalance = useCallback((currentPoints: number) => {
     setLoyaltyCurrentPoints(currentPoints);
-  };
+  }, []);
 
   const { data: activeSession, isLoading: isLoadingSession, isFetching: isFetchingSession } = useActiveSession();
 
@@ -549,7 +549,7 @@ const POSContent: React.FC = () => {
     setCart(prevCart => prevCart.filter(item => item.id !== id));
   }, []);
 
-  const handleCheckout = () => {
+  const handleCheckout = useCallback(() => {
     if (cart.length === 0) return;
 
     if (!activeSession) {
@@ -581,7 +581,7 @@ const POSContent: React.FC = () => {
     }
 
     setShowPaymentDialog(true);
-  };
+  }, [cart.length, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, toast]);
 
   const queryClient = useQueryClient();
 

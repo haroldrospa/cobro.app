@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useCallback } from 'react';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useCategories } from '@/hooks/useCategories';
 import { useProductsOffline } from '@/hooks/useProductsOffline';
@@ -25,11 +25,11 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
 
   const isLoading = isLoadingCustomers || isLoadingCategories || isLoadingProducts;
 
-  const refreshMasterData = () => {
+  const refreshMasterData = useCallback(() => {
     refetchCustomers();
     refetchCategories();
     refetchProducts();
-  };
+  }, [refetchCustomers, refetchCategories, refetchProducts]);
 
   return (
     <MasterDataContext.Provider value={{

@@ -7,7 +7,7 @@
  * Al mover `searchTerm` aquí, solo los componentes suscritos a este context
  * se re-renderizan al escribir — el árbol raíz no se toca.
  */
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 interface POSSearchContextValue {
   searchTerm: string;
@@ -32,8 +32,10 @@ export const POSSearchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSearchTermState('');
   }, []);
 
+  const value = useMemo(() => ({ searchTerm, setSearchTerm, clearSearch }), [searchTerm, setSearchTerm, clearSearch]);
+
   return (
-    <POSSearchContext.Provider value={{ searchTerm, setSearchTerm, clearSearch }}>
+    <POSSearchContext.Provider value={value}>
       {children}
     </POSSearchContext.Provider>
   );
