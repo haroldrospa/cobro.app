@@ -49,7 +49,10 @@ export const sendEvolutionWhatsAppMessage = async (
       },
       body: JSON.stringify({
         number: formattedPhone,
-        text: message,
+        text: message, // For Evolution API v2
+        textMessage: {
+          text: message // For Evolution API v1
+        },
         options: {
           delay: 1200,
           presence: "composing",
