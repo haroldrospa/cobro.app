@@ -48,12 +48,7 @@ export const sendEvolutionWhatsAppMessage = async (
         }
       : {
           number: formattedPhone,
-          text: message,
-          options: {
-            delay: 1200,
-            presence: "composing",
-            linkPreview: false
-          }
+          text: message
         };
 
     console.log(`[Evolution API] Sending to ${endpoint} with format ${isV1 ? 'v1' : 'v2'}:`, JSON.stringify(payload, null, 2));
