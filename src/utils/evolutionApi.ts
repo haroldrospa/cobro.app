@@ -56,6 +56,8 @@ export const sendEvolutionWhatsAppMessage = async (
           }
         };
 
+    console.log(`[Evolution API] Sending to ${endpoint} with format ${isV1 ? 'v1' : 'v2'}:`, JSON.stringify(payload, null, 2));
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -66,7 +68,14 @@ export const sendEvolutionWhatsAppMessage = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      let errorData;
+      const rawText = await response.text();
+      try {
+        errorData = JSON.parse(rawText);
+      } catch (e) {
+        errorData = { rawText };
+      }
+      console.error(`[Evolution API] Response failed with status ${response.status}. Raw body:`, rawText);
       throw { status: response.status, data: errorData };
     }
     return true;

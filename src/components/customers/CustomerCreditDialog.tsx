@@ -448,6 +448,16 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     }
 
     let phone = customer.phone.replace(/\D/g, '');
+    if (phone.length < 10 && phone.length > 0) {
+      // It's possible it's a local number without area code, but WhatsApp requires full international format.
+      // We will try to send it, but let's warn if it's completely empty.
+    }
+    
+    if (phone.length === 0) {
+      toast.error('El número de teléfono no es válido (solo contiene letras o está vacío).');
+      return;
+    }
+
     if (phone.length === 10) {
       phone = `1${phone}`;
     }
