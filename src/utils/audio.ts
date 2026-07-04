@@ -1,36 +1,46 @@
 /**
  * Utilidad de audio para reproducir sonidos de interacción en la aplicación (UI).
- * Usa un sonido base64 para evitar dependencias externas o problemas de carga de red.
+ * Usa Web Audio API para generar un "click/pop" premium con cero latencia.
  */
 
-// Sonido sutil de "Tick/Tap" muy corto.
-const tapSoundBase64 = "data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTEAAAAAAQICAgICBAQEBAQEBgYGBgYICAkJCQkKCQkJCQkJCQkJCQkJBwYEBAMCAQAAAA==";
-
-let tapAudio: HTMLAudioElement | null = null;
+let audioCtx: AudioContext | null = null;
 
 export const playTapSound = () => {
     try {
         if (typeof window === 'undefined') return;
-        
-        if (!tapAudio) {
-            tapAudio = new Audio(tapSoundBase64);
-            // Ajustar volumen para que sea muy sutil y no moleste
-            tapAudio.volume = 0.4;
+
+        if (!audioCtx) {
+            // Inicializar AudioContext (soporte para Safari antiguo con webkit)
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContextClass) return;
+            audioCtx = new AudioContextClass();
         }
 
-        // Si ya está reproduciendo, reiniciar para permitir múltiples toques rápidos
-        tapAudio.currentTime = 0;
-        
-        // El navegador requiere interacción previa del usuario para reproducir audio, 
-        // pero como esto se llama en un evento onClick, siempre funcionará.
-        const playPromise = tapAudio.play();
-        
-        if (playPromise !== undefined) {
-            playPromise.catch((error) => {
-                // Silenciar errores (ej. auto-play restrictions si se llama programáticamente sin click)
-                console.debug("Audio play blocked by browser:", error);
-            });
+        // Si el contexto está suspendido (políticas del navegador), reanudarlo
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
+
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        // Sonido Premium "Tick/Pop" (similar a iOS)
+        // Caída rápida de frecuencia para un sonido orgánico y percusivo
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.04);
+
+        // Envolvente de volumen muy corta y aguda
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.005); // Ataque ultra rápido
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04); // Caída rápida
+
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.05);
+
     } catch (e) {
         console.debug("Error playing tap sound", e);
     }
