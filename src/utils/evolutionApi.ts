@@ -49,13 +49,10 @@ export const sendEvolutionWhatsAppMessage = async (
 
   try {
     // Híbrido: v1 usa textMessage.text, v2 usa text.
-    // Enviamos ambos para que funcione sin importar qué versión de Evolution API esté usando.
+    // SIN OPCIONES DE DELAY: Si enviamos un "delay", Evolution API intenta usar Redis/BullMQ para encolar el mensaje.
+    // Si la cola falla, el mensaje se queda en "PENDING" para siempre.
     const payload = {
       number: formattedPhone,
-      options: {
-        delay: 1200,
-        linkPreview: false
-      },
       textMessage: {
         text: message
       },
