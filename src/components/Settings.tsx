@@ -21,6 +21,8 @@ import { useStoreSettings, PaymentMethod } from '@/hooks/useStoreSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { ThermalPrinterDialog } from '@/components/settings/ThermalPrinterDialog';
+import { PrintSettingsDialog } from '@/components/settings/PrintSettingsDialog';
+import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 import MobileSettingsLayout from '@/components/settings/MobileSettingsLayout';
 import SettingsStoreSection from '@/components/settings/SettingsStoreSection';
 import BannerSettingsSection from '@/components/settings/BannerSettingsSection';
@@ -73,6 +75,9 @@ import BillingMethodSection from '@/components/settings/BillingMethodSection';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 
 const Settings = () => {
+  const [qrConnectionStatus, setQrConnectionStatus] = useState<'disconnected' | 'connected' | 'checking'>('disconnected');
+  const [testWhatsAppPhone, setTestWhatsAppPhone] = useState('');
+  const [isTestingWhatsApp, setIsTestingWhatsApp] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme, scale, setScale } = useTheme();
   const isMobile = useIsMobile();
@@ -3589,6 +3594,48 @@ const Settings = () => {
                           <p className="text-[10px] text-zinc-500 text-center mt-2">
                             Asegúrate de guardar los cambios antes de escanear el código QR.
                           </p>
+
+                          {/* Sección de prueba */}
+                          <div className="mt-6 p-4 border border-zinc-800 rounded-lg bg-zinc-900/50 space-y-3">
+                            <Label className="text-sm font-medium text-zinc-300">Prueba de Envío (WhatsApp)</Label>
+                            <div className="flex gap-2">
+                              <Input 
+                                placeholder="Ej: 18091234567" 
+                                value={testWhatsAppPhone}
+                                onChange={(e) => setTestWhatsAppPhone(e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button
+                                disabled={!testWhatsAppPhone || isTestingWhatsApp}
+                                onClick={async () => {
+                                  setIsTestingWhatsApp(true);
+                                  toast({ title: 'Probando...', description: 'Enviando mensaje de prueba...' });
+                                  try {
+                                    await sendEvolutionWhatsAppMessage(
+                                      testWhatsAppPhone, 
+                                      'Este es un mensaje de prueba desde CobroApp. Si recibes esto, tu API de Evolution está configurada correctamente. 🎉', 
+                                      {
+                                        url: storeSettings.evolution_api_url!,
+                                        instanceName: storeSettings.evolution_instance_name!,
+                                        apiKey: storeSettings.evolution_api_key!
+                                      }
+                                    );
+                                    toast({ title: '¡Éxito!', description: 'El mensaje de prueba se envió correctamente a WhatsApp.', variant: 'default' });
+                                  } catch (err: any) {
+                                    toast({ title: 'Error en la prueba', description: err.message, variant: 'destructive' });
+                                  } finally {
+                                    setIsTestingWhatsApp(false);
+                                  }
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                              >
+                                {isTestingWhatsApp ? 'Enviando...' : 'Probar'}
+                              </Button>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">
+                              Ingresa tu número de teléfono para enviar un mensaje de prueba y verificar que la conexión funciona.
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>

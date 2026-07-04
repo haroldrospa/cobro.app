@@ -184,7 +184,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
   const invoiceNumber = saleData?.encf || saleData?.invoice_number || saleData?.invoiceNumber || '000001';
 
-  const handleSendWhatsApp = async (customPhone?: string) => {
+  const handleSendWhatsApp = async (customPhone?: string, isAutomatic: boolean = false) => {
     const targetPhone = customPhone || saleData?.customer?.phone;
     if (!targetPhone) {
       toast({
@@ -195,41 +195,40 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       return;
     }
 
-    let phone = targetPhone.replace(/\D/g, '');
-    if (phone.length === 10) {
-      phone = `1${phone}`;
-  const handleSendWhatsApp = async (isAutomatic: boolean = false) => {
-    if (!whatsAppPhone) {
-      toast({ title: 'Error', description: 'Por favor, ingrese un número de teléfono válido.', variant: 'destructive' });
-      return;
-    }
-    
-    // Si es automático y no está habilitado, simplemente salir sin abrir ventanas
+    // Si es automático y no está habilitado, salir
     if (isAutomatic && !storeSettings?.evolution_enabled) {
       return;
     }
 
-    const phone = whatsAppPhone.replace(/\D/g, '');
+    let phone = targetPhone.replace(/\D/g, '');
+    if (phone.length === 10) {
+      phone = `1${phone}`;
+    }
+
+    let itemsList = '';
+    const items = saleData?.items || [];
+    items.forEach((item: any) => {
+      itemsList += `• ${item.quantity}x ${item.name || item.product?.name || 'Producto'} ($${((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })})\n`;
+    });
+
     const isCredit = saleData?.paymentMethod === 'credit';
-    const companyName = dbCompanyInfo?.name || 'La Gerencia';
-    
-    const formattedTotalDebt = Number(saleData?.customerDebt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-    const formattedInvoiceTotal = Number(saleData?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
     const formattedDueDate = saleData?.dueDate ? new Date(saleData.dueDate).toLocaleDateString('es-DO') : 'N/A';
-    
-    const itemsList = saleData?.items?.map((item: any) => 
-      `• ${item.quantity}x ${item.name || 'Producto'} - $${Number((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-    ).join('\n') || '';
+    const formattedInvoiceTotal = (saleData?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    const totalDebtValue = saleData?.customerDebt || (isCredit ? (saleData?.total || 0) : 0);
+    const formattedTotalDebt = totalDebtValue.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+    const companyName = (dbCompanyInfo?.name || 'La Gerencia').toUpperCase();
 
     const message = encodeURIComponent(
-      `*${companyName.toUpperCase()}* - ${isCredit ? 'Notificación de Crédito' : 'Notificación de Facturación'}\n` +
+      `*${companyName}*\n` +
+      `*Notificación de Facturación*\n` +
       `---------------------------------------------\n\n` +
       `Estimado/a *${saleData?.customer?.name || 'Cliente'}*,\n\n` +
       `Se ha registrado una nueva factura ${isCredit ? 'a crédito' : 'de venta'} en su cuenta:\n\n` +
       `• *Factura:* #${invoiceNumber}\n` +
       `• *Monto:* $${formattedInvoiceTotal}\n` +
       (isCredit ? `• *Vencimiento:* ${formattedDueDate}\n\n` : '\n') +
-      `*Detalle de compra:*\n${itemsList}\n\n` +
+      `*Detalle de compra:*\n${itemsList}\n` +
       (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\n` : '') +
       `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
       `¡Gracias por su preferencia!\n\n` +
@@ -275,7 +274,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   useEffect(() => {
     if (isOpen && saleData?.paymentMethod === 'credit' && saleData?.customer?.phone) {
       const timer = setTimeout(() => {
-        handleSendWhatsApp(true); // Pasar true para indicar que es envío automático
+        handleSendWhatsApp(undefined, true);
       }, 800);
       return () => clearTimeout(timer);
     }

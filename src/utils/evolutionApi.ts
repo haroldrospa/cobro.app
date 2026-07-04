@@ -63,7 +63,15 @@ export const sendEvolutionWhatsAppMessage = async (
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Error from Evolution API:', errorData);
-      throw new Error(errorData?.message?.[0] || 'Error al enviar mensaje');
+      
+      let errorMessage = 'Error al enviar mensaje';
+      if (errorData?.message) {
+        errorMessage = Array.isArray(errorData.message) ? errorData.message.join(', ') : errorData.message;
+      } else if (errorData?.error) {
+        errorMessage = errorData.error;
+      }
+      
+      throw new Error(`API Error (${response.status}): ${errorMessage}`);
     }
 
     return true;
