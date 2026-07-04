@@ -50,14 +50,10 @@ export const sendEvolutionWhatsAppMessage = async (
   try {
     // En Evolution API v1.x se usa textMessage.text
     // En Evolution API v2.x se usa text
-    // Evolution API v2 payload estricto. (v2 usa Postgres y Redis, que es lo que tiene el usuario).
-    // Evitamos enviar textMessage para no confundir a Baileys internamente.
+    // Evolution API v2 payload estricto y minimalista.
+    // Solo enviamos number y text. Sin opciones de delay ni presence que puedan causar conflictos internos en Baileys.
     const payload = {
       number: formattedPhone,
-      options: {
-        delay: 1200,
-        linkPreview: false
-      },
       text: message
     };
 
