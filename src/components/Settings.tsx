@@ -23,6 +23,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ThermalPrinterDialog } from '@/components/settings/ThermalPrinterDialog';
 import { PrintSettingsDialog } from '@/components/settings/PrintSettingsDialog';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
+import { EvolutionQRDialog } from '@/components/settings/EvolutionQRDialog';
 import MobileSettingsLayout from '@/components/settings/MobileSettingsLayout';
 import SettingsStoreSection from '@/components/settings/SettingsStoreSection';
 import BannerSettingsSection from '@/components/settings/BannerSettingsSection';
@@ -30,7 +31,6 @@ import StoreHoursSection from '@/components/settings/StoreHoursSection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InvoiceSequenceInput } from '@/components/settings/InvoiceSequenceInput';
-import { EvolutionQRDialog } from '@/components/settings/EvolutionQRDialog';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import {
@@ -3605,6 +3605,50 @@ const Settings = () => {
                                 onChange={(e) => setTestWhatsAppPhone(e.target.value)}
                                 className="flex-1"
                               />
+                              <Button 
+                                onClick={async () => {
+                                  try {
+                                    toast({ title: 'Ejecutando diagnóstico...', description: 'Verificando estado de la instancia y número.' });
+                                    
+                                    const baseUrl = storeSettings.evolution_api_url!.endsWith('/') 
+                                      ? storeSettings.evolution_api_url!.slice(0, -1) 
+                                      : storeSettings.evolution_api_url!;
+                                      
+                                    // 1. Connection State
+                                    const stateRes = await fetch(`${baseUrl}/instance/connectionState/${storeSettings.evolution_instance_name}`, {
+                                      headers: { 'apikey': storeSettings.evolution_api_key! }
+                                    });
+                                    const stateData = await stateRes.json();
+                                    console.log('Connection State:', stateData);
+                                    
+                                    // 2. Check Number
+                                    const numRes = await fetch(`${baseUrl}/chat/whatsappNumbers/${storeSettings.evolution_instance_name}`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json', 'apikey': storeSettings.evolution_api_key! },
+                                      body: JSON.stringify({ numbers: [`1${testWhatsAppPhone.replace(/\D/g, '')}`] })
+                                    });
+                                    const numData = await numRes.json();
+                                    console.log('WhatsApp Number Check:', numData);
+                                    
+                                    let diagnosis = `Estado: ${stateData?.instance?.state || stateData?.state || 'Desconocido'}. `;
+                                    if (Array.isArray(numData) && numData.length > 0) {
+                                      diagnosis += numData[0].exists ? 'El número SI existe en WhatsApp.' : 'El número NO existe en WhatsApp.';
+                                    } else {
+                                      diagnosis += 'No se pudo verificar el número.';
+                                    }
+                                    
+                                    toast({ title: 'Diagnóstico Completado', description: diagnosis });
+                                    
+                                  } catch (error: any) {
+                                    console.error('Error en diagnóstico:', error);
+                                    toast({ title: 'Error de Diagnóstico', description: error.message, variant: 'destructive' });
+                                  }
+                                }}
+                                disabled={!testWhatsAppPhone}
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                Diagnosticar
+                              </Button>
                               <Button
                                 disabled={!testWhatsAppPhone || isTestingWhatsApp}
                                 onClick={async () => {
