@@ -719,54 +719,8 @@ const POSContent: React.FC = () => {
       // Show success IMMEDIATELY
       setSaleData(finalSaleData);
 
-      // Enviar notificación de WhatsApp automáticamente para ventas a crédito
-      if (paymentMethod === 'credit' && selectedCustomerData?.phone) {
-        let phone = selectedCustomerData.phone.replace(/\D/g, '');
-        if (phone.length === 10) {
-          phone = `1${phone}`;
-        }
-
-        let itemsList = '';
-        cartWithOffers.forEach(item => {
-          itemsList += `• ${item.quantity}x ${item.name} ($${(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2 })})\n`;
-        });
-
-        const formattedDueDate = dueDate ? new Date(dueDate).toLocaleDateString('es-DO') : 'N/A';
-        const formattedInvoiceTotal = finalTotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
-        const formattedTotalDebt = finalSaleData.customerDebt.toLocaleString('en-US', { minimumFractionDigits: 2 });
-
-        const companyName = (companyInfo?.name || 'La Gerencia').toUpperCase();
-
-        const message = encodeURIComponent(
-          `*${companyName}*\n` +
-          `*Notificación de Facturación*\n` +
-          `---------------------------------------------\n\n` +
-          `Estimado/a *${selectedCustomerData.name}*,\n\n` +
-          `Se ha registrado una nueva factura a crédito en su cuenta:\n\n` +
-          `• *Factura:* #${saleResult.invoice_number}\n` +
-          `• *Monto:* $${formattedInvoiceTotal}\n` +
-          `• *Vencimiento:* ${formattedDueDate}\n\n` +
-          `*Detalle de compra:*\n${itemsList}\n` +
-          `*Balance Pendiente:*\n` +
-          `Su deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\n` +
-          `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
-          `¡Gracias por su preferencia!\n\n` +
-          `_(Mensaje automático)_`
-        );
-
-        if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
-          toast({ title: 'Enviando WhatsApp...', description: 'El mensaje se está enviando en segundo plano.' });
-          sendEvolutionWhatsAppMessage(phone, decodeURIComponent(message), {
-            url: storeSettings.evolution_api_url,
-            instanceName: storeSettings.evolution_instance_name,
-            apiKey: storeSettings.evolution_api_key
-          }).then(() => {
-            toast({ title: 'WhatsApp Enviado', description: 'El mensaje fue entregado correctamente.', variant: 'default' });
-          }).catch((err) => {
-            toast({ title: 'Error al enviar WhatsApp automático', description: err.message || 'Verifica la conexión a la API.', variant: 'destructive' });
-          });
-        }
-      }
+      // El envío de WhatsApp automático ha sido delegado al componente PrintOptionsDialog
+      // para evitar mensajes duplicados y centralizar la lógica de notificaciones.
 
       // Reset state for next sale
       setCart([]);

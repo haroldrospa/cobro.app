@@ -229,10 +229,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       `• *Monto:* $${formattedInvoiceTotal}\n` +
       (isCredit ? `• *Vencimiento:* ${formattedDueDate}\n\n` : '\n') +
       `*Detalle de compra:*\n${itemsList}\n` +
-      (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\n` : '') +
+      (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\nLe recordamos realizar sus pagos a tiempo para que evite recargos por moras.\n\n` : '') +
       `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
       `¡Gracias por su preferencia!\n\n` +
-      `_(Mensaje automático)_`
+      `_(Mensaje automático enviado vía Cobroapp)_`
     );
 
     if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
