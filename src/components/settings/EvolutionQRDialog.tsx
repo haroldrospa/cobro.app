@@ -107,6 +107,44 @@ export const EvolutionQRDialog: React.FC<EvolutionQRDialogProps> = ({
     }
   }, [isOpen]);
 
+  // Polling para verificar si se conectó después de escanear el QR
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (isOpen && status === 'qr_ready') {
+      intervalId = setInterval(async () => {
+        try {
+          const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+          const formattedUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
+          
+          const connectResponse = await fetch(`${formattedUrl}/instance/connectionState/${instanceName}`, {
+            headers: { 'apikey': apiKey }
+          });
+
+          if (connectResponse.ok) {
+            const stateData = await connectResponse.json();
+            const state = stateData?.instance?.state || stateData?.state;
+            
+            if (state === 'open') {
+              setStatus('connected');
+              toast({
+                title: 'Conexión Exitosa',
+                description: 'WhatsApp se ha conectado correctamente.',
+              });
+              clearInterval(intervalId);
+            }
+          }
+        } catch (error) {
+          // Ignorar errores de red temporales durante el polling
+        }
+      }, 3000); // Check every 3 seconds
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isOpen, status, apiUrl, apiKey, instanceName]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800 text-zinc-100">
