@@ -15,6 +15,7 @@ import QuantityDialog from './QuantityDialog';
 import appLogo from '@/assets/cobro-logo.png';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { usePOSSearch } from '@/contexts/POSSearchContext';
+import { playTapSound } from '@/utils/audio';
 
 interface MobileProductSearchProps {
   products: Product[];
@@ -502,7 +503,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
               onQuantityClick={handleQuantityClick}
             />
           )}
-          {filteredProducts.length > visibleCount && (
+          {slicedProducts.length > visibleCount && (
             <div ref={loadMoreRef} className="py-4 flex justify-center items-center w-full">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 animate-pulse">
                 Cargando más productos...
@@ -586,13 +587,18 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
         return (
           <div
             key={product.id}
-            onClick={() => canSelect && onSelect(product)}
+            onClick={() => {
+              if (canSelect) {
+                // Play sound programmatically here later if needed, but handled inside onSelect ideally
+                onSelect(product);
+              }
+            }}
             className={cn(
               "group text-left overflow-hidden border transition-all duration-300 shadow-sm relative flex",
               cartQty > 0 
                 ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] shadow-sm" 
                 : "border-border/60 bg-card hover:border-emerald-500/20 hover:shadow-md",
-              viewMode === 'list' ? "rounded-xl flex-row h-16 items-center" : (gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col"),
+              viewMode === 'list' ? "rounded-xl flex-row h-16 items-center mx-1" : (gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col"),
               outOfStock && "opacity-40 grayscale pointer-events-none",
               canSelect && "cursor-pointer"
             )}
@@ -645,7 +651,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
             {/* Content Area */}
             <div className={cn(
               "flex flex-col justify-between min-w-0 flex-1",
-              viewMode === 'list' ? "pl-3 pr-3 py-1.5 h-full" : (gridCols >= 4 ? "p-2 h-22 sm:h-18 gap-1" : "p-3 h-28 gap-2")
+              viewMode === 'list' ? "pl-3 pr-4 py-1.5 h-full" : (gridCols >= 4 ? "p-2 h-22 sm:h-18 gap-1" : "p-3 h-28 gap-2")
             )}>
               <div className="space-y-0.5 min-w-0">
                 <h4 className={cn(
@@ -681,6 +687,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        playTapSound();
                         onUpdateQuantity?.(product.id, cartQty - 1);
                       }}
                       className={cn(
@@ -693,6 +700,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                     <span 
                       onClick={(e) => {
                         e.stopPropagation();
+                        playTapSound();
                         onQuantityClick?.(product.id, product.name, cartQty);
                       }}
                       className={cn(
@@ -706,6 +714,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        playTapSound();
                         onUpdateQuantity?.(product.id, cartQty + 1);
                       }}
                       className={cn(
@@ -717,7 +726,13 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                     </button>
                   </div>
                 ) : (
-                  <div className={cn(
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playTapSound();
+                      onSelect(product);
+                    }}
+                    className={cn(
                     "rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-sm active:scale-90 transition-all duration-150 cursor-pointer",
                     viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
                   )}>
