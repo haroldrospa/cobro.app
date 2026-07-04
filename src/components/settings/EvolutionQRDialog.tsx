@@ -175,9 +175,37 @@ export const EvolutionQRDialog: React.FC<EvolutionQRDialogProps> = ({
               <p className="text-sm text-zinc-400">
                 Tu instancia <span className="font-mono text-emerald-400">{instanceName}</span> está lista para enviar mensajes automáticamente.
               </p>
-              <Button onClick={onClose} className="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white">
-                Cerrar y Continuar
-              </Button>
+              <div className="flex gap-2 mt-4">
+                <Button onClick={onClose} className="bg-emerald-600 hover:bg-emerald-500 text-white">
+                  Cerrar y Continuar
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={async () => {
+                    if (confirm('¿Estás seguro de que deseas desconectar y eliminar esta sesión de WhatsApp? Tendrás que escanear el QR de nuevo.')) {
+                      try {
+                        const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+                        const formattedUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
+                        await fetch(`${formattedUrl}/instance/logout/${instanceName}`, {
+                          method: 'DELETE',
+                          headers: { 'apikey': apiKey }
+                        });
+                        await fetch(`${formattedUrl}/instance/delete/${instanceName}`, {
+                          method: 'DELETE',
+                          headers: { 'apikey': apiKey }
+                        });
+                        toast({ title: 'Instancia eliminada', description: 'La sesión se ha cerrado correctamente.' });
+                        setStatus('loading');
+                        fetchQR(); // Fetch new QR
+                      } catch (e: any) {
+                        toast({ title: 'Error', description: 'No se pudo eliminar la instancia.', variant: 'destructive' });
+                      }
+                    }
+                  }}
+                >
+                  Desconectar WhatsApp
+                </Button>
+              </div>
             </div>
           )}
 
