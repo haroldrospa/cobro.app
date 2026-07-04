@@ -480,13 +480,12 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       }).then(() => {
         toast.success('Estado de cuenta enviado por WhatsApp');
       }).catch((err: any) => {
-        toast.error('Error al enviar WhatsApp automático', { description: 'Se abrirá la ventana manual como respaldo.' });
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        toast.error('Error al enviar WhatsApp automático', { description: 'Verifica la conexión con Evolution API.' });
       }).finally(() => {
         setIsSendingWhatsApp(false);
       });
     } else {
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      toast.error('WhatsApp Automático no configurado', { description: 'Debes configurar Evolution API en los Ajustes del sistema.' });
     }
   };
 
