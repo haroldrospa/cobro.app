@@ -402,6 +402,8 @@ const POSContent: React.FC = () => {
     });
   }, [cart, activeOffers]);
 
+  const totals = React.useMemo(() => calculateTotals(cartWithOffers, globalDiscount), [cartWithOffers, globalDiscount]);
+
   const { savedCartData, isLoading: isLoadingSavedCart } = useSavedCart();
 
   // Memoize auto-save data to prevent unnecessary re-renders
@@ -1288,7 +1290,7 @@ const POSContent: React.FC = () => {
     handleMobileViewModeChange(mode === 'classic' ? 'list' : 'grid');
   }, [updateSettings, handleMobileViewModeChange]);
 
-  const totals = React.useMemo(() => calculateTotals(cartWithOffers, globalDiscount), [cartWithOffers, globalDiscount]);
+
   const baseTotal = parseFloat(totals.total) || 0;
 
   // Calculate surcharge if paying with card
