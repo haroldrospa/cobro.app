@@ -50,19 +50,15 @@ export const sendEvolutionWhatsAppMessage = async (
   try {
     // En Evolution API v1.x se usa textMessage.text
     // En Evolution API v2.x se usa text
-    // Para evitar falsos positivos donde v1 acepta el payload de v2 pero envía un mensaje vacío (200 OK silencioso),
-    // enviamos AMBOS campos en el mismo payload. El servidor ignorará el que no necesita.
+    // Evolution API v2 payload estricto. (v2 usa Postgres y Redis, que es lo que tiene el usuario).
+    // Evitamos enviar textMessage para no confundir a Baileys internamente.
     const payload = {
       number: formattedPhone,
       options: {
         delay: 1200,
-        presence: 'composing',
         linkPreview: false
       },
-      text: message,
-      textMessage: {
-        text: message
-      }
+      text: message
     };
 
     console.log(`[Evolution API] Sending to ${endpoint}:`, JSON.stringify(payload, null, 2));
