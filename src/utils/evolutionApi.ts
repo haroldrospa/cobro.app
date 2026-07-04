@@ -40,31 +40,46 @@ export const sendEvolutionWhatsAppMessage = async (
   }
   const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
 
-  try {
+  const sendWithFormat = async (isV1: boolean) => {
+    const payload = isV1 
+      ? {
+          number: formattedPhone,
+          textMessage: { text: message }
+        }
+      : {
+          number: formattedPhone,
+          text: message
+        };
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': config.apiKey
       },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message, // For Evolution API v2
-        textMessage: {
-          text: message // For Evolution API v1
-        },
-        options: {
-          delay: 1200,
-          presence: "composing",
-          linkPreview: false
-        }
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Error from Evolution API:', errorData);
+      throw { status: response.status, data: errorData };
+    }
+    return true;
+  };
+
+  try {
+    // Try Evolution API v2 format first
+    return await sendWithFormat(false);
+  } catch (error: any) {
+    console.warn('Evolution API v2 format failed, trying v1 format...', error);
+    
+    try {
+      // Fallback to Evolution API v1 format
+      return await sendWithFormat(true);
+    } catch (fallbackError: any) {
+      console.error('Error from Evolution API (both formats failed):', fallbackError);
       
+      const errorData = fallbackError.data || {};
       let errorMessage = 'Error al enviar mensaje';
       if (errorData?.message) {
         errorMessage = Array.isArray(errorData.message) ? errorData.message.join(', ') : errorData.message;
@@ -72,12 +87,7 @@ export const sendEvolutionWhatsAppMessage = async (
         errorMessage = errorData.error;
       }
       
-      throw new Error(`API Error (${response.status}): ${errorMessage}`);
+      throw new Error(`API Error (${fallbackError.status}): ${errorMessage}`);
     }
-
-    return true;
-  } catch (error) {
-    console.error('Evolution API Request failed:', error);
-    throw error;
   }
 };
