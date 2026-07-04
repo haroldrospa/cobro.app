@@ -45,3 +45,50 @@ export const playTapSound = () => {
         console.debug("Error playing tap sound", e);
     }
 };
+
+/**
+ * Inicia los listeners globales para que la aplicación suene
+ * al tocar botones, enlaces, tarjetas interactivas o al escribir.
+ */
+export const initGlobalAudio = () => {
+    if (typeof window === 'undefined') return;
+
+    // Prevenir reproducción doble por toques rápidos
+    let lastPlayTime = 0;
+
+    const handleInteraction = (e: Event) => {
+        const now = Date.now();
+        if (now - lastPlayTime < 30) return; // Debounce ultracorto
+
+        // Analizar si el evento viene de un teclado o de un toque
+        if (e.type === 'keydown') {
+            const keyEvent = e as KeyboardEvent;
+            // No sonar en teclas silenciosas (Shift, Ctrl, Alt, Meta)
+            if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(keyEvent.key)) {
+                return;
+            }
+            playTapSound();
+            lastPlayTime = now;
+            return;
+        }
+
+        // Para clicks/pointerdown, verificar si se tocó un elemento interactivo
+        const target = e.target as HTMLElement;
+        const isInteractive = target.closest('button') || 
+                              target.closest('a') || 
+                              target.closest('input') || 
+                              target.closest('select') || 
+                              target.closest('[role="button"]') ||
+                              target.closest('.cursor-pointer') ||
+                              getComputedStyle(target).cursor === 'pointer';
+
+        if (isInteractive) {
+            playTapSound();
+            lastPlayTime = now;
+        }
+    };
+
+    // Usar pointerdown para una respuesta táctil instantánea sin esperar al evento 'click'
+    window.addEventListener('pointerdown', handleInteraction, { passive: true });
+    window.addEventListener('keydown', handleInteraction, { passive: true });
+};

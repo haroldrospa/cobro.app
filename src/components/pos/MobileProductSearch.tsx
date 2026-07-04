@@ -15,7 +15,6 @@ import QuantityDialog from './QuantityDialog';
 import appLogo from '@/assets/cobro-logo.png';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { usePOSSearch } from '@/contexts/POSSearchContext';
-import { playTapSound } from '@/utils/audio';
 
 interface MobileProductSearchProps {
   products: Product[];
@@ -589,7 +588,6 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
             key={product.id}
             onClick={() => {
               if (canSelect) {
-                // Play sound programmatically here later if needed, but handled inside onSelect ideally
                 onSelect(product);
               }
             }}
@@ -694,7 +692,6 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        playTapSound();
                         onUpdateQuantity?.(product.id, cartQty - 1);
                       }}
                       className={cn(
@@ -707,7 +704,6 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                     <span 
                       onClick={(e) => {
                         e.stopPropagation();
-                        playTapSound();
                         onQuantityClick?.(product.id, product.name, cartQty);
                       }}
                       className={cn(
@@ -721,7 +717,6 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        playTapSound();
                         onUpdateQuantity?.(product.id, cartQty + 1);
                       }}
                       className={cn(
@@ -736,7 +731,6 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                   <div 
                     onClick={(e) => {
                       e.stopPropagation();
-                      playTapSound();
                       onSelect(product);
                     }}
                     className={cn(
