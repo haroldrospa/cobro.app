@@ -198,32 +198,38 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     let phone = targetPhone.replace(/\D/g, '');
     if (phone.length === 10) {
       phone = `1${phone}`;
+  const handleSendWhatsApp = async (isAutomatic: boolean = false) => {
+    if (!whatsAppPhone) {
+      toast({ title: 'Error', description: 'Por favor, ingrese un número de teléfono válido.', variant: 'destructive' });
+      return;
+    }
+    
+    // Si es automático y no está habilitado, simplemente salir sin abrir ventanas
+    if (isAutomatic && !storeSettings?.evolution_enabled) {
+      return;
     }
 
-    let itemsList = '';
-    const items = saleData?.items || [];
-    items.forEach((item: any) => {
-      itemsList += `• ${item.quantity}x ${item.name || item.product?.name || 'Producto'} ($${((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })})\n`;
-    });
-
+    const phone = whatsAppPhone.replace(/\D/g, '');
     const isCredit = saleData?.paymentMethod === 'credit';
+    const companyName = dbCompanyInfo?.name || 'La Gerencia';
+    
+    const formattedTotalDebt = Number(saleData?.customerDebt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    const formattedInvoiceTotal = Number(saleData?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
     const formattedDueDate = saleData?.dueDate ? new Date(saleData.dueDate).toLocaleDateString('es-DO') : 'N/A';
-    const formattedInvoiceTotal = (saleData?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-    const totalDebtValue = saleData?.customerDebt || (isCredit ? (saleData?.total || 0) : 0);
-    const formattedTotalDebt = totalDebtValue.toLocaleString('en-US', { minimumFractionDigits: 2 });
-
-    const companyName = (dbCompanyInfo?.name || 'La Gerencia').toUpperCase();
+    
+    const itemsList = saleData?.items?.map((item: any) => 
+      `• ${item.quantity}x ${item.name || 'Producto'} - $${Number((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+    ).join('\n') || '';
 
     const message = encodeURIComponent(
-      `*${companyName}*\n` +
-      `*Notificación de Facturación*\n` +
+      `*${companyName.toUpperCase()}* - ${isCredit ? 'Notificación de Crédito' : 'Notificación de Facturación'}\n` +
       `---------------------------------------------\n\n` +
       `Estimado/a *${saleData?.customer?.name || 'Cliente'}*,\n\n` +
       `Se ha registrado una nueva factura ${isCredit ? 'a crédito' : 'de venta'} en su cuenta:\n\n` +
       `• *Factura:* #${invoiceNumber}\n` +
       `• *Monto:* $${formattedInvoiceTotal}\n` +
       (isCredit ? `• *Vencimiento:* ${formattedDueDate}\n\n` : '\n') +
-      `*Detalle de compra:*\n${itemsList}\n` +
+      `*Detalle de compra:*\n${itemsList}\n\n` +
       (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\n` : '') +
       `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
       `¡Gracias por su preferencia!\n\n` +
@@ -242,13 +248,19 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         });
         toast({ title: 'WhatsApp Enviado', description: 'El mensaje fue entregado correctamente.', variant: 'default' });
       } catch (err: any) {
-        toast({ title: 'Error al enviar WhatsApp', description: err.message || 'Se abrirá la ventana manual como respaldo.', variant: 'destructive' });
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        if (!isAutomatic) {
+          toast({ title: 'Error al enviar WhatsApp', description: err.message || 'Se abrirá la ventana manual como respaldo.', variant: 'destructive' });
+          window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        } else {
+          toast({ title: 'Error al enviar WhatsApp automático', description: err.message || 'Verifica la conexión a la API.', variant: 'destructive' });
+        }
       } finally {
         setIsSendingWhatsApp(false);
       }
     } else {
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      if (!isAutomatic) {
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      }
     }
   };
 
@@ -263,7 +275,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   useEffect(() => {
     if (isOpen && saleData?.paymentMethod === 'credit' && saleData?.customer?.phone) {
       const timer = setTimeout(() => {
-        handleSendWhatsApp();
+        handleSendWhatsApp(true); // Pasar true para indicar que es envío automático
       }, 800);
       return () => clearTimeout(timer);
     }

@@ -763,11 +763,8 @@ const POSContent: React.FC = () => {
           }).then(() => {
             toast({ title: 'WhatsApp Enviado', description: 'El mensaje fue entregado correctamente.', variant: 'default' });
           }).catch((err) => {
-            toast({ title: 'Error al enviar WhatsApp', description: err.message || 'Se abrirá la ventana manual como respaldo.', variant: 'destructive' });
-            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+            toast({ title: 'Error al enviar WhatsApp automático', description: err.message || 'Verifica la conexión a la API.', variant: 'destructive' });
           });
-        } else {
-          window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
         }
       }
 
