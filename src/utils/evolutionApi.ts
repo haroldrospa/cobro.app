@@ -79,6 +79,9 @@ export const sendEvolutionWhatsAppMessage = async (
       throw new Error(`Evolution API (${response.status}): ${errorText.slice(0, 100)}`);
     }
 
+    const responseBody = await response.text();
+    console.log(`[Evolution API] Success Response Body:`, responseBody);
+
     return true;
   } catch (error: any) {
     console.error('[Evolution API] General Error:', error);
