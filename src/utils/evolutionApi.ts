@@ -49,13 +49,11 @@ export const sendEvolutionWhatsAppMessage = async (
       },
       body: JSON.stringify({
         number: formattedPhone,
+        text: message,
         options: {
           delay: 1200,
           presence: "composing",
           linkPreview: false
-        },
-        textMessage: {
-          text: message
         }
       })
     });
