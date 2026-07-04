@@ -59,8 +59,12 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 
 import { useAllCustomersBalances } from '@/hooks/useCustomerBalance';
 import { useActiveSession, useSessionHistory } from '@/hooks/useCashSession';
+import { useWhatsAppReminders } from '@/hooks/useWhatsAppReminders';
 
 const Dashboard: React.FC = () => {
+  // Call whatsapp reminders background checker
+  useWhatsAppReminders();
+
   const { profile, isLoading: isProfileLoading } = useUserProfile();
   const { data: activeSession } = useActiveSession();
   const { data: sessionHistoryData } = useSessionHistory();
