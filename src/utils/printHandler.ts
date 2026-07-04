@@ -97,6 +97,7 @@ export const injectPrintStyles = (): void => {
         margin: 0;
         padding: 0;
         background: white !important;
+        color: black !important;
       }
       
       /* Ocultar elementos de UI que no deben imprimirse */
@@ -124,6 +125,11 @@ export const injectPrintStyles = (): void => {
         width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
+        color: black !important;
+      }
+      
+      .printable-content * {
+        color: black !important;
       }
     }
     
