@@ -33,8 +33,11 @@ export const sendEvolutionWhatsAppMessage = async (
 
   const formattedPhone = formatPhoneNumber(phone);
   
-  // Clean URL (remove trailing slash)
-  const baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
+  // Clean URL (remove trailing slash and ensure protocol)
+  let baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
+  if (!/^https?:\/\//i.test(baseUrl)) {
+    baseUrl = `https://${baseUrl}`;
+  }
   const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
 
   try {
