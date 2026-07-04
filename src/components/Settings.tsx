@@ -3611,18 +3611,19 @@ const Settings = () => {
                                   setIsTestingWhatsApp(true);
                                   toast({ title: 'Probando...', description: 'Enviando mensaje de prueba...' });
                                   try {
-                                    // Send format 1: Just the number with 1
-                                    await sendEvolutionWhatsAppMessage(
-                                      testWhatsAppPhone, 
-                                      'Prueba Formato 1 (Con 1): Si recibes esto, Evolution API usa este formato. 🎉', 
-                                      {
-                                        url: storeSettings.evolution_api_url!,
-                                        instanceName: storeSettings.evolution_instance_name!,
-                                        apiKey: storeSettings.evolution_api_key!
-                                      },
-                                      'format1'
-                                    );
-                                  } catch (e) { console.error(e) }
+                                    try {
+                                      // Send format 1: Just the number with 1
+                                      await sendEvolutionWhatsAppMessage(
+                                        testWhatsAppPhone, 
+                                        'Prueba Formato 1 (Con 1): Si recibes esto, Evolution API usa este formato. 🎉', 
+                                        {
+                                          url: storeSettings.evolution_api_url!,
+                                          instanceName: storeSettings.evolution_instance_name!,
+                                          apiKey: storeSettings.evolution_api_key!
+                                        },
+                                        'format1'
+                                      );
+                                    } catch (e) { console.error(e) }
 
                                   try {
                                     // Send format 2: The number with 1 and @s.whatsapp.net
