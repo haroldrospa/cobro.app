@@ -26,8 +26,8 @@ interface PrintItem {
 // Caché para optimizar la carga de SVGs en listas grandes
 const barcodeSvgCache = new Map<string, string>();
 const getCachedBarcodeSvg = (
-  value: string | undefined | null, 
-  showText: boolean, 
+  value: string | undefined | null,
+  showText: boolean,
   fontSize: number = 14,
   barHeight: number = 60,
   barWidth: number = 1.8
@@ -35,7 +35,7 @@ const getCachedBarcodeSvg = (
   if (!value || !value.trim()) return '';
   const cacheKey = `${value}-${showText}-${fontSize}-${barHeight}-${barWidth}`;
   if (barcodeSvgCache.has(cacheKey)) return barcodeSvgCache.get(cacheKey)!;
-  
+
   try {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     JsBarcode(svg, value, {
@@ -106,7 +106,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
   const [columns, setColumns] = useState<number>(savedSettings.columns ?? 1);
   const [gapX, setGapX] = useState<number>(savedSettings.gapX ?? 2); // mm
   const [gapY, setGapY] = useState<number>(savedSettings.gapY ?? 2); // mm
-  
+
   // Opciones de visualización
   const [showBusinessName, setShowBusinessName] = useState<boolean>(savedSettings.showBusinessName ?? true);
   const [showProductName, setShowProductName] = useState<boolean>(savedSettings.showProductName ?? true);
@@ -138,7 +138,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
   }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth, selectedTemplateId]);
 
   // Lista interactiva de impresión
-  const [printList, setPrintList] = useState<PrintItem[]>(() => 
+  const [printList, setPrintList] = useState<PrintItem[]>(() =>
     products.map(p => ({ product: p, selected: false, quantity: 1 }))
   );
   const [previewId, setPreviewId] = useState<string>(printList[0]?.product.id || '');
@@ -172,7 +172,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
   const applyProfile = useCallback((profileId: string) => {
     setSelectedTemplateId(profileId);
     setIsConfigExpanded(false);
-    
+
     if (profileId === 'thermal') {
       setLabelWidth(50);
       setLabelHeight(30);
@@ -290,7 +290,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
   const handleDeleteTemplate = async () => {
     const template = customTemplates.find(t => t.id === selectedTemplateId);
     if (!template) return;
-    
+
     if (confirm(`¿Estás seguro de eliminar la planilla de configuración "${template.name}"?`)) {
       const updated = customTemplates.filter(t => t.id !== selectedTemplateId);
       try {
@@ -311,7 +311,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
   const handlePrint = async () => {
     setIsPrinting(true);
-    
+
     // Abrimos la ventana sincrónicamente con el click para evitar popup blockers
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -324,12 +324,12 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
     setTimeout(() => {
       try {
         const selectedItems = printList.filter(item => item.selected && item.quantity > 0);
-        
+
         if (selectedItems.length === 0) {
-           printWindow.close();
-           alert("No has seleccionado ningún producto o las cantidades son 0.");
-           setIsPrinting(false);
-           return;
+          printWindow.close();
+          alert("No has seleccionado ningún producto o las cantidades son 0.");
+          setIsPrinting(false);
+          return;
         }
 
         const isSwapped = rotation === 90 || rotation === 270;
@@ -338,15 +338,13 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
         const labelsHtml = selectedItems.flatMap(item => {
           const barcodeSvg = getCachedBarcodeSvg(item.product.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth);
-          
+
           const labelHtml = `
             <div class="label">
               <div class="label-content">
-                <div class="label-text">
-                  ${showBusinessName ? `<div class="business-name" style="font-size: ${bnameSize}px">${settings?.company_name || userStore?.store_name || 'Mi Negocio'}</div>` : ''}
-                  ${showProductName ? `<div class="product-name" style="font-size: ${pnameSize}px">${item.product.name}</div>` : ''}
-                  ${showPrice ? `<div class="product-price" style="font-size: ${priceSize}px">$${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
-                </div>
+                ${showBusinessName ? `<div class="business-name" style="font-size: ${bnameSize}px">${settings?.company_name || userStore?.store_name || 'Mi Negocio'}</div>` : ''}
+                ${showProductName ? `<div class="product-name" style="font-size: ${pnameSize}px">${item.product.name}</div>` : ''}
+                ${showPrice ? `<div class="product-price" style="font-size: ${priceSize}px">$${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
                 <div class="barcode-container">
                   ${barcodeSvg}
                 </div>
@@ -368,16 +366,17 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 padding: 0;
               }
               body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                background-color: #fff;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: #f1f5f9;
+                display: flex;
+                justify-content: center;
               }
-              
+
               .labels-container {
                 display: grid;
                 grid-template-columns: repeat(${columns}, ${printW}mm);
                 column-gap: ${gapX}mm;
                 row-gap: ${gapY}mm;
-                /* Center block only if multiple columns */
                 ${columns > 1 ? 'justify-content: center; padding-top: 10mm;' : ''}
                 width: max-content;
                 max-width: 100%;
@@ -385,7 +384,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
               .label {
                 width: ${printW}mm;
-                height: ${printH}mm;
+                height: ${printH - 2}mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -393,7 +392,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 overflow: hidden;
                 background: white;
                 box-sizing: border-box;
-                padding: 0; /* Padding moved to inner content to avoid rotation clipping */
+                padding: 0;
+                margin: 0 auto;
                 border: 1px dotted #ccc; 
               }
 
@@ -402,8 +402,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                width: ${labelWidth}mm;
-                height: ${labelHeight}mm;
+                width: 100%;
+                height: 100%;
                 padding: 1.5mm;
                 box-sizing: border-box;
                 overflow: hidden;
@@ -414,15 +414,6 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
-              }
-
-              .label-text {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                width: 100%;
-                text-align: center;
               }
 
               .business-name {
@@ -441,7 +432,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 font-size: 11px;
                 line-height: 1.2;
                 margin-bottom: 2px;
-                max-height: 26px; /* Max 2 lines */
+                max-height: 26px;
                 overflow: hidden;
                 width: 100%;
                 text-overflow: ellipsis;
@@ -492,7 +483,9 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 
                 ${columns === 1 ? `
                   .labels-container {
-                    display: block !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
                     width: 100% !important;
                     column-gap: 0 !important;
                     row-gap: 0 !important;
@@ -501,21 +494,36 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                   }
                   .label {
                     display: flex !important;
-                    width: ${printW}mm !important;
-                    height: ${printH}mm !important;
-                    page-break-inside: avoid !important;
-                    break-inside: avoid !important;
-                    page-break-after: always !important;
-                    break-after: page !important;
+                    width: ${printW - 1}mm !important;
+                    height: ${printH - 1.5}mm !important;
                     border: none !important;
-                    margin: 0 !important;
+                    margin: 0 auto !important;
                     padding: 0 !important;
                     overflow: hidden !important;
                   }
+                  .label:not(:last-child) {
+                    page-break-after: always !important;
+                    break-after: page !important;
+                  }
                   .label-content {
-                    width: ${labelWidth}mm !important;
-                    height: ${labelHeight}mm !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                    width: 100% !important;
+                    height: 100% !important;
                     overflow: hidden !important;
+                    padding: 1.5mm !important;
+                    box-sizing: border-box !important;
+                  }
+                  .label-text, .barcode-container {
+                    display: flex !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                    width: 100% !important;
+                  }
+                  .barcode-container svg {
+                    display: block !important;
                   }
                 ` : `
                   .label {
@@ -603,410 +611,410 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
             Configuración de Etiquetas
           </DialogTitle>
           <DialogDescription>
-            Configura el tamaño y contenido de las etiquetas para los {products.length} productos en el filtro actual. 
+            Configura el tamaño y contenido de las etiquetas para los {products.length} productos en el filtro actual.
             Puedes desmarcar los que no necesites.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x">
           <ScrollArea className="flex-1 px-6 pb-6 md:w-[58%] lg:w-[60%]">
             <div className="space-y-6 pt-4">
               {/* Planillas de Configuración de Etiquetas */}
-            <div className="space-y-3 bg-secondary/30 p-4 rounded-lg">
-              <div className="flex justify-between items-center">
-                <Label className="flex items-center gap-2 font-semibold">
-                  <Settings className="w-4 h-4" /> Planillas de Configuración (Medidas y Diseño)
-                </Label>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleSaveTemplate} 
-                    className="h-7 text-xs px-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                  >
-                    Guardar Planilla Actual
-                  </Button>
-                  {selectedTemplateId && !['thermal', 'thermal_small', 'a4_3x10'].includes(selectedTemplateId) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleDeleteTemplate} 
-                      className="h-7 text-xs px-2 border-rose-500 text-rose-600 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-400 dark:hover:bg-rose-950/30"
+              <div className="space-y-3 bg-secondary/30 p-4 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <Label className="flex items-center gap-2 font-semibold">
+                    <Settings className="w-4 h-4" /> Planillas de Configuración (Medidas y Diseño)
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSaveTemplate}
+                      className="h-7 text-xs px-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
                     >
-                      Eliminar Planilla
+                      Guardar Planilla Actual
                     </Button>
-                  )}
+                    {selectedTemplateId && !['thermal', 'thermal_small', 'a4_3x10'].includes(selectedTemplateId) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDeleteTemplate}
+                        className="h-7 text-xs px-2 border-rose-500 text-rose-600 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                      >
+                        Eliminar Planilla
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <Select value={selectedTemplateId} onValueChange={applyProfile}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar una planilla de diseño..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="thermal">Impresora Térmica Estandar (50x30mm)</SelectItem>
+                    <SelectItem value="thermal_small">Impresora Térmica Pequeña (30x20mm)</SelectItem>
+                    <SelectItem value="a4_3x10">Hoja A4 - 3 Columnas (Planilla tipo Avery)</SelectItem>
+
+                    {customTemplates.length > 0 && (
+                      <>
+                        <Separator className="my-1" />
+                        <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Mis Planillas Guardadas (Diseños)
+                        </div>
+                        {customTemplates.map(t => (
+                          <SelectItem key={t.id} value={t.id}>
+                            ✨ {t.name} ({t.labelWidth}x{t.labelHeight}mm)
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+                    className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5 px-2.5 rounded-lg border border-transparent hover:border-border/30 hover:bg-background/40"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    {isConfigExpanded ? "Ocultar Ajustes de Medidas" : "Personalizar Medidas y Diseño"}
+                    {isConfigExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </Button>
                 </div>
               </div>
-              <Select value={selectedTemplateId} onValueChange={applyProfile}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar una planilla de diseño..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="thermal">Impresora Térmica Estandar (50x30mm)</SelectItem>
-                  <SelectItem value="thermal_small">Impresora Térmica Pequeña (30x20mm)</SelectItem>
-                  <SelectItem value="a4_3x10">Hoja A4 - 3 Columnas (Planilla tipo Avery)</SelectItem>
-                  
-                  {customTemplates.length > 0 && (
-                    <>
-                      <Separator className="my-1" />
-                      <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Mis Planillas Guardadas (Diseños)
-                      </div>
-                      {customTemplates.map(t => (
-                        <SelectItem key={t.id} value={t.id}>
-                          ✨ {t.name} ({t.labelWidth}x{t.labelHeight}mm)
-                        </SelectItem>
-                      ))}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-              
-              <div className="flex justify-end pt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => setIsConfigExpanded(!isConfigExpanded)}
-                  className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5 px-2.5 rounded-lg border border-transparent hover:border-border/30 hover:bg-background/40"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  {isConfigExpanded ? "Ocultar Ajustes de Medidas" : "Personalizar Medidas y Diseño"}
-                  {isConfigExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </Button>
-              </div>
-            </div>
 
-            {isConfigExpanded && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-b pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                {/* Dimensiones */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-sm border-b pb-1">1. Dimensiones (mm)</h4>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Ancho (mm)</Label>
-                      <Input type="number" value={labelWidth} onChange={(e) => setLabelWidth(Number(e.target.value))} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Alto (mm)</Label>
-                      <Input type="number" value={labelHeight} onChange={(e) => setLabelHeight(Number(e.target.value))} />
-                    </div>
-                  </div>
+              {isConfigExpanded && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-b pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Dimensiones */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-sm border-b pb-1">1. Dimensiones (mm)</h4>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Columnas</Label>
-                      <Input type="number" min="1" max="10" value={columns} onChange={(e) => setColumns(Number(e.target.value))} />
-                    </div>
-                    <div className="space-y-2 flex flex-col justify-end pb-1">
-                      <Label className="text-xs">Rotación</Label>
-                      <Select value={rotation.toString()} onValueChange={(val) => setRotation(Number(val))}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Rotación" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Normal (0°)</SelectItem>
-                          <SelectItem value="90">Girar 90° (Acostado)</SelectItem>
-                          <SelectItem value="180">Girar 180° (Volteado)</SelectItem>
-                          <SelectItem value="270">Girar 270°</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  {columns > 1 && (
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Espaciado X (mm)</Label>
-                        <Input type="number" value={gapX} onChange={(e) => setGapX(Number(e.target.value))} />
+                        <Label>Ancho (mm)</Label>
+                        <Input type="number" value={labelWidth} onChange={(e) => setLabelWidth(Number(e.target.value))} />
                       </div>
                       <div className="space-y-2">
-                        <Label>Espaciado Y (mm)</Label>
-                        <Input type="number" value={gapY} onChange={(e) => setGapY(Number(e.target.value))} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Contenido Visual */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-sm border-b pb-1">2. Información a Mostrar</h4>
-                  
-                  <div className="space-y-3 pt-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="show_bname" className="cursor-pointer">Nombre del Negocio</Label>
-                      <div className="flex items-center gap-2">
-                         {showBusinessName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={bnameSize} onChange={(e) => setBnameSize(Number(e.target.value))} title="Tamaño (px)" />}
-                         <Switch id="show_bname" checked={showBusinessName} onCheckedChange={setShowBusinessName} />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="show_pname" className="cursor-pointer">Nombre del Producto</Label>
-                      <div className="flex items-center gap-2">
-                         {showProductName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={pnameSize} onChange={(e) => setPnameSize(Number(e.target.value))} title="Tamaño (px)" />}
-                         <Switch id="show_pname" checked={showProductName} onCheckedChange={setShowProductName} />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="show_price" className="cursor-pointer">Precio de Venta</Label>
-                      <div className="flex items-center gap-2">
-                         {showPrice && <Input type="number" min="8" max="32" className="w-16 h-8 text-xs" value={priceSize} onChange={(e) => setPriceSize(Number(e.target.value))} title="Tamaño (px)" />}
-                         <Switch id="show_price" checked={showPrice} onCheckedChange={setShowPrice} />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="show_btext" className="cursor-pointer">Número del Código</Label>
-                      <div className="flex items-center gap-2">
-                         {showBarcodeText && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={barcodeFontSize} onChange={(e) => setBarcodeFontSize(Number(e.target.value))} title="Tamaño (px)" />}
-                         <Switch id="show_btext" checked={showBarcodeText} onCheckedChange={setShowBarcodeText} />
+                        <Label>Alto (mm)</Label>
+                        <Input type="number" value={labelHeight} onChange={(e) => setLabelHeight(Number(e.target.value))} />
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border-t pt-3 mt-2">
-                      <Label htmlFor="bar_height" className="text-xs font-semibold">Altura del Código (px)</Label>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          id="bar_height" 
-                          type="number" 
-                          min="10" 
-                          max="150" 
-                          className="w-16 h-8 text-xs" 
-                          value={barHeight} 
-                          onChange={(e) => setBarHeight(Number(e.target.value))} 
-                          title="Altura del código de barras en px"
-                        />
-                        <div className="w-11 shrink-0" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Columnas</Label>
+                        <Input type="number" min="1" max="10" value={columns} onChange={(e) => setColumns(Number(e.target.value))} />
+                      </div>
+                      <div className="space-y-2 flex flex-col justify-end pb-1">
+                        <Label className="text-xs">Rotación</Label>
+                        <Select value={rotation.toString()} onValueChange={(val) => setRotation(Number(val))}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Rotación" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Normal (0°)</SelectItem>
+                            <SelectItem value="90">Girar 90° (Acostado)</SelectItem>
+                            <SelectItem value="180">Girar 180° (Volteado)</SelectItem>
+                            <SelectItem value="270">Girar 270°</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between pt-1">
-                      <Label htmlFor="bar_width" className="text-xs font-semibold">Grosor de Líneas</Label>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          id="bar_width" 
-                          type="number" 
-                          min="1.0" 
-                          max="4.0" 
-                          step="0.1" 
-                          className="w-16 h-8 text-xs" 
-                          value={barWidth} 
-                          onChange={(e) => setBarWidth(Number(e.target.value))} 
-                          title="Grosor de las líneas del código (1.0 - 4.0)"
-                        />
-                        <div className="w-11 shrink-0" />
+
+                    {columns > 1 && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Espaciado X (mm)</Label>
+                          <Input type="number" value={gapX} onChange={(e) => setGapX(Number(e.target.value))} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Espaciado Y (mm)</Label>
+                          <Input type="number" value={gapY} onChange={(e) => setGapY(Number(e.target.value))} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contenido Visual */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-sm border-b pb-1">2. Información a Mostrar</h4>
+
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_bname" className="cursor-pointer">Nombre del Negocio</Label>
+                        <div className="flex items-center gap-2">
+                          {showBusinessName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={bnameSize} onChange={(e) => setBnameSize(Number(e.target.value))} title="Tamaño (px)" />}
+                          <Switch id="show_bname" checked={showBusinessName} onCheckedChange={setShowBusinessName} />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_pname" className="cursor-pointer">Nombre del Producto</Label>
+                        <div className="flex items-center gap-2">
+                          {showProductName && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={pnameSize} onChange={(e) => setPnameSize(Number(e.target.value))} title="Tamaño (px)" />}
+                          <Switch id="show_pname" checked={showProductName} onCheckedChange={setShowProductName} />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_price" className="cursor-pointer">Precio de Venta</Label>
+                        <div className="flex items-center gap-2">
+                          {showPrice && <Input type="number" min="8" max="32" className="w-16 h-8 text-xs" value={priceSize} onChange={(e) => setPriceSize(Number(e.target.value))} title="Tamaño (px)" />}
+                          <Switch id="show_price" checked={showPrice} onCheckedChange={setShowPrice} />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="show_btext" className="cursor-pointer">Número del Código</Label>
+                        <div className="flex items-center gap-2">
+                          {showBarcodeText && <Input type="number" min="6" max="24" className="w-16 h-8 text-xs" value={barcodeFontSize} onChange={(e) => setBarcodeFontSize(Number(e.target.value))} title="Tamaño (px)" />}
+                          <Switch id="show_btext" checked={showBarcodeText} onCheckedChange={setShowBarcodeText} />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t pt-3 mt-2">
+                        <Label htmlFor="bar_height" className="text-xs font-semibold">Altura del Código (px)</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="bar_height"
+                            type="number"
+                            min="10"
+                            max="150"
+                            className="w-16 h-8 text-xs"
+                            value={barHeight}
+                            onChange={(e) => setBarHeight(Number(e.target.value))}
+                            title="Altura del código de barras en px"
+                          />
+                          <div className="w-11 shrink-0" />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <Label htmlFor="bar_width" className="text-xs font-semibold">Grosor de Líneas</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="bar_width"
+                            type="number"
+                            min="1.0"
+                            max="4.0"
+                            step="0.1"
+                            className="w-16 h-8 text-xs"
+                            value={barWidth}
+                            onChange={(e) => setBarWidth(Number(e.target.value))}
+                            title="Grosor de las líneas del código (1.0 - 4.0)"
+                          />
+                          <div className="w-11 shrink-0" />
+                        </div>
                       </div>
                     </div>
-                   </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Lista de selección interactiva */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b pb-1">
-                <h4 className="font-semibold text-sm">3. Productos y Cantidad</h4>
-                <div className="flex gap-2 text-xs">
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    const filteredIds = new Set(filteredPrintList.map(i => i.product.id));
-                    setPrintList(prev => prev.map(i => filteredIds.has(i.product.id) ? {...i, selected: true} : i));
-                  }} className="h-6 px-2 text-xs">Marcar Todos</Button>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    const filteredIds = new Set(filteredPrintList.map(i => i.product.id));
-                    setPrintList(prev => prev.map(i => filteredIds.has(i.product.id) ? {...i, selected: false} : i));
-                  }} className="h-6 px-2 text-xs">Desmarcar</Button>
-                </div>
-              </div>
-
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Buscar por nombre o código..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9"
-                />
-              </div>
-
-              {filteredProductIds && filteredProductIds.length < products.length && (
-                <div className="flex items-center justify-between bg-primary/5 border border-primary/10 rounded-xl p-3 text-xs">
-                  <span className="text-muted-foreground">
-                    {showFilteredOnly 
-                      ? `Mostrando solo los ${filteredProductIds.length} productos del filtro de la tabla.` 
-                      : `Mostrando todos los ${products.length} productos del catálogo.`
-                    }
-                  </span>
-                  <Button 
-                    variant="link" 
-                    size="sm" 
-                    type="button"
-                    onClick={() => setShowFilteredOnly(!showFilteredOnly)}
-                    className="h-auto p-0 font-bold text-primary hover:text-primary/80"
-                  >
-                    {showFilteredOnly ? "Ver todo el catálogo" : "Volver al filtro"}
-                  </Button>
+                  </div>
                 </div>
               )}
-              
-              <div 
-                className="max-h-[300px] overflow-y-auto space-y-2 pr-2 border rounded-md p-2 bg-background"
-                onScroll={(e) => {
-                  const target = e.currentTarget;
-                  if (target.scrollHeight - target.scrollTop <= target.clientHeight + 100) {
-                    if (visibleCount < filteredPrintList.length) {
-                      setVisibleCount(prev => Math.min(prev + 80, filteredPrintList.length));
+
+              {/* Lista de selección interactiva */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b pb-1">
+                  <h4 className="font-semibold text-sm">3. Productos y Cantidad</h4>
+                  <div className="flex gap-2 text-xs">
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      const filteredIds = new Set(filteredPrintList.map(i => i.product.id));
+                      setPrintList(prev => prev.map(i => filteredIds.has(i.product.id) ? { ...i, selected: true } : i));
+                    }} className="h-6 px-2 text-xs">Marcar Todos</Button>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      const filteredIds = new Set(filteredPrintList.map(i => i.product.id));
+                      setPrintList(prev => prev.map(i => filteredIds.has(i.product.id) ? { ...i, selected: false } : i));
+                    }} className="h-6 px-2 text-xs">Desmarcar</Button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por nombre o código..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+
+                {filteredProductIds && filteredProductIds.length < products.length && (
+                  <div className="flex items-center justify-between bg-primary/5 border border-primary/10 rounded-xl p-3 text-xs">
+                    <span className="text-muted-foreground">
+                      {showFilteredOnly
+                        ? `Mostrando solo los ${filteredProductIds.length} productos del filtro de la tabla.`
+                        : `Mostrando todos los ${products.length} productos del catálogo.`
+                      }
+                    </span>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      type="button"
+                      onClick={() => setShowFilteredOnly(!showFilteredOnly)}
+                      className="h-auto p-0 font-bold text-primary hover:text-primary/80"
+                    >
+                      {showFilteredOnly ? "Ver todo el catálogo" : "Volver al filtro"}
+                    </Button>
+                  </div>
+                )}
+
+                <div
+                  className="max-h-[300px] overflow-y-auto space-y-2 pr-2 border rounded-md p-2 bg-background"
+                  onScroll={(e) => {
+                    const target = e.currentTarget;
+                    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 100) {
+                      if (visibleCount < filteredPrintList.length) {
+                        setVisibleCount(prev => Math.min(prev + 80, filteredPrintList.length));
+                      }
                     }
-                  }
-                }}
-              >
-                {filteredPrintList.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4 px-2">No se encontraron productos.</p>
-                ) : (
-                  <>
-                    {filteredPrintList.slice(0, visibleCount).map((item) => (
-                      <div key={item.product.id} className={`flex items-center justify-between p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors border-transparent border`}
-                        onClick={() => {
-                          setPrintList(prev => prev.map(i => i.product.id === item.product.id ? {...i, selected: !i.selected} : i));
-                        }}
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <Checkbox 
-                            checked={item.selected} 
-                            onCheckedChange={(c) => {
-                              setPrintList(prev => prev.map(i => i.product.id === item.product.id ? {...i, selected: !!c} : i));
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div className="flex flex-col overflow-hidden min-w-[120px]">
-                            <span className="text-sm font-medium truncate" title={item.product.name}>{item.product.name}</span>
-                            <span className="text-xs text-muted-foreground truncate">{item.product.barcode} - ${(item.product.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                  }}
+                >
+                  {filteredPrintList.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4 px-2">No se encontraron productos.</p>
+                  ) : (
+                    <>
+                      {filteredPrintList.slice(0, visibleCount).map((item) => (
+                        <div key={item.product.id} className={`flex items-center justify-between p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors border-transparent border`}
+                          onClick={() => {
+                            setPrintList(prev => prev.map(i => i.product.id === item.product.id ? { ...i, selected: !i.selected } : i));
+                          }}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <Checkbox
+                              checked={item.selected}
+                              onCheckedChange={(c) => {
+                                setPrintList(prev => prev.map(i => i.product.id === item.product.id ? { ...i, selected: !!c } : i));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="flex flex-col overflow-hidden min-w-[120px]">
+                              <span className="text-sm font-medium truncate" title={item.product.name}>{item.product.name}</span>
+                              <span className="text-xs text-muted-foreground truncate">{item.product.barcode} - ${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Label className="text-xs">Cant:</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              className="w-16 h-8 text-sm"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const qty = parseInt(e.target.value) || 0;
+                                setPrintList(prev => prev.map(i => {
+                                  if (i.product.id === item.product.id) {
+                                    return { ...i, quantity: qty, selected: qty > 0 ? true : i.selected };
+                                  }
+                                  return i;
+                                }));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Label className="text-xs">Cant:</Label>
-                          <Input 
-                            type="number" 
-                            min="0" 
-                            className="w-16 h-8 text-sm" 
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const qty = parseInt(e.target.value) || 0;
-                              setPrintList(prev => prev.map(i => {
-                                if (i.product.id === item.product.id) {
-                                  return { ...i, quantity: qty, selected: qty > 0 ? true : i.selected };
-                                }
-                                return i;
-                              }));
-                            }}
-                            onClick={(e) => e.stopPropagation()}
+                      ))}
+                      {filteredPrintList.length > visibleCount && (
+                        <div className="text-center py-2 text-xs text-muted-foreground border-t border-dashed mt-2">
+                          Mostrando {visibleCount} de {filteredPrintList.length} productos. Desliza hacia abajo para cargar más...
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md text-xs">
+                <p><strong>Truco Térmico:</strong> Si usas impresora térmica continua (1 columna), asegúrate que el navegador no agregue márgenes ni encaboezados propios (Desactiva "Headers/Footers" y pon "Margins: None" en el diálogo de sistema).</p>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <div className="md:w-[42%] lg:w-[40%] shrink-0 flex flex-col overflow-hidden bg-muted/20 border-l">
+            <div className="p-4 border-b flex justify-between items-center bg-white dark:bg-zinc-950 shrink-0">
+              <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+                Vista Previa Completa
+                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-bold">
+                  {totalLabelsToPrint} etiquetas
+                </span>
+              </h4>
+              {totalLabelsToPrint > maxPreviewLabels && (
+                <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-1 rounded font-medium">
+                  Mostrando primeras {maxPreviewLabels}
+                </span>
+              )}
+            </div>
+
+            <ScrollArea className="flex-1 bg-zinc-100 dark:bg-zinc-900">
+              {/* Un solo bloque de estilo compartido para todos los barcodes de la vista previa */}
+              <style dangerouslySetInnerHTML={{ __html: previewBarcodeStyle }} />
+              <div className="p-8 flex items-start justify-center min-w-max min-h-full">
+                {previewLabels.length === 0 ? (
+                  <div className="h-60 flex flex-col items-center justify-center text-muted-foreground gap-3 p-4 text-center">
+                    <Printer className="w-12 h-12 text-muted-foreground/30 animate-pulse" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">No hay etiquetas para previsualizar</p>
+                      <p className="text-xs text-muted-foreground/80 max-w-[240px]">
+                        Selecciona productos en el listado de la izquierda y define una cantidad para ver la vista previa.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="bg-white shadow-xl dark:bg-white" // Force white background for the "paper"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(${columns}, ${rotation === 90 || rotation === 270 ? labelHeight : labelWidth}mm)`,
+                      columnGap: `${gapX}mm`,
+                      rowGap: `${gapY}mm`,
+                      width: 'max-content',
+                      padding: columns > 1 ? '10mm' : '0' // Give some padding around the sheet if printing A4
+                    }}
+                  >
+                    {previewLabels.map((prod, index) => (
+                      <div
+                        key={`${prod.id}-${index}`}
+                        className="border-dashed border-gray-300 flex items-center justify-center overflow-hidden relative shadow-sm"
+                        style={{
+                          width: `${rotation === 90 || rotation === 270 ? labelHeight : labelWidth}mm`,
+                          height: `${rotation === 90 || rotation === 270 ? labelWidth : labelHeight}mm`,
+                          padding: '0',
+                          border: columns > 1 ? '1px dotted #ccc' : 'none',
+                          borderBottom: columns === 1 ? '1px dashed #ccc' : '1px dotted #ccc',
+                        }}
+                      >
+                        <div className="relative flex flex-col items-center justify-center text-center overflow-hidden text-black" style={{ width: `${labelWidth}mm`, height: `${labelHeight}mm`, padding: '1.5mm', transform: rotation !== 0 ? `rotate(${rotation}deg)` : 'none', transformOrigin: 'center' }}>
+                          <div className="flex flex-col items-center justify-center w-full">
+                            {showBusinessName && (
+                              <div className="font-bold uppercase mb-[2px] w-full text-center" style={{ fontSize: `${bnameSize}px`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {settings?.company_name || userStore?.store_name || 'Mi Negocio'}
+                              </div>
+                            )}
+                            {showProductName && (
+                              <div className="w-full text-center leading-tight mb-[2px]" style={{ fontSize: `${pnameSize}px`, maxHeight: '26px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                {prod.name}
+                              </div>
+                            )}
+                            {showPrice && (
+                              <div className="font-extrabold mb-[2px] w-full text-center" style={{ fontSize: `${priceSize}px` }}>
+                                ${(prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                          </div>
+                          <div className="w-full flex justify-center items-center flex-shrink-0 preview-barcode-container"
+                            dangerouslySetInnerHTML={{ __html: getCachedBarcodeSvg(prod.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth) }}
                           />
+
                         </div>
                       </div>
                     ))}
-                    {filteredPrintList.length > visibleCount && (
-                      <div className="text-center py-2 text-xs text-muted-foreground border-t border-dashed mt-2">
-                        Mostrando {visibleCount} de {filteredPrintList.length} productos. Desliza hacia abajo para cargar más...
-                      </div>
-                    )}
-                  </>
+                  </div>
                 )}
               </div>
-            </div>
-            
-            <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md text-xs">
-              <p><strong>Truco Térmico:</strong> Si usas impresora térmica continua (1 columna), asegúrate que el navegador no agregue márgenes ni encaboezados propios (Desactiva "Headers/Footers" y pon "Margins: None" en el diálogo de sistema).</p>
-            </div>
-           </div>
-           </ScrollArea>
-
-           <div className="md:w-[42%] lg:w-[40%] shrink-0 flex flex-col overflow-hidden bg-muted/20 border-l">
-             <div className="p-4 border-b flex justify-between items-center bg-white dark:bg-zinc-950 shrink-0">
-                <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
-                  Vista Previa Completa
-                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-bold">
-                    {totalLabelsToPrint} etiquetas
-                  </span>
-                </h4>
-                {totalLabelsToPrint > maxPreviewLabels && (
-                  <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-1 rounded font-medium">
-                    Mostrando primeras {maxPreviewLabels}
-                  </span>
-                )}
-             </div>
-             
-             <ScrollArea className="flex-1 bg-zinc-100 dark:bg-zinc-900">
-                {/* Un solo bloque de estilo compartido para todos los barcodes de la vista previa */}
-                <style dangerouslySetInnerHTML={{ __html: previewBarcodeStyle }} />
-                 <div className="p-8 flex items-start justify-center min-w-max min-h-full">
-                    {previewLabels.length === 0 ? (
-                       <div className="h-60 flex flex-col items-center justify-center text-muted-foreground gap-3 p-4 text-center">
-                         <Printer className="w-12 h-12 text-muted-foreground/30 animate-pulse" />
-                         <div className="space-y-1">
-                           <p className="text-sm font-medium">No hay etiquetas para previsualizar</p>
-                           <p className="text-xs text-muted-foreground/80 max-w-[240px]">
-                             Selecciona productos en el listado de la izquierda y define una cantidad para ver la vista previa.
-                           </p>
-                         </div>
-                       </div>
-                    ) : (
-                      <div 
-                        className="bg-white shadow-xl dark:bg-white" // Force white background for the "paper"
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: `repeat(${columns}, ${rotation === 90 || rotation === 270 ? labelHeight : labelWidth}mm)`,
-                          columnGap: `${gapX}mm`,
-                          rowGap: `${gapY}mm`,
-                          width: 'max-content',
-                          padding: columns > 1 ? '10mm' : '0' // Give some padding around the sheet if printing A4
-                        }}
-                      >
-                        {previewLabels.map((prod, index) => (
-                           <div 
-                             key={`${prod.id}-${index}`}
-                             className="border-dashed border-gray-300 flex items-center justify-center overflow-hidden relative shadow-sm"
-                             style={{ 
-                                width: `${rotation === 90 || rotation === 270 ? labelHeight : labelWidth}mm`, 
-                                height: `${rotation === 90 || rotation === 270 ? labelWidth : labelHeight}mm`,
-                                padding: '0', 
-                                border: columns > 1 ? '1px dotted #ccc' : 'none',
-                                borderBottom: columns === 1 ? '1px dashed #ccc' : '1px dotted #ccc',
-                             }}
-                           >
-                              <div className="relative flex flex-col items-center justify-center text-center overflow-hidden text-black" style={{ width: `${labelWidth}mm`, height: `${labelHeight}mm`, padding: '1.5mm', transform: rotation !== 0 ? `rotate(${rotation}deg)` : 'none', transformOrigin: 'center' }}>
-                                <div className="flex flex-col items-center justify-center w-full">
-                                  {showBusinessName && (
-                                    <div className="font-bold uppercase mb-[2px] w-full text-center" style={{ fontSize: `${bnameSize}px`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {settings?.company_name || userStore?.store_name || 'Mi Negocio'}
-                                    </div>
-                                  )}
-                                  {showProductName && (
-                                    <div className="w-full text-center leading-tight mb-[2px]" style={{ fontSize: `${pnameSize}px`, maxHeight: '26px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                      {prod.name}
-                                    </div>
-                                  )}
-                                  {showPrice && (
-                                    <div className="font-extrabold mb-[2px] w-full text-center" style={{ fontSize: `${priceSize}px` }}>
-                                      ${(prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </div>
-                                  )}
-                                </div>
-                                 <div className="w-full flex justify-center items-center flex-shrink-0 preview-barcode-container"
-                                   dangerouslySetInnerHTML={{ __html: getCachedBarcodeSvg(prod.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth) }} 
-                                 />
-
-                              </div>
-                           </div>
-                        ))}
-                      </div>
-                   )}
-                </div>
-                <ScrollBar orientation="horizontal" />
-             </ScrollArea>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </div>
         </div>
 

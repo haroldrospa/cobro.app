@@ -2063,37 +2063,33 @@ const Settings = () => {
       </div>
 
       <div className="max-w-7xl mx-auto w-full px-4">
-        <Tabs defaultValue="invoices" className="flex flex-col md:flex-row gap-8 space-y-0">
+        <Tabs defaultValue="invoices" className="flex flex-col gap-8 space-y-0">
           
-          <div className="w-full md:w-64 shrink-0">
-            <TabsList className="flex flex-col w-full h-auto bg-transparent items-start space-y-1 p-0">
+          <div className="w-full pb-6 border-b border-border/40">
+            <TabsList className="flex flex-wrap w-full h-auto items-center justify-center gap-2 bg-transparent p-0">
               
-              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-4 mx-2 first:mt-0">General</div>
-              <TabsTrigger value="store" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Mi Tienda</TabsTrigger>
-              <TabsTrigger value="company" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Empresa</TabsTrigger>
-              <TabsTrigger value="subscription" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Suscripción</TabsTrigger>
-
-              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mx-2">Ventas y Facturación</div>
-              <TabsTrigger value="billing-method" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Método de Factura</TabsTrigger>
-              <TabsTrigger value="invoices" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Preferencias</TabsTrigger>
-              <TabsTrigger value="payments" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Métodos de Pago</TabsTrigger>
-              <TabsTrigger value="products" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Productos</TabsTrigger>
-
-              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mx-2">Dispositivos y Coms.</div>
-              <TabsTrigger value="print" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Impresión</TabsTrigger>
-              <TabsTrigger value="notifications" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Comunicaciones</TabsTrigger>
+              <TabsTrigger value="store" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Mi Tienda</TabsTrigger>
+              <TabsTrigger value="company" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Empresa</TabsTrigger>
+              <TabsTrigger value="subscription" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Suscripción</TabsTrigger>
+              
+              <TabsTrigger value="billing-method" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Método de Factura</TabsTrigger>
+              <TabsTrigger value="invoices" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Preferencias</TabsTrigger>
+              <TabsTrigger value="payments" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Métodos de Pago</TabsTrigger>
+              <TabsTrigger value="products" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Productos</TabsTrigger>
+              
+              <TabsTrigger value="print" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Impresión</TabsTrigger>
+              <TabsTrigger value="notifications" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Comunicaciones</TabsTrigger>
               {(shopType === 'restaurant') && (
-                <TabsTrigger value="cocina" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Cocina KDS</TabsTrigger>
+                <TabsTrigger value="cocina" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Cocina KDS</TabsTrigger>
               )}
 
-              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mx-2">Sistema</div>
-              <TabsTrigger value="system" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Apariencia</TabsTrigger>
-              <TabsTrigger value="advanced" className="w-full justify-start text-left data-[state=active]:bg-zinc-800/50 hover:bg-zinc-800/30">Avanzado</TabsTrigger>
+              <TabsTrigger value="system" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Apariencia</TabsTrigger>
+              <TabsTrigger value="advanced" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Avanzado</TabsTrigger>
               
             </TabsList>
           </div>
 
-          <div className="flex-1 w-full max-w-4xl min-w-0">
+          <div className="flex-1 w-full max-w-6xl min-w-0 mx-auto">
             {/* Subscription Settings */}
             <TabsContent value="subscription" className="mt-0">
               <SubscriptionOverview />
@@ -2521,39 +2517,29 @@ const Settings = () => {
 
         {/* Invoice Settings */}
         <TabsContent value="invoices" className="space-y-6 mt-0">
-          <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="mr-2 h-5 w-5" />
-                  Configuración de Facturas
-                </CardTitle>
-                <CardDescription>
-                  Personaliza el formato y numeración de tus facturas
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Layout de 2 columnas: Formulario + Vista Previa */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Configuración de Facturas</h2>
+              <p className="text-muted-foreground mt-1">Personaliza el diseño, formato y comportamiento de tus recibos impresos y digitales.</p>
+            </div>
 
-                  {/* Columna izquierda: Formulario */}
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="currency">Moneda</Label>
-                        <Select value={invoiceSettings.currency} onValueChange={(value) => setInvoiceSettings({ ...invoiceSettings, currency: value })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="DOP">Peso Dominicano (DOP)</SelectItem>
-                            <SelectItem value="USD">Dólar Americano (USD)</SelectItem>
-                            <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="logo-size">Tamaño del Logo (px)</Label>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Columna Izquierda: Formulario (7 columnas) */}
+              <div className="lg:col-span-7 space-y-6">
+                
+                {/* Sección 1: Diseño Visual */}
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-md p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
+                  <h3 className="text-lg font-semibold flex items-center mb-6 text-foreground/90">
+                    <div className="p-2 rounded-md bg-primary/10 mr-3">
+                      <Palette className="h-4 w-4 text-primary" />
+                    </div>
+                    Diseño Visual
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="logo-size" className="text-sm font-medium">Tamaño del Logo (px)</Label>
+                      <div className="relative">
                         <Input
                           id="logo-size"
                           type="number"
@@ -2561,211 +2547,274 @@ const Settings = () => {
                           max="500"
                           value={companyInfo.logoSize}
                           onChange={(e) => setCompanyInfo({ ...companyInfo, logoSize: parseInt(e.target.value) || 120 })}
+                          className="bg-background/50 border-border/50 focus:bg-background transition-colors"
                         />
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="font-size">Tamaño de Fuente (px)</Label>
-                        <div className="flex items-center gap-4">
-                          <Input
-                            id="font-size"
-                            type="number"
-                            min="8"
-                            max="24"
-                            value={printSettings.fontSize || 12}
-                            onChange={(e) => setPrintSettings({ ...printSettings, fontSize: parseInt(e.target.value) || 12 })}
-                            className="w-20"
-                          />
-                          <input
-                            type="range"
-                            min="8"
-                            max="24"
-                            step="1"
-                            value={printSettings.fontSize || 12}
-                            onChange={(e) => setPrintSettings({ ...printSettings, fontSize: parseInt(e.target.value) || 12 })}
-                            className="flex-1 cursor-pointer"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">Ajusta el tamaño base de la letra en la factura.</p>
-                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="logo-margin-top-invoice">Margen Logo (Superior)</Label>
-                        <Select
-                          value={printSettings.logoMarginTop || '6px'}
-                          onValueChange={(value) => setPrintSettings({ ...printSettings, logoMarginTop: value })}
-                        >
-                          <SelectTrigger id="logo-margin-top-invoice">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0px">Sin espacio (0px)</SelectItem>
-                            <SelectItem value="2px">Muy pequeño (2px)</SelectItem>
-                            <SelectItem value="4px">Pequeño (4px)</SelectItem>
-                            <SelectItem value="6px">Normal (6px)</SelectItem>
-                            <SelectItem value="8px">Medio (8px)</SelectItem>
-                            <SelectItem value="12px">Grande (12px)</SelectItem>
-                            <SelectItem value="16px">Muy grande (16px)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          Espacio arriba del logo
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="logo-margin-invoice">Margen Logo (Inferior)</Label>
-                        <Select
-                          value={printSettings.logoMarginBottom || '6px'}
-                          onValueChange={(value) => setPrintSettings({ ...printSettings, logoMarginBottom: value })}
-                        >
-                          <SelectTrigger id="logo-margin-invoice">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0px">Sin espacio (0px)</SelectItem>
-                            <SelectItem value="2px">Muy pequeño (2px)</SelectItem>
-                            <SelectItem value="4px">Pequeño (4px)</SelectItem>
-                            <SelectItem value="6px">Normal (6px)</SelectItem>
-                            <SelectItem value="8px">Medio (8px)</SelectItem>
-                            <SelectItem value="12px">Grande (12px)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex flex-col justify-center space-y-3">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="logo-width"
-                            checked={printSettings.logoWidth === 'full'}
-                            onCheckedChange={(checked) => setPrintSettings({ ...printSettings, logoWidth: checked ? 'full' : 'auto' })}
-                          />
-                          <Label htmlFor="logo-width">Ajustar al Ancho Completo</Label>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Expande el logo a todo el ancho del papel, ignorando la altura fija.
-                        </p>
+                    <div className="space-y-3">
+                      <Label htmlFor="font-size" className="text-sm font-medium">Tamaño de Fuente (px)</Label>
+                      <div className="flex items-center gap-3 bg-background/50 border border-border/50 rounded-md p-1 pr-3">
+                        <Input
+                          id="font-size"
+                          type="number"
+                          min="8"
+                          max="24"
+                          value={printSettings.fontSize || 12}
+                          onChange={(e) => setPrintSettings({ ...printSettings, fontSize: parseInt(e.target.value) || 12 })}
+                          className="w-16 h-8 border-0 bg-transparent shadow-none focus-visible:ring-0"
+                        />
+                        <input
+                          type="range"
+                          min="8"
+                          max="24"
+                          step="1"
+                          value={printSettings.fontSize || 12}
+                          onChange={(e) => setPrintSettings({ ...printSettings, fontSize: parseInt(e.target.value) || 12 })}
+                          className="flex-1 accent-primary cursor-pointer"
+                        />
                       </div>
                     </div>
+                  </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Mostrar Código de Barras NCF</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Muestra el código de barras del NCF al final de la factura
-                        </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="logo-margin-top-invoice" className="text-sm font-medium">Margen Superior del Logo</Label>
+                      <Select
+                        value={printSettings.logoMarginTop || '6px'}
+                        onValueChange={(value) => setPrintSettings({ ...printSettings, logoMarginTop: value })}
+                      >
+                        <SelectTrigger id="logo-margin-top-invoice" className="bg-background/50 border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0px">Sin espacio (0px)</SelectItem>
+                          <SelectItem value="2px">Muy pequeño (2px)</SelectItem>
+                          <SelectItem value="4px">Pequeño (4px)</SelectItem>
+                          <SelectItem value="6px">Normal (6px)</SelectItem>
+                          <SelectItem value="8px">Medio (8px)</SelectItem>
+                          <SelectItem value="12px">Grande (12px)</SelectItem>
+                          <SelectItem value="16px">Muy grande (16px)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="logo-margin-invoice" className="text-sm font-medium">Margen Inferior del Logo</Label>
+                      <Select
+                        value={printSettings.logoMarginBottom || '6px'}
+                        onValueChange={(value) => setPrintSettings({ ...printSettings, logoMarginBottom: value })}
+                      >
+                        <SelectTrigger id="logo-margin-invoice" className="bg-background/50 border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0px">Sin espacio (0px)</SelectItem>
+                          <SelectItem value="2px">Muy pequeño (2px)</SelectItem>
+                          <SelectItem value="4px">Pequeño (4px)</SelectItem>
+                          <SelectItem value="6px">Normal (6px)</SelectItem>
+                          <SelectItem value="8px">Medio (8px)</SelectItem>
+                          <SelectItem value="12px">Grande (12px)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-border/30 flex flex-row items-center justify-between group">
+                    <div className="space-y-1">
+                      <Label htmlFor="logo-width" className="text-sm font-medium cursor-pointer">Ajustar al Ancho Completo</Label>
+                      <p className="text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors">
+                        Expande el logo a todo el ancho del ticket
+                      </p>
+                    </div>
+                    <Switch
+                      id="logo-width"
+                      checked={printSettings.logoWidth === 'full'}
+                      onCheckedChange={(checked) => setPrintSettings({ ...printSettings, logoWidth: checked ? 'full' : 'auto' })}
+                      className="data-[state=checked]:bg-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Sección 2: Datos y Finanzas */}
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-md p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
+                  <h3 className="text-lg font-semibold flex items-center mb-6 text-foreground/90">
+                    <div className="p-2 rounded-md bg-primary/10 mr-3">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    Datos y Finanzas
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="currency" className="text-sm font-medium">Moneda</Label>
+                      <Select value={invoiceSettings.currency} onValueChange={(value) => setInvoiceSettings({ ...invoiceSettings, currency: value })}>
+                        <SelectTrigger className="bg-background/50 border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="DOP">DOP - Peso</SelectItem>
+                          <SelectItem value="USD">USD - Dólar</SelectItem>
+                          <SelectItem value="EUR">EUR - Euro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="tax-rate" className="text-sm font-medium">Impuesto (%)</Label>
+                      <Input
+                        id="tax-rate"
+                        type="number"
+                        value={invoiceSettings.defaultTaxRate}
+                        onChange={(e) => setInvoiceSettings({ ...invoiceSettings, defaultTaxRate: e.target.value })}
+                        className="bg-background/50 border-border/50"
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label htmlFor="payment-terms" className="text-sm font-medium">Términos (días)</Label>
+                      <Input
+                        id="payment-terms"
+                        type="number"
+                        value={invoiceSettings.paymentTerms}
+                        onChange={(e) => setInvoiceSettings({ ...invoiceSettings, paymentTerms: e.target.value })}
+                        className="bg-background/50 border-border/50"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 pt-6 border-t border-border/30 space-y-5">
+                    <div className="flex flex-row items-center justify-between group">
+                      <div className="space-y-1">
+                        <Label htmlFor="show-barcode" className="text-sm font-medium cursor-pointer">Mostrar Código de Barras NCF</Label>
+                        <p className="text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors">Añade el código al pie de la factura</p>
                       </div>
                       <Switch
+                        id="show-barcode"
                         checked={invoiceSettings.showBarcode || false}
                         onCheckedChange={(checked) => setInvoiceSettings({ ...invoiceSettings, showBarcode: checked })}
                       />
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Auto-incrementar Numeración</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Incrementar automáticamente el número de factura
-                        </p>
+                    
+                    <div className="flex flex-row items-center justify-between group">
+                      <div className="space-y-1">
+                        <Label htmlFor="auto-increment" className="text-sm font-medium cursor-pointer">Auto-incrementar Numeración</Label>
+                        <p className="text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors">Suma 1 automáticamente a la siguiente factura</p>
                       </div>
                       <Switch
+                        id="auto-increment"
                         checked={invoiceSettings.autoIncrement}
                         onCheckedChange={(checked) => setInvoiceSettings({ ...invoiceSettings, autoIncrement: checked })}
                       />
                     </div>
+                  </div>
+                </div>
 
-                    <Separator />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tax-rate">Tasa de Impuesto (%)</Label>
-                        <Input
-                          id="tax-rate"
-                          type="number"
-                          value={invoiceSettings.defaultTaxRate}
-                          onChange={(e) => setInvoiceSettings({ ...invoiceSettings, defaultTaxRate: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="payment-terms">Términos de Pago (días)</Label>
-                        <Input
-                          id="payment-terms"
-                          type="number"
-                          value={invoiceSettings.paymentTerms}
-                          onChange={(e) => setInvoiceSettings({ ...invoiceSettings, paymentTerms: e.target.value })}
-                        />
-                      </div>
+                {/* Sección 3: Textos y Mensajes */}
+                <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-md p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
+                  <h3 className="text-lg font-semibold flex items-center mb-6 text-foreground/90">
+                    <div className="p-2 rounded-md bg-primary/10 mr-3">
+                      <Mail className="h-4 w-4 text-primary" />
                     </div>
+                    Textos y Correos
+                  </h3>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="footer-text">Texto del Pie de Página</Label>
+                  <div className="space-y-5">
+                    <div className="space-y-3">
+                      <Label htmlFor="footer-text" className="text-sm font-medium">Mensaje en Pie de Página (Impreso)</Label>
                       <Textarea
                         id="footer-text"
                         value={invoiceSettings.footerText}
                         onChange={(e) => setInvoiceSettings({ ...invoiceSettings, footerText: e.target.value })}
                         rows={2}
+                        className="bg-background/50 border-border/50 resize-none focus-visible:ring-primary/50"
+                        placeholder="Ej: ¡Gracias por su compra! Vuelva pronto."
                       />
                     </div>
 
-                    <Separator className="my-6" />
-
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold flex items-center">
-                        <Mail className="mr-2 h-5 w-5" />
-                        Configuración de Email Personalizado
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Personaliza el saludo y el mensaje que reciben tus clientes al enviar una factura por correo.
-                      </p>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="email-greeting">Saludo del Email</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border/30">
+                      <div className="space-y-3">
+                        <Label htmlFor="email-greeting" className="text-sm font-medium">Saludo del Correo</Label>
                         <Input
                           id="email-greeting"
                           placeholder="Ej: ¡Hola!"
                           value={invoiceSettings.emailGreeting}
                           onChange={(e) => setInvoiceSettings({ ...invoiceSettings, emailGreeting: e.target.value })}
+                          className="bg-background/50 border-border/50"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email-message">Mensaje del Email</Label>
+                      <div className="space-y-3">
+                        <Label htmlFor="email-message" className="text-sm font-medium">Cuerpo del Correo</Label>
                         <Textarea
                           id="email-message"
                           placeholder="Escribe el mensaje de agradecimiento..."
                           value={invoiceSettings.emailMessage}
                           onChange={(e) => setInvoiceSettings({ ...invoiceSettings, emailMessage: e.target.value })}
-                          rows={4}
+                          rows={3}
+                          className="bg-background/50 border-border/50 resize-none focus-visible:ring-primary/50"
                         />
                       </div>
                     </div>
+                  </div>
+                </div>
 
-                    <div className="pt-4">
-                      <Button onClick={() => handleSaveSettings('facturas')} disabled={loading || isUpdatingStoreSettings}>
-                        <Save className="mr-2 h-4 w-4" />
-                        Guardar Configuración de Facturas
-                      </Button>
+                {/* Botón de Guardar */}
+                <div className="sticky bottom-6 z-10 pt-2 pb-4">
+                  <Button 
+                    onClick={() => handleSaveSettings('facturas')} 
+                    disabled={loading || isUpdatingStoreSettings}
+                    className="w-full sm:w-auto px-8 shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all font-semibold rounded-xl"
+                    size="lg"
+                  >
+                    <Save className="mr-2 h-5 w-5" />
+                    Guardar Cambios
+                  </Button>
+                </div>
+              </div>
+
+              {/* Columna Derecha: Vista Previa (5 columnas) */}
+              <div className="lg:col-span-5 relative">
+                <div className="sticky top-6 rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-[#0a0a0a] flex flex-col h-[calc(100vh-140px)] min-h-[650px] ring-1 ring-white/10">
+                  
+                  {/* Header de la vista previa estilo macOS */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#111]">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-[#ff5f56]"></div>
+                      <div className="h-3 w-3 rounded-full bg-[#ffbd2e]"></div>
+                      <div className="h-3 w-3 rounded-full bg-[#27c93f]"></div>
+                      <span className="ml-3 text-xs font-medium text-white/50 tracking-wider">PREVIEW</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse"></div>
+                      <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">En Vivo</span>
                     </div>
                   </div>
 
-                  {/* Columna derecha: Vista Previa */}
-                  <div className="lg:sticky lg:top-6 h-fit">
-                    <div className="border rounded-lg p-6 bg-white dark:bg-gray-900 shadow-lg">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-lg">Vista Previa del Recibo</h3>
-                        <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">EN VIVO</span>
-                      </div>
-
-                      {/* Simulación del recibo - Fondo BLANCO PURO (Simulación papel) - Dynamic Font Size */}
-                      <div className="border border-gray-200 p-2 space-y-1 max-w-md mx-auto shadow-sm" style={{ backgroundColor: '#ffffff', color: '#000000', fontSize: `${printSettings.fontSize || 12}px`, lineHeight: '1.2' }}>
+                  {/* Contenedor del recibo scrollable */}
+                  <div className="flex-1 overflow-y-auto p-6 md:p-8 flex justify-center custom-scrollbar relative">
+                    {/* Efecto de luz radial de fondo */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+                    
+                    {/* El Recibo Físico */}
+                    <div className="w-full max-w-[320px] bg-[#fcfcfc] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-300 relative group h-fit z-10"
+                         style={{ 
+                           color: '#111', 
+                           fontSize: `${printSettings.fontSize || 12}px`, 
+                           lineHeight: '1.4',
+                         }}>
+                      
+                      {/* Efecto de papel rasgado superior (CSS puro) */}
+                      <div className="absolute top-0 left-0 right-0 h-2 w-full bg-[radial-gradient(circle_at_10px_0,#fcfcfc_10px,transparent_11px)]" style={{ backgroundSize: '20px 10px', marginTop: '-10px', filter: 'drop-shadow(0 -1px 2px rgba(0,0,0,0.1))' }}></div>
+                      
+                      <div className="p-5">
                         {/* Logo */}
                         {companyInfo.logo && (
-                          <div className="text-center" style={{ marginTop: printSettings.logoMarginTop, marginBottom: printSettings.logoMarginBottom }}>
+                          <div className="text-center transition-all duration-300" style={{ marginTop: printSettings.logoMarginTop, marginBottom: printSettings.logoMarginBottom }}>
                             <img
                               src={companyInfo.logo}
                               alt="Logo"
-                              className="mx-auto w-auto object-contain grayscale"
+                              className="mx-auto w-auto object-contain grayscale opacity-90 mix-blend-multiply"
                               style={{
                                 maxHeight: printSettings.logoWidth === 'full' ? 'none' : `${companyInfo.logoSize}px`,
                                 width: printSettings.logoWidth === 'full' ? '100%' : 'auto',
@@ -2777,100 +2826,97 @@ const Settings = () => {
                         )}
 
                         {/* Header */}
-                        <div className="text-center border-b border-black pb-1 mb-1">
-                          <h2 className="font-bold mb-1" style={{ color: '#000', fontSize: '1.25em' }}>{companyInfo.name}</h2>
-                          {companyInfo.rnc && <p className="leading-tight" style={{ color: '#000', fontSize: '0.9em' }}>RNC: {companyInfo.rnc}</p>}
-                          {companyInfo.phone && <p className="leading-tight" style={{ color: '#000', fontSize: '0.9em' }}>{companyInfo.phone}</p>}
-                          {companyInfo.address && <p className="leading-tight" style={{ color: '#000', fontSize: '0.9em' }}>{companyInfo.address}</p>}
+                        <div className="text-center border-b-[1.5px] border-black/80 pb-3 mb-3">
+                          <h2 className="font-bold mb-1 tracking-tight" style={{ fontSize: '1.3em' }}>{companyInfo.name || 'Mi Negocio'}</h2>
+                          {companyInfo.rnc && <p className="leading-tight text-black/80" style={{ fontSize: '0.9em' }}>RNC: {companyInfo.rnc}</p>}
+                          {companyInfo.phone && <p className="leading-tight text-black/80" style={{ fontSize: '0.9em' }}>{companyInfo.phone}</p>}
+                          {companyInfo.address && <p className="leading-tight text-black/80 mt-1" style={{ fontSize: '0.9em' }}>{companyInfo.address}</p>}
                         </div>
 
                         {/* Número de factura */}
-                        <div className="text-center py-1 border-b border-black mb-1">
-                          <p className="font-bold leading-none" style={{ color: '#000', fontSize: '1.1em' }}>
+                        <div className="text-center py-2 border-b-[1.5px] border-black/80 mb-3">
+                          <p className="font-bold leading-none tracking-wider mb-1" style={{ fontSize: '1.1em' }}>
                             {localBillingMode === 'e-ncf' ? 'e-CF' : 'NCF'}
                           </p>
-                          <p className="font-mono font-bold leading-tight" style={{ color: '#000', fontSize: '1em' }}>
+                          <p className="font-mono font-bold leading-tight" style={{ fontSize: '1.05em' }}>
                             {localBillingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001'}
                           </p>
-                          <p className="leading-tight" style={{ color: '#000', fontSize: '0.9em' }}>{new Date().toLocaleDateString('es-DO')}</p>
+                          <p className="leading-tight mt-1 text-black/70" style={{ fontSize: '0.85em' }}>{new Date().toLocaleDateString('es-DO')} {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
                         </div>
 
                         {/* Items ejemplo */}
-                        {/* Items ejemplo */}
-                        {/* Items ejemplo */}
-                        <div className="border-t border-b border-black py-1 space-y-0.5 mb-1">
-                          <div className="flex justify-between" style={{ fontSize: '0.9em' }}>
-                            <span style={{ color: '#000' }}>Producto Ejemplo x1</span>
-                            <span className="font-mono" style={{ color: '#000' }}>{invoiceSettings.currency} 100.00</span>
+                        <div className="border-t-[1.5px] border-b-[1.5px] border-black/80 py-2 space-y-1.5 mb-3">
+                          <div className="flex justify-between items-start" style={{ fontSize: '0.95em' }}>
+                            <span style={{ paddingRight: '10px' }}>1x Producto Ejemplo</span>
+                            <span className="font-mono whitespace-nowrap">{invoiceSettings.currency} 100.00</span>
                           </div>
-                          <div className="flex justify-between" style={{ fontSize: '0.9em' }}>
-                            <span style={{ color: '#000' }}>Servicio Ejemplo x2</span>
-                            <span className="font-mono" style={{ color: '#000' }}>{invoiceSettings.currency} 150.00</span>
+                          <div className="flex justify-between items-start" style={{ fontSize: '0.95em' }}>
+                            <span style={{ paddingRight: '10px' }}>2x Servicio Ejemplo Premium</span>
+                            <span className="font-mono whitespace-nowrap">{invoiceSettings.currency} 150.00</span>
                           </div>
                         </div>
 
                         {/* Totales */}
-                        <div className="space-y-0.5 mb-1">
-                          <div className="flex justify-between" style={{ fontSize: '0.9em' }}>
-                            <span style={{ color: '#000' }}>Subtotal:</span>
-                            <span className="font-mono" style={{ color: '#000' }}>{invoiceSettings.currency} 250.00</span>
+                        <div className="space-y-1 mb-3">
+                          <div className="flex justify-between text-black/80" style={{ fontSize: '0.9em' }}>
+                            <span>Subtotal:</span>
+                            <span className="font-mono">{invoiceSettings.currency} 250.00</span>
                           </div>
-                          <div className="flex justify-between" style={{ fontSize: '0.9em' }}>
-                            <span style={{ color: '#000' }}>ITBIS ({invoiceSettings.defaultTaxRate}%):</span>
-                            <span className="font-mono" style={{ color: '#000' }}>{invoiceSettings.currency} {(250 * parseFloat(invoiceSettings.defaultTaxRate || '0') / 100).toFixed(2)}</span>
+                          <div className="flex justify-between text-black/80" style={{ fontSize: '0.9em' }}>
+                            <span>ITBIS ({invoiceSettings.defaultTaxRate}%):</span>
+                            <span className="font-mono">{invoiceSettings.currency} {(250 * parseFloat(invoiceSettings.defaultTaxRate || '0') / 100).toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between font-bold border-t border-black pt-2 mt-1" style={{ fontSize: '1.1em' }}>
-                            <span style={{ color: '#000' }}>TOTAL:</span>
-                            <span className="font-mono" style={{ color: '#000' }}>{invoiceSettings.currency} {(250 * (1 + parseFloat(invoiceSettings.defaultTaxRate || '0') / 100)).toFixed(2)}</span>
+                          <div className="flex justify-between font-bold border-t-[1.5px] border-black/80 pt-2 mt-2" style={{ fontSize: '1.2em' }}>
+                            <span>TOTAL:</span>
+                            <span className="font-mono">{invoiceSettings.currency} {(250 * (1 + parseFloat(invoiceSettings.defaultTaxRate || '0') / 100)).toFixed(2)}</span>
                           </div>
                         </div>
 
                         {/* Footer */}
                         {invoiceSettings.footerText && (
-                          <div className="text-center border-t border-black pt-2 mt-3" style={{ fontSize: '0.9em' }}>
-                            <p style={{ color: '#000' }}>{invoiceSettings.footerText}</p>
+                          <div className="text-center border-t border-black/30 pt-3 mt-4" style={{ fontSize: '0.9em' }}>
+                            <p className="font-medium italic">{invoiceSettings.footerText}</p>
                           </div>
                         )}
 
                         {/* Términos de pago */}
                         {invoiceSettings.paymentTerms && (
-                          <div className="text-center text-[10px] pt-2">
-                            <p style={{ color: '#666' }}>Términos de pago: {invoiceSettings.paymentTerms} días</p>
+                          <div className="text-center pt-2 text-black/60" style={{ fontSize: '0.8em' }}>
+                            <p>Términos de pago: {invoiceSettings.paymentTerms} días</p>
                           </div>
                         )}
 
                         {/* Código de Barras o QR */}
                         {invoiceSettings.showBarcode && (
-                          <div className="text-center pt-3 mt-3 border-t border-dashed" style={{ borderColor: '#000' }}>
+                          <div className="text-center pt-4 mt-4 border-t-[1.5px] border-dashed border-black/40">
                             {localBillingMode === 'e-ncf' ? (
                               <div className="flex flex-col items-center justify-center">
-                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('https://dgii.gov.do/ecf/E310000000001')}`} alt="Código QR Fiscal" style={{ width: '110px', height: '110px', display: 'block', margin: '0 auto' }} />
-                                <div style={{ fontSize: '10px', textAlign: 'left', margin: '8px auto 0 auto', width: 'fit-content', fontFamily: 'monospace', lineHeight: 1.4, color: '#000' }}>
+                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('https://dgii.gov.do/ecf/E310000000001')}`} alt="Código QR Fiscal" style={{ width: '110px', height: '110px', display: 'block', margin: '0 auto' }} className="opacity-90 mix-blend-multiply" />
+                                <div style={{ fontSize: '10px', textAlign: 'left', margin: '10px auto 0 auto', width: 'fit-content', fontFamily: 'monospace', lineHeight: 1.4 }}>
                                   <div><strong>Código de seguridad:</strong> A1B2C3</div>
                                   <div>
-                                    <strong>Fecha firma digital:</strong> <br/> {new Date().toLocaleDateString('es-DO')} {new Date().toLocaleTimeString('es-DO', { hour12: false })}
+                                    <strong>Firma digital:</strong> <br/> {new Date().toLocaleDateString('es-DO')} {new Date().toLocaleTimeString('es-DO', { hour12: false })}
                                   </div>
                                 </div>
-                                <div style={{ fontSize: '8px', fontWeight: 'bold', color: '#666', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                <div style={{ fontSize: '8px', fontWeight: 'bold', color: '#111', marginTop: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }} className="border border-black/20 px-2 py-1 rounded-sm bg-black/5">
                                   Comprobante Autorizado por la DGII
                                 </div>
                               </div>
                             ) : (
-                              <div className="bg-white p-2 inline-block">
-                                <svg width="200" height="50" className="mx-auto">
-                                  <rect width="200" height="50" fill="white" />
+                              <div className="bg-transparent inline-block">
+                                <svg width="200" height="50" className="mx-auto opacity-90">
                                   {/* Simulación de código de barras */}
-                                  {[...Array(20)].map((_, i) => (
+                                  {[...Array(24)].map((_, i) => (
                                     <rect
                                       key={i}
-                                      x={10 + i * 9}
-                                      y="5"
-                                      width={Math.random() > 0.5 ? 3 : 2}
-                                      height="35"
+                                      x={5 + i * 8}
+                                      y="0"
+                                      width={Math.random() > 0.5 ? 3 : (Math.random() > 0.5 ? 2 : 4)}
+                                      height="38"
                                       fill="black"
                                     />
                                   ))}
-                                  <text x="100" y="48" fontSize="8" textAnchor="middle" fill="black">B0200000001</text>
+                                  <text x="100" y="48" fontSize="10" fontWeight="bold" fontFamily="monospace" textAnchor="middle" fill="black">B0200000001</text>
                                 </svg>
                               </div>
                             )}
@@ -2878,27 +2924,27 @@ const Settings = () => {
                         )}
 
                         {/* Marca de Agua Cobro */}
-                        <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t border-dotted opacity-80" style={{ borderColor: '#ccc' }}>
+                        <div className="flex items-center justify-center gap-2 mt-5 pt-3 border-t border-dotted border-black/20 opacity-60">
                           <img
                             src={`${window.location.origin}/cobro-logo.png`}
                             alt="Cobro"
-                            style={{ height: '16px', width: 'auto', filter: 'grayscale(100%)' }}
+                            style={{ height: '14px', width: 'auto', filter: 'grayscale(100%) opacity(0.8)' }}
                             className="inline-block"
                           />
-                          <span style={{ fontSize: '10px', fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                            Cobro
+                          <span style={{ fontSize: '9px', fontWeight: 700, color: '#111', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+                            Cobro App
                           </span>
                         </div>
                       </div>
-
-                      <p className="text-xs text-muted-foreground text-center mt-4">
-                        ✨ Los cambios se reflejan automáticamente
-                      </p>
+                      
+                      {/* Efecto de papel rasgado inferior (CSS puro) */}
+                      <div className="absolute bottom-0 left-0 right-0 h-2 w-full bg-[radial-gradient(circle_at_10px_10px,#fcfcfc_10px,transparent_11px)]" style={{ backgroundSize: '20px 10px', marginBottom: '-10px', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.1))' }}></div>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Payment Settings */}

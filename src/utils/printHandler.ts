@@ -93,11 +93,15 @@ export const injectPrintStyles = (): void => {
         margin: 0mm;
       }
       
-      html, body {
+      html, body, #root {
         margin: 0;
         padding: 0;
         background: white !important;
         color: black !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        position: static !important;
       }
       
       /* Ocultar elementos de UI que no deben imprimirse */
@@ -123,6 +127,10 @@ export const injectPrintStyles = (): void => {
       .printable-content {
         display: block !important;
         width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        position: static !important;
         margin: 0 !important;
         padding: 0 !important;
         color: black !important;

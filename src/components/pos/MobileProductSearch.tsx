@@ -740,7 +740,7 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
                     <Plus className={cn(
                       "text-white",
                       viewMode === 'list' ? "h-3.5 w-3.5" : (gridCols >= 4 ? "h-3 w-3" : "h-4 w-4")
-                    )} />
+                    )} strokeWidth={2.5} />
                   </div>
                 )}
               </div>
