@@ -360,14 +360,16 @@ const UserSubscription = () => {
                                 {/* Cálculo de días */}
                                 {(() => {
                                     if (!subscription) return null;
-                                    const start = subscription.start_date ? new Date(subscription.start_date) : new Date();
                                     const end = new Date(subscription.end_date!); // ! is safe because of parent check
                                     const now = new Date();
-                                    const total = end.getTime() - start.getTime();
                                     const remaining = end.getTime() - now.getTime();
                                     const daysLeft = Math.ceil(remaining / (1000 * 60 * 60 * 24));
-                                    // Progress bar logic: Full (100%) when new, Empty (0%) when expired.
-                                    const percentRemaining = total > 0 ? Math.max(0, Math.min(100, (remaining / total) * 100)) : 0;
+                                    
+                                    // La barra representa los últimos 30 días. 
+                                    // Si quedan más de 30 días, está al 100% (verde). 
+                                    // Si quedan menos, empieza a bajar progresivamente.
+                                    const referenceDays = 30;
+                                    const percentRemaining = Math.max(0, Math.min(100, (daysLeft / referenceDays) * 100));
 
                                     return (
                                         <>
