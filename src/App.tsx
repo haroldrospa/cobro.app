@@ -12,6 +12,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRedirect from "./components/RoleRedirect";
 import { ScrollUnlocker } from "./components/ScrollUnlocker";
 import { MasterDataProvider } from "@/providers/MasterDataProvider";
+import { initializePaddle } from "@paddle/paddle-js";
 
 // Lazy load components for code splitting
 const Layout = lazy(() => import("./components/Layout"));
@@ -101,6 +102,20 @@ const App = () => {
     });
     return () => subscription.unsubscribe();
   }, [queryClient]);
+
+  // Initialize Paddle globally
+  useEffect(() => {
+    initializePaddle({
+      environment: 'sandbox',
+      token: import.meta.env.VITE_PADDLE_CLIENT_TOKEN || 'test_token',
+    }).then(
+      (paddleInstance) => {
+        if (paddleInstance) {
+          console.log("✅ Paddle initialized successfully");
+        }
+      }
+    ).catch(err => console.error("❌ Failed to initialize Paddle", err));
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

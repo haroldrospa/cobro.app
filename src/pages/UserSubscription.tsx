@@ -257,7 +257,56 @@ const UserSubscription = () => {
         }
     };
 
-    // NUEVA FUNCIÓN: Activación automatizada (Stripe / PayPal)
+    // NUEVA FUNCIÓN: Activación automatizada (Paddle / PayPal)
+    const handlePaddleCheckout = () => {
+        if (!store?.id) return;
+
+        // IDs de precios de prueba de Paddle (Sandbox)
+        // El usuario debe reemplazarlos en Supabase o en el .env, pero por ahora los dejamos como variables o hardcoded 
+        // para que puedan probar en cuanto pongan sus IDs.
+        const paddlePriceIds: Record<string, string> = {
+            'basic': import.meta.env.VITE_PADDLE_BASIC_PRICE_ID || 'pri_01...', 
+            'pro': import.meta.env.VITE_PADDLE_PRO_PRICE_ID || 'pri_02...',
+            'enterprise': import.meta.env.VITE_PADDLE_ENTERPRISE_PRICE_ID || 'pri_03...'
+        };
+
+        const planId = targetPlan || activePlan;
+        const priceId = paddlePriceIds[planId];
+
+        if (!priceId || priceId.startsWith('pri_0')) {
+            toast({
+                title: "Configuración Pendiente",
+                description: `Por favor configura el Price ID de Paddle para el plan ${planId} en tu archivo .env.`,
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        // @ts-ignore
+        if (window.Paddle) {
+            // @ts-ignore
+            window.Paddle.Checkout.open({
+                items: [{ priceId: priceId, quantity: 1 }],
+                customData: {
+                    company_id: store.id,
+                    target_plan_id: planId
+                },
+                settings: {
+                    displayMode: "overlay",
+                    theme: "light",
+                    locale: "es",
+                }
+            });
+            setIsPaymentOpen(false); // Cierra el modal local
+        } else {
+            toast({
+                title: "Error",
+                description: "La pasarela de pago no está cargada. Intente recargar la página.",
+                variant: 'destructive'
+            });
+        }
+    };
+
     const activatePlanAutomated = async (method: 'stripe' | 'paypal') => {
         setIsProcessing(true);
         console.log(`🚀 [AUTO] Activando plan vía ${method}...`);
@@ -473,7 +522,7 @@ const UserSubscription = () => {
                                         </div>
                                         
                                         <div className="space-y-1">
-                                            <h3 className="font-bold text-blue-900">Pago Seguro con Stripe</h3>
+                                            <h3 className="font-bold text-blue-900">Pago Seguro con Paddle</h3>
                                             <p className="text-[11px] text-blue-700/70">Tu pago será procesado de forma segura y tu cuenta se activará al instante.</p>
                                         </div>
 
@@ -484,7 +533,7 @@ const UserSubscription = () => {
 
                                         <Button 
                                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 shadow-lg"
-                                            onClick={() => activatePlanAutomated('stripe')}
+                                            onClick={handlePaddleCheckout}
                                             disabled={isProcessing}
                                         >
                                             {isProcessing ? (
