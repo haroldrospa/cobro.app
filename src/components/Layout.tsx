@@ -300,7 +300,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <ChevronDown className="h-4 w-4 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover">
+              <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto">
                 {navigation.map(item => {
                   const Icon = item.icon;
                   return (
