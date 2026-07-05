@@ -11,7 +11,7 @@ const paddleApiKey = Deno.env.get("PADDLE_API_KEY") || "";
 const paddleWebhookSecret = Deno.env.get("PADDLE_WEBHOOK_SECRET") || "";
 
 const paddle = new Paddle(paddleApiKey, {
-  environment: Environment.sandbox, // Cambiar a Environment.production cuando pases a vivo
+  environment: Environment.production, // Entorno en vivo
 });
 
 serve(async (req) => {

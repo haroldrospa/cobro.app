@@ -106,7 +106,7 @@ const App = () => {
   // Initialize Paddle globally
   useEffect(() => {
     initializePaddle({
-      environment: 'sandbox',
+      environment: 'production',
       token: import.meta.env.VITE_PADDLE_CLIENT_TOKEN || 'test_token',
     }).then(
       (paddleInstance) => {
