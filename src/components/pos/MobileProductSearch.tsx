@@ -363,7 +363,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
       </div>
 
       {/* ── PRODUCTS FEED ── */}
-      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth overscroll-contain">
         <div className={cn("px-2 pt-4", cart && cart.length > 0 ? "pb-28" : "pb-6")}>
           {filteredProducts.length === 0 ? (
             cart && cart.length > 0 ? (

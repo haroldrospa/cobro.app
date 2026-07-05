@@ -246,9 +246,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   if (isFullScreenApp) {
     return (
-      <div className="h-[100dvh] w-screen overflow-hidden flex flex-col">
+      <div className="fixed inset-0 overflow-hidden flex flex-col bg-background">
         {!isOnline && (
-          <div className="bg-destructive text-destructive-foreground p-1 text-center text-xs font-semibold safe-area-top">
+          <div className="bg-destructive text-destructive-foreground p-1 text-center text-xs font-semibold safe-area-top shrink-0 z-50">
             Sin conexión - Trabajando offline
           </div>
         )}

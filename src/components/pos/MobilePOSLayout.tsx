@@ -38,7 +38,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
   const hasItems = cart.length > 0;
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden relative">
+    <div className="h-full flex flex-col bg-background overflow-hidden relative">
       {/* ── MAIN PRODUCT FEED ── */}
       <main className="flex-1 min-h-0 relative">
         {productSearchComponent}

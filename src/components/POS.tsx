@@ -1556,7 +1556,7 @@ const POSContent: React.FC = () => {
 
   if (isMobile) {
     return (
-      <div className="h-[100dvh] flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background">
+      <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background">
         <MobilePOSLayout
           productSearchComponent={
             <MobileProductSearch
