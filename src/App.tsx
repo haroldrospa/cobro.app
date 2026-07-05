@@ -40,6 +40,11 @@ const Kitchen = lazy(() => import("./components/KitchenDisplay"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 
+// Legal Pages
+const Terms = lazy(() => import("./pages/legal/Terms"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
+const Refunds = lazy(() => import("./pages/legal/Refunds"));
+
 // Loading fallback component
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -134,6 +139,9 @@ const App = () => {
               <Route path="/store-suspended" element={<StoreSuspended />} />
               <Route path="/tienda/:slug" element={<Tienda />} />
               <Route path="/buscar-tienda" element={<BuscarTienda />} />
+              <Route path="/terminos" element={<Terms />} />
+              <Route path="/privacidad" element={<Privacy />} />
+              <Route path="/reembolsos" element={<Refunds />} />
 
               {/* Full-screen protected routes - NO Layout header */}
               <Route
