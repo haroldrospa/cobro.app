@@ -277,25 +277,34 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         try {
             // 1. Eliminar automáticamente tickets delta de cocina (ventas fantasmas)
             try {
-                await supabase
-                    .from('open_orders')
-                    .delete()
-                    .eq('store_id', userData?.id)
-                    .eq('profile_id', activeSessionUserId)
-                    .ilike('notes', '[ACTUALIZADO]%');
+                if (userData?.id && activeSessionUserId) {
+                    await supabase
+                        .from('open_orders')
+                        .delete()
+                        .eq('store_id', userData.id)
+                        .eq('profile_id', activeSessionUserId)
+                        .ilike('notes', '[ACTUALIZADO]%');
+                }
             } catch (cleanupErr) {
                 console.error('Error cleaning up delta tickets:', cleanupErr);
             }
 
             // Verificación de ventas abiertas (excluyendo tickets delta)
-            const { count, error: countError } = await supabase
-                .from('open_orders')
-                .select('id', { count: 'exact', head: true })
-                .eq('store_id', userData?.id)
-                .eq('profile_id', activeSessionUserId)
-                .eq('payment_status', 'pending')
-                .eq('source', 'pos')
-                .or('notes.is.null,notes.not.ilike.[ACTUALIZADO]%');
+            let count = 0;
+            let countError = null;
+
+            if (userData?.id && activeSessionUserId) {
+                const result = await supabase
+                    .from('open_orders')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('store_id', userData.id)
+                    .eq('profile_id', activeSessionUserId)
+                    .eq('payment_status', 'pending')
+                    .eq('source', 'pos')
+                    .or('notes.is.null,notes.not.ilike.[ACTUALIZADO]%');
+                count = result.count || 0;
+                countError = result.error;
+            }
 
             if (countError) throw countError;
 
@@ -367,7 +376,9 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             setActualCash('');
             setNotes('');
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error al cerrar caja', description: error.message || 'Error desconocido.' });
+            console.error("Cierre caja error:", error);
+            const errorStr = error?.message || error?.error_description || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+            toast({ variant: 'destructive', title: 'Error al cerrar caja', description: errorStr || 'Error desconocido.' });
         }
     };
 
