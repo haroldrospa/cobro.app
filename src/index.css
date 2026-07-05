@@ -125,6 +125,12 @@
     @apply border-border;
   }
 
+  html,
+  body {
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
   html {
     width: 100%;
     scroll-padding-bottom: 15vh;
