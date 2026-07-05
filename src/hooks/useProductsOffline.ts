@@ -96,7 +96,8 @@ export const useProductsOffline = () => {
                     break;
                 }
 
-                if (chunkError || !chunk) break;
+                if (chunkError) throw chunkError;
+                if (!chunk) throw new Error('No chunk data');
 
                 allData = [...allData, ...chunk];
                 from += step;
@@ -161,7 +162,8 @@ export const useProductsOffline = () => {
                             .order('name')
                             .range(from, from + step - 1);
 
-                        if (error || !chunk) break;
+                        if (error) throw error;
+                        if (!chunk) break;
                         allData = [...allData, ...chunk];
                         from += step;
                         if (chunk.length < step) hasMore = false;
@@ -182,8 +184,8 @@ export const useProductsOffline = () => {
                 setTimeout(() => syncFromSupabase(storeId), 1000);
             }
 
-            // Sin internet y sin caché, o hubo error: retornar vacío temporalmente
-            return [];
+            // Sin internet y sin caché, o hubo error: Lanza error para que React Query reintente y no cachee []
+            throw new Error('Error de conexión al cargar catálogo');
         },
         staleTime: 1000 * 60 * 2,    // 2 min — usar caché local pero verificar seguido
         gcTime: 1000 * 60 * 60 * 24, // 24 horas
