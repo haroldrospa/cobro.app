@@ -352,7 +352,7 @@ const Auth = () => {
   const inputCls = "pl-10 h-12 text-sm !bg-slate-950/40 !border-white/[0.08] text-white placeholder:text-slate-600 focus:!bg-slate-950/60 focus:!border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 focus-visible:ring-offset-0 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 transition-all rounded-xl";
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-tr from-[#121619] via-[#1a2228] to-[#252f36] text-white px-4 py-8 relative overflow-y-auto font-sans selection:bg-emerald-500/30">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-tr from-[#121619] via-[#1a2228] to-[#252f36] text-white px-4 py-8 overflow-y-auto overscroll-none font-sans selection:bg-emerald-500/30">
       {/* Structured dotted grid pattern */}
       <div className="absolute inset-0 z-0 opacity-[0.25]" style={{
         backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1.5px, transparent 0)',
