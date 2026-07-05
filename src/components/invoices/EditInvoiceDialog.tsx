@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -197,14 +197,14 @@ const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4">
+        <DialogFooter className="pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={updateSale.isPending}>
             {updateSale.isPending ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

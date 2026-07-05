@@ -356,14 +356,14 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
               )}
             />
 
-            <div className="flex justify-end gap-2 pt-4">
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={updateCustomer.isPending}>
                 {updateCustomer.isPending ? 'Guardando...' : 'Guardar'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         </Form>
       </DialogContent>
