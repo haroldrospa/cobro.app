@@ -642,3 +642,7 @@ body[data-scroll-locked] {
   grid-column: 1 / -1;
 }
 
+/* Ocultar elementos cuando el teclado virtual está abierto */
+body.keyboard-open .hide-on-keyboard {
+  display: none !important;
+}

@@ -47,7 +47,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
       {/* ── FLOATING PAYMENT BAR — CSS animated, no Framer Motion ── */}
       <div
         className={cn(
-          "absolute bottom-6 left-4 right-4 z-40",
+          "absolute bottom-6 left-4 right-4 z-40 hide-on-keyboard",
           "transition-all duration-300 ease-out will-change-transform",
           hasItems && !isPaymentOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
@@ -117,7 +117,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
       <Drawer open={isCartOpen} onOpenChange={setIsCartOpen}>
         {!hasItems && !isPaymentOpen && (
           <DrawerTrigger asChild>
-            <button className="flex-shrink-0 bg-background/95 backdrop-blur-md border-t border-border/40 py-3 safe-area-bottom px-4 w-full text-left active:bg-muted/50 transition-colors z-40 relative">
+            <button className="flex-shrink-0 bg-background/95 backdrop-blur-md border-t border-border/40 py-3 safe-area-bottom px-4 w-full text-left active:bg-muted/50 transition-colors z-40 relative hide-on-keyboard">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="bg-muted rounded-full p-2">

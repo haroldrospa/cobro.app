@@ -8,7 +8,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { initGlobalKeyboardAvoid } from './hooks/useKeyboardAvoid';
 import { initGlobalAudio } from './utils/audio';
 
-// Activar scroll-into-view global cuando el teclado virtual aparece en móvil
+// Activar manejo de teclado virtual (oculta barras inferiores)
 initGlobalKeyboardAvoid();
 
 // Activar sonidos globales interactivos
