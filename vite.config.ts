@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
 import legacy from '@vitejs/plugin-legacy';
+import viteCompression from 'vite-plugin-compression';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -35,6 +36,16 @@ export default defineConfig(({ mode }) => ({
     react(),
     legacy({
       targets: ["defaults", "not IE 11", "chrome >= 49", "firefox >= 45", "safari >= 10", "edge >= 15"],
+    }),
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024,
+    }),
+    viteCompression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 1024,
     }),
     mode === 'development' && componentTagger(),
     VitePWA({
