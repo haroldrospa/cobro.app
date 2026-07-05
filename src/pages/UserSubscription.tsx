@@ -72,7 +72,7 @@ const UserSubscription = () => {
         {
             id: 'basic',
             name: 'Emprendedor',
-            priceDisplay: '$29',
+            priceDisplay: '$17',
             price: 1500,
             currency: 'USD',
             period: 'mes',
@@ -94,9 +94,9 @@ const UserSubscription = () => {
         },
         {
             id: 'pro',
-            name: 'Negocio',
-            priceDisplay: '$59',
-            price: 3000,
+            name: 'Empresarial',
+            priceDisplay: '$45',
+            price: 4500,
             currency: 'USD',
             period: 'mes',
             description: 'Todo lo que necesitas para escalar.',
@@ -145,6 +145,10 @@ const UserSubscription = () => {
     const targetPlanDetails = plans.find(p => p.id === targetPlan);
 
     const handleSelectPlan = (plan: typeof plans[0]) => {
+        if (plan.id === 'enterprise') {
+            window.open('mailto:soporte@cobroapp.com?subject=Interesado en Plan Corporativo', '_blank');
+            return;
+        }
         setIsSuccess(false); // Reset por si acaso
         setTargetPlan(plan.id);
         setPaymentAmount(plan.price.toString());
@@ -273,7 +277,7 @@ const UserSubscription = () => {
         const planId = targetPlan || activePlan;
         const priceId = paddlePriceIds[planId];
 
-        if (!priceId || priceId.startsWith('pri_0')) {
+        if (!priceId || priceId.includes('...')) {
             toast({
                 title: "Configuración Pendiente",
                 description: `Por favor configura el Price ID de Paddle para el plan ${planId} en tu archivo .env.`,
@@ -514,7 +518,7 @@ const UserSubscription = () => {
                                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5 text-center space-y-4 shadow-sm">
                                         <div className="flex justify-center gap-3">
                                             <div className="h-8 w-12 bg-white rounded border flex items-center justify-center shadow-sm">
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-4" alt="Visa" />
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" className="h-4" alt="Visa" />
                                             </div>
                                             <div className="h-8 w-12 bg-white rounded border flex items-center justify-center shadow-sm">
                                                 <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-5" alt="Mastercard" />
@@ -861,7 +865,7 @@ const UserSubscription = () => {
                                     disabled={activePlan === plan.id}
                                     onClick={() => handleSelectPlan(plan)}
                                 >
-                                    {activePlan === plan.id ? 'Plan Actual' : 'Empezar Prueba'}
+                                    {activePlan === plan.id ? 'Plan Actual' : (plan.id === 'enterprise' ? 'Contactar Soporte' : 'Empezar Prueba')}
                                 </Button>
                             )}
                         </div>
