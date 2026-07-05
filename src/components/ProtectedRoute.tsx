@@ -5,6 +5,7 @@ import { getSessionSafe, invalidateSessionCache } from '@/lib/authSession';
 import { Session } from '@supabase/supabase-js';
 import { Loader2, AlertCircle, Settings2, RefreshCcw, ServerCrash, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getDaysRemaining } from '@/lib/utils';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Button } from '@/components/ui/button';
 import {
@@ -97,12 +98,33 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           const isOnboarded = session.user.user_metadata?.onboarding_completed;
           const currentPath = window.location.pathname;
           
-          if (isOwner && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+          if (isOwner && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended' && currentPath !== '/subscription-expired') {
             navigate('/onboarding', { replace: true });
             return;
           } else if ((isOnboarded || !isOwner) && currentPath === '/onboarding') {
             navigate('/app', { replace: true });
             return;
+          }
+
+          // 4. Check Subscription Status
+          const { data: subscription } = await supabase
+            .from('company_subscriptions')
+            .select('end_date')
+            .eq('company_id', profile.store_id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (subscription?.end_date) {
+            const daysRemaining = getDaysRemaining(subscription.end_date);
+            if (daysRemaining <= 0 && currentPath !== '/subscription' && currentPath !== '/subscription-expired' && currentPath !== '/store-suspended') {
+              navigate('/subscription-expired', { replace: true });
+              return;
+            } else if (daysRemaining > 0 && currentPath === '/subscription-expired') {
+              navigate('/app', { replace: true });
+              return;
+            }
           }
           
           setSession(session);
@@ -129,12 +151,33 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
                 const isOnboarded = session.user.user_metadata?.onboarding_completed;
                 const currentPath = window.location.pathname;
                 
-                if (isOwnerRetried && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended') {
+                if (isOwnerRetried && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended' && currentPath !== '/subscription-expired') {
                   navigate('/onboarding', { replace: true });
                   return;
                 } else if ((isOnboarded || !isOwnerRetried) && currentPath === '/onboarding') {
                   navigate('/app', { replace: true });
                   return;
+                }
+
+                // 4. Check Subscription Status for retried profile
+                const { data: retriedSub } = await supabase
+                  .from('company_subscriptions')
+                  .select('end_date')
+                  .eq('company_id', retriedProfile.store_id)
+                  .eq('status', 'active')
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                if (retriedSub?.end_date) {
+                  const daysRemaining = getDaysRemaining(retriedSub.end_date);
+                  if (daysRemaining <= 0 && currentPath !== '/subscription' && currentPath !== '/subscription-expired' && currentPath !== '/store-suspended') {
+                    navigate('/subscription-expired', { replace: true });
+                    return;
+                  } else if (daysRemaining > 0 && currentPath === '/subscription-expired') {
+                    navigate('/app', { replace: true });
+                    return;
+                  }
                 }
 
                 setSession(session);

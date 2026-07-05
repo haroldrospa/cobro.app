@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { SubscriptionWarningBanner } from '@/components/SubscriptionWarningBanner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -263,6 +264,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SubscriptionWarningBanner />
       {showOfflineBanner && (
         <div className="bg-destructive text-destructive-foreground text-center text-xs py-1 px-4 font-medium fixed top-0 w-full z-50">
           Sin conexión a internet. Trabajando en modo offline.

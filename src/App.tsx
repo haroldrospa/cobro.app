@@ -31,6 +31,7 @@ const Tienda = lazy(() => import("./pages/Tienda"));
 const BuscarTienda = lazy(() => import("./pages/BuscarTienda"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const UserSubscription = lazy(() => import("./pages/UserSubscription"));
+const SubscriptionExpired = lazy(() => import("./pages/SubscriptionExpired"));
 const SuperAdmin = lazy(() => import("./pages/admin/SuperAdmin"));
 const StoreSuspended = lazy(() => import("./pages/StoreSuspended"));
 const Delivery = lazy(() => import("./components/Delivery"));
@@ -172,6 +173,7 @@ const App = () => {
                           <Route path="/accounting" element={<Accounting />} />
                           <Route path="/payroll" element={<Payroll />} />
                           <Route path="/subscription" element={<UserSubscription />} />
+                          <Route path="/subscription-expired" element={<SubscriptionExpired />} />
                           <Route path="/admin/super-panel" element={<SuperAdmin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

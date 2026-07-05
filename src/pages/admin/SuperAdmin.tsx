@@ -55,7 +55,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { differenceInDays } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import { es } from "date-fns/locale";
+import { getDaysRemaining } from "@/lib/utils";
 
 // INTERFAZ DE ADMINISTRACIÓN
 // Ruta: /admin/super-panel
@@ -295,12 +297,6 @@ const SuperAdmin = () => {
         if (!path) return "";
         const { data } = supabase.storage.from("payment-proofs").getPublicUrl(path);
         return data.publicUrl;
-    };
-
-    const getDaysRemaining = (dateString: string) => {
-        if (!dateString) return 0;
-        const days = differenceInDays(new Date(dateString), new Date());
-        return days > 0 ? days : 0;
     };
 
     // 6. Global Settings Logic

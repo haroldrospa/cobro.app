@@ -5,6 +5,7 @@ import { CartItem } from '@/types/pos';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { SubscriptionWarningBanner } from '@/components/SubscriptionWarningBanner';
 
 interface MobilePOSLayoutProps {
   // Products tab
@@ -39,6 +40,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden relative">
+      <SubscriptionWarningBanner />
       {/* ── MAIN PRODUCT FEED ── */}
       <main className="flex-1 min-h-0 relative">
         {productSearchComponent}
