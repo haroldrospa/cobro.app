@@ -250,6 +250,41 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     setEmailAddress('');
   };
 
+  const handleWhatsAppReceipt = () => {
+    if (!paymentReceipt) return;
+    
+    if (!customer?.phone) {
+      toast.error('El cliente no tiene un número de teléfono registrado');
+      return;
+    }
+
+    const message = `*RECIBO DE PAGO*\nNo. ${paymentReceipt.receiptNumber}\n\n*Cliente:* ${paymentReceipt.customerName}\n*Total Pagado:* $${paymentReceipt.totalPaid.toLocaleString('en-US')}\n*Balance Pendiente:* $${paymentReceipt.remainingDebt.toLocaleString('en-US')}\n\nGracias por su pago.`;
+    
+    let phone = customer.phone.replace(/\D/g, ''); 
+    if (phone.length === 10) {
+      phone = `1${phone}`;
+    }
+    
+    if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+      toast('Enviando recibo por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano vía API.' });
+      
+      sendEvolutionWhatsAppMessage(phone, message, {
+        url: storeSettings.evolution_api_url,
+        instanceName: storeSettings.evolution_instance_name,
+        apiKey: storeSettings.evolution_api_key
+      }).then(() => {
+        toast.success('Recibo enviado por WhatsApp');
+      }).catch((err: any) => {
+        toast.error('Error al enviar WhatsApp', { description: err.message || 'Verifica la conexión con Evolution API.' });
+      });
+    } else {
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+      window.open(whatsappUrl, '_blank');
+      toast.info("API no configurada, abriendo WhatsApp Web.");
+    }
+  };
+
   const handleSendStatementEmail = async () => {
     if (!statementEmail || !statementEmail.includes('@')) {
       toast.error('Correo inválido');
@@ -973,23 +1008,27 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4 flex-wrap">
-            <Button onClick={handlePrintReceipt} className="flex-1" size="sm">
+          <div className="grid grid-cols-2 gap-2 mt-4 sm:grid-cols-3">
+            <Button onClick={handlePrintReceipt} className="w-full" size="sm">
               <Printer className="h-4 w-4 mr-2" />
               Imprimir
             </Button>
-            <Button onClick={handleDownloadPDF} variant="outline" className="flex-1" size="sm">
+            <Button onClick={handleDownloadPDF} variant="outline" className="w-full" size="sm">
               <Download className="h-4 w-4 mr-2" />
               PDF
             </Button>
-            <Button onClick={() => setIsEmailDialogOpen(true)} variant="outline" className="flex-1" size="sm">
+            <Button onClick={handleWhatsAppReceipt} variant="outline" className="w-full text-green-600 border-green-600 hover:bg-green-50" size="sm">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              WhatsApp
+            </Button>
+            <Button onClick={() => setIsEmailDialogOpen(true)} variant="outline" className="w-full" size="sm">
               <Mail className="h-4 w-4 mr-2" />
-              Enviar
+              Correo
             </Button>
             <Button
               variant="secondary"
               onClick={() => setPaymentReceipt(null)}
-              className="flex-1"
+              className="w-full sm:col-span-2"
               size="sm"
             >
               <X className="h-4 w-4 mr-2" />
