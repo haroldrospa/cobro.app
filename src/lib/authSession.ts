@@ -19,67 +19,45 @@ let _lastSessionResult: Session | null = null;
 let _lastSessionTs = 0;
 const SESSION_CACHE_TTL = 1000 * 60 * 5; // 5 minutos
 
-/**
- * Obtiene la sesión de Supabase de forma segura:
- * - Deduplica llamadas concurrentes (sólo una petición en vuelo)
- * - Reintenta automáticamente ante AbortError (máx. 3 intentos)
- * - Cachea el resultado 5 minutos para evitar llamadas innecesarias
- */
 export async function getSessionSafe(): Promise<Session | null> {
-  // Usar cache si está fresco
   const now = Date.now();
   if (_lastSessionResult && (now - _lastSessionTs) < SESSION_CACHE_TTL) {
     return _lastSessionResult;
   }
 
-  // Si ya hay una petición en vuelo, esperarla en lugar de lanzar otra
-  if (_pendingSessionPromise) {
-    try {
-      return await _pendingSessionPromise;
-    } catch {
-      // Si la petición en vuelo falló, intentar de nuevo abajo
-    }
-  }
-
-  _pendingSessionPromise = (async () => {
-    const MAX_RETRIES = 3;
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.warn('[authSession] getSession error:', error.message);
+  if (!_pendingSessionPromise) {
+    _pendingSessionPromise = (async () => {
+      const MAX_RETRIES = 3;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (error) {
+            console.warn('[authSession] getSession error:', error.message);
+            break;
+          }
+          if (data.session) {
+            _lastSessionResult = data.session;
+            _lastSessionTs = Date.now();
+          }
+          return data.session;
+        } catch (e: any) {
+          const isAbort = e?.name === 'AbortError' || e?.message?.includes('aborted');
+          if (isAbort && attempt < MAX_RETRIES) {
+            const delay = 300 * attempt;
+            await new Promise(r => setTimeout(r, delay));
+            continue;
+          }
+          if (!isAbort) {
+            console.warn('[authSession] getSession falló definitivamente:', e?.message);
+          }
           break;
         }
-        _lastSessionResult = data.session;
-        _lastSessionTs = Date.now();
-        return data.session;
-      } catch (e: any) {
-        const isAbort = e?.name === 'AbortError' || e?.message?.includes('aborted');
-        if (isAbort && attempt < MAX_RETRIES) {
-          const delay = 300 * attempt;
-          console.warn(`[authSession] AbortError en intento ${attempt}/${MAX_RETRIES}. Reintentando en ${delay}ms...`);
-          await new Promise(r => setTimeout(r, delay));
-          continue;
-        }
-        // No es AbortError, o se agotaron los intentos
-        console.warn('[authSession] getSession falló definitivamente:', e?.message);
-        break;
       }
-    }
-    // Si todo falla, intentar con refreshSession una última vez
-    try {
-      const { data } = await supabase.auth.refreshSession();
-      if (data?.session) {
-        _lastSessionResult = data.session;
-        _lastSessionTs = Date.now();
-        return data.session;
-      }
-    } catch { /* ignore */ }
-
-    return _lastSessionResult; // retornar último resultado cacheado si existe
-  })().finally(() => {
-    _pendingSessionPromise = null;
-  });
+      return _lastSessionResult;
+    })().finally(() => {
+      _pendingSessionPromise = null;
+    });
+  }
 
   return _pendingSessionPromise;
 }

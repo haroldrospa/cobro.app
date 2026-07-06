@@ -39,7 +39,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 
 createRoot(document.getElementById("root")!).render(
     <AppErrorBoundary>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
             <App />
         </ThemeProvider>
     </AppErrorBoundary>

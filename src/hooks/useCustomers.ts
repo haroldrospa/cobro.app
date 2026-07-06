@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { offlineDB, OfflineStore } from '@/lib/offlineDB';
 import { useOnlineStatus } from './useProductsOffline';
+import { getSessionSafe } from '@/lib/authSession';
 
 export interface Customer {
   id: string;
@@ -36,13 +37,13 @@ export const useCustomers = () => {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
-        // Get current user's store_id
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const session = await getSessionSafe();
+        if (!session?.user) {
           // Offline: return from IndexedDB
           const localCustomers = await offlineDB.getAll<Customer>(OfflineStore.CUSTOMERS);
           return localCustomers;
         }
+        const user = session.user;
 
         if (!isOnline) {
           // Without internet, load from IndexedDB
@@ -82,11 +83,12 @@ export const useCustomers = () => {
 
         const customers = allData;
 
-        // Guardar en IndexedDB en paralelo (mucho más rápido que uno por uno)
+        // Guardar en IndexedDB en paralelo (mucho más rápido usando putBulk)
         // Solo guardamos los primeros 5000 para no saturar IndexedDB si son demasiados,
         // pero devolvemos todos al estado de la app.
         const syncLimit = 5000;
-        await Promise.all(customers.slice(0, syncLimit).map(c => offlineDB.put(OfflineStore.CUSTOMERS, c)));
+        await offlineDB.putBulk(OfflineStore.CUSTOMERS, customers.slice(0, syncLimit))
+          .catch(e => console.warn('IndexedDB bulk write error (customers):', e));
 
         return customers;
       } catch (error) {

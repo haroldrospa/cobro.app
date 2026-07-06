@@ -63,6 +63,7 @@ const UserSubscription = () => {
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false); // Estado para pantalla de éxito
+    const [isAnnual, setIsAnnual] = useState(false);
 
     // Estado para reporte de pago manual
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
@@ -73,7 +74,9 @@ const UserSubscription = () => {
             id: 'basic',
             name: 'Emprendedor',
             priceDisplay: '$17',
-            price: 1500,
+            price: 17,
+            annualPriceDisplay: '$14',
+            annualPrice: 168,
             currency: 'USD',
             period: 'mes',
             description: 'Ideal para empezar con el pie derecho.',
@@ -96,7 +99,9 @@ const UserSubscription = () => {
             id: 'pro',
             name: 'Empresarial',
             priceDisplay: '$45',
-            price: 4500,
+            price: 45,
+            annualPriceDisplay: '$37',
+            annualPrice: 444,
             currency: 'USD',
             period: 'mes',
             description: 'Todo lo que necesitas para escalar.',
@@ -119,7 +124,9 @@ const UserSubscription = () => {
             id: 'enterprise',
             name: 'Corporativo',
             priceDisplay: 'Personalizado',
-            price: 6000,
+            price: 0,
+            annualPriceDisplay: 'Personalizado',
+            annualPrice: 0,
             currency: '',
             period: '',
             description: 'Potencia ilimitada y adaptación exacta a las necesidades de tu negocio.',
@@ -151,7 +158,7 @@ const UserSubscription = () => {
         }
         setIsSuccess(false); // Reset por si acaso
         setTargetPlan(plan.id);
-        setPaymentAmount(plan.price.toString());
+        setPaymentAmount(isAnnual ? plan.annualPrice.toString() : plan.price.toString());
         setIsPaymentOpen(true);
     };
 
@@ -269,9 +276,9 @@ const UserSubscription = () => {
         // El usuario debe reemplazarlos en Supabase o en el .env, pero por ahora los dejamos como variables o hardcoded 
         // para que puedan probar en cuanto pongan sus IDs.
         const paddlePriceIds: Record<string, string> = {
-            'basic': import.meta.env.VITE_PADDLE_BASIC_PRICE_ID || 'pri_01...', 
-            'pro': import.meta.env.VITE_PADDLE_PRO_PRICE_ID || 'pri_02...',
-            'enterprise': import.meta.env.VITE_PADDLE_ENTERPRISE_PRICE_ID || 'pri_03...'
+            'basic': isAnnual ? import.meta.env.VITE_PADDLE_BASIC_ANNUAL_PRICE_ID : import.meta.env.VITE_PADDLE_BASIC_PRICE_ID,
+            'pro': isAnnual ? import.meta.env.VITE_PADDLE_PRO_ANNUAL_PRICE_ID : import.meta.env.VITE_PADDLE_PRO_PRICE_ID,
+            'enterprise': import.meta.env.VITE_PADDLE_ENTERPRISE_PRICE_ID
         };
 
         const planId = targetPlan || activePlan;
@@ -452,13 +459,17 @@ const UserSubscription = () => {
                         )}
 
                         <Button className="w-full shadow-md" onClick={() => {
+                            if (currentPlanDetails.id === 'enterprise') {
+                                window.open('mailto:soporte@cobroapp.com?subject=Renovación de Plan Corporativo', '_blank');
+                                return;
+                            }
                             setIsSuccess(false);
                             setTargetPlan(null); // Reset target
                             setPaymentAmount(currentPlanDetails.price.toString());
                             setIsPaymentOpen(true);
                         }}>
                             <Wallet className="mr-2 h-4 w-4" />
-                            Reportar Pago / Renovar
+                            {currentPlanDetails.id === 'enterprise' ? 'Contactar Soporte' : 'Reportar Pago / Renovar'}
                         </Button>
                     </CardContent>
                 </Card>
@@ -513,44 +524,66 @@ const UserSubscription = () => {
                                     </TabsList>
                                 </div>
 
-                                {/* TAB 1: CARD (STRIPE) */}
-                                <TabsContent value="card" className="p-5 space-y-4 animate-in slide-in-from-left-2 transition-all">
-                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5 text-center space-y-4 shadow-sm">
-                                        <div className="flex justify-center gap-3">
-                                            <div className="h-8 w-12 bg-white rounded border flex items-center justify-center shadow-sm">
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" className="h-4" alt="Visa" />
-                                            </div>
-                                            <div className="h-8 w-12 bg-white rounded border flex items-center justify-center shadow-sm">
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-5" alt="Mastercard" />
-                                            </div>
-                                        </div>
+                                {/* TAB 1: CARD (PADDLE) */}
+                                <TabsContent value="card" className="p-2 space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                                    <div className="relative overflow-hidden bg-[#1c1d22] border border-white/5 rounded-2xl p-6 text-center shadow-2xl">
+                                        {/* Background Glow */}
+                                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 blur-[80px] rounded-full pointer-events-none" />
+                                        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full pointer-events-none" />
                                         
-                                        <div className="space-y-1">
-                                            <h3 className="font-bold text-blue-900">Pago Seguro con Paddle</h3>
-                                            <p className="text-[11px] text-blue-700/70">Tu pago será procesado de forma segura y tu cuenta se activará al instante.</p>
-                                        </div>
+                                        <div className="relative z-10 flex flex-col items-center">
+                                            {/* Icons */}
+                                            <div className="flex justify-center gap-2 mb-5">
+                                                <div className="h-10 w-14 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex items-center justify-center shadow-inner">
+                                                    <svg className="h-4 text-white opacity-90" viewBox="0 0 38 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M14.502 11.233L16.892.427h3.818l-2.39 10.806h-3.818zm11.18-10.609c-1.077-.423-2.736-.889-4.739-.889-4.212 0-7.18 2.228-7.202 5.419-.023 2.362 2.146 3.673 3.774 4.465 1.673.814 2.234 1.336 2.234 2.062-.02 1.116-1.349 1.62-2.593 1.62-1.748 0-2.695-.272-4.127-.923l-.58-.27-1.12 5.093c1.078.498 3.064.927 5.143.953 4.492 0 7.41-2.197 7.433-5.597.022-1.895-1.127-3.336-3.6-4.505-1.503-.772-2.42-1.284-2.42-2.068 0-.712.809-1.464 2.464-1.464 1.412-.023 2.457.29 3.238.65l.39.18 1.125-5.118zm10.74 10.609l-3.612-9.673c-.27-.687-.852-1.034-1.554-1.133h-6.7l-.105.485c1.298.272 2.766.777 3.682 1.348l-3.14 8.973h4.032l.805-2.224h4.925l.47 2.224h3.197zm-5.717-5.32l1.986-5.417 1.143 5.418h-3.13zM6.91 11.233l-2.78-7.502L2.946.804A1.674 1.674 0 0 0 1.378 0H.02L0 .093c2.723.687 5.795 1.956 7.643 3.447l1.196-3.113h4.1l-6.03 10.806H6.91z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="h-10 w-14 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex items-center justify-center shadow-inner">
+                                                    <svg className="h-6" viewBox="0 0 36 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <circle cx="11.25" cy="11.25" r="11.25" fill="#EB001B"/>
+                                                        <circle cx="24.75" cy="11.25" r="11.25" fill="#F79E1B"/>
+                                                        <path fillRule="evenodd" clipRule="evenodd" d="M18 17.58A11.25 11.25 0 0 1 18 4.92a11.25 11.25 0 0 1 0 12.66Z" fill="#FF5F00"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-1.5 mb-6">
+                                                <h3 className="text-lg font-bold text-white tracking-tight flex items-center justify-center gap-2">
+                                                    Pago Seguro 
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20">
+                                                        Paddle
+                                                    </span>
+                                                </h3>
+                                                <p className="text-[12px] text-zinc-400 max-w-[240px] mx-auto leading-relaxed">
+                                                    Cifrado de grado bancario. Tu suscripción se activará al instante.
+                                                </p>
+                                            </div>
 
-                                        <div className="bg-white/80 p-3 rounded-lg border border-blue-200/50 flex flex-col items-center">
-                                            <span className="text-2xl font-black text-blue-900">RD${parseFloat(paymentAmount).toLocaleString()}</span>
-                                            <span className="text-[10px] text-muted-foreground font-medium">TOTAL A PAGAR</span>
-                                        </div>
+                                            <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col items-center mb-6">
+                                                <span className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase mb-1">Total a Pagar</span>
+                                                <span className="text-3xl font-black text-white tracking-tighter">
+                                                    RD${parseFloat(paymentAmount).toLocaleString()}
+                                                </span>
+                                            </div>
 
-                                        <Button 
-                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 shadow-lg"
-                                            onClick={handlePaddleCheckout}
-                                            disabled={isProcessing}
-                                        >
-                                            {isProcessing ? (
-                                                <Loader2 className="h-5 w-5 animate-spin" />
-                                            ) : (
-                                                <>
-                                                    <ShieldCheck className="mr-2 h-5 w-5" />
-                                                    Pagar con Tarjeta
-                                                </>
-                                            )}
-                                        </Button>
+                                            <Button 
+                                                className="w-full bg-white text-black hover:bg-zinc-200 font-bold h-12 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:scale-[1.02] active:scale-[0.98] group"
+                                                onClick={handlePaddleCheckout}
+                                                disabled={isProcessing}
+                                            >
+                                                {isProcessing ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <ShieldCheck className="w-4 h-4 mr-2 group-hover:text-emerald-600 transition-colors" />
+                                                        Ingresar Tarjeta
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
+                                    <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1 mt-2">
                                         <ShieldCheck className="h-3 w-3" /> Conexión cifrada de 256 bits
                                     </p>
                                 </TabsContent>
@@ -689,9 +722,25 @@ const UserSubscription = () => {
             </Dialog>
 
             {/* Planes y Precios Grid */}
-            <h2 className="text-2xl font-black tracking-tight uppercase tracking-widest text-center mt-12 mb-8">
-                Planes Disponibles
-            </h2>
+            <div className="text-center mt-12 mb-8">
+                <h2 className="text-2xl font-black uppercase tracking-widest mb-6">
+                    Planes Disponibles
+                </h2>
+                
+                <div className="flex items-center justify-center gap-3">
+                    <span className={`text-sm font-medium ${!isAnnual ? 'text-white' : 'text-slate-400'}`}>Pago Mensual</span>
+                    <button 
+                        onClick={() => setIsAnnual(!isAnnual)}
+                        className="w-14 h-7 bg-emerald-500 rounded-full relative transition-colors focus:outline-none"
+                    >
+                        <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform ${isAnnual ? 'left-8' : 'left-1'}`} />
+                    </button>
+                    <span className={`text-sm font-medium flex items-center gap-1 ${isAnnual ? 'text-white' : 'text-slate-400'}`}>
+                        Pago Anual <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">(Ahorra hasta 17%)</span>
+                    </span>
+                </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto px-2">
                 {plans.map((plan) => {
                     const isBasic = plan.id === 'basic';
@@ -761,21 +810,30 @@ const UserSubscription = () => {
                                         </span>
                                     </div>
                                 ) : (
-                                    <div className="flex items-baseline gap-1.5 mb-8">
-                                        <span
-                                            className={`text-4xl font-black tracking-tight ${
-                                                isPro ? 'text-emerald-950' : 'text-white'
-                                            }`}
-                                        >
-                                            {plan.priceDisplay}
-                                        </span>
-                                        <span
-                                            className={`text-xs font-semibold ${
-                                                isPro ? 'text-emerald-900/80' : 'text-zinc-500'
-                                            }`}
-                                        >
-                                            USD / {plan.period}
-                                        </span>
+                                    <div className="flex flex-col gap-1 mb-8">
+                                        <div className="flex items-baseline gap-1.5">
+                                            <span
+                                                className={`text-4xl font-black tracking-tighter ${
+                                                    isPro ? 'text-emerald-950' : 'text-white'
+                                                }`}
+                                            >
+                                                {isAnnual ? plan.annualPriceDisplay : plan.priceDisplay}
+                                            </span>
+                                            <span
+                                                className={`text-sm font-bold uppercase tracking-wider ${
+                                                    isPro ? 'text-emerald-900/60' : 'text-zinc-500'
+                                                }`}
+                                            >
+                                                USD / mes
+                                            </span>
+                                        </div>
+                                        {isAnnual && (
+                                            <div className="mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <span className={`inline-block text-xs font-bold px-2 py-1 rounded-full ${isPro ? 'bg-emerald-950 text-emerald-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                                    Pago único de ${plan.annualPrice} USD
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

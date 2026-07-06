@@ -15,6 +15,7 @@ import { offlineDB, OfflineStore } from '@/lib/offlineDB';
 import { offlineSyncManager } from '@/lib/offlineSync';
 import { Product } from './useProducts';
 import { useUserStore } from '@/hooks/useUserStore';
+import { getSessionSafe } from '@/lib/authSession';
 
 // Hook para detectar estado online/offline
 export const useOnlineStatus = () => {
@@ -59,9 +60,13 @@ export const useProductsOffline = () => {
         }
 
         syncInProgress.add(sid);
-        lastSyncTimestamp.set(sid, now);
-
         try {
+            const session = await getSessionSafe();
+            if (!session) {
+                console.warn('📦 Background sync abortado: sin sesión');
+                return;
+            }
+
             let allData: any[] = [];
             let hasMore = true;
             let from = 0;
@@ -145,6 +150,10 @@ export const useProductsOffline = () => {
             console.log('📦 Primera carga: descargando catálogo desde Supabase...');
             if (isOnline) {
                 try {
+                    const session = await getSessionSafe();
+                    if (!session) {
+                        throw new Error('Sin sesión válida al cargar productos');
+                    }
                     let allData: any[] = [];
                     let hasMore = true;
                     let from = 0;

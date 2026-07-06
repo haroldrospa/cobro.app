@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
 import { z } from 'zod';
@@ -59,11 +60,13 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+1_do');
   const [companyName, setCompanyName] = useState('');
   const [rnc, setRnc] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('basic');
   const [selectedBusinessType, setSelectedBusinessType] = useState<'restaurant' | 'store' | 'supermarket'>('store');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -189,28 +192,69 @@ const Auth = () => {
     }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     setErrors({});
     let hasError = false;
+    let currentFieldErrors: Record<string, string> = {};
+    
     try {
       if (step === 1) step1Schema.parse({ fullName, email, phone });
       if (step === 2) step2Schema.parse({ companyName, rnc });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const fieldErrors: Record<string, string> = {};
         error.errors.forEach(err => {
           if (err.path[0]) {
-            fieldErrors[err.path[0] as string] = err.message;
+            currentFieldErrors[err.path[0] as string] = err.message;
           }
         });
-        setErrors(fieldErrors);
+        setErrors(currentFieldErrors);
         hasError = true;
       }
     }
-    if (!hasError) {
-      setDirection(1);
-      setStep(s => s + 1);
+
+    if (hasError) return;
+
+    setLoading(true);
+
+    try {
+      if (step === 1) {
+        const fullPhone = `${countryCode.split('_')[0]}${phone}`;
+        const { data: existing, error } = await supabase.rpc('check_existing_user', {
+          p_email: email,
+          p_phone: fullPhone
+        });
+        
+        if (existing) {
+          const { emailExists, phoneExists } = existing as any;
+          if (emailExists) currentFieldErrors.email = 'Este correo electrónico ya está registrado.';
+          if (phoneExists) currentFieldErrors.phone = 'Este teléfono ya está registrado.';
+          
+          if (emailExists || phoneExists) {
+            setErrors(currentFieldErrors);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      if (step === 2) {
+        const { data: rncExists, error } = await supabase.rpc('check_existing_rnc', {
+          p_rnc: rnc
+        });
+          
+        if (rncExists) {
+          setErrors({ rnc: 'Este RNC ya se encuentra registrado.' });
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+       console.error("Validation error", err);
     }
+    
+    setLoading(false);
+    setDirection(1);
+    setStep(s => s + 1);
   };
 
   const handlePrevStep = () => {
@@ -249,7 +293,7 @@ const Auth = () => {
             full_name: fullName,
             company_name: companyName,
             rnc: rnc,
-            phone: phone,
+            phone: `${countryCode.split('_')[0]}${phone}`,
             plan_id: 'basic',
             shop_type: selectedBusinessType,
             onboarding_completed: true
@@ -552,13 +596,41 @@ const Auth = () => {
                         {showPassword ? <EyeOff className="h-4.5 w-4.5" strokeWidth={1.75} /> : <Eye className="h-4.5 w-4.5" strokeWidth={1.75} />}
                       </Button>
                     </div>
-                    <div className="flex justify-end mt-1">
+                    <div className="flex justify-between items-center mt-4 mb-2">
+                      <label 
+                        className="flex items-center gap-2.5 cursor-pointer group select-none"
+                        onClick={() => setRememberMe(!rememberMe)}
+                      >
+                        <div className="relative">
+                          {/* Outer ring */}
+                          <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all duration-300 ease-out shadow-sm
+                            ${rememberMe 
+                              ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' 
+                              : 'bg-[#15171b] border-slate-700/60 group-hover:border-emerald-500/50'
+                            }`}
+                          >
+                            <Check 
+                              className={`w-3.5 h-3.5 text-slate-950 stroke-[4] transition-all duration-300
+                                ${rememberMe ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}
+                              `}
+                            />
+                          </div>
+                          {/* Ripple effect on check */}
+                          {rememberMe && (
+                            <div className="absolute inset-0 rounded-md ring-2 ring-emerald-500/30 animate-ping opacity-20 pointer-events-none" />
+                          )}
+                        </div>
+                        <span className="text-[11.5px] text-slate-400 font-medium group-hover:text-slate-200 transition-colors">
+                          Recordar sesión
+                        </span>
+                      </label>
+                      
                       <button
                         type="button"
                         onClick={() => setAuthView('forgot-password')}
-                        className="text-[11px] text-slate-400 hover:text-emerald-400 transition-colors duration-200 font-medium cursor-pointer"
+                        className="text-[11.5px] text-emerald-500/80 hover:text-emerald-400 transition-colors duration-200 font-semibold cursor-pointer tracking-tight"
                       >
-                        ¿Olvidaste tu contraseña?
+                        ¿Olvidaste tu clave?
                       </button>
                     </div>
                     {errors.password && <p className="text-[10px] text-red-400 mt-1">{errors.password}</p>}
@@ -597,6 +669,14 @@ const Auth = () => {
                       />
                     ))}
                   </div>
+                  {step === 1 && (
+                    <div className="mt-5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 flex items-center gap-3">
+                      <span className="text-xl">🎁</span>
+                      <p className="text-xs text-emerald-400 font-medium leading-relaxed">
+                        ¡Crea tu cuenta ahora y disfruta de <strong className="text-white">15 días de prueba gratis</strong> con todas las funciones!
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <AnimatePresence mode="wait" custom={direction}>
@@ -620,7 +700,7 @@ const Auth = () => {
                             placeholder="Ej. Juan Pérez"
                             value={fullName}
                             onChange={e => setFullName(e.target.value)}
-                            className={inputCls}
+                            className={`${inputCls} ${errors.fullName ? '!border-red-500/60 focus:!border-red-500 focus:ring-red-500/20 focus-visible:border-red-500' : ''}`}
                           />
                         </div>
                         {errors.fullName && <p className="text-[10px] text-red-400">{errors.fullName}</p>}
@@ -636,7 +716,7 @@ const Auth = () => {
                             placeholder="tu@email.com"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
-                            className={inputCls}
+                            className={`${inputCls} ${errors.email ? '!border-red-500/60 focus:!border-red-500 focus:ring-red-500/20 focus-visible:border-red-500' : ''}`}
                           />
                         </div>
                         {errors.email && <p className="text-[10px] text-red-400">{errors.email}</p>}
@@ -645,14 +725,49 @@ const Auth = () => {
                       <div className="space-y-2">
                         <Label htmlFor="signup-phone" className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Teléfono móvil</Label>
                         <div className="relative">
-                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" strokeWidth={1.75} />
+                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 z-10" strokeWidth={1.75} />
+                          
+                          <div className="absolute left-9 top-1/2 -translate-y-1/2 z-10 flex items-center">
+                            <Select value={countryCode} onValueChange={setCountryCode}>
+                              <SelectTrigger className="h-8 border-0 bg-transparent text-slate-200 focus:ring-0 focus:ring-offset-0 px-2 shadow-none font-medium gap-1 text-[13px] hover:text-white transition-colors">
+                                <SelectValue placeholder="País" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#121619] border-white/10 text-slate-200 max-h-[250px] shadow-xl">
+                                {[
+                                  { value: '+1_do', code: 'do', label: '+1', name: 'DO' },
+                                  { value: '+1_us', code: 'us', label: '+1', name: 'US' },
+                                  { value: '+34', code: 'es', label: '+34', name: 'ES' },
+                                  { value: '+52', code: 'mx', label: '+52', name: 'MX' },
+                                  { value: '+54', code: 'ar', label: '+54', name: 'AR' },
+                                  { value: '+56', code: 'cl', label: '+56', name: 'CL' },
+                                  { value: '+57', code: 'co', label: '+57', name: 'CO' },
+                                ].map((country) => (
+                                  <SelectItem key={country.value} value={country.value} className="cursor-pointer focus:bg-white/5 focus:text-white">
+                                    <div className="flex items-center gap-2">
+                                      <img 
+                                        src={`https://flagcdn.com/w20/${country.code}.png`} 
+                                        srcSet={`https://flagcdn.com/w40/${country.code}.png 2x`}
+                                        width="16" 
+                                        height="12" 
+                                        alt={country.name} 
+                                        className="rounded-[2px] shadow-sm"
+                                      />
+                                      <span>{country.label}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="h-5 w-[1px] bg-white/10 mx-1"></div>
+                          </div>
+
                           <Input
                             id="signup-phone"
                             type="tel"
-                            placeholder="Ej. 8095551234"
+                            placeholder="809-555-1234"
                             value={phone}
                             onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 15))}
-                            className={inputCls}
+                            className={`${inputCls} !pl-[145px] ${errors.phone ? '!border-red-500/60 focus:!border-red-500 focus:ring-red-500/20 focus-visible:border-red-500' : ''}`}
                           />
                         </div>
                         {errors.phone && <p className="text-[10px] text-red-400">{errors.phone}</p>}
@@ -661,9 +776,10 @@ const Auth = () => {
                       <Button
                         type="button"
                         onClick={handleNextStep}
+                        disabled={loading}
                         className="w-full h-12 mt-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all rounded-xl group text-sm"
                       >
-                        Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                        {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verificando...</> : <>Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" /></>}
                       </Button>
                     </motion.div>
                   )}
@@ -688,7 +804,7 @@ const Auth = () => {
                             placeholder="Ej. Mi Tienda, S.R.L."
                             value={companyName}
                             onChange={e => setCompanyName(e.target.value)}
-                            className={inputCls}
+                            className={`${inputCls} ${errors.companyName ? '!border-red-500/60 focus:!border-red-500 focus:ring-red-500/20 focus-visible:border-red-500' : ''}`}
                           />
                         </div>
                         {errors.companyName && <p className="text-[10px] text-red-400">{errors.companyName}</p>}
@@ -704,7 +820,7 @@ const Auth = () => {
                             placeholder="Ej. 132456789"
                             value={rnc}
                             onChange={e => setRnc(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                            className={inputCls}
+                            className={`${inputCls} ${errors.rnc ? '!border-red-500/60 focus:!border-red-500 focus:ring-red-500/20 focus-visible:border-red-500' : ''}`}
                           />
                         </div>
                         {errors.rnc && <p className="text-[10px] text-red-400">{errors.rnc}</p>}
@@ -722,9 +838,10 @@ const Auth = () => {
                         <Button
                           type="button"
                           onClick={handleNextStep}
+                          disabled={loading}
                           className="flex-[2] h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all rounded-xl group text-sm"
                         >
-                          Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verificando...</> : <>Siguiente <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" /></>}
                         </Button>
                       </div>
                     </motion.div>
@@ -745,28 +862,39 @@ const Auth = () => {
                           { id: 'store', label: 'Tienda', desc: 'Venta de productos, inventario y clientes', icon: '🛍️' },
                           { id: 'restaurant', label: 'Restaurante', desc: 'Mesas, cocina, pedidos y delivery', icon: '🍽️' },
                           { id: 'supermarket', label: 'Supermercado', desc: 'Gran inventario, categorías y cajas', icon: '🛒' },
-                        ].map(type => (
-                          <div
-                            key={type.id}
-                            onClick={() => setSelectedBusinessType(type.id as any)}
-                            className={`cursor-pointer rounded-xl border p-4 flex items-center gap-4 transition-all duration-200 ${
-                              selectedBusinessType === type.id
-                                ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_4px_20px_rgba(16,185,129,0.05)]'
-                                : 'border-white/5 bg-slate-950/20 hover:border-white/10 hover:bg-slate-950/30'
-                              }`}
-                          >
-                             <div className="text-2xl opacity-90">{type.icon}</div>
-                             <div className="flex-1">
-                               <div className={`text-sm font-semibold tracking-wide ${selectedBusinessType === type.id ? 'text-emerald-50 font-bold' : 'text-slate-300'}`}>{type.label}</div>
-                               <div className={`text-xs mt-0.5 ${selectedBusinessType === type.id ? 'text-emerald-400' : 'text-slate-500'}`}>{type.desc}</div>
-                             </div>
-                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                               selectedBusinessType === type.id ? 'border-emerald-500 bg-emerald-500' : 'border-white/10 bg-transparent'
-                             }`}>
-                               {selectedBusinessType === type.id && <Check className="w-3 h-3 text-emerald-950" strokeWidth={3} />}
-                             </div>
-                          </div>
-                        ))}
+                        ].map(type => {
+                          const isSelected = selectedBusinessType === type.id;
+                          return (
+                            <div
+                              key={type.id}
+                              onClick={() => setSelectedBusinessType(type.id as any)}
+                              className={`group cursor-pointer rounded-2xl border p-4 flex items-center gap-5 transition-all duration-300 ${
+                                isSelected
+                                  ? 'border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/50'
+                                  : 'border-white/5 bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04] hover:shadow-lg hover:-translate-y-0.5'
+                                }`}
+                            >
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
+                                isSelected 
+                                  ? 'bg-emerald-500/20 scale-110 shadow-inner' 
+                                  : 'bg-white/5 group-hover:scale-105 group-hover:bg-white/10'
+                              }`}>
+                                <span className={isSelected ? 'drop-shadow-lg' : ''}>{type.icon}</span>
+                              </div>
+                              <div className="flex-1">
+                                <div className={`text-[15px] font-bold tracking-wide transition-colors ${isSelected ? 'text-emerald-400' : 'text-slate-200 group-hover:text-white'}`}>{type.label}</div>
+                                <div className={`text-[13px] mt-1 transition-colors ${isSelected ? 'text-emerald-400/80' : 'text-slate-500'}`}>{type.desc}</div>
+                              </div>
+                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                                isSelected 
+                                  ? 'border-emerald-500 bg-emerald-500 scale-110 shadow-[0_0_10px_rgba(16,185,129,0.4)]' 
+                                  : 'border-white/10 bg-transparent group-hover:border-white/30'
+                              }`}>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-emerald-950" strokeWidth={4} />}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       <div className="flex gap-3 mt-6">

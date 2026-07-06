@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ShoppingCart, Store, Plus, Minus, Trash2, ArrowLeft, Package,
   Search, Sparkles, Tag, Filter, X, ChevronRight, Star, Percent,
   SlidersHorizontal, DollarSign, MapPin, User, ShoppingBag, Utensils, Home,
   Wallet, CreditCard, Smartphone, Building2, CheckCircle2, Navigation, UserPlus,
-  Facebook, Instagram, Twitter, Phone, Mail, AlertTriangle, LogIn
+  Facebook, Instagram, Twitter, Phone, Mail, AlertTriangle, LogIn, Heart, Moon, Sun
 } from 'lucide-react';
+import { useTheme } from '@/components/ThemeProvider';
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ import { ShopperProfileDialog } from '@/components/store/ShopperProfileDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useShopperOrders } from '@/hooks/useShopperOrders';
 import { useChatNotifications } from '@/hooks/useChatNotifications';
+import { MobileDock, TabId } from '@/components/store/MobileDock';
 
 interface CartItem {
   product: Product;
@@ -78,6 +80,7 @@ const Tienda: React.FC = () => {
   const { toast } = useToast();
   const { profile, saveProfile, isProfileComplete } = useShopperProfile();
   const { user } = useShopperAuth();
+  const { theme, setTheme } = useTheme();
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
@@ -97,6 +100,36 @@ const Tienda: React.FC = () => {
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<TabId>('home');
+
+  useEffect(() => {
+    if (!showCart && activeMobileTab === 'cart') {
+      setActiveMobileTab('home');
+    }
+  }, [showCart, activeMobileTab]);
+
+  useEffect(() => {
+    if (!showProfileDialog && activeMobileTab === 'profile') {
+      setActiveMobileTab('home');
+    }
+  }, [showProfileDialog, activeMobileTab]);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTabChange = (tab: TabId) => {
+    setActiveMobileTab(tab);
+    if (tab === 'cart') {
+      setShowCart(true);
+    } else if (tab === 'profile') {
+      setShowProfileDialog(true);
+    } else if (tab === 'search') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  };
+
   const [profileDialogView, setProfileDialogView] = useState<'orders' | 'settings'>('orders');
   const [loyaltyData, setLoyaltyData] = useState<{ points: number, code: string } | null>(null);
 
@@ -398,7 +431,7 @@ const Tienda: React.FC = () => {
       // CARD STYLING - Refined for premium compact look
       card: {
         restaurant: `rounded-2xl shadow-sm hover:shadow-md border border-border/40 bg-card transition-all duration-300 hover:-translate-y-1`, // Removed heavy gradients and borders
-        fashion: `rounded-sm border border-border/20 shadow-none hover:shadow-sm transition-all duration-300 bg-white`,
+        fashion: `rounded-sm border border-border/20 shadow-none hover:shadow-sm transition-all duration-300 bg-white dark:bg-card`,
         supermarket: `rounded-lg border border-[hsl(40,35%,28%)] shadow-md hover:shadow-lg hover:border-[hsl(40,65%,55%)] transition-all duration-200 bg-[hsl(145,40%,14%)] overflow-hidden`,
         technology: `rounded-xl bg-slate-900 border border-slate-800 shadow-sm hover:shadow-cyan-500/10 hover:border-cyan-500/30 transition-all duration-300`,
         default: `rounded-xl border border-border/40 shadow-sm hover:shadow-md bg-card transition-all duration-300`
@@ -438,7 +471,7 @@ const Tienda: React.FC = () => {
       // CONTAINER STYLING - Theme-specific backgrounds
       pageBackground: {
         restaurant: 'bg-gradient-to-b from-orange-50 via-white to-red-50',
-        fashion: 'bg-white',
+        fashion: 'bg-white dark:bg-card',
         supermarket: 'bg-[hsl(145,45%,11%)]',
         technology: 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950',
         default: 'bg-gradient-to-b from-background to-muted/20'
@@ -683,624 +716,165 @@ const Tienda: React.FC = () => {
 
 
   return (
-    <div
-      className={`min-h-screen ${themeClasses.pageBackground} transition-colors duration-500`}
-      style={themeStyles}
-      data-theme={shopType}
-    >
-      {/* Header - Optimized for Mobile */}
-      {/* Header - Premium App Style */}
-      {/* Header - Premium Glassmorphism Style */}
-      <header className="sticky top-0 z-50 w-full transition-all duration-300">
-        {/* Glass Background Layer */}
-        <div className="absolute inset-0 bg-background/60 backdrop-blur-2xl border-b border-white/10 shadow-lg shadow-black/5 supports-[backdrop-filter]:bg-background/40 transition-colors duration-500" />
-
-        <div className="relative container mx-auto px-4 py-3">
-          {/* Mobile Layout Premium Optimization */}
-          <div className="md:hidden space-y-5">
-            {/* Top Row: Brand & Actions */}
-            <div className="flex items-center justify-between gap-3 pt-1">
-              {/* Brand Identity */}
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="relative group cursor-pointer flex-shrink-0">
-                  {companySettings?.logo_url ? (
-                    <img
-                      src={companySettings.logo_url}
-                      alt="Logo"
-                      className="h-11 w-11 object-cover rounded-full bg-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                    />
-                  ) : (
-                    <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shadow-sm">
-                      <Store className="h-5.5 w-5.5 text-primary" />
-                    </div>
-                  )}
-                  {/* Live Status Orb */}
-                  <span className="absolute bottom-0 right-0 flex h-3 w-3">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isStoreCurrentlyOpen ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
-                    <span className={`relative inline-flex rounded-full h-3 w-3 ${isStoreCurrentlyOpen ? 'bg-emerald-500' : 'bg-red-500'} border-2 border-background shadow-sm`}></span>
-                  </span>
-                </div>
-
-                <div className="flex flex-col justify-center min-w-0">
-                  <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground leading-tight truncate">
-                    {storeName}
-                  </h1>
-                  <p className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 mt-0.5 tracking-wider uppercase">
-                    <span className={isStoreCurrentlyOpen ? "text-emerald-600 dark:text-emerald-500 font-bold" : "text-red-600 dark:text-red-500 font-bold"}>
-                      {isStoreCurrentlyOpen ? "Abierto" : "Cerrado"}
-                    </span>
-                    <span className="opacity-40">•</span>
-                    <span>Catálogo</span>
-                  </p>
-                </div>
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-background font-sans text-slate-900 dark:text-foreground pb-24">
+      {/* iOS-Style Header */}
+      <header className="sticky top-0 z-40 bg-[#f8f9fa] dark:bg-background/80 backdrop-blur-xl pt-4 pb-2 px-6 flex items-center justify-between max-w-7xl mx-auto w-full">
+        <div className="w-10" />
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] text-slate-400 dark:text-muted-foreground/80 font-medium tracking-wide">location:</span>
+          <span className="text-sm font-bold tracking-tight text-slate-800 dark:text-foreground/90">{storeName || 'Tienda'}</span>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-200/50 dark:hover:bg-zinc-800" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+            {theme === 'dark' ? <Sun className="h-6 w-6 text-slate-400 dark:text-muted-foreground/80 dark:text-muted-foreground" /> : <Moon className="h-6 w-6 text-slate-400 dark:text-muted-foreground/80 dark:text-muted-foreground" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-slate-200/50 dark:hover:bg-zinc-800" onClick={() => setShowProfileDialog(true)}>
+            {user && profile?.name ? (
+              <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-secondary flex items-center justify-center font-bold text-slate-600 dark:text-muted-foreground dark:text-muted-foreground">
+                {profile.name.charAt(0)}
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2.5 sm:gap-1.5 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 sm:h-9 sm:w-9 rounded-full bg-secondary/60 hover:bg-secondary text-foreground transition-all"
-                  onClick={() => { setProfileDialogView('orders'); setShowProfileDialog(true); }}
-                >
-                  <User className="h-5 w-5 sm:h-4.5 sm:w-4.5 opacity-80" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowCart(true)}
-                  className={`relative h-10 w-10 sm:h-9 sm:w-9 rounded-full transition-all ${cartAnimations.length > 0 ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary/60 hover:bg-secondary text-foreground'}`}
-                  aria-label="Ver carrito"
-                >
-                  <ShoppingBag className={`h-5 w-5 sm:h-4.5 sm:w-4.5 ${cartAnimations.length > 0 ? 'animate-bounce' : 'opacity-80'}`} />
-                  {cartItemCount > 0 && (
-                    <span className={`absolute -top-0.5 -right-0.5 h-3.5 min-w-[14px] px-1 bg-destructive text-white text-[9px] font-black rounded-full flex items-center justify-center border border-background shadow-sm transition-transform duration-300 ${cartAnimations.length > 0 ? 'scale-110' : 'animate-in zoom-in'}`}>
-                      {cartItemCount}
-                    </span>
-                  )}
-                </Button>
+            ) : (
+              <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-secondary flex items-center justify-center">
+                <User className="h-5 w-5 text-slate-500 dark:text-muted-foreground dark:text-muted-foreground" />
               </div>
-            </div>
-
-            {/* Premium Search Bar */}
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <Search className="h-4.5 w-4.5 text-muted-foreground/60" />
-              </div>
-              <Input
-                placeholder="¿Qué se te antoja hoy?"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 pr-11 bg-secondary/50 border-0 focus-visible:ring-1 focus-visible:ring-border h-12 rounded-2xl text-[15px] font-medium placeholder:text-muted-foreground/50 shadow-none transition-all hover:bg-secondary/70"
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-black/5 dark:hover:bg-white/10 rounded-full text-muted-foreground"
-                  onClick={() => setSearchTerm('')}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Desktop Layout - Premium & Spacious */}
-          <div className="hidden md:flex items-center gap-8 animate-in fade-in slide-in-from-top-4 duration-700 fill-mode-forwards">
-            {/* Animated Brand Section */}
-            <div className="flex items-center gap-4 group cursor-pointer select-none">
-              <div className="relative transition-transform duration-500 hover:scale-110">
-                <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full opacity-40 group-hover:opacity-60 transition-opacity duration-500 animate-pulse-slow" />
-                {companySettings?.logo_url ? (
-                  <img
-                    src={companySettings.logo_url}
-                    alt="Logo"
-                    className="relative h-12 w-12 object-contain rounded-full shadow-xl shadow-primary/10 ring-2 ring-white/10 bg-background/80 backdrop-blur-md transition-all duration-300 group-hover:ring-primary/40 group-hover:shadow-primary/30"
-                  />
-                ) : (
-                  <div className="relative h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white shadow-lg ring-2 ring-white/20 transition-all duration-300 group-hover:shadow-primary/50 group-hover:scale-105">
-                    <Store className="h-6 w-6" />
-                  </div>
-                )}
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-300 transform origin-left group-hover:scale-[1.02]">{storeName}</h1>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium mt-1 transition-opacity group-hover:opacity-90">
-                  <span className={`inline-flex items-center gap-1.5 ${isStoreCurrentlyOpen ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-emerald-500/5 group-hover:bg-emerald-500/15 group-hover:border-emerald-500/30' : 'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/5 group-hover:bg-red-500/15 group-hover:border-red-500/30'} px-2.5 py-0.5 rounded-full border backdrop-blur-sm shadow-sm transition-colors`}>
-                    <span className="relative flex h-2 w-2">
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isStoreCurrentlyOpen ? 'bg-emerald-400' : 'bg-red-400'} opacity-75 duration-1000`}></span>
-                      <span className={`relative inline-flex rounded-full h-2 w-2 ${isStoreCurrentlyOpen ? 'bg-emerald-500' : 'bg-red-500'} ${isStoreCurrentlyOpen ? 'shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></span>
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider font-extrabold ml-0.5">
-                      {isStoreCurrentlyOpen ? "Abierto" : "Cerrado"}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Premium Search Bar */}
-            <div className="flex-1 max-w-xl mx-4 transition-all duration-500 ease-out hover:max-w-2xl">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-purple-500/20 to-primary/20 rounded-full blur-md opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
-                <div className="relative flex items-center">
-                  <Search className="absolute left-4 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
-                  <Input
-                    placeholder="Buscar en todo el catálogo..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-11 pr-4 h-12 bg-muted/40 hover:bg-muted/60 focus:bg-background border-white/5 hover:border-white/10 focus:border-primary/30 rounded-full transition-all duration-300 shadow-inner focus:shadow-xl focus:shadow-primary/5 text-sm placeholder:text-muted-foreground/50 selection:bg-primary/20"
-                  />
-                  {searchTerm && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-2 h-8 w-8 rounded-full hover:bg-background/80 text-muted-foreground hover:text-foreground animate-in zoom-in duration-200"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                className="hidden lg:flex h-11 rounded-full px-4 hover:bg-white/5 border border-transparent hover:border-white/10 gap-3 transition-all group overflow-hidden"
-                onClick={() => setShowProfileDialog(true)}
-              >
-                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-[1px] shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <div className="h-full w-full rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                    {user && profile?.name ? (
-                      <span className="text-xs font-bold text-white">{profile.name.charAt(0)}</span>
-                    ) : (
-                      <User className="h-3.5 w-3.5 text-white" />
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col items-start gap-0.5 max-w-[100px]">
-                  <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors truncate w-full">
-                    {user && profile?.name ? `Hola, ${profile.name.split(' ')[0]}` : 'Mi Cuenta'}
-                  </span>
-                  {user && <span className="text-[10px] text-primary/80 font-semibold tracking-wide uppercase">Cliente</span>}
-                </div>
-              </Button>
-
-              <Button
-                className={`relative h-11 rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg transition-all duration-300 group overflow-hidden ${cartAnimations.length > 0 ? 'scale-105 shadow-primary/50 translate-y-[-2px] ring-4 ring-primary/30' : 'shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95'}`}
-                onClick={() => setShowCart(true)}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer skew-x-12" />
-
-                <div className="relative flex items-center gap-2.5">
-                  <div className="relative">
-                    <ShoppingBag className={`h-5 w-5 transition-transform duration-300 ${cartAnimations.length > 0 ? 'animate-bounce scale-110 drop-shadow-md' : 'group-hover:rotate-6'}`} />
-                    {cartItemCount > 0 && (
-                      <span className={`absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-primary text-[9px] font-bold shadow-sm transition-transform duration-300 ${cartAnimations.length > 0 ? 'scale-125 bg-emerald-400 text-white' : 'animate-bounce'}`}>
-                        {cartItemCount}
-                      </span>
-                    )}
-                  </div>
-                  <span className="hidden lg:inline font-bold tracking-tight">Mi Pedido</span>
-                  {cartItemCount > 0 && (
-                    <span className="hidden lg:flex bg-white/20 backdrop-blur-sm h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full text-[10px] font-bold ml-1 animate-in zoom-in">
-                      {new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(cartTotal)}
-                    </span>
-                  )}
-                </div>
-              </Button>
-            </div>
-          </div>
+            )}
+            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#f8f9fa] dark:border-zinc-950"></span>
+          </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6 pb-24 md:pb-6">
+      <main className="px-6 space-y-6 mt-4 max-w-7xl mx-auto w-full">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-muted-foreground" />
+          <Input 
+            ref={searchInputRef}
+            type="text"
+            placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-12 py-6 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-none rounded-2xl text-base focus-visible:ring-1 focus-visible:ring-primary/50 transition-shadow"
+          />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:text-muted-foreground dark:hover:text-foreground transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
 
-        {/* Tarjeta de Fidelidad Virtual */}
-        {loyaltyData && (
-          <section className="mb-2 animate-in fade-in slide-in-from-top-4 duration-700">
-            <div className="relative group overflow-hidden max-w-sm mx-auto sm:mx-0">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-              <div className="relative bg-card border rounded-2xl p-5 shadow-sm overflow-hidden min-h-[160px] flex flex-col justify-between">
-                {/* Decorative card background element */}
-                <div className="absolute top-0 right-0 -tr-4 opacity-5 pointer-events-none">
-                  <Star className="h-32 w-32 text-yellow-500 rotate-12" />
-                </div>
-
-                <div className="flex justify-between items-start z-10">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-yellow-500" />
-                      Tarjeta Virtual
-                    </span>
-                    <h3 className="text-lg font-black tracking-tight">Cobroapp Rewards</h3>
-                  </div>
-                  <div className="h-10 w-10 bg-yellow-500/10 rounded-full flex items-center justify-center border border-yellow-500/20">
-                    <Star className="h-6 w-6 text-yellow-600 fill-yellow-500" />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 my-2 z-10">
-                  <div className="text-4xl font-black text-foreground tracking-tighter">
-                    {loyaltyData.points}
-                  </div>
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Puntos</span>
-                    <span className="text-sm font-bold text-yellow-600">Acumulados</span>
-                  </div>
-                </div>
-
-                <div className="pt-3 mt-1 border-t border-dashed border-border/60 flex items-center justify-between z-10">
-                  <div>
-                    <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter">Validación POS</span>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xl font-mono font-black text-primary tracking-widest uppercase">
-                        {loyaltyData.code || '---'}
-                      </p>
-                      {loyaltyData.code && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-transparent"
-                          onClick={() => {
-                            navigator.clipboard.writeText(loyaltyData.code);
-                            toast({ title: "Código copiado", description: "Llévalo contigo para usar tus puntos en caja." });
-                          }}
-                        >
-                          <Share2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] text-muted-foreground italic leading-none mb-1">Dígitalo en caja</p>
-                    <div className="flex gap-1 justify-end opacity-40">
-                      {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-0.5 w-2 bg-foreground rounded-full"></div>)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-      {/* Closed Store Warning Alert */}
-      {!isStoreCurrentlyOpen && (
-        <section className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl p-4 md:p-6 shadow-xl shadow-red-500/20 border border-white/10 overflow-hidden relative group">
-            {/* Decorative Background Elements */}
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700" />
-            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 bg-black/10 rounded-full blur-3xl group-hover:bg-black/20 transition-all duration-700" />
-
-            <div className="relative flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-              <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                <AlertTriangle className="h-7 w-7 text-white animate-pulse" />
-              </div>
-              <div className="flex-1 space-y-1">
-                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic">
-                  ¡Negocio Cerrado Temporalmente!
-                </h2>
-                <p className="text-white/90 text-sm md:text-base font-medium max-w-2xl leading-relaxed">
-                  Agradecemos tu preferencia, pero en este momento no estamos recibiendo pedidos.
-                  Por favor revisa nuestro horario de atención para saber cuándo estaremos listos para servirte.
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 min-w-[120px]">
-                <span className="px-4 py-2 bg-black/20 backdrop-blur-md rounded-full border border-white/20 text-white text-[10px] uppercase font-black tracking-widest text-center">
-                  Pronto Contigo
-                </span>
-              </div>
-            </div>
+        {/* Title & Categories */}
+        <section>
+          <div className="flex items-end justify-between mb-4">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground tracking-tight">Populares</h1>
+            <button className="text-xs text-slate-400 dark:text-muted-foreground/80 font-medium hover:text-slate-600 dark:text-muted-foreground transition-colors" onClick={() => setSelectedCategory(null)}>
+              ver todo
+            </button>
           </div>
-        </section>
-      )}
-
-      {/* Filters Sticky Bar - Elegant & Modern */}
-      <section className="sticky top-[100px] md:top-[80px] z-40 -mx-4 px-4 md:mx-0 md:px-0 pointer-events-none pt-2">
-        {/* Container with pointer-events-auto so clicks work but empty space passes through to content below */}
-        <div className="pointer-events-auto">
-          <div className="relative">
-            {/* Horizontal Gradient Masks for scroll cue */}
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none md:hidden" />
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none md:hidden" />
-
-            <div className="flex items-center gap-2.5 overflow-x-auto pb-4 pt-1 -mx-4 px-4 scrollbar-none snap-x mask-fade-edges">
-              {/* Offers Chip */}
-              <button
-                onClick={() => setShowOnlyDiscounts(!showOnlyDiscounts)}
-                className={`
-                      relative group flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all duration-300 select-none whitespace-nowrap snap-start
-                      ${showOnlyDiscounts
-                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-md scale-105'
-                    : 'bg-secondary/60 hover:bg-secondary text-foreground'
-                  }
-                    `}
-              >
-                <Percent className={`h-3.5 w-3.5 ${showOnlyDiscounts ? '' : 'text-orange-500'}`} />
-                <span>Ofertas</span>
-              </button>
-
-              <div className="h-5 w-px bg-border/40 mx-1 flex-shrink-0" />
-
-              {/* Category Chips - Premium styling */}
-              <button
+          
+          <ScrollArea className="w-full whitespace-nowrap pb-4 -mx-6 px-6" type="scroll">
+            <div className="flex w-max space-x-3">
+              <button 
                 onClick={() => setSelectedCategory(null)}
-                className={`
-                      px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all duration-300 whitespace-nowrap select-none snap-start
-                      ${selectedCategory === null
-                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-md scale-105'
-                    : 'bg-secondary/60 hover:bg-secondary text-foreground'
-                  }
-                    `}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm ${!selectedCategory ? 'bg-red-700 text-white' : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
               >
-                Todos
+                🥘 Todos
               </button>
-
-              {categories.map(cat => (
+              {categories.map((cat, idx) => (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
-                  className={`
-                        px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all duration-300 whitespace-nowrap select-none snap-start
-                        ${selectedCategory === cat.id
-                      ? 'bg-black text-white dark:bg-white dark:text-black shadow-md scale-105'
-                      : 'bg-secondary/60 hover:bg-secondary text-foreground'
-                    }
-                      `}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm ${selectedCategory === cat.id ? 'bg-red-700 text-white' : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
                 >
+                  <span className="text-base">{['🍜', '🍣', '🍱', '🍙', '🥟', '🍤', '🍚'][idx % 7]}</span>
                   {cat.name}
                 </button>
               ))}
-
-              {/* Price Filter - Desktop only usually, but let's keep it tucked inside for mobile if needed or just visible on larger screens */}
-              <div className="hidden sm:block ml-auto pl-2">
-                <Select value={priceFilter} onValueChange={setPriceFilter}>
-                  <SelectTrigger className={`border-0 bg-muted/50 hover:bg-muted focus:ring-0 rounded-full h-9 gap-2 text-xs font-medium w-auto min-w-[130px] transition-all ${priceFilter !== 'all' ? 'text-primary' : 'text-muted-foreground'}`}>
-                    <div className="flex items-center gap-2">
-                      <div className="bg-background rounded-full p-1 shadow-sm">
-                        <DollarSign className="h-3 w-3" />
-                      </div>
-                      <SelectValue placeholder="Precio" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border/20 shadow-xl bg-background/95 backdrop-blur-lg">
-                    <SelectItem value="all">Cualquier precio</SelectItem>
-                    <SelectItem value="under50">Menos de $50</SelectItem>
-                    <SelectItem value="50to100">$50 - $100</SelectItem>
-                    <SelectItem value="100to500">$100 - $500</SelectItem>
-                    <SelectItem value="over500">Más de $500</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Banner Carousel */}
-      {banners.length > 0 && !searchTerm && (
-        <section className="animate-fade-in mt-2 mb-6 md:mt-0 shadow-lg shadow-black/5 rounded-2xl ring-1 ring-border/30">
-          <BannerCarousel banners={banners} />
+          </ScrollArea>
         </section>
-      )}
-      {/* Featured Section */}
-      {featuredProducts.length > 0 && !searchTerm && !selectedCategory && (
-        <section className="animate-fade-in">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-gradient-to-br from-destructive to-orange-500 rounded-lg">
-              <Percent className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold" style={{ fontFamily: themeClasses.heading.fontFamily, fontWeight: themeClasses.heading.fontWeight }}>¡Ofertas y Destacados!</h2>
-              <p className="text-sm text-muted-foreground">Productos en promoción</p>
-            </div>
+
+        {/* Featured Banner */}
+        <section>
+          <div className="w-full bg-black rounded-[32px] overflow-hidden relative min-h-[160px] flex items-center shadow-lg">
+             <div className="absolute top-0 left-0 bottom-0 w-2/3 bg-gradient-to-r from-black via-black/80 to-transparent z-10" />
+             {banners.length > 0 && banners[0].image_url ? (
+               <img src={banners[0].image_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover opacity-70" />
+             ) : (
+               <div className="absolute inset-0 bg-zinc-900" />
+             )}
+             <div className="relative z-20 w-full flex justify-end px-8 py-6">
+                <div className="text-right flex flex-col items-end">
+                  <h3 className="text-white text-2xl font-light leading-tight">Discount 50%</h3>
+                  <button className="text-white/60 text-xs mt-2 hover:text-white transition-colors">learn more...</button>
+                </div>
+             </div>
           </div>
+        </section>
 
-          <div className={`grid ${themeClasses.grid}`}>
-            {featuredProducts.map(product => {
-              const hasDiscount = isDiscountActive(product);
-              const discountedPrice = getDiscountedPrice(product);
-
-              return (
-                <Card
-                  key={product.id}
-                  className={`group overflow-hidden ${themeClasses.card} hover:-translate-y-1 cursor-pointer ${hasDiscount ? 'border-destructive/30 bg-gradient-to-br from-destructive/5 to-orange-500/5' : ''}`}
-                  onClick={(e) => handleAddToCartAnim(e, product)}
-                >
-                  <div className="relative">
-                    {product.image_url ? (
-                      <div className={`${themeClasses.imageAspect} overflow-hidden`}>
-                        <img
-                          src={product.image_url}
+        {/* Product Grid */}
+        <section className="pt-2">
+          {filteredProducts.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 dark:text-muted-foreground/80">No hay productos disponibles</div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+              {filteredProducts.slice(0, visibleCount).map((product) => {
+                const hasDiscount = isDiscountActive(product);
+                const discountedPrice = getDiscountedPrice(product);
+                
+                return (
+                  <div 
+                    key={product.id} 
+                    className="bg-white dark:bg-card rounded-[24px] p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] hover:shadow-md transition-shadow cursor-pointer flex flex-col h-full relative border border-slate-100 dark:border-border"
+                    onClick={(e) => handleAddToCartAnim(e, product)}
+                  >
+                    <button className="absolute top-4 left-4 z-10 text-slate-300 hover:text-rose-400 transition-colors" onClick={(e) => e.stopPropagation()}>
+                      <Heart className="h-5 w-5" />
+                    </button>
+                    
+                    <div className="aspect-square w-full relative mb-3 overflow-hidden">
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          className="absolute inset-0 w-full h-full object-contain drop-shadow-md p-2"
                         />
-                      </div>
-                    ) : (
-                      <div className="aspect-square bg-muted flex items-center justify-center">
-                        <Package className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                    )}
-
-                    {/* Discount badge */}
-                    {hasDiscount && (
-                      <Badge className="absolute top-2 left-2 bg-destructive border-0 text-sm font-bold">
-                        -{product.discount_percentage}%
-                      </Badge>
-                    )}
-
-                    {/* Featured badge */}
-                    {product.is_featured && !hasDiscount && (
-                      <Badge className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 border-0">
-                        <Star className="h-3 w-3 mr-1" />
-                        Destacado
-                      </Badge>
-                    )}
-                  </div>
-
-                  <CardContent className={themeClasses.cardPadding}>
-                    <h3 className="font-semibold line-clamp-1 text-sm">{product.name}</h3>
-                    <div className="mt-1">
-                      {hasDiscount ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm line-through text-muted-foreground">${product.price.toFixed(2)}</span>
-                          <span className={`${themeClasses.priceSize} font-bold text-destructive`}>${discountedPrice.toFixed(2)}</span>
-                        </div>
                       ) : (
-                        <p className={`${themeClasses.priceSize} font-bold text-primary`}>${product.price.toFixed(2)}</p>
+                        <div className="absolute inset-0 w-full h-full bg-slate-50 rounded-2xl flex items-center justify-center">
+                          <Package className="h-8 w-8 text-slate-300" />
+                        </div>
                       )}
                     </div>
-                  </CardContent>
-
-                  <CardFooter className="p-3 pt-0">
-                    <Button
-                      size="sm"
-                      className={`w-full ${themeClasses.button} ${hasDiscount ? 'bg-gradient-to-r from-destructive to-orange-500 hover:from-destructive/90 hover:to-orange-600 text-white border-0' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCartAnim(e, product);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Agregar
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
+                    
+                    <div className="flex-1 flex flex-col justify-end mt-auto">
+                      <h3 className="font-bold text-[13px] text-slate-800 dark:text-foreground/90 line-clamp-2 min-h-[2.5rem] mb-2">{product.name}</h3>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[15px] text-slate-900 dark:text-foreground tracking-tight">
+                          $ {(hasDiscount ? discountedPrice : product.price).toFixed(2)}
+                        </span>
+                        <div className="flex items-center gap-1 text-slate-500 dark:text-muted-foreground">
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          <span className="text-[11px] font-medium">4.8</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
+          {visibleCount < filteredProducts.length && (
+            <div className="flex justify-center mt-6">
+              <Button variant="outline" className="rounded-full bg-white dark:bg-card shadow-sm border-slate-200 dark:border-border text-slate-600 dark:text-muted-foreground font-semibold" onClick={() => setVisibleCount(prev => prev + 20)}>
+                Cargar más
+              </Button>
+            </div>
+          )}
         </section>
-      )}
-
-
-      {/* Products Grid */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold" style={{ fontFamily: themeClasses.heading.fontFamily, fontWeight: themeClasses.heading.fontWeight }}>
-            {selectedCategory
-              ? categories.find(c => c.id === selectedCategory)?.name
-              : searchTerm
-                ? `Resultados para "${searchTerm}"`
-                : 'Todos los Productos'}
-          </h2>
-          <Badge variant="secondary">{filteredProducts.length} productos</Badge>
-        </div>
-
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-12 bg-muted/30 rounded-xl">
-            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-base font-medium">No se encontraron productos</p>
-            <p className="text-sm text-muted-foreground mb-4">Intenta con otra búsqueda</p>
-            <Button variant="outline" size="sm" onClick={() => { setSearchTerm(''); setSelectedCategory(null); }}>
-              Ver todos
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 pb-24 md:pb-0">
-            {filteredProducts.slice(0, visibleCount).map((product, idx) => (
-              <div
-                key={product.id}
-                className="group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 active:scale-95 animate-in fade-in zoom-in-95 duration-500"
-                style={{ animationDelay: `${(idx % 20) * 30}ms` }}
-                onClick={(e) => {
-                  if (!isDiscountActive(product) && (product.track_inventory !== false) && (product.stock ?? 0) <= 0) return;
-                  handleAddToCartAnim(e, product);
-                }}
-              >
-                {/* Image Area */}
-                <div className="relative aspect-[1/1.1] overflow-hidden bg-zinc-800/30">
-                  {product.image_url ? (
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                      className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${(product.track_inventory !== false) && (product.stock ?? 0) <= 0 ? 'grayscale opacity-40' : ''}`}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="h-6 w-6 text-zinc-700" />
-                    </div>
-                  )}
-
-                  {/* Subtle Gradient Overlay */}
-                  <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
-
-                  {/* Badges - Scaled for 4 columns */}
-                  <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10">
-                    {isDiscountActive(product) && (
-                      <div className="bg-emerald-500 text-[8px] font-black px-1.5 py-0.5 rounded-full text-white shadow-lg animate-pulse">
-                        -{product.discount_percentage}%
-                      </div>
-                    )}
-                    {(product.track_inventory !== false) && (product.stock ?? 0) <= (product.min_stock ?? 0) && (product.stock ?? 0) > 0 && (
-                      <div className="bg-orange-500 text-[7px] font-black px-1.5 py-0.5 rounded-full text-white shadow-lg uppercase tracking-tighter">
-                        Ultimos
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Out of Stock Overlay */}
-                  {(product.track_inventory !== false) && (product.stock ?? 0) <= 0 && (
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
-                      <Badge variant="outline" className="font-bold border-2 px-3 py-1 bg-background/50 rounded-full">Agotado</Badge>
-                    </div>
-                  )}
-                </div>
-
-                {/* Content Area - Minimal & Epic */}
-                <div className="p-2 flex-1 flex flex-col justify-between gap-1.5">
-                  <div className="space-y-0.5">
-                    <h3 className="font-bold text-[10px] leading-tight line-clamp-2 text-zinc-100 tracking-tight uppercase">
-                      {product.name}
-                    </h3>
-                    {product.category && (
-                      <p className="text-[7px] uppercase tracking-widest font-black text-emerald-500/50 line-clamp-1">
-                        {product.category.name}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center justify-between border-t border-white/5 pt-1.5 mt-auto">
-                    <div className="flex flex-col">
-                      {isDiscountActive(product) ? (
-                        <div className="flex flex-col -space-y-0.5">
-                          <span className="text-[7px] text-zinc-500 line-through opacity-70">${product.price.toLocaleString()}</span>
-                          <span className="font-black text-xs text-emerald-500 tracking-tighter">${getDiscountedPrice(product).toLocaleString()}</span>
-                        </div>
-                      ) : (
-                        <span className="font-black text-xs text-emerald-500 tracking-tighter">${product.price.toLocaleString()}</span>
-                      )}
-                    </div>
-                    <div className="h-6 w-6 rounded-lg bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-90 transition-transform">
-                      <Plus className="h-4 w-4 text-white" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {visibleCount < filteredProducts.length && (
-          <div className="flex justify-center mt-8 pb-24 md:pb-0 animate-in fade-in duration-300">
-            <Button
-              variant="outline"
-              size="lg"
-              className="rounded-full px-8 font-semibold shadow-sm hover:shadow-md transition-all bg-background/80 backdrop-blur-md border-border/60 hover:bg-muted/80"
-              onClick={() => setVisibleCount(prev => prev + 24)}
-            >
-              Cargar más productos
-            </Button>
-          </div>
-        )}
-      </section>
-    </main>
-
+      </main>
       {/* Premium Footer */ }
   <footer className="bg-gradient-to-b from-muted/50 to-muted/80 border-t border-border/40 pt-16 pb-8 mt-auto">
     <div className="container mx-auto px-6">
@@ -1310,7 +884,7 @@ const Tienda: React.FC = () => {
         <div className="md:col-span-5 space-y-4">
           <div className="flex items-center gap-3">
             {companySettings?.logo_url ? (
-              <img src={companySettings.logo_url} alt={storeName} className="h-12 w-12 object-contain rounded-xl bg-white/5 p-1 border border-white/10" />
+              <img src={companySettings.logo_url} alt={storeName} className="h-12 w-12 object-contain rounded-xl bg-white dark:bg-card/5 p-1 border border-white/10" />
             ) : (
               <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Store className="h-6 w-6 text-primary" />
@@ -1413,34 +987,12 @@ const Tienda: React.FC = () => {
     </div>
   </footer>
 
-  {/* Floating Cart Button (Mobile) - Enhanced */ }
-  {
-    cartItemCount > 0 && (
-      <div className="fixed bottom-0 left-0 right-0 md:hidden z-50 p-3 bg-gradient-to-t from-background via-background to-transparent animate-in slide-in-from-bottom duration-300">
-        <Button
-          size="lg"
-          className="w-full h-14 text-base font-bold shadow-2xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-          onClick={() => setShowCart(true)}
-        >
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-2 -right-2 h-4 w-4 bg-destructive text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {cartItemCount}
-                </span>
-              </div>
-              <span>Ver Carrito</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-lg">${cartTotal.toFixed(2)}</span>
-              <ChevronRight className="h-5 w-5" />
-            </div>
-          </div>
-        </Button>
-      </div>
-    )
-  }
+  {/* Mobile Spotlight Dock */}
+  <MobileDock
+    activeTab={activeMobileTab}
+    setActiveTab={handleTabChange}
+    cartItemCount={cartItemCount}
+  />
 
   {/* Cart Dialog */}
   <Dialog open={showCart} onOpenChange={setShowCart}>
@@ -1484,7 +1036,7 @@ const Tienda: React.FC = () => {
             <div className="divide-y divide-border/40 pb-4 pt-2">
               {cart.map(item => (
                 <div key={item.product.id} className="flex items-center gap-4 py-4 group">
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 flex-shrink-0 shadow-sm border border-black/5 dark:border-white/5">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-white dark:bg-card dark:bg-secondary flex-shrink-0 shadow-sm border border-black/5 dark:border-border">
                     {item.product.image_url ? (
                       <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                     ) : (
@@ -1960,11 +1512,11 @@ const Tienda: React.FC = () => {
           >
             <div className="relative">
               {anim.image ? (
-                <div className="h-16 w-16 p-1 bg-white/95 backdrop-blur-md rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-2 border-primary/20 flex items-center justify-center">
+                <div className="h-16 w-16 p-1 bg-white dark:bg-card/95 backdrop-blur-md rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-2 border-primary/20 flex items-center justify-center">
                   <img src={anim.image} alt="product" className="h-full w-full rounded-full object-cover" />
                 </div>
               ) : (
-                <div className="h-16 w-16 p-1 bg-white/95 backdrop-blur-md rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-2 border-primary/20 flex items-center justify-center">
+                <div className="h-16 w-16 p-1 bg-white dark:bg-card/95 backdrop-blur-md rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-2 border-primary/20 flex items-center justify-center">
                   <div className="h-full w-full rounded-full bg-primary flex items-center justify-center text-white">
                     <ShoppingBag className="h-7 w-7" />
                   </div>

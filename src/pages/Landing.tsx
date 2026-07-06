@@ -353,16 +353,16 @@ const Landing = () => {
                 <p className="text-slate-400 mb-6 h-12">Ideal para empezar con el pie derecho.</p>
                 <div className="mb-6">
                   <div>
-                    <span className="text-4xl font-extrabold text-white">${isAnnual ? '24' : '29'}</span>
+                    <span className="text-4xl font-extrabold text-white">${isAnnual ? '14' : '17'}</span>
                     <span className="text-slate-400"> USD / mes</span>
                   </div>
                   {isAnnual && (
                     <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-2 items-start">
                       <span className="inline-block text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-400 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-emerald-400/50">
-                        ✨ Ahorras $60 USD / año (17%)
+                        ✨ Ahorras $36 USD / año (17%)
                       </span>
                       <span className="text-sm text-slate-400 font-medium">
-                        Pago único de $288 USD
+                        Pago único de $168 USD
                       </span>
                     </div>
                   )}
@@ -397,20 +397,20 @@ const Landing = () => {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-400 text-yellow-950 text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider">
                   El más popular
                 </div>
-                <h3 className="text-2xl font-bold mb-2">⭐ Plan Negocio</h3>
+                <h3 className="text-2xl font-bold mb-2">⭐ Plan Empresarial</h3>
                 <p className="text-emerald-950/80 mb-6 h-12">Todo lo que necesitas para escalar.</p>
                 <div className="mb-6">
                   <div>
-                    <span className="text-4xl font-extrabold">${isAnnual ? '49' : '59'}</span>
+                    <span className="text-4xl font-extrabold">${isAnnual ? '37' : '45'}</span>
                     <span className="text-emerald-950/80"> USD / mes</span>
                   </div>
                   {isAnnual && (
                     <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-2 items-start">
                       <span className="inline-block text-sm font-extrabold text-yellow-950 bg-yellow-400 px-3 py-1 rounded-full shadow-[0_4px_14px_rgba(250,204,21,0.5)] ring-2 ring-yellow-300/50">
-                        🔥 Ahorras $120 USD / año (17%)
+                        🔥 Ahorras $96 USD / año (17%)
                       </span>
                       <span className="text-sm text-emerald-950/80 font-bold">
-                        Pago único de $588 USD
+                        Pago único de $444 USD
                       </span>
                     </div>
                   )}

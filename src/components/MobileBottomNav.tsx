@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Home,
   ShoppingCart,
@@ -119,28 +120,28 @@ export const MobileBottomNav: React.FC = () => {
       {/* Sheet "Más" que sube desde abajo */}
       <div
         className={cn(
-          'fixed bottom-16 left-0 right-0 z-50 md:hidden',
-          'bg-card border border-border rounded-t-2xl shadow-2xl',
+          'fixed bottom-0 left-0 right-0 z-40 md:hidden',
+          'bg-card/95 backdrop-blur-xl border border-border/50 rounded-t-[32px] shadow-[0_-20px_40px_rgba(0,0,0,0.4)]',
           'transition-transform duration-300 ease-out',
           moreOpen ? 'translate-y-0' : 'translate-y-full pointer-events-none'
         )}
       >
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-          <span className="font-semibold text-sm text-foreground">Menú</span>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+          <span className="font-semibold text-base tracking-wide text-foreground">Menú</span>
           <button
             onClick={() => setMoreOpen(false)}
-            className="p-1.5 rounded-full hover:bg-secondary transition-colors"
+            className="p-2 rounded-full bg-secondary/50 hover:bg-secondary transition-colors"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
-        <div className="p-4 grid grid-cols-3 gap-3 max-h-[60dvh] overflow-y-auto">
+        <div className="p-5 grid grid-cols-3 gap-4 max-h-[60dvh] overflow-y-auto" style={{ paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
           {moreItems.map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
@@ -177,8 +178,11 @@ export const MobileBottomNav: React.FC = () => {
       </div>
 
       {/* Barra de tabs inferior */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t border-border">
-        <div className="flex items-stretch" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav 
+        className="fixed left-4 right-4 z-50 md:hidden"
+        style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex items-stretch bg-card/95 backdrop-blur-xl border border-border/60 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] rounded-[24px]">
           {primaryItems.map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href ||
@@ -188,16 +192,20 @@ export const MobileBottomNav: React.FC = () => {
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] transition-colors',
+                  'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-300',
                   isActive
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Icon className={cn('h-5 w-5 transition-transform', isActive && 'scale-110')} />
-                <span className="text-[10px] font-medium">{item.name}</span>
+                <Icon className={cn('h-[22px] w-[22px] transition-transform duration-300', isActive && 'scale-110 drop-shadow-sm')} />
+                <span className="text-[10px] font-medium tracking-wide">{item.name}</span>
                 {isActive && (
-                  <span className="absolute bottom-0 h-0.5 w-8 rounded-full bg-primary" />
+                  <motion.div
+                    layoutId="mobile-nav-indicator"
+                    className="absolute bottom-0 h-1.5 w-12 rounded-t-full bg-primary"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
                 )}
               </Link>
             );
@@ -208,12 +216,19 @@ export const MobileBottomNav: React.FC = () => {
             <button
               onClick={() => setMoreOpen(v => !v)}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] transition-colors',
+                'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-300',
                 moreOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <MoreHorizontal className={cn('h-5 w-5', moreOpen && 'scale-110')} />
-              <span className="text-[10px] font-medium">Más</span>
+              <MoreHorizontal className={cn('h-[22px] w-[22px] transition-transform duration-300', moreOpen && 'scale-110')} />
+              <span className="text-[10px] font-medium tracking-wide">Más</span>
+              {moreOpen && (
+                  <motion.div
+                    layoutId="mobile-nav-indicator"
+                    className="absolute bottom-0 h-1.5 w-12 rounded-t-full bg-primary"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+              )}
             </button>
           )}
         </div>
