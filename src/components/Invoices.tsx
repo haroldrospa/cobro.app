@@ -9,6 +9,9 @@ import { LoadingLogo } from '@/components/ui/loading-logo';
 import { useCustomers } from '@/hooks/useCustomers';
 import { cn } from "@/lib/utils";
 import { useEmployees } from '@/hooks/useEmployees';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import InvoiceSearch from './invoices/InvoiceSearch';
 import InvoiceTable from './invoices/InvoiceTable';
 import InvoiceDetailsDialog from './invoices/InvoiceDetailsDialog';
@@ -42,12 +45,18 @@ const Invoices: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
+  
+  const [otpCode, setOtpCode] = useState<string | null>(null);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
+  const [otpInput, setOtpInput] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   const { data: sales = [], isLoading, isFetching, refetch } = useSales(filters);
   const { data: customers = [] } = useCustomers();
   const { data: employees = [] } = useEmployees();
   const deleteSale = useDeleteSale();
   const { toast } = useToast();
+  const { settings: storeSettings } = useStoreSettings();
 
   const handleViewDetails = (sale: Sale) => {
     console.log('Viewing details for sale:', sale);
@@ -78,6 +87,9 @@ const Invoices: React.FC = () => {
       });
       setShowDeleteDialog(false);
       setSaleToDelete(null);
+      setOtpCode(null);
+      setOtpExpiresAt(null);
+      setOtpInput('');
     } catch (error) {
       console.error('Error eliminando factura:', error);
       toast({
@@ -86,6 +98,75 @@ const Invoices: React.FC = () => {
         description: "No se pudo eliminar la factura.",
       });
     }
+  };
+
+  const handleSendOtp = async () => {
+    if (!storeSettings?.email_reports_recipient) {
+      toast({
+        variant: "destructive",
+        title: "Error de configuración",
+        description: "No hay un correo principal configurado para recibir el código.",
+      });
+      return;
+    }
+
+    setIsSendingOtp(true);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    try {
+      const { error } = await supabase.functions.invoke('send-otp-email', {
+        body: {
+          email: storeSettings.email_reports_recipient,
+          code: code
+        }
+      });
+
+      if (error) throw error;
+
+      setOtpCode(code);
+      setOtpExpiresAt(Date.now() + 60000); // 1 minuto
+      setOtpInput('');
+      toast({
+        title: "Código enviado",
+        description: `Se ha enviado un código a ${storeSettings.email_reports_recipient}. Tienes 1 minuto para ingresarlo.`,
+      });
+    } catch (error) {
+      console.error('Error enviando código:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo enviar el código de seguridad.",
+      });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyAndDelete = async () => {
+    if (!otpCode || !otpExpiresAt) return;
+    
+    if (Date.now() > otpExpiresAt) {
+      toast({
+        variant: "destructive",
+        title: "Código expirado",
+        description: "El código de seguridad ha expirado. Por favor solicita uno nuevo.",
+      });
+      setOtpCode(null);
+      setOtpExpiresAt(null);
+      setOtpInput('');
+      return;
+    }
+
+    if (otpInput !== otpCode) {
+      toast({
+        variant: "destructive",
+        title: "Código incorrecto",
+        description: "El código ingresado no coincide.",
+      });
+      return;
+    }
+
+    await confirmDelete();
   };
 
   const handleRefresh = () => {
@@ -300,22 +381,55 @@ const Invoices: React.FC = () => {
       )}
 
       {/* Diálogo de confirmación de eliminación */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+        setShowDeleteDialog(open);
+        if (!open) {
+          setOtpCode(null);
+          setOtpExpiresAt(null);
+          setOtpInput('');
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. La factura y todos sus items serán eliminados permanentemente.
+            <AlertDialogDescription asChild>
+              <div>
+                {!otpCode ? (
+                  <p>Esta acción no se puede deshacer. La factura y todos sus items serán eliminados permanentemente. Se requerirá un código de seguridad.</p>
+                ) : (
+                  <div className="flex flex-col gap-3 mt-3">
+                    <p>Hemos enviado un código de 6 dígitos al correo de reportes. Tienes 1 minuto para ingresarlo.</p>
+                    <Input 
+                      placeholder="Ingresa el código..." 
+                      value={otpInput}
+                      onChange={(e) => setOtpInput(e.target.value)}
+                      maxLength={6}
+                      className="text-center text-xl tracking-[0.5em] font-mono"
+                    />
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
+            {!otpCode ? (
+              <Button
+                variant="destructive"
+                onClick={handleSendOtp}
+                disabled={isSendingOtp}
+              >
+                {isSendingOtp ? "Enviando..." : "Enviar Código"}
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={handleVerifyAndDelete}
+                disabled={otpInput.length < 6}
+              >
+                Verificar y Eliminar
+              </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
