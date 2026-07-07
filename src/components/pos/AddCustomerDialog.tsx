@@ -174,36 +174,6 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2 col-span-2">
-              <Label htmlFor="name" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">Nombre Completo *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ej: Juan Pérez"
-                className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customer-type" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">Tipo</Label>
-              <Select
-                value={formData.customer_type}
-                onValueChange={(value: 'final' | 'business') =>
-                  setFormData({ ...formData, customer_type: value })
-                }
-              >
-                <SelectTrigger className="h-12 bg-zinc-900/50 border-white/5 rounded-xl text-white font-bold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10">
-                  <SelectItem value="final" className="font-bold">Personal</SelectItem>
-                  <SelectItem value="business" className="font-bold">Negocio</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="rnc" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">RNC / Cédula</Label>
               <div className="relative flex items-center">
@@ -227,12 +197,42 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 </Button>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customer-type" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">Tipo</Label>
+              <Select
+                value={formData.customer_type}
+                onValueChange={(value: 'final' | 'business') =>
+                  setFormData({ ...formData, customer_type: value })
+                }
+              >
+                <SelectTrigger className="h-12 bg-zinc-900/50 border-white/5 rounded-xl text-white font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10">
+                  <SelectItem value="final" className="font-bold">Personal</SelectItem>
+                  <SelectItem value="business" className="font-bold">Negocio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="name" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">Nombre Completo *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ej: Juan Pérez"
+                className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
+                required
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1 flex items-center gap-1.5">
-                <Phone className="h-3 w-3" /> Teléfono
+                <Phone className="h-3 w-3" /> Teléfono *
               </Label>
               <Input
                 id="phone"
@@ -240,6 +240,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="809-..."
                 className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
+                required
               />
             </div>
 

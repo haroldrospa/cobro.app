@@ -2630,16 +2630,6 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="sup-name" className="text-right">Nombre</Label>
-                            <Input
-                                id="sup-name"
-                                placeholder="Ej. Distribuidora ABC"
-                                className="col-span-3"
-                                value={newSupplier.name || ''}
-                                onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="sup-rnc" className="text-right">RNC</Label>
                             <div className="col-span-3 relative flex items-center">
                                 <Input
@@ -2661,6 +2651,16 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                     {isLookingUpSupplierRnc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                                 </Button>
                             </div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="sup-name" className="text-right">Nombre</Label>
+                            <Input
+                                id="sup-name"
+                                placeholder="Ej. Distribuidora ABC"
+                                className="col-span-3"
+                                value={newSupplier.name || ''}
+                                onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                            />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="sup-contact" className="text-right">Contacto</Label>
