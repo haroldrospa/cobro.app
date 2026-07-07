@@ -423,7 +423,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
                 import('@/services/alanube/AlanubeService')
                     .then(({ AlanubeService }) => {
-                        AlanubeService.emitirFacturaElectronica(rpcResult.id);
+                        AlanubeService.emitirFacturaElectronica(rpcResult.id, true);
                     })
                     .catch(err => console.error('⚠️ Error al cargar AlanubeService para emisión en segundo plano:', err));
             }
@@ -686,7 +686,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
         import('@/services/alanube/AlanubeService')
             .then(({ AlanubeService }) => {
-                AlanubeService.emitirFacturaElectronica(finalSale.id);
+                AlanubeService.emitirFacturaElectronica(finalSale.id, true);
             })
             .catch(err => console.error('⚠️ Error cargando AlanubeService para emisión en segundo plano:', err));
     }

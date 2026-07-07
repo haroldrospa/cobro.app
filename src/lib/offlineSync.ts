@@ -792,7 +792,7 @@ class OfflineSyncManager {
                     if (alanubeConfig?.is_active) {
                         console.log('🔌 [OfflineSync] Alanube e-NCF está activo. Emitiendo comprobante electrónico para venta offline:', data.id);
                         const { AlanubeService } = await import('@/services/alanube/AlanubeService');
-                        await AlanubeService.emitirFacturaElectronica(data.id);
+                        await AlanubeService.emitirFacturaElectronica(data.id, true);
                     }
                 } catch (alanubeErr) {
                     console.error('⚠️ [OfflineSync] Error al integrar con Alanube:', alanubeErr);

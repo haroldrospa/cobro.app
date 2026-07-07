@@ -31,7 +31,7 @@ export class AlanubeService {
   /**
    * Procesa la emisión electrónica de una factura existente
    */
-  static async emitirFacturaElectronica(saleId: string): Promise<boolean> {
+  static async emitirFacturaElectronica(saleId: string, silent: boolean = false): Promise<boolean> {
     try {
       // 1. Obtener la factura, sus items y el cliente
       const { data: sale, error: saleError } = await supabase
@@ -294,14 +294,16 @@ export class AlanubeService {
 
           // Mostrar al usuario el motivo del rechazo fiscal (DGII) en un Toast descriptivo
           const errorMsg = response.errores.map(e => `${e.codigo ? `[${e.codigo}] ` : ''}${e.mensaje}`).join('\n');
-          import('@/hooks/use-toast').then(({ toast }) => {
-            toast({
-              title: "Error de Validación Fiscal (DGII)",
-              description: errorMsg || "El comprobante fue rechazado por la DGII. Por favor, verifique la configuración de emisor y cliente.",
-              variant: "destructive",
-              duration: 12000
+          if (!silent) {
+            import('@/hooks/use-toast').then(({ toast }) => {
+              toast({
+                title: "Error de Validación Fiscal (DGII)",
+                description: errorMsg || "El comprobante fue rechazado por la DGII. Por favor, verifique la configuración de emisor y cliente.",
+                variant: "destructive",
+                duration: 12000
+              });
             });
-          });
+          }
 
           return false;
         }
@@ -351,28 +353,32 @@ export class AlanubeService {
         const errorMessage = error?.message || 'Error de conexión con Alanube';
         console.error('[Alanube] Connection/Infrastructure Error:', error);
         
-        import('@/hooks/use-toast').then(({ toast }) => {
-          toast({
-            title: "Error de Conexión Fiscal",
-            description: `No se pudo conectar con el servidor de facturación electrónica. Detalle: ${errorMessage}. La venta se guardó localmente y se sincronizará automáticamente al restablecer el servicio.`,
-            variant: "destructive",
-            duration: 10000
+        if (!silent) {
+          import('@/hooks/use-toast').then(({ toast }) => {
+            toast({
+              title: "Error de Conexión Fiscal",
+              description: `No se pudo conectar con el servidor de facturación electrónica. Detalle: ${errorMessage}. La venta se guardó localmente y se sincronizará automáticamente al restablecer el servicio.`,
+              variant: "destructive",
+              duration: 10000
+            });
           });
-        });
+        }
           
         return false;
       }
     } catch (err: any) {
       console.error('[Alanube] Error general emitiendo factura:', err);
       const generalMessage = err?.message || 'Error general en el módulo e-NCF';
-      import('@/hooks/use-toast').then(({ toast }) => {
-        toast({
-          title: "Error General de Facturación Electrónica",
-          description: generalMessage,
-          variant: "destructive",
-          duration: 8000
+      if (!silent) {
+        import('@/hooks/use-toast').then(({ toast }) => {
+          toast({
+            title: "Error General de Facturación Electrónica",
+            description: generalMessage,
+            variant: "destructive",
+            duration: 8000
+          });
         });
-      });
+      }
       return false;
     }
   }
