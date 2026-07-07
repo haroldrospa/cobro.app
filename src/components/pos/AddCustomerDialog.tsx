@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useCreateCustomer, useCustomers } from '@/hooks/useCustomers';
 import { useEmployees } from '@/hooks/useEmployees';
-import { Loader2, UserPlus, Phone, Mail, MapPin, CreditCard, ShieldCheck } from 'lucide-react';
+import { Loader2, UserPlus, Phone, Mail, MapPin, CreditCard, ShieldCheck, Search } from 'lucide-react';
+import { lookupRnc } from '@/lib/rncLookup';
 
 interface AddCustomerDialogProps {
   isOpen: boolean;
@@ -36,6 +37,36 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
   const createCustomer = useCreateCustomer();
   const { data: employees = [] } = useEmployees();
   const { data: allCustomers = [] } = useCustomers();
+  const [isLookingUpRnc, setIsLookingUpRnc] = useState(false);
+
+  const handleLookupRnc = async () => {
+    if (!formData.rnc.trim()) return;
+    setIsLookingUpRnc(true);
+    try {
+      const result = await lookupRnc(formData.rnc);
+      if (result.success && result.name) {
+        setFormData(prev => ({ ...prev, name: result.name! }));
+        toast({
+          title: "Cliente encontrado",
+          description: `Nombre: ${result.name}`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Consulta fallida",
+          description: result.error || "No se encontró un cliente con este RNC/Cédula.",
+        });
+      }
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error de conexión al consultar.",
+      });
+    } finally {
+      setIsLookingUpRnc(false);
+    }
+  };
 
   // Find profile_ids already linked to other customers
   const takenProfileIds = useMemo(() => {
@@ -175,13 +206,26 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="rnc" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">RNC / Cédula</Label>
-              <Input
-                id="rnc"
-                value={formData.rnc}
-                onChange={(e) => setFormData({ ...formData, rnc: e.target.value })}
-                placeholder="402-..."
-                className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
-              />
+              <div className="relative flex items-center">
+                <Input
+                  id="rnc"
+                  value={formData.rnc}
+                  onChange={(e) => setFormData({ ...formData, rnc: e.target.value })}
+                  placeholder="402-..."
+                  className="h-12 bg-zinc-900/50 border-white/5 rounded-xl pr-12 focus:ring-green-500/20 text-white font-bold"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 w-10 h-10 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  onClick={handleLookupRnc}
+                  disabled={isLookingUpRnc || !formData.rnc}
+                  title="Buscar en DGII"
+                >
+                  {isLookingUpRnc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
           </div>
 

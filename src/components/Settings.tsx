@@ -73,6 +73,7 @@ import { injectPrintStyles } from '@/utils/printHandler';
 import SubscriptionOverview from '@/components/subscription/SubscriptionOverview';
 import BillingMethodSection from '@/components/settings/BillingMethodSection';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
+import { lookupRnc } from '@/lib/rncLookup';
 
 const Settings = () => {
   const [qrConnectionStatus, setQrConnectionStatus] = useState<'disconnected' | 'connected' | 'checking'>('disconnected');
@@ -141,6 +142,36 @@ const Settings = () => {
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [shopType, setShopType] = useState('default');
+  const [isLookingUpCompanyRnc, setIsLookingUpCompanyRnc] = useState(false);
+
+  const handleLookupCompanyRnc = async () => {
+    if (!companyInfo.rnc?.trim()) return;
+    setIsLookingUpCompanyRnc(true);
+    try {
+      const result = await lookupRnc(companyInfo.rnc);
+      if (result.success && result.name) {
+        setCompanyInfo(prev => ({ ...prev, name: result.name! }));
+        toast({
+          title: "Empresa encontrada",
+          description: `Nombre: ${result.name}`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Consulta fallida",
+          description: result.error || "No se encontró empresa con este RNC/Cédula.",
+        });
+      }
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error de conexión al consultar.",
+      });
+    } finally {
+      setIsLookingUpCompanyRnc(false);
+    }
+  };
 
   // Sync company settings from database to local state
   useEffect(() => {
@@ -1308,9 +1339,22 @@ const Settings = () => {
             <Label htmlFor="company-name" className="text-xs font-bold uppercase tracking-widest text-zinc-500 pl-1">Nombre de la Empresa</Label>
             <Input id="company-name" className="bg-zinc-950/50 border-zinc-800 rounded-xl h-11" value={companyInfo.name} onChange={(e) => setCompanyInfo({ ...companyInfo, name: e.target.value })} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="company-rnc" className="text-xs font-bold uppercase tracking-widest text-zinc-500 pl-1">RNC</Label>
-            <Input id="company-rnc" className="bg-zinc-950/50 border-zinc-800 rounded-xl h-11" value={companyInfo.rnc} onChange={(e) => setCompanyInfo({ ...companyInfo, rnc: e.target.value })} />
+            <div className="relative flex items-center">
+              <Input id="company-rnc" className="bg-zinc-950/50 border-zinc-800 rounded-xl h-11 pr-12 w-full" value={companyInfo.rnc} onChange={(e) => setCompanyInfo({ ...companyInfo, rnc: e.target.value })} />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 w-9 h-9 text-zinc-400 hover:text-white"
+                onClick={handleLookupCompanyRnc}
+                disabled={isLookingUpCompanyRnc || !companyInfo.rnc}
+                title="Buscar en DGII"
+              >
+                {isLookingUpCompanyRnc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="company-phone" className="text-xs font-bold uppercase tracking-widest text-zinc-500 pl-1">Teléfono</Label>
@@ -2215,11 +2259,25 @@ const Settings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company-rnc">RNC</Label>
-                  <Input
-                    id="company-rnc"
-                    value={companyInfo.rnc}
-                    onChange={(e) => setCompanyInfo({ ...companyInfo, rnc: e.target.value })}
-                  />
+                  <div className="relative flex items-center">
+                    <Input
+                      id="company-rnc"
+                      className="bg-zinc-900 border-zinc-800 text-white rounded-xl h-11 pr-12 w-full"
+                      value={companyInfo.rnc}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, rnc: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 w-9 h-9 text-zinc-400 hover:text-white"
+                      onClick={handleLookupCompanyRnc}
+                      disabled={isLookingUpCompanyRnc || !companyInfo.rnc}
+                      title="Buscar en DGII"
+                    >
+                      {isLookingUpCompanyRnc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company-phone">Teléfono</Label>

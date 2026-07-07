@@ -25,6 +25,7 @@ import { useSupplierDebts, SupplierDebt } from '@/hooks/useSupplierDebts';
 import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { lookupRnc } from '@/lib/rncLookup';
 
 
 const CATEGORIES = [
@@ -393,6 +394,36 @@ function AccountingContent() {
 
     const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
     const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({});
+    const [isLookingUpSupplierRnc, setIsLookingUpSupplierRnc] = useState(false);
+
+    const handleLookupSupplierRnc = async () => {
+        if (!newSupplier.rnc?.trim()) return;
+        setIsLookingUpSupplierRnc(true);
+        try {
+            const result = await lookupRnc(newSupplier.rnc);
+            if (result.success && result.name) {
+                setNewSupplier(prev => ({ ...prev, name: result.name! }));
+                toast({
+                    title: "Proveedor encontrado",
+                    description: `Nombre: ${result.name}`,
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Consulta fallida",
+                    description: result.error || "No se encontró un proveedor con este RNC/Cédula.",
+                });
+            }
+        } catch (e) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Error de conexión al consultar.",
+            });
+        } finally {
+            setIsLookingUpSupplierRnc(false);
+        }
+    };
     const [supplierSearch, setSupplierSearch] = useState('');
     const [supplierDebtFilter, setSupplierDebtFilter] = useState<'all' | 'with_debt' | 'no_debt'>('all');
     // Expense type: 'reinversion' = Inventario, 'operativo' = all others
@@ -2610,13 +2641,26 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="sup-rnc" className="text-right">RNC</Label>
-                            <Input
-                                id="sup-rnc"
-                                placeholder="000-00000-0"
-                                className="col-span-3"
-                                value={newSupplier.rnc || ''}
-                                onChange={(e) => setNewSupplier({ ...newSupplier, rnc: e.target.value })}
-                            />
+                            <div className="col-span-3 relative flex items-center">
+                                <Input
+                                    id="sup-rnc"
+                                    placeholder="000-00000-0"
+                                    className="pr-12 w-full"
+                                    value={newSupplier.rnc || ''}
+                                    onChange={(e) => setNewSupplier({ ...newSupplier, rnc: e.target.value })}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-1 w-8 h-8 text-zinc-400 hover:text-white"
+                                    onClick={handleLookupSupplierRnc}
+                                    disabled={isLookingUpSupplierRnc || !newSupplier.rnc}
+                                    title="Buscar en DGII"
+                                >
+                                    {isLookingUpSupplierRnc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                </Button>
+                            </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="sup-contact" className="text-right">Contacto</Label>
