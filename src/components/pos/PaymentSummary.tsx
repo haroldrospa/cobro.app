@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Calculator, CreditCard, Plus, ChevronDown, ChevronUp, Percent, DollarSign, AlertCircle, Archive, StickyNote } from 'lucide-react';
+import { Calculator, CreditCard, Plus, ChevronDown, ChevronUp, Percent, DollarSign, AlertCircle, Archive, StickyNote, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Customer } from '@/hooks/useCustomers';
@@ -229,21 +231,66 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                        <Plus className="h-3 w-3" />
                      </Button>
                    </div>
-                   <Select value={selectedCustomer || "none"} onValueChange={(val) => onCustomerChange(val === "none" ? "" : val)}>
-                     <SelectTrigger className="h-7 text-xs bg-background border-border">
-                       <SelectValue placeholder="Seleccionar Cliente" />
-                     </SelectTrigger>
-                     <SelectContent className="bg-popover border border-border z-50 max-h-[200px] overflow-y-auto">
-                       <SelectItem value="none" className="text-xs">
-                         Seleccionar Cliente...
-                       </SelectItem>
-                       {customers.map((c) => (
-                         <SelectItem key={c.id} value={c.id} className="text-xs">
-                           {c.name} {c.rnc ? `(RNC: ${c.rnc})` : ''}
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
+                   <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
+                     <PopoverTrigger asChild>
+                       <Button
+                         variant="outline"
+                         role="combobox"
+                         aria-expanded={isCustomerOpen}
+                         className="w-full justify-between h-7 text-xs bg-background border-border font-normal"
+                       >
+                         {selectedCustomer ? (
+                           <span className="truncate">
+                             {(() => {
+                               const c = customers.find(c => c.id === selectedCustomer);
+                               return c ? `${c.name} ${c.rnc ? `(RNC: ${c.rnc})` : ''}` : "Seleccionar Cliente...";
+                             })()}
+                           </span>
+                         ) : (
+                           <span className="text-muted-foreground truncate">Seleccionar Cliente...</span>
+                         )}
+                         <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                       </Button>
+                     </PopoverTrigger>
+                     <PopoverContent className="w-[300px] p-0 bg-popover border-border z-50">
+                       <Command>
+                         <CommandInput placeholder="Buscar por nombre o RNC..." className="h-8 text-xs" />
+                         <CommandList className="max-h-[200px]">
+                           <CommandEmpty className="py-2 text-xs text-center text-muted-foreground">No encontrado.</CommandEmpty>
+                           <CommandGroup>
+                             <CommandItem
+                               value="none-customer-item-placeholder"
+                               onSelect={() => {
+                                 onCustomerChange("");
+                                 setIsCustomerOpen(false);
+                               }}
+                               className="text-xs py-1.5 cursor-pointer"
+                             >
+                               <Check className={cn("mr-2 h-3 w-3", !selectedCustomer ? "opacity-100" : "opacity-0")} />
+                               Seleccionar Cliente...
+                             </CommandItem>
+                             {customers.map((c) => (
+                               <CommandItem
+                                 key={c.id}
+                                 value={`${c.name} ${c.rnc || ''} ${c.id}`}
+                                 onSelect={() => {
+                                   onCustomerChange(c.id);
+                                   setIsCustomerOpen(false);
+                                 }}
+                                 className="text-xs py-1.5 cursor-pointer"
+                               >
+                                 <Check className={cn("mr-2 h-3 w-3", selectedCustomer === c.id ? "opacity-100" : "opacity-0")} />
+                                 <div className="flex flex-col overflow-hidden">
+                                   <span className="truncate">{c.name}</span>
+                                   {c.rnc && <span className="text-[10px] text-muted-foreground">RNC: {c.rnc}</span>}
+                                 </div>
+                               </CommandItem>
+                             ))}
+                           </CommandGroup>
+                         </CommandList>
+                       </Command>
+                     </PopoverContent>
+                   </Popover>
                    {selectedCustomerData && (
                      <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 bg-background/50 p-1.5 rounded border border-border/50">
                        <span className="font-semibold text-foreground">{selectedCustomerData.name}</span>
