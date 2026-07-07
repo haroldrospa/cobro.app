@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,72 +22,29 @@ serve(async (req) => {
     }
 
     const cleanRnc = rnc.replace(/[^0-9]/g, '');
-    let name = null;
+    
+    // Using supabase-js to query the database directly
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Timeout helper
-    const fetchWithTimeout = async (url: string, ms = 5000) => {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), ms);
-      try {
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(id);
-        return response;
-      } catch (e) {
-        clearTimeout(id);
-        throw e;
-      }
-    };
+    const { data, error } = await supabase
+      .from('dgii_rncs')
+      .select('name')
+      .eq('rnc', cleanRnc)
+      .single();
 
-    // 1. Si es cédula (11 dígitos), intentamos con Adamix
-    if (cleanRnc.length === 11) {
-      try {
-        const adamixRes = await fetchWithTimeout(`https://api.adamix.net/apec/cedula/${cleanRnc}`, 4000);
-        if (adamixRes.ok) {
-          const adamixData = await adamixRes.json();
-          if (adamixData.ok && adamixData.nombres) {
-            name = `${adamixData.nombres} ${adamixData.apellido1 || ''} ${adamixData.apellido2 || ''}`.trim();
-          }
-        }
-      } catch (e) { console.error('Adamix API error:', e); }
-    }
-
-    // 2. Probamos Marcos API
-    if (!name) {
-      try {
-        const marcosRes = await fetchWithTimeout(`https://api.marcos.do/rnc/${cleanRnc}`, 4000);
-        if (marcosRes.ok) {
-          const marcosData = await marcosRes.json();
-          if (marcosData && marcosData.name) {
-            name = marcosData.name.trim();
-          }
-        }
-      } catch (e) { console.error('Marcos API error:', e); }
-    }
-
-    // 3. Probamos Statetrack
-    if (!name) {
-      try {
-        const stRes = await fetchWithTimeout(`https://statetrack.do/api/rnc/${cleanRnc}`, 4000);
-        if (stRes.ok) {
-          const stData = await stRes.json();
-          if (stData && stData.name) {
-            name = stData.name.trim();
-          }
-        }
-      } catch (e) { console.error('Statetrack API error:', e); }
-    }
-
-    if (name) {
-      return new Response(JSON.stringify({ success: true, rnc: cleanRnc, name }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    } else {
-      return new Response(JSON.stringify({ success: false, error: "RNC no encontrado en ninguna base de datos pública." }), {
+    if (error || !data) {
+      return new Response(JSON.stringify({ success: false, error: "RNC no encontrado en nuestra base de datos." }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
+
+    return new Response(JSON.stringify({ success: true, rnc: cleanRnc, name: data.name }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
 
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
