@@ -83,7 +83,7 @@ serve(async (req) => {
       });
     } else {
       return new Response(JSON.stringify({ success: false, error: "RNC no encontrado en ninguna base de datos pública." }), {
-        status: 404,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
