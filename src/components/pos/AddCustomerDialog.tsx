@@ -108,13 +108,17 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
         }
       }
 
+      const cleanRnc = formData.rnc.replace(/[^0-9]/g, '');
+      const detectedType = cleanRnc.length === 9 ? 'business' : 'final';
+
       createCustomer.mutate({
-        ...formData,
+        name: formData.name,
         rnc: formData.rnc.trim() || null,
         phone: formData.phone.trim() || null,
         email: formData.email.trim() || null,
         address: formData.address.trim() || null,
         validation_code: formData.validation_code.trim() || null,
+        customer_type: detectedType,
         credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : 0,
         credit_used: 0,
         total_purchases: 0,
@@ -174,7 +178,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-2">
               <Label htmlFor="rnc" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">RNC / Cédula</Label>
               <div className="relative flex items-center">
                 <Input
@@ -196,24 +200,6 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                   {isLookingUpRnc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </Button>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customer-type" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">Tipo</Label>
-              <Select
-                value={formData.customer_type}
-                onValueChange={(value: 'final' | 'business') =>
-                  setFormData({ ...formData, customer_type: value })
-                }
-              >
-                <SelectTrigger className="h-12 bg-zinc-900/50 border-white/5 rounded-xl text-white font-bold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-white/10">
-                  <SelectItem value="final" className="font-bold">Personal</SelectItem>
-                  <SelectItem value="business" className="font-bold">Negocio</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2 col-span-2">
