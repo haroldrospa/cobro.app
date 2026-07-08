@@ -2428,7 +2428,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
               <div className="flex bg-zinc-950 p-1 rounded-xl border border-white/10 shadow-inner">
                 <Button
                   size="sm"
-                  variant={layoutMode === 'classic' ? 'secondary' : 'ghost'}
+                  variant="ghost"
                   onClick={() => onLayoutModeChange?.('classic')}
                   className={cn(
                     "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
@@ -2439,7 +2439,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                 </Button>
                 <Button
                   size="sm"
-                  variant={layoutMode === 'catalog' ? 'secondary' : 'ghost'}
+                  variant="ghost"
                   onClick={() => onLayoutModeChange?.('catalog')}
                   className={cn(
                     "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
@@ -2463,7 +2463,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                 <div className="flex bg-zinc-950 p-1 rounded-xl border border-white/10 shadow-inner">
                   <Button
                     size="sm"
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    variant="ghost"
                     onClick={() => onViewModeChange?.('list')}
                     className={cn(
                       "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
@@ -2474,7 +2474,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   </Button>
                   <Button
                     size="sm"
-                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    variant="ghost"
                     onClick={() => onViewModeChange?.('grid')}
                     className={cn(
                       "h-8 text-xs font-bold rounded-lg px-3 transition-all duration-200",
