@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+import { useUserStore } from './useUserStore';
+
 export interface ProductBarcode {
   id: string;
   barcode: string;
@@ -41,19 +43,14 @@ export interface Product {
 }
 
 export const useProducts = () => {
+  const { data: store } = useUserStore();
+  const storeId = store?.id;
+
   return useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', storeId],
+    enabled: !!storeId,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('store_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const storeId = profile?.store_id;
+      if (!storeId) return [];
 
       let allData: any[] = [];
       let isBasicSchema = false;
@@ -75,7 +72,7 @@ export const useProducts = () => {
           .order('name')
           .range(from, from + step - 1);
 
-        if (storeId) query = query.eq('store_id', storeId);
+        query = query.eq('store_id', storeId);
 
         const { data: chunk, error: chunkError } = await query;
 

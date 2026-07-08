@@ -91,6 +91,27 @@ const App = () => {
             localStorage.removeItem(key);
           }
         });
+
+        // Clear IndexedDB cache to prevent cross-store data contamination
+        import('@/lib/offlineDB').then(({ offlineDB, OfflineStore }) => {
+          const storesToClear = [
+            OfflineStore.PRODUCTS,
+            OfflineStore.CUSTOMERS,
+            OfflineStore.CATEGORIES,
+            OfflineStore.INVOICE_TYPES,
+            OfflineStore.EXPENSES,
+            OfflineStore.CASH_SESSIONS,
+            OfflineStore.INVENTORY_MOVEMENTS,
+            OfflineStore.FIXED_EXPENSES,
+            OfflineStore.SUPPLIER_DEBTS,
+            OfflineStore.SALES,
+            OfflineStore.SETTINGS,
+            OfflineStore.SYNC_QUEUE
+          ];
+          storesToClear.forEach(store => {
+            offlineDB.clear(store).catch(err => console.error(`Error clearing offline store ${store}:`, err));
+          });
+        }).catch(err => console.error('Error importing offlineDB on sign out:', err));
       }
     });
     return () => subscription.unsubscribe();

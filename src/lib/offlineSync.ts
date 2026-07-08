@@ -232,6 +232,11 @@ class OfflineSyncManager {
 
             const storeId = profile?.store_id;
 
+            if (!storeId) {
+                console.warn('⚠️ Sincronización omitida: el usuario no tiene store_id asignado');
+                return;
+            }
+
             // Guardar perfil en offline DB para tener el store_id disponible offline
             if (profile) {
                 await offlineDB.put(OfflineStore.SETTINGS, {

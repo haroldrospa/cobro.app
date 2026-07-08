@@ -5,6 +5,8 @@ import { offlineDB, OfflineStore } from '@/lib/offlineDB';
 import { useOnlineStatus } from './useProductsOffline';
 import { getSessionSafe } from '@/lib/authSession';
 
+import { useUserStore } from './useUserStore';
+
 export interface Customer {
   id: string;
   name: string;
@@ -29,44 +31,39 @@ export interface Customer {
 
 export const useCustomers = () => {
   const isOnline = useOnlineStatus();
+  const { data: store } = useUserStore();
+  const storeId = store?.id;
 
   return useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', storeId],
     staleTime: Infinity, // MasterData: Never refetch automatically
     gcTime: Infinity, // MasterData: Keep in cache indefinitely
     refetchOnWindowFocus: false,
+    enabled: !!storeId,
     queryFn: async () => {
+      if (!storeId) return [];
+
       try {
         const session = await getSessionSafe();
         if (!session?.user) {
-          // Offline: return from IndexedDB
+          // Offline: return from IndexedDB filtered by storeId
           const localCustomers = await offlineDB.getAll<Customer>(OfflineStore.CUSTOMERS);
-          return localCustomers;
+          return localCustomers.filter(c => c.store_id === storeId);
         }
-        const user = session.user;
 
         if (!isOnline) {
           // Without internet, load from IndexedDB
           console.log('👥 Cargando clientes desde IndexedDB (modo offline)');
           const localCustomers = await offlineDB.getAll<Customer>(OfflineStore.CUSTOMERS);
-          return localCustomers;
+          return localCustomers.filter(c => c.store_id === storeId);
         }
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('store_id')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        // Build query - filter by store_id if user has one
+        // Build query - filter strictly by store_id
         let query = supabase
           .from('customers')
           .select('*')
+          .eq('store_id', storeId)
           .order('name');
-
-        if (profile?.store_id) {
-          query = query.eq('store_id', profile.store_id);
-        }
 
         let allData: Customer[] = [];
         let from = 0;
@@ -95,7 +92,7 @@ export const useCustomers = () => {
         // Fallback to IndexedDB on any error
         console.log('👥 Error en Supabase, cargando clientes desde IndexedDB:', error);
         const localCustomers = await offlineDB.getAll<Customer>(OfflineStore.CUSTOMERS);
-        return localCustomers;
+        return localCustomers.filter(c => c.store_id === storeId);
       }
     },
   });
