@@ -67,7 +67,9 @@ import {
   Bike,
   CheckCircle2,
   LayoutGrid,
-  QrCode
+  QrCode,
+  Search,
+  Loader2
 } from 'lucide-react';
 import { injectPrintStyles } from '@/utils/printHandler';
 import SubscriptionOverview from '@/components/subscription/SubscriptionOverview';
