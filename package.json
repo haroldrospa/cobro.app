@@ -3,6 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "browserslist": [
+    "> 0.2%",
+    "last 4 versions",
+    "Android >= 6",
+    "Chrome >= 49",
+    "Safari >= 10",
+    "not dead"
+  ],
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",

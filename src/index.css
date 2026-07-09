@@ -646,3 +646,43 @@ body[data-scroll-locked] {
 body.keyboard-open .hide-on-keyboard {
   display: none !important;
 }
+
+/*
+ * Fallback para navegadores antiguos que no soportan la propiedad 'gap' en Flexbox (ej. Android 8 / Chrome antiguo)
+ */
+@supports not (gap: 1px) {
+  .flex.gap-1 > * + *, .inline-flex.gap-1 > * + * { margin-left: 0.25rem; }
+  .flex.flex-col.gap-1 > * + *, .inline-flex.flex-col.gap-1 > * + * { margin-top: 0.25rem; margin-left: 0; }
+  
+  .flex.gap-2 > * + *, .inline-flex.gap-2 > * + * { margin-left: 0.5rem; }
+  .flex.flex-col.gap-2 > * + *, .inline-flex.flex-col.gap-2 > * + * { margin-top: 0.5rem; margin-left: 0; }
+
+  .flex.gap-3 > * + *, .inline-flex.gap-3 > * + * { margin-left: 0.75rem; }
+  .flex.flex-col.gap-3 > * + *, .inline-flex.flex-col.gap-3 > * + * { margin-top: 0.75rem; margin-left: 0; }
+
+  .flex.gap-4 > * + *, .inline-flex.gap-4 > * + * { margin-left: 1rem; }
+  .flex.flex-col.gap-4 > * + *, .inline-flex.flex-col.gap-4 > * + * { margin-top: 1rem; margin-left: 0; }
+
+  .flex.gap-5 > * + *, .inline-flex.gap-5 > * + * { margin-left: 1.25rem; }
+  .flex.flex-col.gap-5 > * + *, .inline-flex.flex-col.gap-5 > * + * { margin-top: 1.25rem; margin-left: 0; }
+
+  .flex.gap-6 > * + *, .inline-flex.gap-6 > * + * { margin-left: 1.5rem; }
+  .flex.flex-col.gap-6 > * + *, .inline-flex.flex-col.gap-6 > * + * { margin-top: 1.5rem; margin-left: 0; }
+
+  .flex.gap-8 > * + *, .inline-flex.gap-8 > * + * { margin-left: 2rem; }
+  .flex.flex-col.gap-8 > * + *, .inline-flex.flex-col.gap-8 > * + * { margin-top: 2rem; margin-left: 0; }
+  
+  .flex.gap-x-1 > * + * { margin-left: 0.25rem; }
+  .flex.gap-x-2 > * + * { margin-left: 0.5rem; }
+  .flex.gap-x-3 > * + * { margin-left: 0.75rem; }
+  .flex.gap-x-4 > * + * { margin-left: 1rem; }
+  .flex.gap-x-5 > * + * { margin-left: 1.25rem; }
+  .flex.gap-x-6 > * + * { margin-left: 1.5rem; }
+  
+  .flex.gap-y-1 > * + * { margin-top: 0.25rem; }
+  .flex.gap-y-2 > * + * { margin-top: 0.5rem; }
+  .flex.gap-y-3 > * + * { margin-top: 0.75rem; }
+  .flex.gap-y-4 > * + * { margin-top: 1rem; }
+  .flex.gap-y-5 > * + * { margin-top: 1.25rem; }
+  .flex.gap-y-6 > * + * { margin-top: 1.5rem; }
+}

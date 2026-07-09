@@ -1,4 +1,17 @@
 import 'regenerator-runtime/runtime';
+// Polyfill Promise.allSettled for older ES-module-capable browsers (like Chrome 61-75)
+if (typeof Promise.allSettled !== 'function') {
+  Promise.allSettled = function (promises: any) {
+    return Promise.all(
+      Array.from(promises).map((p: any) =>
+        Promise.resolve(p).then(
+          value => ({ status: 'fulfilled', value }),
+          reason => ({ status: 'rejected', reason })
+        )
+      )
+    );
+  } as any;
+}
 import './lib/offlineErrorHandler'; // DEBE SER PRIMERO - Suprimir errores de red offline
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
