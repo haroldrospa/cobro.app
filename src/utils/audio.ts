@@ -24,22 +24,21 @@ export const playTapSound = () => {
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
 
-        // Sonido Premium "Tick/Pop" (similar a iOS)
-        // Caída rápida de frecuencia para un sonido orgánico y percusivo
+        // Sonido Premium "Tick/Click" suave, delicado y limpio (tipo háptico)
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.04);
+        osc.frequency.setValueAtTime(950, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime + 0.025);
 
-        // Envolvente de volumen muy corta y aguda
+        // Envolvente de volumen muy corta y discreta para que no sature
         gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.005); // Ataque ultra rápido
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04); // Caída rápida
+        gainNode.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.002); // Ataque suave e inmediato
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.025); // Caída rápida y limpia
 
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
 
         osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.05);
+        osc.stop(audioCtx.currentTime + 0.035);
 
     } catch (e) {
         console.debug("Error playing tap sound", e);
