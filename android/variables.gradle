@@ -2,6 +2,8 @@ ext {
     minSdkVersion = 23
     compileSdkVersion = 35
     targetSdkVersion = 35
+
+    // AndroidX versions
     androidxActivityVersion = '1.9.2'
     androidxAppCompatVersion = '1.7.0'
     androidxCoordinatorLayoutVersion = '1.2.0'
@@ -9,8 +11,24 @@ ext {
     androidxFragmentVersion = '1.8.4'
     coreSplashScreenVersion = '1.0.1'
     androidxWebkitVersion = '1.12.1'
+
+    // Kotlin
+    kotlinVersion = '1.9.25'
+
+    // Jetpack Compose
+    composeBomVersion = '2024.10.00'
+    kotlinCompilerExtensionVersion = '1.5.15'
+    activityComposeVersion = '1.9.2'
+    lifecycleVersion = '2.8.6'
+
+    // Firebase
+    firebaseBomVersion = '33.7.0'
+
+    // Testing
     junitVersion = '4.13.2'
     androidxJunitVersion = '1.2.1'
     androidxEspressoCoreVersion = '3.6.1'
+
+    // Capacitor
     cordovaAndroidVersion = '10.1.1'
 }
