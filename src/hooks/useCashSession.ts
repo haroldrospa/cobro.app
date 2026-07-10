@@ -67,7 +67,6 @@ export const useActiveSession = () => {
                             .from('cash_sessions')
                             .select('*')
                             .eq('store_id', storeId)
-                            .eq('opened_by', user.id)
                             .eq('status', 'open')
                             .order('opened_at', { ascending: false })
                             .limit(1)
@@ -93,7 +92,7 @@ export const useActiveSession = () => {
 
                 // Offline path: try IndexedDB first, then localStorage
                 const localSessions = await offlineDB.getAll<CashSession>(OfflineStore.CASH_SESSIONS);
-                const activeLocal = localSessions.find(s => s.status === 'open' && s.opened_by === user.id) ?? null;
+                const activeLocal = localSessions.find(s => s.status === 'open') ?? null;
                 if (activeLocal) return activeLocal;
 
                 return getSessionFromLS();
@@ -103,7 +102,7 @@ export const useActiveSession = () => {
                 try {
                     const { data: { user } } = await supabase.auth.getUser();
                     const localSessions = await offlineDB.getAll<CashSession>(OfflineStore.CASH_SESSIONS);
-                    const activeLocal = localSessions.find(s => s.status === 'open' && s.opened_by === user?.id) ?? null;
+                    const activeLocal = localSessions.find(s => s.status === 'open') ?? null;
                     if (activeLocal) return activeLocal;
                 } catch { /* ignore */ }
 
