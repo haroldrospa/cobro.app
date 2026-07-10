@@ -77,41 +77,44 @@ const App = () => {
   // Global listener for Merchant (App) session
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        // Debounce or only clear if there's actual data
-        console.log('🚪 Global: User signed out, clearing cache...');
+      console.log(`🔑 Auth event: ${event}`);
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+        console.log(`🚪 Clearing React Query cache due to auth event: ${event}`);
         queryClient.clear();
-        Object.keys(localStorage).forEach(key => {
-          if (
-            key === 'cobro_last_user_id' ||
-            key.includes('cobro_user_store_cache') ||
-            key.includes('cobro_user_profile_cache') ||
-            key.startsWith('posSettings_')
-          ) {
-            localStorage.removeItem(key);
-          }
-        });
-
-        // Clear IndexedDB cache to prevent cross-store data contamination
-        import('@/lib/offlineDB').then(({ offlineDB, OfflineStore }) => {
-          const storesToClear = [
-            OfflineStore.PRODUCTS,
-            OfflineStore.CUSTOMERS,
-            OfflineStore.CATEGORIES,
-            OfflineStore.INVOICE_TYPES,
-            OfflineStore.EXPENSES,
-            OfflineStore.CASH_SESSIONS,
-            OfflineStore.INVENTORY_MOVEMENTS,
-            OfflineStore.FIXED_EXPENSES,
-            OfflineStore.SUPPLIER_DEBTS,
-            OfflineStore.SALES,
-            OfflineStore.SETTINGS,
-            OfflineStore.SYNC_QUEUE
-          ];
-          storesToClear.forEach(store => {
-            offlineDB.clear(store).catch(err => console.error(`Error clearing offline store ${store}:`, err));
+        
+        if (event === 'SIGNED_OUT') {
+          Object.keys(localStorage).forEach(key => {
+            if (
+              key === 'cobro_last_user_id' ||
+              key.includes('cobro_user_store_cache') ||
+              key.includes('cobro_user_profile_cache') ||
+              key.startsWith('posSettings_')
+            ) {
+              localStorage.removeItem(key);
+            }
           });
-        }).catch(err => console.error('Error importing offlineDB on sign out:', err));
+
+          // Clear IndexedDB cache to prevent cross-store data contamination
+          import('@/lib/offlineDB').then(({ offlineDB, OfflineStore }) => {
+            const storesToClear = [
+              OfflineStore.PRODUCTS,
+              OfflineStore.CUSTOMERS,
+              OfflineStore.CATEGORIES,
+              OfflineStore.INVOICE_TYPES,
+              OfflineStore.EXPENSES,
+              OfflineStore.CASH_SESSIONS,
+              OfflineStore.INVENTORY_MOVEMENTS,
+              OfflineStore.FIXED_EXPENSES,
+              OfflineStore.SUPPLIER_DEBTS,
+              OfflineStore.SALES,
+              OfflineStore.SETTINGS,
+              OfflineStore.SYNC_QUEUE
+            ];
+            storesToClear.forEach(store => {
+              offlineDB.clear(store).catch(err => console.error(`Error clearing offline store ${store}:`, err));
+            });
+          }).catch(err => console.error('Error importing offlineDB on sign out:', err));
+        }
       }
     });
     return () => subscription.unsubscribe();
