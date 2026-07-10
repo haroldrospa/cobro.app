@@ -65,8 +65,8 @@ export const useUserStore = () => {
       }
       return null;
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 1000 * 5,   // 5 segundos de gracia para evitar thrashing
+    gcTime: 1000 * 30,     // Guardar en caché 30 segundos
     refetchOnMount: true,        // Siempre verificar la sesión al montar
     refetchOnWindowFocus: true,  // Verificar cuando el usuario vuelve a la pestaña
     retry: 2,
@@ -77,7 +77,7 @@ export const useUserStore = () => {
 
   const query = useQuery({
     queryKey: ['user-store', userId],
-    staleTime: 1000 * 10,  // 10 segundos para re-verificar pero evitar spam inmediato
+    staleTime: 1000 * 30,  // 30 segundos — estable pero se actualiza rápido
     gcTime: 1000 * 60 * 5,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
