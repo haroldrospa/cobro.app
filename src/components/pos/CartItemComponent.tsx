@@ -32,11 +32,12 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
 
   const handleApplyDiscount = () => {
     const val = parseFloat(tempDiscountValue);
+    const identifier = item.cartItemId || item.id;
     if (!isNaN(val) && val >= 0) {
-      onUpdateDiscount?.(item.id, val, tempDiscountType);
+      onUpdateDiscount?.(identifier, val, tempDiscountType);
       setIsEditingDiscount(false);
     } else {
-      onUpdateDiscount?.(item.id, 0, 'percentage');
+      onUpdateDiscount?.(identifier, 0, 'percentage');
       setIsEditingDiscount(false);
     }
   };
@@ -99,7 +100,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+          onClick={() => onUpdateQuantity(item.cartItemId || item.id, item.quantity - 1)}
           className="h-6 w-6 rounded-full hover:bg-background hover:shadow-sm text-muted-foreground hover:text-foreground transition-all active:scale-90"
         >
           <Minus className="h-3 w-3" />
@@ -115,7 +116,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
         <QuantityDialog
           isOpen={isQuantityDialogOpen}
           onClose={() => setIsQuantityDialogOpen(false)}
-          onConfirm={(q) => onUpdateQuantity(item.id, q)}
+          onConfirm={(q) => onUpdateQuantity(item.cartItemId || item.id, q)}
           itemName={item.name}
           currentQuantity={item.quantity}
         />
@@ -123,7 +124,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+          onClick={() => onUpdateQuantity(item.cartItemId || item.id, item.quantity + 1)}
           className="h-6 w-6 rounded-full hover:bg-background hover:shadow-sm text-muted-foreground hover:text-foreground transition-all active:scale-90"
         >
           <Plus className="h-3 w-3" />
@@ -146,7 +147,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => onRemove(item.id)}
+        onClick={() => onRemove(item.cartItemId || item.id)}
         className="h-9 w-9 text-red-500/60 hover:text-red-600 hover:bg-red-500/10 rounded-full transition-all flex-shrink-0"
         title="Eliminar"
       >
@@ -160,7 +161,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
             <div className="flex gap-1 items-center">
               <Input
                 value={item.comment || ''}
-                onChange={(e) => onUpdateComment(item.id, e.target.value)}
+                onChange={(e) => onUpdateComment(item.cartItemId || item.id, e.target.value)}
                 placeholder="Nota para factura..."
                 className="h-7 text-xs bg-background/50 border-muted-foreground/20 focus:border-primary shadow-sm"
                 autoFocus
@@ -246,7 +247,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
                 className="text-[9px] text-muted-foreground hover:text-red-500 font-semibold"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onUpdateDiscount?.(item.id, 0, 'percentage');
+                  onUpdateDiscount?.(item.cartItemId || item.id, 0, 'percentage');
                   setTempDiscountValue('');
                 }}
               >
@@ -263,6 +264,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
 export default React.memo(CartItemComponent, (prev, next) => {
   return (
     prev.item.id === next.item.id &&
+    prev.item.cartItemId === next.item.cartItemId &&
     prev.item.quantity === next.item.quantity &&
     prev.item.price === next.item.price &&
     prev.item.comment === next.item.comment &&

@@ -498,10 +498,14 @@ const POSContent: React.FC = () => {
     }
 
     const priceToUse = forcedPrice !== undefined ? forcedPrice : product.price;
+    const isAdicional = product.name.toLowerCase().includes('adicional') || product.name.toLowerCase().includes('extra');
 
     setCart(prevCart => {
       // Buscar un item que coincida con ID Y PRECIO para evitar mezclar precios de bundle con normales
-      const existingItem = prevCart.find(item => item.id === product.id && item.price === priceToUse);
+      // Pero si es un adicional/extra, no lo agrupamos para que aparezcan en líneas separadas con notas independientes.
+      const existingItem = isAdicional
+        ? null
+        : prevCart.find(item => item.id === product.id && item.price === priceToUse);
 
       if (existingItem) {
         // Mover el item existente al principio y actualizar cantidad
@@ -509,11 +513,18 @@ const POSContent: React.FC = () => {
           ...existingItem,
           quantity: existingItem.quantity + quantity
         };
-        return [updatedItem, ...prevCart.filter(item => !(item.id === product.id && item.price === priceToUse))];
+        return [updatedItem, ...prevCart.filter(item => {
+          if (existingItem.cartItemId && item.cartItemId) {
+            return item.cartItemId !== existingItem.cartItemId;
+          }
+          return !(item.id === product.id && item.price === priceToUse);
+        })];
       } else {
-        // Agregar nuevo item al principio
+        // Agregar nuevo item al principio con un ID de carrito único
+        const cartItemId = `${product.id}-${Date.now()}-${Math.random()}`;
         return [{
           id: product.id,
+          cartItemId,
           name: product.name,
           price: priceToUse,
           quantity: quantity,
@@ -529,26 +540,26 @@ const POSContent: React.FC = () => {
   const updateQuantity = useCallback((id: string, quantity: number) => {
     setCart(prevCart => {
       if (quantity <= 0) {
-        return prevCart.filter(item => item.id !== id);
+        return prevCart.filter(item => (item.cartItemId || item.id) !== id);
       }
-      return prevCart.map(item => item.id === id ? { ...item, quantity } : item);
+      return prevCart.map(item => (item.cartItemId || item.id) === id ? { ...item, quantity } : item);
     });
   }, []);
 
   const updateComment = useCallback((id: string, comment: string) => {
-    setCart(prevCart => prevCart.map(item => item.id === id ? { ...item, comment } : item));
+    setCart(prevCart => prevCart.map(item => (item.cartItemId || item.id) === id ? { ...item, comment } : item));
   }, []);
 
   const updateDiscount = useCallback((id: string, value: number, type: 'percentage' | 'amount') => {
     setCart(prevCart => prevCart.map(item =>
-      item.id === id
+      (item.cartItemId || item.id) === id
         ? { ...item, discount: value > 0 ? { value, type } : undefined }
         : item
     ));
   }, []);
 
   const removeFromCart = useCallback((id: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== id));
+    setCart(prevCart => prevCart.filter(item => (item.cartItemId || item.id) !== id));
   }, []);
 
   const handleCheckout = useCallback(() => {

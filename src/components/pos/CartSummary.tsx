@@ -139,7 +139,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
           ) : (
             cart.map(item => (
               <CartItemComponent
-                key={item.id}
+                key={item.cartItemId || item.id}
                 item={item}
                 onUpdateQuantity={onUpdateQuantity}
                 onUpdateComment={onUpdateComment}
