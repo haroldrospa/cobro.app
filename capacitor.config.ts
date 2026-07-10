@@ -5,10 +5,9 @@ const config: CapacitorConfig = {
   appName: 'CobroApp',
   webDir: 'dist',
   server: {
-    // Cargar la webapp en producción directamente desde cobroapp.app
-    // Esto permite que la sesión, cookies y todos los datos persistan
-    // entre sesiones de la aplicación nativa
-    url: 'https://cobroapp.app',
+    // Cargar la vista de ventas/catálogo del POS directamente.
+    // Si no está autenticado, la web redirigirá a login y luego regresará aquí.
+    url: 'https://cobroapp.app/pos',
     cleartext: false,
     androidScheme: 'https',
     // Permitir navegación dentro del dominio principal
