@@ -473,20 +473,23 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                     sequenceRowId = seqData.id;
                 }
 
-                if (currentSeqNumber === 0) {
-                    const { data: maxSale } = await supabase
-                        .from('sales')
-                        .select('invoice_number')
-                        .eq('store_id', storeId)
-                        .eq('invoice_type_id', saleData.invoice_type_id)
-                        .order('invoice_number', { ascending: false })
-                        .limit(1);
+                // AUTO-REPARACIÓN AGRESIVA: Siempre verificar el máximo real en la tabla de ventas
+                // Esto evita el ciclo lento de 20 reintentos si la secuencia se quedó atascada
+                const { data: maxSale } = await supabase
+                    .from('sales')
+                    .select('invoice_number')
+                    .eq('store_id', storeId)
+                    .eq('invoice_type_id', saleData.invoice_type_id)
+                    .order('invoice_number', { ascending: false })
+                    .limit(1);
 
-                    if (maxSale && maxSale.length > 0) {
-                        const m = maxSale[0].invoice_number?.match(/-(\d+)$/);
-                        if (m) {
-                            currentSeqNumber = parseInt(m[1], 10);
-                            console.log(`🔄 Auto-reparando secuencia para ${traditionalCode}: encontrado max real = ${currentSeqNumber}`);
+                if (maxSale && maxSale.length > 0) {
+                    const m = maxSale[0].invoice_number?.match(/-(\d+)$/);
+                    if (m) {
+                        const maxRealNumber = parseInt(m[1], 10);
+                        if (maxRealNumber > currentSeqNumber) {
+                            console.log(`🔄 Auto-reparando secuencia para ${traditionalCode}: saltando de ${currentSeqNumber} a ${maxRealNumber}`);
+                            currentSeqNumber = maxRealNumber;
                         }
                     }
                 }
