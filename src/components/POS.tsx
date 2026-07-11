@@ -1866,6 +1866,16 @@ const POSContent: React.FC = () => {
                     isLoading={loadingProducts}
                     userName={profile?.full_name}
                   />
+                  {products.length === 0 && (
+                    <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive flex flex-col gap-1">
+                      <span className="font-bold">🔍 DEBUG INFO (Envíaselo al desarrollador):</span>
+                      <span>• Store ID (UserStore): {storeId || 'null/undefined'}</span>
+                      <span>• Profile Store ID: {profile?.store_id || 'null/undefined'}</span>
+                      <span>• Total Products (MasterData): {allProducts?.length ?? 0}</span>
+                      <span>• Business Type: {storeSettings?.shop_type || 'undefined'}</span>
+                      <span>• Session Loaded: {!isLoadingSession ? 'YES' : 'NO'} (Active: {activeSession ? 'YES' : 'NO'})</span>
+                    </div>
+                  )}
                 </div>
 
                 <div id="pos-cart-area" className="flex-1 min-h-[150px] md:min-h-[250px] overflow-hidden rounded-xl border bg-card shadow-sm z-10">
@@ -1931,6 +1941,16 @@ const POSContent: React.FC = () => {
                   recipeAvailability={recipeAvailability}
                   userName={profile?.full_name}
                 />
+                {products.length === 0 && (
+                  <div className="m-2 p-2 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive flex flex-col gap-1">
+                    <span className="font-bold">🔍 DEBUG INFO (Envíaselo al desarrollador):</span>
+                    <span>• Store ID (UserStore): {storeId || 'null/undefined'}</span>
+                    <span>• Profile Store ID: {profile?.store_id || 'null/undefined'}</span>
+                    <span>• Total Products (MasterData): {allProducts?.length ?? 0}</span>
+                    <span>• Business Type: {storeSettings?.shop_type || 'undefined'}</span>
+                    <span>• Session Loaded: {!isLoadingSession ? 'YES' : 'NO'} (Active: {activeSession ? 'YES' : 'NO'})</span>
+                  </div>
+                )}
               </div>
 
               {/* Panel derecho - Carrito y Totales */}
