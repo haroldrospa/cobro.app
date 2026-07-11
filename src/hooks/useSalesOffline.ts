@@ -544,22 +544,33 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             if (saleError) {
                 const errorMsg = saleError.message || '';
 
-                if (saleError.code === '23505' && (errorMsg.includes('sales_pkey') || errorMsg.includes('primary key'))) {
-                    console.log('✅ La venta ya existe por ID (idempotencia). Recuperando registro...');
-                    const { data: existingSale } = await supabase
-                        .from('sales')
-                        .select()
-                        .eq('id', saleData.id!)
-                        .single();
-                    if (existingSale) {
-                        finalSale = existingSale;
-                        break;
-                    }
-                }
-
                 if (saleError.code === '23505' || errorMsg.includes('unique constraint') || errorMsg.includes('duplicate')) {
+                    // BULLETPROOF IDEMPOTENCY CHECK:
+                    // En vez de depender del texto del error ('sales_pkey'), verificamos directamente
+                    // si la venta ya se insertó (ej. por el RPC que triunfó pero dio timeout al cliente)
+                    const { data: checkExisting } = await supabase
+                        .from('sales')
+                        .select('id')
+                        .eq('id', saleData.id!)
+                        .maybeSingle();
+
+                    if (checkExisting) {
+                        console.log('✅ La venta ya existe por ID (idempotencia comprobada). Recuperando registro...');
+                        const { data: existingSale } = await supabase
+                            .from('sales')
+                            .select()
+                            .eq('id', saleData.id!)
+                            .single();
+                        if (existingSale) {
+                            finalSale = existingSale;
+                            break;
+                        }
+                    }
+
+                    // Si NO fue por el ID, entonces fue choque de secuencia (invoice_number). Reintentamos.
+                    console.warn(`Choque de secuencia detectado (intento ${attempts}). Reintentando...`);
                     highestTriedNumber = Math.max(highestTriedNumber, nextNumber);
-                    await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200));
+                    await new Promise(resolve => setTimeout(resolve, Math.random() * 300 + 100)); // Reducido a 100-400ms
                     continue;
                 }
                 throw saleError;
