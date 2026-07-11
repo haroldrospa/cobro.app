@@ -155,17 +155,6 @@ BEGIN
      VALUES (v_invoice_type_code, v_next_number, p_store_id)
      RETURNING id INTO v_seq_id;
   ELSE
-     -- Auto-reparación agresiva: Aún si existe la secuencia, podría estar desfasada (ej. ventas offline previas)
-     SELECT COALESCE(MAX(SUBSTRING(invoice_number FROM '-([0-9]{1,9})$')::INTEGER), 0) INTO v_real_max
-     FROM public.sales
-     WHERE store_id = p_store_id 
-       AND invoice_type_id = p_invoice_type_id
-       AND invoice_number NOT LIKE '%OFFLINE%';
-
-     IF v_real_max > v_current_number THEN
-        v_current_number := v_real_max;
-     END IF;
-
      v_next_number := v_current_number + 1;
      UPDATE public.invoice_sequences 
      SET current_number = v_next_number, updated_at = NOW() 

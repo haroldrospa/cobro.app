@@ -480,28 +480,6 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                     currentSeqNumber = seqData.current_number;
                     sequenceRowId = seqData.id;
                 }
-
-                // AUTO-REPARACIÓN AGRESIVA: Siempre verificar el máximo real en la tabla de ventas
-                // Esto evita el ciclo lento de 20 reintentos si la secuencia se quedó atascada
-                const { data: maxSale } = await supabase
-                    .from('sales')
-                    .select('invoice_number')
-                    .eq('store_id', storeId)
-                    .eq('invoice_type_id', saleData.invoice_type_id)
-                    .not('invoice_number', 'like', '%OFFLINE%')
-                    .order('invoice_number', { ascending: false })
-                    .limit(1);
-
-                if (maxSale && maxSale.length > 0) {
-                    const m = maxSale[0].invoice_number?.match(/-(\d{1,9})$/);
-                    if (m) {
-                        const maxRealNumber = parseInt(m[1], 10);
-                        if (maxRealNumber > currentSeqNumber) {
-                            console.log(`🔄 Auto-reparando secuencia para ${traditionalCode}: saltando de ${currentSeqNumber} a ${maxRealNumber}`);
-                            currentSeqNumber = maxRealNumber;
-                        }
-                    }
-                }
             }
 
             const nextNumber = Math.max(currentSeqNumber + 1, highestTriedNumber + 1);
