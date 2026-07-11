@@ -259,7 +259,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   const showOfflineBanner = !isOnline;
-  const showSyncBanner = isOnline && pendingCount > 0 && isSyncBannerVisible;
+  const showSyncBanner = false; // Desactivado por solicitud del usuario para evitar carteles de sincronización
   const shouldAddMargin = showOfflineBanner || showSyncBanner;
 
   return (

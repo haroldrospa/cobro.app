@@ -355,7 +355,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         const { data: profile } = await supabase
             .from('profiles')
             .select('store_id')
-            .eq('id', user.id)
+            .eq('id', profileId)
             .maybeSingle();
 
         storeId = profile?.store_id;
