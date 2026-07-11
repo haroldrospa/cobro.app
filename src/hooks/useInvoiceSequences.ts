@@ -31,27 +31,37 @@ export const useMaxInvoiceNumbers = () => {
   return useQuery({
     queryKey: ['max-invoice-numbers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('invoice_type_id, invoice_number');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return {};
 
-      if (error) throw error;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('store_id')
+        .eq('id', session.user.id)
+        .single();
 
-      // Extraer el número máximo para cada tipo
+      if (!profile?.store_id) return {};
+
+      const invoiceTypes = ['B01', 'B02', 'B03', 'B04', 'B14', 'B15', 'B16'];
       const maxNumbers: Record<string, number> = {};
 
-      data?.forEach(sale => {
-        if (sale.invoice_type_id && sale.invoice_number) {
-          // Extraer el número de la factura (ej: B01-00000012 -> 12)
-          const match = sale.invoice_number.match(/-(\d{1,9})$/);
+      await Promise.all(invoiceTypes.map(async (typeId) => {
+        const { data, error } = await supabase
+          .from('sales')
+          .select('invoice_number')
+          .eq('store_id', profile.store_id)
+          .eq('invoice_type_id', typeId)
+          .not('invoice_number', 'like', '%OFFLINE%')
+          .order('invoice_number', { ascending: false })
+          .limit(1);
+
+        if (!error && data && data.length > 0) {
+          const match = data[0].invoice_number.match(/-(\d{1,9})$/);
           if (match) {
-            const num = parseInt(match[1], 10);
-            if (!maxNumbers[sale.invoice_type_id] || num > maxNumbers[sale.invoice_type_id]) {
-              maxNumbers[sale.invoice_type_id] = num;
-            }
+            maxNumbers[typeId] = parseInt(match[1], 10);
           }
         }
-      });
+      }));
 
       return maxNumbers;
     },
