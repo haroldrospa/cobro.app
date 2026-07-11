@@ -230,6 +230,8 @@ const POSContent: React.FC = () => {
     is_active: true,
   };
 
+  const storeId = profile?.store_id;
+
   const { products: allProducts, customers = [] } = useMasterData();
   const updateCustomerMutation = useUpdateCustomer();
   const productsQueryLoading = false;
