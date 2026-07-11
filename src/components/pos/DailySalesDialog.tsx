@@ -104,7 +104,10 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
     const sessionSales = useMemo(() => {
         if (activeSession) {
             // Only return sales within the active session time window
-            return sales.filter(sale => new Date(sale.created_at) >= new Date(activeSession.opened_at));
+            // Buffer de 30 mins para absorber desincronización de relojes
+            const bufferStart = new Date(activeSession.opened_at);
+            bufferStart.setMinutes(bufferStart.getMinutes() - 30);
+            return sales.filter(sale => new Date(sale.created_at) >= bufferStart);
         }
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -145,7 +148,9 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
         });
 
         if (activeSession) {
-            return baseMovements.filter(m => new Date(m.created_at) >= effectiveStart);
+            const bufferStart = new Date(effectiveStart);
+            bufferStart.setMinutes(bufferStart.getMinutes() - 30);
+            return baseMovements.filter(m => new Date(m.created_at) >= bufferStart);
         }
         const today = new Date();
         today.setHours(0, 0, 0, 0);

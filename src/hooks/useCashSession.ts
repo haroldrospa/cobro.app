@@ -154,8 +154,7 @@ export const useOpenSession = () => {
                         store_id: profile.store_id,
                         opened_by: user.id,
                         initial_cash: initialCash,
-                        status: 'open',
-                        opened_at: new Date().toISOString()
+                        status: 'open'
                     })
                     .select()
                     .single();

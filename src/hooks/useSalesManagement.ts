@@ -178,7 +178,9 @@ export const useSales = (filters: SalesFilters = {}) => {
 
       // Filtro por fecha desde (Only if NOT searching for a specific invoice)
       if (filters.dateFrom instanceof Date && !isNaN(filters.dateFrom.getTime()) && !isInvoiceSearch) {
-        query = query.gte('created_at', filters.dateFrom.toISOString());
+        const bufferDateFrom = new Date(filters.dateFrom);
+        bufferDateFrom.setHours(bufferDateFrom.getHours() - 12); // Buffer para absorber desincronización de reloj local vs server
+        query = query.gte('created_at', bufferDateFrom.toISOString());
       }
 
       // Filtro por fecha hasta (Only if NOT searching for a specific invoice)
