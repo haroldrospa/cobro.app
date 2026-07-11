@@ -31,6 +31,14 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     refetchProducts();
   }, [refetchCustomers, refetchCategories, refetchProducts]);
 
+  // Refrescar automáticamente cuando el storeId se resuelva para evitar condiciones de carrera al iniciar sesión
+  React.useEffect(() => {
+    if (storeId) {
+      console.log('🔄 MasterDataProvider: Store ID resolved, refreshing master data...', storeId);
+      refreshMasterData();
+    }
+  }, [storeId, refreshMasterData]);
+
   return (
     <MasterDataContext.Provider value={{
       customers,
