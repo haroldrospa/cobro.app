@@ -78,12 +78,11 @@ const App = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       console.log(`🔑 Auth event: ${event}`);
-      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+      if (event === 'SIGNED_OUT') {
         console.log(`🚪 Clearing React Query cache due to auth event: ${event}`);
         queryClient.clear();
         
-        if (event === 'SIGNED_OUT') {
-          Object.keys(localStorage).forEach(key => {
+        Object.keys(localStorage).forEach(key => {
             if (
               key === 'cobro_last_user_id' ||
               key.includes('cobro_user_store_cache') ||
@@ -114,7 +113,6 @@ const App = () => {
               offlineDB.clear(store).catch(err => console.error(`Error clearing offline store ${store}:`, err));
             });
           }).catch(err => console.error('Error importing offlineDB on sign out:', err));
-        }
       }
     });
     return () => subscription.unsubscribe();
