@@ -125,32 +125,35 @@ export const useCreateSaleOffline = () => {
                 }
             }
 
-            // Intentar guardar en Supabase (si hay conexión funcionará, si no, fallará y entrará al catch)
-            try {
-                const result = await saveSaleToSupabase({ ...saleData, id: saleId, store_id: storeId || undefined });
+            if (isOnline) {
+                // Modo ONLINE: Forzar subida directa y fallar si hay errores (nada en segundo plano)
+                console.log('🌐 Dispositivo online, guardando venta directamente en Supabase...');
+                try {
+                    const result = await saveSaleToSupabase({ ...saleData, id: saleId, store_id: storeId || undefined });
 
-                // Actualizar la venta local con el invoice_number y metadatos de e-NCF de Supabase
-                const updatedCompleteSale = {
-                    ...completeSale,
-                    invoice_number: result.encf || result.invoice_number,
-                    is_electronic: result.is_electronic || false,
-                    estado_fiscal: result.estado_fiscal || null,
-                    encf: result.encf || null,
-                    codigo_seguridad: result.codigo_seguridad || null,
-                    qrcode_url: result.qrcode_url || null,
-                    fecha_firma: result.fecha_firma || null,
-                    synced: true
-                };
-                await offlineDB.put(OfflineStore.SALES, updatedCompleteSale);
-
-                // IMPORTANTE: Mantener la secuencia local sincronizada
-                await updateLocalSequenceFromOnlineSale(saleData.invoice_type_id, result.invoice_number);
-
-                console.log('✅ Venta sincronizada con Supabase:', result.encf || result.invoice_number);
-                return updatedCompleteSale;
-            } catch (error: any) {
-                console.warn('⚠️ Error guardando en Supabase (posiblemente offline), se guardará para sincronizar:', error?.message || error);
-                // Agregar a cola de sincronización
+                    const updatedCompleteSale = {
+                        ...completeSale,
+                        invoice_number: result.encf || result.invoice_number,
+                        is_electronic: result.is_electronic || false,
+                        estado_fiscal: result.estado_fiscal || null,
+                        encf: result.encf || null,
+                        codigo_seguridad: result.codigo_seguridad || null,
+                        qrcode_url: result.qrcode_url || null,
+                        fecha_firma: result.fecha_firma || null,
+                        synced: true
+                    };
+                    await offlineDB.put(OfflineStore.SALES, updatedCompleteSale);
+                    await updateLocalSequenceFromOnlineSale(saleData.invoice_type_id, result.invoice_number);
+                    console.log('✅ Venta sincronizada con Supabase:', result.encf || result.invoice_number);
+                    return updatedCompleteSale;
+                } catch (error: any) {
+                    console.error('❌ Error crítico guardando en Supabase en modo online:', error);
+                    // Lanzar el error para que la UI muestre el fallo real y no continúe como si hubiera tenido éxito
+                    throw error;
+                }
+            } else {
+                // Modo OFFLINE: Guardar localmente y encolar para sincronización posterior
+                console.warn('🔌 Dispositivo offline, guardando venta localmente en cola de sincronización...');
                 await offlineDB.addToSyncQueue({
                     store: OfflineStore.SALES,
                     operation: 'CREATE',
