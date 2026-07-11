@@ -405,7 +405,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         });
 
         if (rpcError) {
-            console.warn('⚠️ RPC create_sale_transaction_v3 falló, usando fallback JS:', rpcError.message);
+            console.error('❌ RPC create_sale_transaction_v3 falló:', rpcError);
             throw rpcError;
         }
 
@@ -424,8 +424,13 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
 
             return rpcResult;
         }
-    } catch (err) {
-        console.warn('🔄 Usando fallback clásico de facturación por JS...');
+    } catch (err: any) {
+        if (err && err.code === 'PGRST202') {
+            console.warn('🔄 RPC no encontrado. Usando fallback clásico de facturación por JS...');
+        } else {
+            console.error('❌ Error crítico en RPC de facturación:', err);
+            throw err;
+        }
     }
 
     // --- FALLBACK CLÁSICO POR JS ---
