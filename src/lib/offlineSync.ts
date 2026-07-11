@@ -638,7 +638,7 @@ class OfflineSyncManager {
                             // CRITICAL FIX: Instead of relying on invoice_sequences (which may be stale),
                             // query the ACTUAL max invoice_number from the sales table.
                             // This is the self-healing approach that works even when sequences are far behind.
-                            const typePrefix = data.invoice_number.match(/^(.+?)-?(\d+)$/);
+                            const typePrefix = data.invoice_number.match(/^(.+?)-?(\d{1,9})$/);
                             const prefixPart = typePrefix ? typePrefix[1] : null;
 
                             // Query real max from sales table
@@ -657,7 +657,7 @@ class OfflineSyncManager {
                                     .abortSignal(signal || null);
 
                                 if (maxSaleData && maxSaleData.length > 0) {
-                                    const m = maxSaleData[0].invoice_number?.match(/-(\d+)$/);
+                                    const m = maxSaleData[0].invoice_number?.match(/-(\d{1,9})$/);
                                     if (m) baseNumber = parseInt(m[1], 10);
                                 }
                             } catch (maxErr) {
@@ -744,7 +744,7 @@ class OfflineSyncManager {
             if (data.invoice_number && data.store_id && data.invoice_type_id) {
                 try {
                     // Extraer número de la factura (ej: B02-00001739 -> 1739)
-                    const match = data.invoice_number.match(/-(\d+)$/);
+                    const match = data.invoice_number.match(/-(\d{1,9})$/);
                     if (match && match[1]) {
                         const sequenceNumber = parseInt(match[1], 10);
 

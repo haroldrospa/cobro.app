@@ -492,7 +492,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                     .limit(1);
 
                 if (maxSale && maxSale.length > 0) {
-                    const m = maxSale[0].invoice_number?.match(/-(\d+)$/);
+                    const m = maxSale[0].invoice_number?.match(/-(\d{1,9})$/);
                     if (m) {
                         const maxRealNumber = parseInt(m[1], 10);
                         if (maxRealNumber > currentSeqNumber) {

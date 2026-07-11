@@ -43,7 +43,7 @@ export const useMaxInvoiceNumbers = () => {
       data?.forEach(sale => {
         if (sale.invoice_type_id && sale.invoice_number) {
           // Extraer el número de la factura (ej: B01-00000012 -> 12)
-          const match = sale.invoice_number.match(/-(\d+)$/);
+          const match = sale.invoice_number.match(/-(\d{1,9})$/);
           if (match) {
             const num = parseInt(match[1], 10);
             if (!maxNumbers[sale.invoice_type_id] || num > maxNumbers[sale.invoice_type_id]) {
@@ -76,7 +76,7 @@ export const useUpdateInvoiceSequence = () => {
       // Encontrar el número máximo usado
       let maxUsed = 0;
       sales?.forEach(sale => {
-        const match = sale.invoice_number.match(/-(\d+)$/);
+        const match = sale.invoice_number.match(/-(\d{1,9})$/);
         if (match) {
           const num = parseInt(match[1], 10);
           if (num > maxUsed) maxUsed = num;

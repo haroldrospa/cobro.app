@@ -143,7 +143,7 @@ BEGIN
 
   IF v_seq_id IS NULL THEN
      -- Auto-reparación: Si no existe, buscar el máximo real usado en ventas
-     SELECT COALESCE(MAX(SUBSTRING(invoice_number FROM '-([0-9]+)$')::INTEGER), 0) INTO v_current_number
+     SELECT COALESCE(MAX(SUBSTRING(invoice_number FROM '-([0-9]{1,9})$')::INTEGER), 0) INTO v_current_number
      FROM public.sales
      WHERE store_id = p_store_id AND invoice_type_id = p_invoice_type_id;
 
@@ -154,7 +154,7 @@ BEGIN
      RETURNING id INTO v_seq_id;
   ELSE
      -- Auto-reparación agresiva: Aún si existe la secuencia, podría estar desfasada (ej. ventas offline previas)
-     SELECT COALESCE(MAX(SUBSTRING(invoice_number FROM '-([0-9]+)$')::INTEGER), 0) INTO v_real_max
+     SELECT COALESCE(MAX(SUBSTRING(invoice_number FROM '-([0-9]{1,9})$')::INTEGER), 0) INTO v_real_max
      FROM public.sales
      WHERE store_id = p_store_id AND invoice_type_id = p_invoice_type_id;
 
