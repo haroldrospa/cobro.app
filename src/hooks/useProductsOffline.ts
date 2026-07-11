@@ -150,10 +150,6 @@ export const useProductsOffline = () => {
             console.log('📦 Primera carga: descargando catálogo desde Supabase...');
             if (isOnline) {
                 try {
-                    const session = await getSessionSafe();
-                    if (!session) {
-                        throw new Error('Sin sesión válida al cargar productos');
-                    }
                     let allData: any[] = [];
                     let hasMore = true;
                     let from = 0;
@@ -179,22 +175,22 @@ export const useProductsOffline = () => {
                     }
 
                     const filtered = allData.filter((p: any) => p.store_id === storeId) as Product[];
-                    // Guardar en una sola transacción bulk (mucho más eficiente que N inserts individuales)
-                    offlineDB.putBulk(OfflineStore.PRODUCTS, filtered)
-                        .catch(e => console.warn('IndexedDB bulk write error:', e));
+                    if (filtered.length > 0) {
+                        await offlineDB.putBulk(OfflineStore.PRODUCTS, filtered);
+                    }
                     return filtered;
                 } catch (error) {
-                    console.log('📦 Error en primera carga desde Supabase:', error);
-                    // Disparar intento de sync background si falló
-                    setTimeout(() => syncFromSupabase(storeId), 1000);
+                    console.error('❌ Error en primera carga desde Supabase:', error);
+                    // Disparar sync en background
+                    setTimeout(() => syncFromSupabase(storeId), 500);
                 }
             } else {
                 // Sin internet y sin caché: programar sync
-                setTimeout(() => syncFromSupabase(storeId), 1000);
+                setTimeout(() => syncFromSupabase(storeId), 500);
             }
 
-            // Sin internet y sin caché, o hubo error: Lanza error para que React Query reintente y no cachee []
-            throw new Error('Error de conexión al cargar catálogo');
+            // Fallback: retornar lo que tengamos localmente en vez de colgar la UI con una excepción
+            return localProducts;
         },
         staleTime: 1000 * 60 * 2,    // 2 min — usar caché local pero verificar seguido
         gcTime: 1000 * 60 * 60 * 24, // 24 horas
