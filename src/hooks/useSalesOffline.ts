@@ -125,47 +125,38 @@ export const useCreateSaleOffline = () => {
                 }
             }
 
-            // Si estamos online, intentar guardar en Supabase
-            if (isOnline) {
-                try {
-                    const result = await saveSaleToSupabase({ ...saleData, id: saleId, store_id: storeId || undefined });
+            // Intentar guardar en Supabase (si hay conexión funcionará, si no, fallará y entrará al catch)
+            try {
+                const result = await saveSaleToSupabase({ ...saleData, id: saleId, store_id: storeId || undefined });
 
-                    // Actualizar la venta local con el invoice_number y metadatos de e-NCF de Supabase
-                    const updatedCompleteSale = {
-                        ...completeSale,
-                        invoice_number: result.encf || result.invoice_number,
-                        is_electronic: result.is_electronic || false,
-                        estado_fiscal: result.estado_fiscal || null,
-                        encf: result.encf || null,
-                        codigo_seguridad: result.codigo_seguridad || null,
-                        qrcode_url: result.qrcode_url || null,
-                        fecha_firma: result.fecha_firma || null,
-                        synced: true
-                    };
-                    await offlineDB.put(OfflineStore.SALES, updatedCompleteSale);
+                // Actualizar la venta local con el invoice_number y metadatos de e-NCF de Supabase
+                const updatedCompleteSale = {
+                    ...completeSale,
+                    invoice_number: result.encf || result.invoice_number,
+                    is_electronic: result.is_electronic || false,
+                    estado_fiscal: result.estado_fiscal || null,
+                    encf: result.encf || null,
+                    codigo_seguridad: result.codigo_seguridad || null,
+                    qrcode_url: result.qrcode_url || null,
+                    fecha_firma: result.fecha_firma || null,
+                    synced: true
+                };
+                await offlineDB.put(OfflineStore.SALES, updatedCompleteSale);
 
-                    // IMPORTANTE: Mantener la secuencia local sincronizada
-                    await updateLocalSequenceFromOnlineSale(saleData.invoice_type_id, result.invoice_number);
+                // IMPORTANTE: Mantener la secuencia local sincronizada
+                await updateLocalSequenceFromOnlineSale(saleData.invoice_type_id, result.invoice_number);
 
-                    console.log('✅ Venta sincronizada con Supabase:', result.encf || result.invoice_number);
-                    return result;
-                } catch (error: any) {
-                    console.warn('⚠️ Error guardando en Supabase (posiblemente offline), se guardará para sincronizar:', error?.message || error);
-                    // Agregar a cola de sincronización
-                    await offlineDB.addToSyncQueue({
-                        store: OfflineStore.SALES,
-                        operation: 'CREATE',
-                        data: completeSale,
-                    });
-                }
-            } else {
-                console.log('📵 Sin conexión - Venta guardada para sincronizar después');
+                console.log('✅ Venta sincronizada con Supabase:', result.encf || result.invoice_number);
+                return updatedCompleteSale;
+            } catch (error: any) {
+                console.warn('⚠️ Error guardando en Supabase (posiblemente offline), se guardará para sincronizar:', error?.message || error);
                 // Agregar a cola de sincronización
                 await offlineDB.addToSyncQueue({
                     store: OfflineStore.SALES,
                     operation: 'CREATE',
                     data: completeSale,
                 });
+                return completeSale;
             }
 
             return completeSale;
