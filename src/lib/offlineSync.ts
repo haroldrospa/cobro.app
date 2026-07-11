@@ -652,6 +652,7 @@ class OfflineSyncManager {
                                     .select('invoice_number')
                                     .eq('store_id', storeId)
                                     .eq('invoice_type_id', invoiceTypeId)
+                                    .not('invoice_number', 'like', '%OFFLINE%')
                                     .order('invoice_number', { ascending: false })
                                     .limit(1) // Only need the single highest
                                     .abortSignal(signal || null);

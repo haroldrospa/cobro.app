@@ -488,6 +488,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                     .select('invoice_number')
                     .eq('store_id', storeId)
                     .eq('invoice_type_id', saleData.invoice_type_id)
+                    .not('invoice_number', 'like', '%OFFLINE%')
                     .order('invoice_number', { ascending: false })
                     .limit(1);
 
