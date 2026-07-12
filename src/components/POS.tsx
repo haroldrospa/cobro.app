@@ -542,26 +542,26 @@ const POSContent: React.FC = () => {
   const updateQuantity = useCallback((id: string, quantity: number) => {
     setCart(prevCart => {
       if (quantity <= 0) {
-        return prevCart.filter(item => (item.cartItemId || item.id) !== id);
+        return prevCart.filter(item => item.cartItemId !== id && item.id !== id);
       }
-      return prevCart.map(item => (item.cartItemId || item.id) === id ? { ...item, quantity } : item);
+      return prevCart.map(item => (item.cartItemId === id || item.id === id) ? { ...item, quantity } : item);
     });
   }, []);
 
   const updateComment = useCallback((id: string, comment: string) => {
-    setCart(prevCart => prevCart.map(item => (item.cartItemId || item.id) === id ? { ...item, comment } : item));
+    setCart(prevCart => prevCart.map(item => (item.cartItemId === id || item.id === id) ? { ...item, comment } : item));
   }, []);
 
   const updateDiscount = useCallback((id: string, value: number, type: 'percentage' | 'amount') => {
     setCart(prevCart => prevCart.map(item =>
-      (item.cartItemId || item.id) === id
+      (item.cartItemId === id || item.id === id)
         ? { ...item, discount: value > 0 ? { value, type } : undefined }
         : item
     ));
   }, []);
 
   const removeFromCart = useCallback((id: string) => {
-    setCart(prevCart => prevCart.filter(item => (item.cartItemId || item.id) !== id));
+    setCart(prevCart => prevCart.filter(item => item.cartItemId !== id && item.id !== id));
   }, []);
 
   const handleCheckout = useCallback(() => {
