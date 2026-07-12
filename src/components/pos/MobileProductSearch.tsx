@@ -102,47 +102,118 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     return ['Todos', ...Array.from(new Set(names))];
   }, [products]);
 
+  const normalizeText = React.useCallback((text: string) => {
+    return (text || '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }, []);
+
+  // Pre-normalize products for faster searching (eliminate repeated toLowerCase calls)
   const normalizedProducts = React.useMemo(() => {
     return products.map(p => ({
       ...p,
-      _name_lower: p.name?.toLowerCase() || '',
-      _barcode_lower: p.barcode?.toLowerCase() || '',
-      _internal_code_lower: p.internal_code?.toLowerCase() || '',
-      _category_lower: p.category?.name?.toLowerCase() || '',
-      _all_barcodes_lower: [
-        p.barcode?.toLowerCase(),
-        ...(p.barcodes?.map(b => b.barcode.toLowerCase()) ?? [])
-      ].filter(Boolean) as string[]
+      _name_norm: normalizeText(p.name),
+      _barcode_norm: normalizeText(p.barcode),
+      _internal_code_norm: normalizeText(p.internal_code),
+      _category_norm: normalizeText(p.category?.name),
+      _all_barcodes_norm: [
+        p.barcode,
+        ...(p.barcodes?.map(b => b.barcode) ?? [])
+      ].map(b => normalizeText(b)).filter(Boolean) as string[]
     }));
-  }, [products]);
+  }, [products, normalizeText]);
 
   // Memoize search results to filter by category and search term
   const filteredProducts = React.useMemo(() => {
-    const searchLower = debouncedSearchTerm.toLowerCase().trim();
+    const rawTerm = debouncedSearchTerm.trim();
     
     let list = normalizedProducts;
 
     // Filter by category if not 'Todos'
     if (selectedCategory !== 'Todos') {
-      const catLower = selectedCategory.toLowerCase();
-      list = list.filter(product => product._category_lower === catLower);
+      const catNorm = normalizeText(selectedCategory);
+      list = list.filter(product => product._category_norm === catNorm);
     }
 
-    if (!searchLower) {
+    if (!rawTerm) {
       return list.slice(0, 80);
     }
 
-    const filtered = list.filter(product => {
-      return (
-        product._name_lower.includes(searchLower) ||
-        product._all_barcodes_lower.some(b => b.includes(searchLower)) ||
-        product._internal_code_lower.includes(searchLower) ||
-        product._category_lower.includes(searchLower)
-      );
+    const normTerm = normalizeText(rawTerm);
+    const searchWords = normTerm.split(/\s+/).filter(Boolean);
+
+    if (searchWords.length === 0) {
+      return list.slice(0, 80);
+    }
+
+    // Scoring and filtering products by relevance
+    const scoredProducts = list
+      .map(product => {
+        let score = 0;
+
+        // 1. Exact Barcode Match (highest priority for scanners)
+        const isExactBarcode = product._all_barcodes_norm.some(b => b === normTerm);
+        if (isExactBarcode) {
+          score += 1000;
+        }
+
+        // 2. Exact Internal Code Match
+        if (product._internal_code_norm === normTerm) {
+          score += 900;
+        }
+
+        // 3. Name matches
+        if (product._name_norm === normTerm) {
+          score += 800; // Exact name match
+        } else if (product._name_norm.startsWith(normTerm)) {
+          score += 500; // Name starts with search term
+        }
+
+        // 4. Token/Word matching (Fuzzy search)
+        let matchedWordsCount = 0;
+        searchWords.forEach(word => {
+          const inName = product._name_norm.includes(word);
+          const inBarcode = product._all_barcodes_norm.some(b => b.includes(word));
+          const inCode = product._internal_code_norm.includes(word);
+          const inCategory = product._category_norm.includes(word);
+
+          if (inName || inBarcode || inCode || inCategory) {
+            matchedWordsCount++;
+            if (inName) score += 50;
+            if (inBarcode) score += 40;
+            if (inCode) score += 30;
+          }
+        });
+
+        // Must match at least one word to be included
+        if (matchedWordsCount === 0) {
+          return null;
+        }
+
+        // Boost products that match ALL search words
+        if (matchedWordsCount === searchWords.length) {
+          score += 200;
+        }
+
+        // Relative match percentage bonus
+        score += (matchedWordsCount / searchWords.length) * 100;
+
+        return { product, score };
+      })
+      .filter((item): item is { product: any; score: number } => item !== null);
+
+    // Sort by score descending, then by name alphabetically
+    scoredProducts.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.product._name_norm.localeCompare(b.product._name_norm);
     });
 
-    return filtered.slice(0, 80);
-  }, [normalizedProducts, debouncedSearchTerm, selectedCategory]);
+    const result = scoredProducts.map(item => item.product);
+
+    return result.slice(0, 80);
+  }, [normalizedProducts, debouncedSearchTerm, selectedCategory, normalizeText]);
 
   // Slice results for infinite scrolling/performance
   const slicedProducts = React.useMemo(() => {

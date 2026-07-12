@@ -369,59 +369,113 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     placeholder: 'Buscar por categoría...'
   }], []);
 
+  const normalizeText = useCallback((text: string) => {
+    return (text || '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }, []);
+
   // Pre-normalize products for faster searching (eliminate repeated toLowerCase calls)
   const normalizedProducts = useMemo(() => {
     return products.map(p => ({
       ...p,
-      _name_lower: p.name?.toLowerCase() || '',
-      _barcode_lower: p.barcode?.toLowerCase() || '',
-      _internal_code_lower: p.internal_code?.toLowerCase() || '',
-      _category_lower: p.category?.name?.toLowerCase() || '',
-      _all_barcodes_lower: [
-        p.barcode?.toLowerCase(),
-        ...(p.barcodes?.map(b => b.barcode.toLowerCase()) ?? [])
-      ].filter(Boolean) as string[]
+      _name_norm: normalizeText(p.name),
+      _barcode_norm: normalizeText(p.barcode),
+      _internal_code_norm: normalizeText(p.internal_code),
+      _category_norm: normalizeText(p.category?.name),
+      _all_barcodes_norm: [
+        p.barcode,
+        ...(p.barcodes?.map(b => b.barcode) ?? [])
+      ].map(b => normalizeText(b)).filter(Boolean) as string[]
     }));
-  }, [products]);
+  }, [products, normalizeText]);
 
   // Memoize filtered products - only recalculate when products or search changes
   const filteredProducts = useMemo(() => {
-    const term = debouncedSearchTerm.trim();
+    const rawTerm = debouncedSearchTerm.trim();
     
     // Classic mode: only show if searching
-    if (mode === 'classic' && !term) return [];
+    if (mode === 'classic' && !rawTerm) return [];
 
     // Catalog mode or while searching: Show results
-    if (!term) return normalizedProducts.slice(0, 100);
+    if (!rawTerm) return normalizedProducts.slice(0, 100);
 
-    const searchLower = term.toLowerCase();
+    const normTerm = normalizeText(rawTerm);
+    const searchWords = normTerm.split(/\s+/).filter(Boolean);
 
-    // First pass filter - extremely efficient now
-    let filtered = normalizedProducts.filter(product => {
-      // Prioritize name and barcode which are most common
-      if (searchType === 'name' || searchType === 'all') {
-        if (product._name_lower.includes(searchLower)) return true;
-      }
-      
-      if (searchType === 'barcode' || searchType === 'all') {
-        if (product._all_barcodes_lower.some(b => b.includes(searchLower))) return true;
-      }
+    if (searchWords.length === 0) return normalizedProducts.slice(0, 100);
 
-      if (searchType === 'id' || searchType === 'all') {
-        if (product._internal_code_lower.includes(searchLower)) return true;
-      }
+    // Scoring and filtering products by relevance
+    const scoredProducts = normalizedProducts
+      .map(product => {
+        let score = 0;
 
-      if (searchType === 'category' || searchType === 'all') {
-        if (product._category_lower.includes(searchLower)) return true;
-      }
+        // 1. Exact Barcode Match (highest priority for scanners)
+        const isExactBarcode = product._all_barcodes_norm.some(b => b === normTerm);
+        if (isExactBarcode) {
+          score += 1000;
+        }
 
-      return false;
+        // 2. Exact Internal Code Match
+        if (product._internal_code_norm === normTerm) {
+          score += 900;
+        }
+
+        // 3. Name matches
+        if (product._name_norm === normTerm) {
+          score += 800; // Exact name match
+        } else if (product._name_norm.startsWith(normTerm)) {
+          score += 500; // Name starts with search term
+        }
+
+        // 4. Token/Word matching (Fuzzy search)
+        let matchedWordsCount = 0;
+        searchWords.forEach(word => {
+          const inName = (searchType === 'name' || searchType === 'all') && product._name_norm.includes(word);
+          const inBarcode = (searchType === 'barcode' || searchType === 'all') && product._all_barcodes_norm.some(b => b.includes(word));
+          const inCode = (searchType === 'id' || searchType === 'all') && product._internal_code_norm.includes(word);
+          const inCategory = (searchType === 'category' || searchType === 'all') && product._category_norm.includes(word);
+
+          if (inName || inBarcode || inCode || inCategory) {
+            matchedWordsCount++;
+            if (inName) score += 50;
+            if (inBarcode) score += 40;
+            if (inCode) score += 30;
+          }
+        });
+
+        // Must match at least one word to be included
+        if (matchedWordsCount === 0) {
+          return null;
+        }
+
+        // Boost products that match ALL search words
+        if (matchedWordsCount === searchWords.length) {
+          score += 200;
+        }
+
+        // Relative match percentage bonus
+        score += (matchedWordsCount / searchWords.length) * 100;
+
+        return { product, score };
+      })
+      .filter((item): item is { product: any; score: number } => item !== null);
+
+    // Sort by score descending, then by name alphabetically
+    scoredProducts.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.product._name_norm.localeCompare(b.product._name_norm);
     });
 
+    const sortedProducts = scoredProducts.map(item => item.product);
+
     // --- DEDUPLICACION DE BUNDLES ---
+    let filtered = sortedProducts;
     const hasBundleMatch = filtered.some(p =>
       p.barcodes?.some(b => {
-        const isExact = b.barcode.toLowerCase() === searchLower;
+        const isExact = normalizeText(b.barcode) === normTerm;
         const qty = Number(b.quantity) || 1;
         const disc = Number(b.discount_value) || 0;
         return isExact && (qty > 1 || disc > 0);
@@ -430,37 +484,24 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     
     if (hasBundleMatch) {
       filtered = filtered.filter(p => {
-        const isPrimaryBarcode = p._barcode_lower === searchLower;
+        const isPrimaryBarcode = p._barcode_norm === normTerm;
         if (!isPrimaryBarcode) return true;
         const hasBundleRule = p.barcodes?.some(b => {
-          return b.barcode.toLowerCase() === searchLower && ((Number(b.quantity) || 1) > 1 || (Number(b.discount_value) || 0) > 0);
+          return normalizeText(b.barcode) === normTerm && ((Number(b.quantity) || 1) > 1 || (Number(b.discount_value) || 0) > 0);
         });
         return !!hasBundleRule;
       });
     }
 
-    filtered = filtered.sort((a, b) => {
-      const aStarts = a._name_lower.startsWith(searchLower);
-      const bStarts = b._name_lower.startsWith(searchLower);
-      
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-      
-      if (a._barcode_lower === searchLower) return -1;
-      if (b._barcode_lower === searchLower) return 1;
-
-      return a._name_lower.localeCompare(b._name_lower);
-    });
-
     const withBundles = filtered.map(p => ({
       ...p,
-      _matchedBundle: searchLower
-        ? p.barcodes?.find(b => b.barcode.toLowerCase() === searchLower) ?? null
+      _matchedBundle: normTerm
+        ? p.barcodes?.find(b => normalizeText(b.barcode) === normTerm) ?? null
         : null,
     }));
 
     return withBundles.slice(0, 100);
-  }, [normalizedProducts, debouncedSearchTerm, searchType, mode]);
+  }, [normalizedProducts, debouncedSearchTerm, searchType, mode, normalizeText]);
 
   // Reset focused index when search results change
   useEffect(() => {
