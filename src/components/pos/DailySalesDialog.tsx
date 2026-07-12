@@ -50,7 +50,15 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
     const { data: openSessionsData } = useOpenSessions();
     const { data: sessionHistoryData } = useSessionHistory();
     const sessionHistory = sessionHistoryData || [];
-    const openSessions = openSessionsData || [];
+    
+    // Resolve the raw open sessions list, prepending the cached session if it exists but is missing from list
+    const openSessions = useMemo(() => {
+        const list = [...(openSessionsData || [])];
+        if (activeSessionCached && !list.find(s => s.id === activeSessionCached.id)) {
+            list.unshift(activeSessionCached);
+        }
+        return list;
+    }, [openSessionsData, activeSessionCached]);
 
     // Resolve the TRUE active session for the current user from live DB data,
     // bypassing any stale localStorage-cached session.

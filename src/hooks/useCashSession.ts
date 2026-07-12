@@ -42,57 +42,49 @@ const getSessionFromLS = (): CashSession | null => {
 
 export const useActiveSession = () => {
     const isOnline = useOnlineStatus();
+    const { profile } = useUserProfile();
+    const userId = profile?.id;
+    const storeId = profile?.store_id;
 
     return useQuery({
-        queryKey: ['active-cash-session'],
+        queryKey: ['active-cash-session', userId],
         queryFn: async () => {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) {
+                if (!userId) {
                     return getSessionFromLS();
                 }
 
-                if (isOnline) {
-                    const { data: profile, error: profileError } = await supabase
-                        .from('profiles')
-                        .select('store_id')
-                        .eq('id', user.id)
+                if (isOnline && storeId) {
+                    const { data, error } = await supabase
+                        .from('cash_sessions')
+                        .select('*')
+                        .eq('store_id', storeId)
+                        .eq('status', 'open')
+                        .eq('opened_by', userId)
+                        .order('opened_at', { ascending: false })
+                        .limit(1)
                         .maybeSingle();
 
-                    if (profileError) throw profileError;
+                    if (error) throw error;
 
-                    const storeId = profile?.store_id;
-                    if (storeId) {
-                        const { data, error } = await supabase
-                            .from('cash_sessions')
-                            .select('*')
-                            .eq('store_id', storeId)
-                            .eq('status', 'open')
-                            .order('opened_at', { ascending: false })
-                            .limit(1)
-                            .maybeSingle();
-
-                        if (error) throw error;
-
-                        // If server returned a different session than what was in localStorage, clear the stale one
-                        const lsSession = getSessionFromLS();
-                        if (lsSession && (!data || lsSession.id !== data.id)) {
-                            console.log('[CashSession] Clearing stale localStorage session:', lsSession.id, '→ replacing with:', data?.id ?? 'null');
-                            saveSessionToLS(data ?? null);
-                        } else {
-                            saveSessionToLS(data ?? null);
-                        }
-
-                        if (data) {
-                            await offlineDB.put(OfflineStore.CASH_SESSIONS, data);
-                        }
-                        return (data as CashSession) ?? null;
+                    // If server returned a different session than what was in localStorage, clear the stale one
+                    const lsSession = getSessionFromLS();
+                    if (lsSession && (!data || lsSession.id !== data.id)) {
+                        console.log('[CashSession] Clearing stale localStorage session:', lsSession.id, '→ replacing with:', data?.id ?? 'null');
+                        saveSessionToLS(data ?? null);
+                    } else {
+                        saveSessionToLS(data ?? null);
                     }
+
+                    if (data) {
+                        await offlineDB.put(OfflineStore.CASH_SESSIONS, data);
+                    }
+                    return (data as CashSession) ?? null;
                 }
 
                 // Offline path: try IndexedDB first, then localStorage
                 const localSessions = await offlineDB.getAll<CashSession>(OfflineStore.CASH_SESSIONS);
-                const activeLocal = localSessions.find(s => s.status === 'open') ?? null;
+                const activeLocal = localSessions.find(s => s.status === 'open' && s.opened_by === userId) ?? null;
                 if (activeLocal) return activeLocal;
 
                 return getSessionFromLS();
@@ -100,15 +92,15 @@ export const useActiveSession = () => {
             } catch (error) {
                 console.error('Error fetching active session, using local fallback:', error);
                 try {
-                    const { data: { user } } = await supabase.auth.getUser();
                     const localSessions = await offlineDB.getAll<CashSession>(OfflineStore.CASH_SESSIONS);
-                    const activeLocal = localSessions.find(s => s.status === 'open') ?? null;
+                    const activeLocal = localSessions.find(s => s.status === 'open' && s.opened_by === userId) ?? null;
                     if (activeLocal) return activeLocal;
                 } catch { /* ignore */ }
 
                 return getSessionFromLS();
             }
         },
+        enabled: !!userId,
         retry: false,
         staleTime: 0,
     });
@@ -117,6 +109,8 @@ export const useActiveSession = () => {
 
 export const useOpenSession = () => {
     const queryClient = useQueryClient();
+    const { profile } = useUserProfile();
+    const userId = profile?.id;
 
     return useMutation({
         mutationFn: async ({ initialCash }: { initialCash: number }) => {
@@ -126,19 +120,19 @@ export const useOpenSession = () => {
             const isOnline = navigator.onLine;
 
             if (isOnline) {
-                const { data: profile } = await supabase
+                const { data: profileData } = await supabase
                     .from('profiles')
                     .select('store_id')
                     .eq('id', user.id)
                     .maybeSingle();
 
-                if (!profile?.store_id) throw new Error('No store found');
+                if (!profileData?.store_id) throw new Error('No store found');
 
                 // Check if there's already an open session to prevent duplicates
                 const { data: existingSessions } = await supabase
                     .from('cash_sessions')
                     .select('id')
-                    .eq('store_id', profile.store_id)
+                    .eq('store_id', profileData.store_id)
                     .eq('opened_by', user.id)
                     .eq('status', 'open')
                     .limit(1);
@@ -151,7 +145,7 @@ export const useOpenSession = () => {
                 const { data, error } = await supabase
                     .from('cash_sessions')
                     .insert({
-                        store_id: profile.store_id,
+                        store_id: profileData.store_id,
                         opened_by: user.id,
                         initial_cash: initialCash,
                         status: 'open'
@@ -204,6 +198,9 @@ export const useOpenSession = () => {
                 await offlineDB.put(OfflineStore.CASH_SESSIONS, newItem);
             }
             // Instant UI update
+            if (userId) {
+                queryClient.setQueryData(['active-cash-session', userId], newItem);
+            }
             queryClient.setQueryData(['active-cash-session'], newItem);
             queryClient.invalidateQueries({ queryKey: ['active-cash-session'] });
             queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
@@ -214,6 +211,8 @@ export const useOpenSession = () => {
 
 export const useCloseSession = () => {
     const queryClient = useQueryClient();
+    const { profile } = useUserProfile();
+    const userId = profile?.id;
 
     return useMutation({
         mutationFn: async ({ sessionId, closingData }: { sessionId: string, closingData: any }) => {
@@ -280,6 +279,9 @@ export const useCloseSession = () => {
                 await offlineDB.put(OfflineStore.CASH_SESSIONS, data);
             }
             // Instant UI update to trigger opening dialog
+            if (userId) {
+                queryClient.setQueryData(['active-cash-session', userId], null);
+            }
             queryClient.setQueryData(['active-cash-session'], null);
             queryClient.invalidateQueries({ queryKey: ['active-cash-session'] });
             queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
