@@ -15,7 +15,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Maximize, Minimize, Menu, Home, Package, Users, FileText, BarChart,
   Settings as SettingsIcon, Store, LogOut, Save, ClipboardList, Receipt,
-  RefreshCcw, HandCoins, Lock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
+  RefreshCcw, HandCoins, Lock, Unlock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
   Menu as MenuIcon, User, Layers, Info, HelpCircle, Search, ChevronRight
 } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
@@ -1440,6 +1440,8 @@ const POSContent: React.FC = () => {
             pos_view_mode: mode === 'classic' ? 'list' : 'grid'
           })}
           userName={profile?.full_name}
+          activeSession={activeSession}
+          onOpenRegister={() => setUserClosedRegisterDialog(false)}
         />
       );
     }
@@ -1455,9 +1457,11 @@ const POSContent: React.FC = () => {
         onDebtSelect={handleShowDebtSelect}
         onLogout={handleLogout}
         userName={profile?.full_name}
+        activeSession={activeSession}
+        onOpenRegister={() => setUserClosedRegisterDialog(false)}
       />
     );
-  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile]);
+  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile, activeSession]);
 
   // Action buttons as a stable React.memo component reference
   const actionButtons = useMemo(() => (
@@ -2396,6 +2400,8 @@ interface POSMenuButtonProps {
   layoutMode?: 'classic' | 'catalog';
   onLayoutModeChange?: (mode: 'classic' | 'catalog') => void;
   userName?: string;
+  activeSession: any;
+  onOpenRegister: () => void;
 }
 
 const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
@@ -2413,6 +2419,8 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
   layoutMode,
   onLayoutModeChange,
   userName,
+  activeSession,
+  onOpenRegister,
 }) {
   if (isMobile) {
     return (
@@ -2551,7 +2559,9 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                 { icon: Receipt, label: 'Ventas del Día', action: onDailySales, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10 hover:border-blue-500/25 group-hover:bg-blue-500/10' },
                 { icon: RefreshCcw, label: 'Devoluciones', action: onRefund, color: 'text-orange-400', bg: 'bg-orange-500/5 border-orange-500/10 hover:border-orange-500/25 group-hover:bg-orange-500/10' },
                 { icon: HandCoins, label: 'Movimientos', action: onCashMovements, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/25 group-hover:bg-emerald-500/10' },
-                { icon: Lock, label: 'Cierre de Caja', action: onCloseDay, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10 hover:border-rose-500/25 group-hover:bg-rose-500/10' },
+                activeSession
+                  ? { icon: Lock, label: 'Cierre de Caja', action: onCloseDay, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10 hover:border-rose-500/25 group-hover:bg-rose-500/10' }
+                  : { icon: Unlock, label: 'Abrir Caja', action: onOpenRegister, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/25 group-hover:bg-emerald-500/10' },
                 { icon: DollarSign, label: 'Cobros Deudas', action: onDebtSelect, color: 'text-amber-400', bg: 'bg-amber-500/5 border-amber-500/10 hover:border-amber-500/25 group-hover:bg-amber-500/10', colSpan: true },
               ].map((item, idx) => (
                 <DrawerClose asChild key={idx}>
@@ -2616,7 +2626,11 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
         <DropdownMenuItem onSelect={onDailySales} className="cursor-pointer"><Receipt className="h-4 w-4 mr-2" />Ventas del Día</DropdownMenuItem>
         <DropdownMenuItem onSelect={onRefund} className="cursor-pointer"><RefreshCcw className="h-4 w-4 mr-2" />Devoluciones / Reembolsos</DropdownMenuItem>
         <DropdownMenuItem onSelect={onCashMovements} className="cursor-pointer"><HandCoins className="h-4 w-4 mr-2" />Movimientos de Caja (E/S)</DropdownMenuItem>
-        <DropdownMenuItem onSelect={onCloseDay} className="cursor-pointer"><Lock className="h-4 w-4 mr-2" />Cierre de Caja (Finalizar Día)</DropdownMenuItem>
+        {activeSession ? (
+          <DropdownMenuItem onSelect={onCloseDay} className="cursor-pointer"><Lock className="h-4 w-4 mr-2" />Cierre de Caja (Finalizar Día)</DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onSelect={onOpenRegister} className="cursor-pointer"><Unlock className="h-4 w-4 mr-2" />Abrir Caja (Iniciar Turno)</DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={onDebtSelect} className="cursor-pointer"><DollarSign className="h-4 w-4 mr-2" />Cobros a Clientes (Deudas)</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onLogout} className="cursor-pointer text-destructive focus:text-destructive"><LogOut className="h-4 w-4 mr-2" />Cerrar Sesión</DropdownMenuItem>

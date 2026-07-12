@@ -90,14 +90,8 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
         }
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-        const lastClosedToday = (sessionHistory as any[])
-            .filter(s => s.status === 'closed' && s.closed_at && new Date(s.closed_at) >= todayStart)
-            .sort((a, b) => new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime())[0];
-        if (lastClosedToday) {
-            return new Date(lastClosedToday.opened_at);
-        }
         return todayStart;
-    }, [activeSession, sessionHistory]);
+    }, [activeSession]);
 
     const { data: sales = [], isLoading } = useSales({ 
         dateFrom: effectiveStart,
@@ -117,21 +111,8 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
             bufferStart.setMinutes(bufferStart.getMinutes() - 1);
             return sales.filter(sale => new Date(sale.created_at) >= bufferStart);
         }
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        const lastClosedToday = (sessionHistory as any[])
-            .filter(s => s.status === 'closed' && s.closed_at && new Date(s.closed_at) >= todayStart)
-            .sort((a, b) => new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime())[0];
-        if (lastClosedToday) {
-            const start = new Date(lastClosedToday.opened_at);
-            const end = new Date(lastClosedToday.closed_at);
-            return sales.filter(sale => {
-                const d = new Date(sale.created_at);
-                return d >= start && d <= end;
-            });
-        }
-        return sales;
-    }, [sales, activeSession, sessionHistory]);
+        return [];
+    }, [sales, activeSession]);
 
     const filteredSales = useMemo(() => {
         return sessionSales.filter(sale => {
@@ -257,7 +238,7 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                                     Historial de Facturación
                                 </DialogTitle>
                                 <DialogDescription className="text-zinc-500 text-[9px] sm:text-[10px] font-medium [@media(max-height:580px)]:hidden">
-                                    {activeSession ? "Monitor de ventas activas del turno actual" : "Ventas de la última sesión finalizada"}
+                                    {activeSession ? "Monitor de ventas activas del turno actual" : "Sin turno de caja activo"}
                                 </DialogDescription>
                             </div>
                         </div>
@@ -558,8 +539,8 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                         </div>
                         <div className="mt-2 flex items-center justify-between text-zinc-600 px-4 shrink-0">
                             <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider">
-                                <AlertCircle className="h-2.5 w-2.5 text-emerald-500" />
-                                Turno actual en curso
+                                <AlertCircle className={cn("h-2.5 w-2.5", activeSession ? "text-emerald-500" : "text-zinc-500")} />
+                                {activeSession ? "Turno actual en curso" : "Sin turno activo"}
                             </div>
                             <div className="text-[9px] font-bold uppercase tracking-wider bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-800 text-zinc-400">
                                 {filteredSales.length} facturas
