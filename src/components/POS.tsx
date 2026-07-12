@@ -1439,6 +1439,7 @@ const POSContent: React.FC = () => {
             pos_layout_mode: mode,
             pos_view_mode: mode === 'classic' ? 'list' : 'grid'
           })}
+          userName={profile?.full_name}
         />
       );
     }
@@ -1453,9 +1454,10 @@ const POSContent: React.FC = () => {
         onCloseDay={handleShowCloseDay}
         onDebtSelect={handleShowDebtSelect}
         onLogout={handleLogout}
+        userName={profile?.full_name}
       />
     );
-  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings]);
+  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile]);
 
   // Action buttons as a stable React.memo component reference
   const actionButtons = useMemo(() => (
@@ -2393,6 +2395,7 @@ interface POSMenuButtonProps {
   onViewModeChange?: (mode: 'grid' | 'list') => void;
   layoutMode?: 'classic' | 'catalog';
   onLayoutModeChange?: (mode: 'classic' | 'catalog') => void;
+  userName?: string;
 }
 
 const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
@@ -2409,6 +2412,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
   onViewModeChange,
   layoutMode,
   onLayoutModeChange,
+  userName,
 }) {
   if (isMobile) {
     return (
