@@ -2422,7 +2422,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             <MenuIcon className="h-6 w-6" />
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-zinc-950/98 backdrop-blur-3xl border-white/[0.08] p-4 pb-12 rounded-t-[2.5rem] shadow-2xl">
+        <DrawerContent className="bg-background border-zinc-800 p-4 pb-12 rounded-t-[2.5rem] shadow-2xl">
           <DrawerHeader className="border-b border-white/[0.04] pb-4 mb-4">
             <DrawerTitle className="text-lg font-black text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
