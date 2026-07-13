@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
 import { z } from 'zod';
-import cobroLogo from '@/assets/cobro-logo-light.png';
+import cobroLogo from '@/assets/cobro-logo-dark.png';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),

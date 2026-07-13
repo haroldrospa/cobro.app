@@ -1,5 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import logoDark from '@/assets/cobro-logo-dark.png';
+import logoLight from '@/assets/cobro-logo-light.png';
 
 interface LoadingLogoProps {
     text?: string;
@@ -29,19 +31,28 @@ export const LoadingLogo: React.FC<LoadingLogoProps> = ({
                 ></div>
             </div>
 
-            {/* Brand Text: Cobroapp */}
+            {/* Logo Image */}
             <div className="flex flex-col items-center gap-1.5 z-10 mt-1">
-                <div className={cn(
-                    "font-black tracking-tight flex items-center justify-center select-none",
-                    size === 'sm' ? 'text-base' : size === 'md' ? 'text-xl' : 'text-2xl'
-                )}>
-                    <span className="text-white">Cobro</span>
-                    <span className="text-emerald-500">app</span>
-                </div>
+                <img 
+                    src={logoLight} 
+                    alt="Logo" 
+                    className={cn(
+                        "object-contain dark:hidden",
+                        size === 'sm' ? 'h-8' : size === 'md' ? 'h-12' : 'h-16'
+                    )}
+                />
+                <img 
+                    src={logoDark} 
+                    alt="Logo" 
+                    className={cn(
+                        "object-contain hidden dark:block",
+                        size === 'sm' ? 'h-8' : size === 'md' ? 'h-12' : 'h-16'
+                    )}
+                />
                 
                 {/* Optional Status Subtext */}
                 {text && (
-                    <span className="text-[10px] text-zinc-500 font-medium tracking-widest uppercase animate-pulse mt-0.5">
+                    <span className="text-[10px] text-zinc-500 font-medium tracking-widest uppercase mt-0.5">
                         {text.replace('...', '')}
                     </span>
                 )}

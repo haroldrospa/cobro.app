@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat } from 'lucide-react';
+import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
@@ -144,7 +144,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     ];
   }, [profile, hasKitchenDisplay, hasDelivery]);
 
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [systemTheme, setSystemTheme] = React.useState<'dark' | 'light'>(
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   );
@@ -162,6 +162,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const effectiveTheme = theme === 'system' ? systemTheme : theme;
   const logoSrc = effectiveTheme === 'dark' ? cobroLogoDark : cobroLogoLight;
+
+  const toggleTheme = () => {
+    setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
+  };
 
   // Redirect unauthorized users
   React.useEffect(() => {
@@ -343,6 +347,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           )}
           <PlanBadge />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-9 w-9 rounded-xl hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-all shrink-0"
+            title={effectiveTheme === 'dark' ? 'Activar Modo Claro' : 'Activar Modo Oscuro'}
+          >
+            {effectiveTheme === 'dark' ? (
+              <Sun className="h-[18px] w-[18px] text-yellow-500 fill-yellow-500/20" />
+            ) : (
+              <Moon className="h-[18px] w-[18px]" />
+            )}
+          </Button>
           <div className="text-xs text-muted-foreground hidden lg:block">Desarrollado por Harold Rosado</div>
         </div>
       </div>
