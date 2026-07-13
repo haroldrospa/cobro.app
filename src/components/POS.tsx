@@ -319,10 +319,34 @@ const POSContent: React.FC = () => {
   const isElectronicActive = alanubeConfig?.is_active || false;
 
   const selectedInvoiceTypeData = invoiceTypes.find(t => t.id === selectedInvoiceType);
-  const mappedInvoiceTypeCode = isElectronicActive
-    ? (selectedInvoiceTypeData?.code === 'B01' ? 'E31' : selectedInvoiceTypeData?.code === 'B02' ? 'E32' : selectedInvoiceTypeData?.code)
-    : selectedInvoiceTypeData?.code;
-  const requiresCustomer = mappedInvoiceTypeCode === 'B01' || mappedInvoiceTypeCode === 'E31' || selectedInvoiceTypeData?.name?.toLowerCase().includes('crédito fiscal');
+  const mappedInvoiceTypeCode = React.useMemo(() => {
+    if (!selectedInvoiceTypeData?.code) return selectedInvoiceTypeData?.code;
+    if (!isElectronicActive) return selectedInvoiceTypeData.code;
+    
+    const code = selectedInvoiceTypeData.code;
+    if (code === 'B01') return 'E31';
+    if (code === 'B02') return 'E32';
+    if (code === 'B03') return 'E33';
+    if (code === 'B04') return 'E34';
+    if (code === 'B11') return 'E41';
+    if (code === 'B12') return 'E43';
+    if (code === 'B13') return 'E44';
+    if (code === 'B14') return 'E45';
+    if (code === 'B15') return 'E46';
+    if (code === 'B16') return 'E47';
+    
+    if (code.startsWith('B')) {
+      return 'E' + code.substring(1);
+    }
+    return code;
+  }, [selectedInvoiceTypeData, isElectronicActive]);
+
+  const requiresCustomer = React.useMemo(() => {
+    if (!mappedInvoiceTypeCode) return false;
+    const code = mappedInvoiceTypeCode;
+    if (['B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    return true;
+  }, [mappedInvoiceTypeCode]);
 
 
 

@@ -99,18 +99,37 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   const mappedInvoiceTypes = React.useMemo(() => {
     return invoiceTypes.map(type => {
       if (isElectronic) {
-        if (type.code === 'B01') {
-          return { ...type, code: 'E31', name: 'Crédito Fiscal Electrónico' };
-        } else if (type.code === 'B02') {
-          return { ...type, code: 'E32', name: 'Consumidor Final Electrónico' };
+        let electronicCode = type.code;
+        let electronicName = type.name;
+        
+        if (type.code === 'B01') { electronicCode = 'E31'; electronicName = 'Crédito Fiscal Electrónico'; }
+        else if (type.code === 'B02') { electronicCode = 'E32'; electronicName = 'Consumidor Final Electrónico'; }
+        else if (type.code === 'B03') { electronicCode = 'E33'; electronicName = 'Nota de Débito Electrónica'; }
+        else if (type.code === 'B04') { electronicCode = 'E34'; electronicName = 'Nota de Crédito Electrónica'; }
+        else if (type.code === 'B11') { electronicCode = 'E41'; electronicName = 'Proveedores Informales Electrónico'; }
+        else if (type.code === 'B12') { electronicCode = 'E43'; electronicName = 'Registro Único de Ingresos Electrónico'; }
+        else if (type.code === 'B13') { electronicCode = 'E44'; electronicName = 'Gastos Menores Electrónico'; }
+        else if (type.code === 'B14') { electronicCode = 'E45'; electronicName = 'Regímenes Especiales Electrónico'; }
+        else if (type.code === 'B15') { electronicCode = 'E46'; electronicName = 'Comprobante Gubernamental Electrónico'; }
+        else if (type.code === 'B16') { electronicCode = 'E47'; electronicName = 'Comprobante de Exportación Electrónico'; }
+        else if (type.code.startsWith('B')) {
+          electronicCode = 'E' + type.code.substring(1);
+          electronicName = type.name + ' Electrónico';
         }
+        
+        return { ...type, code: electronicCode, name: electronicName };
       }
       return type;
     });
   }, [invoiceTypes, isElectronic]);
 
   const selectedType = mappedInvoiceTypes.find(t => t.id === selectedInvoiceType);
-  const requiresCustomer = selectedType?.code === 'B01' || selectedType?.code === 'E31' || selectedType?.name?.toLowerCase().includes('crédito fiscal');
+  const requiresCustomer = React.useMemo(() => {
+    if (!selectedType?.code) return false;
+    const code = selectedType.code;
+    if (['B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    return true;
+  }, [selectedType]);
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
   const canCheckout = cartLength > 0 && (!requiresCustomer || selectedCustomer);
 
@@ -208,7 +227,7 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
             </SelectTrigger>
             <SelectContent className="bg-popover border-border rounded-xl">
               {mappedInvoiceTypes
-                .filter(type => ['B01', 'E31', 'B02', 'E32'].includes(type.code))
+                .filter(type => !['B03', 'E33', 'B04', 'E34'].includes(type.code))
                 .map((type) => (
                   <SelectItem key={type.id} value={type.id} className="font-bold">
                     {type.name} ({type.code})
