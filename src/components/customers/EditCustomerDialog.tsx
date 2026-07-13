@@ -130,8 +130,9 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
       } as any);
       toast.success('Cliente actualizado correctamente');
       onOpenChange(false);
-    } catch (error) {
-      toast.error('Error al actualizar el cliente');
+    } catch (error: any) {
+      console.error('Error al actualizar el cliente:', error);
+      toast.error(`Error al actualizar el cliente: ${error.message || error}`);
     }
   };
 
