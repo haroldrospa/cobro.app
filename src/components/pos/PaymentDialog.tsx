@@ -73,8 +73,15 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     total: fullTotal.toFixed(2)
   };
 
-  const selectedCustomerLabel = customers.find(c => c.id === selectedCustomer)?.name || "Consumidor Final";
-  const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
+  const selectedCustomerData = React.useMemo(() => {
+    if (!selectedCustomer) return null;
+    return customers.find(c => c.id === selectedCustomer) || null;
+  }, [selectedCustomer, customers]);
+
+  const selectedCustomerLabel = React.useMemo(() => {
+    if (!selectedCustomer) return "Consumidor Final";
+    return selectedCustomerData ? selectedCustomerData.name : "Cargando...";
+  }, [selectedCustomer, selectedCustomerData]);
 
   const webChangeInfo = React.useMemo(() => {
     if (!webOrderNotes) return null;
@@ -201,7 +208,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                           </span>
                           {selectedCustomer && selectedCustomerData?.rnc && (
                             <span className="text-[9px] font-mono text-primary font-bold mt-0.5 [@media(max-height:580px)]:text-[8px] [@media(max-height:580px)]:mt-0">
-                              RNC: {selectedCustomerData.rnc}
+                              RNC: {selectedCustomerData?.rnc}
                             </span>
                           )}
                           {requiresCustomer && selectedCustomer && !selectedCustomerData?.rnc && (
@@ -282,7 +289,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0 mt-0.5 [@media(max-height:580px)]:mt-0 [@media(max-height:580px)]:h-3 [@media(max-height:580px)]:w-3" />
                       <div>
                         <p className="font-bold uppercase tracking-wider text-[8px] text-destructive">RNC Faltante</p>
-                        <p className="text-muted-foreground [@media(max-height:580px)]:hidden">El cliente <strong className="text-foreground">{selectedCustomerData.name}</strong> no tiene un RNC. Para Crédito Fiscal, el RNC es obligatorio.</p>
+                        <p className="text-muted-foreground [@media(max-height:580px)]:hidden">El cliente <strong className="text-foreground">{selectedCustomerData?.name || 'Cargando...'}</strong> no tiene un RNC. Para Crédito Fiscal, el RNC es obligatorio.</p>
                       </div>
                     </div>
                   ) : (
@@ -290,7 +297,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 [@media(max-height:580px)]:h-3 [@media(max-height:580px)]:w-3" />
                       <div>
                         <p className="font-bold uppercase tracking-wider text-[8px] text-primary">Datos Correctos</p>
-                        <p className="text-muted-foreground [@media(max-height:580px)]:hidden">Cliente <strong className="text-foreground">{selectedCustomerData.name}</strong> con RNC <strong className="text-primary font-mono">{selectedCustomerData.rnc}</strong> listo.</p>
+                        <p className="text-muted-foreground [@media(max-height:580px)]:hidden">Cliente <strong className="text-foreground">{selectedCustomerData?.name || 'Cargando...'}</strong> con RNC <strong className="text-primary font-mono">{selectedCustomerData?.rnc}</strong> listo.</p>
                       </div>
                     </div>
                   )}
