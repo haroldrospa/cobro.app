@@ -1,7 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import logoDark from '@/assets/cobro-logo-dark.png';
-import logoLight from '@/assets/cobro-logo-light.png';
+import cobroLogo from '@/assets/cobro-logo-dark.png';
 
 interface LoadingLogoProps {
     text?: string;
@@ -15,45 +14,49 @@ export const LoadingLogo: React.FC<LoadingLogoProps> = ({
     className = ''
 }) => {
     return (
-        <div className={cn("flex flex-col items-center justify-center gap-5 w-full max-w-sm mx-auto p-6 relative", className)}>
+        <div className={cn("flex flex-col items-center justify-center gap-4 w-full max-w-sm mx-auto p-6 relative", className)}>
             
-            {/* Circular Spinner */}
-            <div className="relative flex items-center justify-center">
-                <div 
-                    className={cn(
-                        "animate-spin rounded-full border-solid",
-                        size === 'sm' ? 'h-8 w-8 border-2' : size === 'md' ? 'h-12 w-12 border-[3px]' : 'h-16 w-16 border-4'
-                    )} 
-                    style={{ 
-                        borderColor: 'rgba(16, 185, 129, 0.1)', 
-                        borderTopColor: '#10b981' 
-                    }}
-                ></div>
+            {/* Logo & Brand Name Container */}
+            <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center justify-center gap-3">
+                    <img 
+                        src={cobroLogo} 
+                        alt="Cobroapp Logo" 
+                        className={cn(
+                            "object-contain rounded-xl shadow-md",
+                            size === 'sm' ? 'h-8 w-8' : size === 'md' ? 'h-14 w-14' : 'h-20 w-20'
+                        )}
+                    />
+                    <div className={cn(
+                        "font-black tracking-tight select-none flex items-center",
+                        size === 'sm' ? 'text-lg' : size === 'md' ? 'text-3xl' : 'text-4xl'
+                    )}>
+                        <span className="text-white">Cobro</span>
+                        <span className="text-emerald-500">app</span>
+                    </div>
+                </div>
+                
+                {/* Brand Tagline */}
+                <p className={cn(
+                    "text-zinc-400 font-medium text-center",
+                    size === 'sm' ? 'text-[9px]' : size === 'md' ? 'text-[11px]' : 'text-xs'
+                )}>
+                    Tu negocio en control, en cualquier lugar
+                </p>
             </div>
 
-            {/* Logo Image */}
-            <div className="flex flex-col items-center gap-1.5 z-10 mt-1">
-                <img 
-                    src={logoLight} 
-                    alt="Logo" 
-                    className={cn(
-                        "object-contain dark:hidden",
-                        size === 'sm' ? 'h-8' : size === 'md' ? 'h-12' : 'h-16'
-                    )}
-                />
-                <img 
-                    src={logoDark} 
-                    alt="Logo" 
-                    className={cn(
-                        "object-contain hidden dark:block",
-                        size === 'sm' ? 'h-8' : size === 'md' ? 'h-12' : 'h-16'
-                    )}
-                />
-                
+            {/* Subtle Loading Indicator (elegant emerald bar or pulse) */}
+            <div className="mt-2 flex flex-col items-center gap-2">
+                <div className="flex gap-1 items-center justify-center h-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce"></span>
+                </div>
+
                 {/* Optional Status Subtext */}
                 {text && (
-                    <span className="text-[10px] text-zinc-500 font-medium tracking-widest uppercase mt-0.5">
-                        {text.replace('...', '')}
+                    <span className="text-[9px] text-zinc-500 font-bold tracking-widest uppercase animate-pulse">
+                        {text}
                     </span>
                 )}
             </div>
