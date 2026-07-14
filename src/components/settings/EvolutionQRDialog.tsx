@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, QrCode, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, QrCode, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface EvolutionQRDialogProps {
@@ -98,6 +98,35 @@ export const EvolutionQRDialog: React.FC<EvolutionQRDialogProps> = ({
       console.error('Error fetching QR:', error);
       setStatus('error');
       setErrorMessage(error.message || 'Error de conexión con Evolution API.');
+    }
+  };
+
+  const handleRecreateInstance = async () => {
+    if (confirm('¿Deseas recrear la instancia de WhatsApp? Esto eliminará la sesión corrupta en el servidor y creará una nueva limpia para solucionar errores de vinculación.')) {
+      setStatus('loading');
+      try {
+        const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+        const formattedUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
+        
+        // Cierre de sesión y borrado forzado
+        await fetch(`${formattedUrl}/instance/logout/${instanceName}`, {
+          method: 'DELETE',
+          headers: { 'apikey': apiKey }
+        }).catch(() => {});
+        
+        await fetch(`${formattedUrl}/instance/delete/${instanceName}`, {
+          method: 'DELETE',
+          headers: { 'apikey': apiKey }
+        }).catch(() => {});
+
+        toast({ title: 'Instancia Recreada', description: 'Generando nuevo código QR limpio...' });
+        
+        fetchQR();
+      } catch (e: any) {
+        console.error('Error recreating instance:', e);
+        setStatus('error');
+        setErrorMessage('No se pudo recrear la instancia en el servidor.');
+      }
     }
   };
 
@@ -224,8 +253,18 @@ export const EvolutionQRDialog: React.FC<EvolutionQRDialogProps> = ({
                   <QrCode className="w-4 h-4 mr-2" />
                   Generar Nuevo QR
                 </Button>
+                
+                <Button 
+                  variant="ghost"
+                  className="w-full text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center gap-1.5"
+                  onClick={handleRecreateInstance}
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Recrear Instancia (Solucionar Errores)
+                </Button>
+                
                 <p className="text-[10px] text-center text-zinc-500 font-medium px-4">
-                  Si el código expira o no funciona, genera uno nuevo.
+                  Si WhatsApp muestra el error <strong>"No se pueden vincular nuevos dispositivos"</strong>, haz clic en "Recrear Instancia" para limpiar la sesión corrupta del servidor.
                 </p>
               </div>
             </div>
@@ -237,9 +276,19 @@ export const EvolutionQRDialog: React.FC<EvolutionQRDialogProps> = ({
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
               <p className="text-sm font-bold text-red-400">{errorMessage}</p>
-              <Button onClick={fetchQR} className="mt-4 bg-zinc-800 hover:bg-zinc-700 text-white">
-                Intentar de nuevo
-              </Button>
+              <div className="flex gap-2 w-full mt-4">
+                <Button onClick={fetchQR} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white">
+                  Intentar de nuevo
+                </Button>
+                <Button 
+                  variant="destructive"
+                  className="flex-1 flex items-center justify-center gap-1.5"
+                  onClick={handleRecreateInstance}
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Recrear Instancia
+                </Button>
+              </div>
             </div>
           )}
         </div>
