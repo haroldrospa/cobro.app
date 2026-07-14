@@ -31,6 +31,7 @@ import { Customer, useUpdateCustomer, useCustomers } from '@/hooks/useCustomers'
 import { useEmployees } from '@/hooks/useEmployees';
 import { toast } from 'sonner';
 import { Star, ShieldAlert } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const customerSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(100),
