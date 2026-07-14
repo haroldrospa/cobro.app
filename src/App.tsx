@@ -47,8 +47,8 @@ const Refunds = lazy(() => import("./pages/legal/Refunds"));
 
 // Loading fallback component
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <LoadingLogo text="Cargando..." />
+  <div className="fixed inset-0 flex items-center justify-center bg-background z-[9999]">
+    <LoadingLogo />
   </div>
 );
 

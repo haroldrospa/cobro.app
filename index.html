@@ -100,37 +100,36 @@
       .app-preloader-text span {
         color: #10b981;
       }
-      .preloader-dots {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-        justify-content: center;
-        height: 10px;
-        margin-top: 8px;
+      .preloader-bar-container {
+        width: 128px;
+        height: 4px;
+        background-color: rgba(16, 185, 129, 0.15);
+        border-radius: 9999px;
+        overflow: hidden;
+        position: relative;
+        margin-top: 12px;
       }
-      .preloader-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
+      .preloader-bar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
         background-color: #10b981;
-        animation: preloader-bounce 1.4s infinite ease-in-out both;
+        border-radius: 9999px;
+        animation: preloader-slide 1.5s infinite ease-in-out;
       }
-      .preloader-dot:nth-child(1) { animation-delay: -0.32s; }
-      .preloader-dot:nth-child(2) { animation-delay: -0.16s; }
-      @keyframes preloader-bounce {
-        0%, 80%, 100% { transform: scale(0); }
-        40% { transform: scale(1.0); }
+      @keyframes preloader-slide {
+        0% { left: -50%; width: 30%; }
+        50% { left: 30%; width: 40%; }
+        100% { left: 100%; width: 30%; }
       }
     </style>
     <div class="app-preloader">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px;">
-        <img src="/logo-dark.png" alt="Cobroapp Logo" style="height: 56px; width: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
+        <img src="/logo-dark.png" alt="Cobroapp Logo" style="height: 56px; width: auto; border-radius: 12px;" />
         <div class="app-preloader-text">Cobro<span>app</span></div>
       </div>
-      <div class="preloader-dots">
-        <div class="preloader-dot"></div>
-        <div class="preloader-dot"></div>
-        <div class="preloader-dot"></div>
+      <div class="preloader-bar-container">
+        <div class="preloader-bar"></div>
       </div>
     </div>
   </div>

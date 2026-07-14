@@ -232,8 +232,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Returning users see their content immediately while auth validates in background
   if (loading && !hasCachedUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingLogo text="Verificando sesión..." />
+      <div className="fixed inset-0 flex items-center justify-center bg-background z-[9999]">
+        <LoadingLogo />
       </div>
     );
   }

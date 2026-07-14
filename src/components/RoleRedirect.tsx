@@ -8,8 +8,8 @@ const RoleRedirect: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <LoadingLogo text="Preparando tu espacio..." />
+            <div className="fixed inset-0 flex items-center justify-center bg-background z-[9999]">
+                <LoadingLogo />
             </div>
         );
     }
