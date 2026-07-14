@@ -124,6 +124,7 @@ const Reports = () => {
   // Dialog States
   const [selectedClosing, setSelectedClosing] = useState<DailyClosing | null>(null);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [selectedDailySalesDate, setSelectedDailySalesDate] = useState<string | null>(null);
   const [selectedActionSale, setSelectedActionSale] = useState<Sale | null>(null); // New state for Action Modal
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState('');
@@ -219,7 +220,7 @@ const Reports = () => {
 
   // New: Daily Sales Aggregation
   const dailySalesData = useMemo(() => {
-    const grouped: Record<string, { date: string, rawDate: Date, total: number, count: number }> = {};
+    const grouped: Record<string, { key: string, date: string, rawDate: Date, total: number, count: number }> = {};
 
     filteredSales.forEach(sale => {
       // Use raw Date object for sorting, string for grouping
@@ -228,6 +229,7 @@ const Reports = () => {
 
       if (!grouped[dateKey]) {
         grouped[dateKey] = {
+          key: dateKey,
           date: format(dateObj, 'dd MMM', { locale: es }),
           rawDate: dateObj,
           total: 0,
@@ -240,6 +242,27 @@ const Reports = () => {
 
     return Object.values(grouped).sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
   }, [filteredSales]);
+
+  const daySales = useMemo(() => {
+    if (!selectedDailySalesDate) return [];
+    return filteredSales.filter(s => format(new Date(s.created_at), 'yyyy-MM-dd') === selectedDailySalesDate);
+  }, [filteredSales, selectedDailySalesDate]);
+
+  const dayProducts = useMemo(() => {
+    const products: Record<string, { name: string, quantity: number, total: number }> = {};
+    daySales.forEach(sale => {
+      (sale.sale_items || []).forEach(item => {
+        const productName = item.product?.name || item.product_name || 'Producto Desconocido';
+        const key = item.product_id || productName;
+        if (!products[key]) {
+          products[key] = { name: productName, quantity: 0, total: 0 };
+        }
+        products[key].quantity += item.quantity || 0;
+        products[key].total += item.total || 0;
+      });
+    });
+    return Object.values(products).sort((a, b) => b.quantity - a.quantity);
+  }, [daySales]);
 
   // New: Hourly Sales Aggregation
   const hourlySalesData = useMemo(() => {
@@ -1403,10 +1426,14 @@ const Reports = () => {
                   <TableBody>
                     {dailySalesData.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center py-6">No hay datos en este rango.</TableCell></TableRow> :
                       dailySalesData.map((d, i) => (
-                        <TableRow key={i}>
-                          <TableCell>{d.date}</TableCell>
+                        <TableRow 
+                          key={i} 
+                          className="cursor-pointer hover:bg-zinc-900/60 transition-colors"
+                          onClick={() => setSelectedDailySalesDate(d.key)}
+                        >
+                          <TableCell className="font-medium text-white">{d.date}</TableCell>
                           <TableCell className="text-center">{d.count}</TableCell>
-                          <TableCell className="text-right font-bold">${d.total.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-bold text-emerald-400">${d.total.toLocaleString()}</TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
@@ -2281,6 +2308,193 @@ const Reports = () => {
                 </Button>
                 <Button onClick={() => setSelectedSale(null)}>Cerrar</Button>
               </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedDailySalesDate} onOpenChange={(open) => !open && setSelectedDailySalesDate(null)}>
+        <DialogContent className="max-w-4xl bg-zinc-950 border-zinc-800 text-zinc-100 p-6 sm:p-8 max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-emerald-500" />
+              Resumen Diario: {selectedDailySalesDate && format(new Date(selectedDailySalesDate + 'T00:00:00'), "dd 'de' MMMM, yyyy", { locale: es })}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Desglose detallado de transacciones, métodos de pago y productos vendidos para este día.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDailySalesDate && (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                  <CardContent className="p-4">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total Facturado</p>
+                    <p className="text-xl sm:text-2xl font-black text-emerald-500 mt-1">
+                      ${daySales.reduce((acc, curr) => acc + curr.total, 0).toLocaleString()}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                  <CardContent className="p-4">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Transacciones</p>
+                    <p className="text-xl sm:text-2xl font-black text-white mt-1">
+                      {daySales.length}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                  <CardContent className="p-4">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Ticket Promedio</p>
+                    <p className="text-xl sm:text-2xl font-black text-teal-400 mt-1">
+                      ${daySales.length > 0 
+                        ? (daySales.reduce((acc, curr) => acc + curr.total, 0) / daySales.length).toLocaleString(undefined, { maximumFractionDigits: 2 }) 
+                        : '0'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                  <CardContent className="p-4">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Impuestos (ITBIS)</p>
+                    <p className="text-xl sm:text-2xl font-black text-zinc-300 mt-1">
+                      ${daySales.reduce((acc, curr) => acc + (curr.tax_total || 0), 0).toLocaleString()}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Grid content */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Left side: Payments & Top Products */}
+                <div className="lg:col-span-5 space-y-6">
+                  
+                  {/* Payment Methods */}
+                  <Card className="bg-zinc-900/40 border-zinc-800">
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-sm font-bold text-zinc-200">Métodos de Pago</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-3">
+                      {(() => {
+                        const payments = { cash: 0, card: 0, transfer: 0, other: 0 };
+                        daySales.forEach(s => {
+                          const m = s.payment_method?.toLowerCase() || 'cash';
+                          if (m === 'cash' || m === 'efectivo') payments.cash += s.total;
+                          else if (m === 'card' || m === 'tarjeta') payments.card += s.total;
+                          else if (m === 'transfer' || m === 'transferencia') payments.transfer += s.total;
+                          else payments.other += s.total;
+                        });
+                        const grandTotal = Object.values(payments).reduce((a, b) => a + b, 0) || 1;
+                        
+                        return (
+                          <>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-zinc-400">Efectivo</span>
+                                <span className="font-semibold text-white">${payments.cash.toLocaleString()} ({(payments.cash / grandTotal * 100).toFixed(0)}%)</span>
+                              </div>
+                              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(payments.cash / grandTotal * 100)}%` }} />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-zinc-400">Tarjeta</span>
+                                <span className="font-semibold text-white">${payments.card.toLocaleString()} ({(payments.card / grandTotal * 100).toFixed(0)}%)</span>
+                              </div>
+                              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(payments.card / grandTotal * 100)}%` }} />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-zinc-400">Transferencia</span>
+                                <span className="font-semibold text-white">${payments.transfer.toLocaleString()} ({(payments.transfer / grandTotal * 100).toFixed(0)}%)</span>
+                              </div>
+                              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(payments.transfer / grandTotal * 100)}%` }} />
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+
+                  {/* Top Products */}
+                  <Card className="bg-zinc-900/40 border-zinc-800">
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-sm font-bold text-zinc-200">Productos Más Vendidos</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1">
+                        {dayProducts.length === 0 ? (
+                          <p className="text-xs text-zinc-500 text-center py-4">No hay datos de productos.</p>
+                        ) : (
+                          dayProducts.slice(0, 10).map((prod, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs p-2 bg-zinc-900/60 rounded-lg border border-zinc-800/40">
+                              <span className="truncate max-w-[150px] font-medium text-zinc-300">{prod.name}</span>
+                              <div className="flex gap-4 items-center">
+                                <span className="text-zinc-500">x{prod.quantity}</span>
+                                <span className="font-bold text-zinc-200">${prod.total.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                </div>
+
+                {/* Right side: Detailed Transaction List */}
+                <div className="lg:col-span-7">
+                  <Card className="bg-zinc-900/40 border-zinc-800 h-full">
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-sm font-bold text-zinc-200 flex items-center justify-between">
+                        <span>Listado de Facturas</span>
+                        <span className="text-xs font-normal text-zinc-500">{daySales.length} comprobantes</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="max-h-[350px] overflow-y-auto pr-1">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-zinc-800 hover:bg-transparent">
+                              <TableHead className="text-xs text-zinc-400 py-2">Factura</TableHead>
+                              <TableHead className="text-xs text-zinc-400 py-2">Cliente</TableHead>
+                              <TableHead className="text-xs text-zinc-400 py-2 text-right">Total</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {daySales.map((sale, sIdx) => (
+                              <TableRow 
+                                key={sIdx} 
+                                className="border-zinc-800/60 hover:bg-zinc-900/60 cursor-pointer transition-colors"
+                                onClick={() => setSelectedSale(sale)}
+                              >
+                                <TableCell className="py-2.5">
+                                  <div className="font-semibold text-xs text-white">#{sale.invoice_number || 'N/A'}</div>
+                                  <div className="text-[10px] text-zinc-500">{format(new Date(sale.created_at), 'hh:mm a')}</div>
+                                </TableCell>
+                                <TableCell className="py-2.5 text-xs text-zinc-300">
+                                  {sale.customer?.name || 'Cliente Final'}
+                                </TableCell>
+                                <TableCell className="py-2.5 text-right font-black text-xs text-emerald-400">
+                                  ${sale.total.toLocaleString()}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+              </div>
             </div>
           )}
         </DialogContent>
