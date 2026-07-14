@@ -397,15 +397,41 @@ const Auth = () => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-tr from-[#121619] via-[#1a2228] to-[#252f36] text-white px-4 py-8 overflow-y-auto font-sans selection:bg-emerald-500/30">
+      <style>{`
+        @keyframes ambient-pulse {
+          0%, 100% { opacity: 0.1; transform: scale(1) translate(0, 0); }
+          50% { opacity: 0.2; transform: scale(1.15) translate(15px, -15px); }
+        }
+        @keyframes float-particle-1 {
+          0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.15; }
+          50% { transform: translateY(-40px) translateX(15px) scale(1.3); opacity: 0.5; }
+        }
+        @keyframes float-particle-2 {
+          0%, 100% { transform: translateY(0) translateX(0) scale(1.2); opacity: 0.1; }
+          50% { transform: translateY(-25px) translateX(-20px) scale(0.9); opacity: 0.4; }
+        }
+        @keyframes float-particle-3 {
+          0%, 100% { transform: translateY(0) translateX(0) scale(0.9); opacity: 0.2; }
+          50% { transform: translateY(-30px) translateX(10px) scale(1.1); opacity: 0.6; }
+        }
+      `}</style>
+
       {/* Structured dotted grid pattern */}
       <div className="absolute inset-0 z-0 opacity-[0.25]" style={{
         backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1.5px, transparent 0)',
         backgroundSize: '24px 24px'
       }} />
 
+      {/* Floating background particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[15%] left-[20%] w-3 h-3 bg-emerald-500/20 rounded-full blur-[2px] animate-[float-particle-1_12s_infinite_ease-in-out]" />
+        <div className="absolute top-[55%] right-[15%] w-4 h-4 bg-teal-500/15 rounded-full blur-[3px] animate-[float-particle-2_16s_infinite_ease-in-out]" />
+        <div className="absolute bottom-[25%] left-[30%] w-2 h-2 bg-emerald-400/25 rounded-full blur-[1px] animate-[float-particle-3_10s_infinite_ease-in-out]" />
+      </div>
+
       {/* Soft emerald gradient glow auras in the corners */}
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none animate-[ambient-pulse_12s_infinite_alternate_ease-in-out]" />
+      <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-emerald-500/5 rounded-full blur-[90px] pointer-events-none animate-[ambient-pulse_15s_infinite_alternate_ease-in-out_delay-2s]" />
 
       {/* Decorative center card background glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] bg-emerald-500/[0.03] rounded-full blur-[60px] pointer-events-none z-0" />
@@ -424,14 +450,21 @@ const Auth = () => {
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             onClick={() => navigate('/')}
           >
-            <div className="flex items-center justify-center gap-2.5">
+            <div className="relative flex items-center justify-center w-24 h-24 mb-4">
+              {/* Rotating glowing dashed rings */}
+              <div className="absolute inset-0 rounded-full border-2 border-dashed border-emerald-500/35 animate-[spin_15s_linear_infinite]" />
+              <div className="absolute inset-2 rounded-full border border-dashed border-emerald-500/15 animate-[spin_20s_linear_infinite_reverse]" />
+              <div className="absolute inset-0 rounded-full bg-emerald-500/[0.03] blur-md animate-pulse" />
+              
               <img
                 src={cobroLogo}
                 alt="Cobro"
-                className="h-9 w-auto object-contain rounded-lg"
+                className="relative h-14 w-auto object-contain rounded-xl z-10 shadow-lg"
                 loading="eager"
               />
-              <span className="text-2xl font-black tracking-tight text-white">Cobro<span className="text-emerald-400">app</span></span>
+            </div>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-3xl font-black tracking-tight text-white">Cobro<span className="text-emerald-400">app</span></span>
             </div>
             <p className="text-slate-400 text-[11px] mt-1.5 font-medium tracking-wide">Tu negocio en control, en cualquier lugar</p>
           </motion.div>
@@ -439,7 +472,8 @@ const Auth = () => {
 
         <Card className="bg-[#1e252b]/95 backdrop-blur-xl border border-white/[0.06] border-t-emerald-500/20 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.6)] overflow-hidden relative rounded-2xl w-full">
           <CardContent className="p-6 sm:p-8 relative z-10">
-            {authView === 'forgot-password' ? (
+            <motion.div layout transition={{ type: "spring", stiffness: 350, damping: 40 }} className="w-full">
+              {authView === 'forgot-password' ? (
               <form onSubmit={handleRequestPasswordReset} className="space-y-4">
                 <div className="space-y-2 mb-4">
                   <h3 className="text-lg font-bold text-white">Recuperar Contraseña</h3>
@@ -995,6 +1029,7 @@ const Auth = () => {
               </TabsContent>
             </Tabs>
             )}
+            </motion.div>
           </CardContent>
         </Card>
 
