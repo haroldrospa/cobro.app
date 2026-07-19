@@ -2593,8 +2593,8 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                     <Receipt className="h-6 w-6 text-blue-400" />
                   </div>
                   <div className="flex flex-col text-left">
-                    <span className="text-[7.5px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Operación Principal</span>
-                    <span className="font-extrabold text-zinc-200 group-hover:text-white transition-colors tracking-wider text-xs uppercase">
+                    <span className="text-[8px] font-extrabold text-zinc-500 uppercase tracking-[0.12em] leading-none mb-1">Operación Principal</span>
+                    <span className="font-bold text-zinc-100 group-hover:text-white transition-colors text-sm">
                       Ventas del Día
                     </span>
                   </div>
@@ -2651,7 +2651,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                     variant="ghost"
                     onClick={item.action}
                     className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-[1.5rem] bg-zinc-900/40 hover:bg-zinc-900/60 border border-white/[0.03] shadow-lg shadow-black/25 group transition-all duration-300 active:scale-[0.97] h-24",
+                      "!flex !flex-col items-center justify-center p-3 rounded-[1.5rem] bg-zinc-900/40 hover:bg-zinc-900/60 border border-white/[0.03] shadow-lg shadow-black/25 group transition-all duration-300 active:scale-[0.97] h-24 w-full",
                       item.btnStyle
                     )}
                   >
@@ -2663,9 +2663,9 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                     </div>
                     <div className="flex flex-col items-center text-center">
                       {item.isDebt && (
-                        <span className="text-[7px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-0.5">Créditos</span>
+                        <span className="text-[8px] font-bold text-amber-500/80 uppercase tracking-wider leading-none mb-1">Créditos</span>
                       )}
-                      <span className="font-extrabold text-zinc-300 group-hover:text-white transition-colors tracking-wider text-[10px] uppercase">
+                      <span className="font-bold text-zinc-200 group-hover:text-white transition-colors text-[11px] tracking-wide">
                         {item.label}
                       </span>
                     </div>
