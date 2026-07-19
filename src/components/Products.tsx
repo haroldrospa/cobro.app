@@ -438,7 +438,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "llama-3.2-11b-vision-preview",
+          model: "qwen/qwen3.6-27b",
           response_format: { type: "json_object" },
           messages: [
             {

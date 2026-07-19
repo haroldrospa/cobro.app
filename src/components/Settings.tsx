@@ -4034,7 +4034,7 @@ const Settings = () => {
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Esta clave se utiliza para procesar imágenes de facturas usando el modelo Llama 3.2 Vision. Puedes obtener una clave gratuita en console.groq.com.
+                    Esta clave se utiliza para procesar imágenes de facturas usando el modelo Qwen 3.6 Vision. Puedes obtener una clave gratuita en console.groq.com.
                   </p>
                 </div>
                 <Button 

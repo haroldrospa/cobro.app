@@ -825,7 +825,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "llama-3.2-11b-vision-preview",
+                model: "qwen/qwen3.6-27b",
                 messages: [
                     {
                         role: "user",
@@ -1820,7 +1820,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 Configuración de IA (Groq)
                             </Label>
                             <p className="text-xs text-muted-foreground w-full">
-                                Introduce tu API key de Groq para usar el modelo Llama 3.2 Vision y escanear tus facturas.
+                                Introduce tu API key de Groq para usar el modelo Qwen 3.6 Vision y escanear tus facturas.
                             </p>
                             <div className="flex gap-2">
                                 <div className="relative flex-1">
