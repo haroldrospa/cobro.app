@@ -73,9 +73,14 @@ serve(async (req) => {
       </div>
     `;
 
+    const toEmails = email.split(',').map(e => e.trim()).filter(Boolean);
+    if (toEmails.length === 0) {
+      return new Response(JSON.stringify({ error: "El email provisto es inválido." }), { status: 400, headers });
+    }
+
     const { data: resData, error: resError } = await resend.emails.send({
       from: 'Cobro App <alertas@cobroapp.app>',
-      to: [email],
+      to: toEmails,
       subject: `Código de Eliminación - ${companyName}`,
       html: emailHTML,
     });

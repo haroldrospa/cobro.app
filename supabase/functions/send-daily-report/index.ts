@@ -633,9 +633,14 @@ async function sendReportForStore(
 
     const subjectPrefix = session_id ? "🔒 Cierre de Caja" : `📊 Informe ${reportLabel}`;
     
+    const toEmails = recipient_email.split(',').map(e => e.trim()).filter(Boolean);
+    if (toEmails.length === 0) {
+      throw new Error("No recipient emails specified");
+    }
+
     const { data: resData, error: resError } = await resend.emails.send({
       from: `${companyName} <reportes@cobroapp.app>`,
-      to: [recipient_email],
+      to: toEmails,
       subject: `${subjectPrefix} — ${companyName}`,
       html: emailHTML,
     });

@@ -3524,17 +3524,57 @@ const Settings = () => {
 
                 {(storeSettings?.email_reports_enabled ?? false) && (
                   <div className="space-y-4 pl-4 border-l-2 border-primary/20">
-                    <div className="space-y-2">
-                      <Label htmlFor="email-recipient">Correo de destino</Label>
-                      <Input
-                        id="email-recipient"
-                        type="email"
-                        placeholder="tu@email.com"
-                        value={storeSettings?.email_reports_recipient || ''}
-                        onChange={(e) => updateStoreSettings({ email_reports_recipient: e.target.value })}
-                      />
+                    <div className="space-y-4">
+                      {(() => {
+                        const emails = (storeSettings?.email_reports_recipient || '').split(',').map(e => e.trim());
+                        const email1 = emails[0] || '';
+                        const email2 = emails[1] || '';
+                        const email3 = emails[2] || '';
+                        
+                        const handleEmailChange = (index: number, val: string) => {
+                          const newEmails = [email1, email2, email3];
+                          newEmails[index] = val;
+                          const filtered = newEmails.map(e => e.trim()).filter(Boolean);
+                          updateStoreSettings({ email_reports_recipient: filtered.join(', ') });
+                        };
+
+                        return (
+                          <div className="space-y-3.5">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="email-recipient-1">Correo de destino principal</Label>
+                              <Input
+                                id="email-recipient-1"
+                                type="email"
+                                placeholder="principal@email.com"
+                                value={email1}
+                                onChange={(e) => handleEmailChange(0, e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="email-recipient-2">Segundo correo (Opcional)</Label>
+                              <Input
+                                id="email-recipient-2"
+                                type="email"
+                                placeholder="adicional1@email.com"
+                                value={email2}
+                                onChange={(e) => handleEmailChange(1, e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="email-recipient-3">Tercer correo (Opcional)</Label>
+                              <Input
+                                id="email-recipient-3"
+                                type="email"
+                                placeholder="adicional2@email.com"
+                                value={email3}
+                                onChange={(e) => handleEmailChange(2, e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
                       <p className="text-xs text-muted-foreground">
-                        Los informes se enviarán a este correo
+                        Los informes se enviarán a estos correos configurados.
                       </p>
                     </div>
 
