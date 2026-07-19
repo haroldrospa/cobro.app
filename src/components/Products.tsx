@@ -438,7 +438,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "meta-llama/llama-4-scout-17b-16e-instruct",
+          model: "llama-3.2-11b-vision-preview",
           response_format: { type: "json_object" },
           messages: [
             {
