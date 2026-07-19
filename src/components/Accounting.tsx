@@ -934,6 +934,47 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
             setNewExpense(prev => ({ ...prev, image_url: publicUrl }));
             toast({ title: "Comprobante adjuntado", description: "La imagen se ha subido correctamente." });
+
+            // Iniciar extracción de datos con IA si Groq está configurado
+            const userKey = cleanKey(storeSettings?.ai_api_key);
+            const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
+            const apiKey = userKey || systemKey;
+
+            if (apiKey) {
+                try {
+                    toast({ 
+                        title: "Analizando comprobante...", 
+                        description: "La IA está extrayendo los datos del comprobante para rellenar el formulario." 
+                    });
+                    const data = await scanInvoice(file, apiKey);
+                    if (data) {
+                        console.log("Datos extraídos con IA:", data);
+                        const foundSupplier = suppliers.find(s => s.name.toLowerCase() === (data.supplier_name || '').trim().toLowerCase());
+                        
+                        setNewExpense(prev => ({
+                            ...prev,
+                            amount: typeof data.amount === 'number' ? data.amount : (parseFloat(data.amount) || prev.amount || 0),
+                            description: data.description || prev.description || '',
+                            date: data.date ? new Date(data.date) : (prev.date || new Date()),
+                            category: data.category || prev.category || 'Otros',
+                            supplier_id: foundSupplier?.id || prev.supplier_id || null,
+                            supplier_name: foundSupplier ? '' : (data.supplier_name || prev.supplier_name || ''),
+                            invoice_number: data.invoice_number || prev.invoice_number || ''
+                        }));
+                        toast({ 
+                            title: "Datos auto-completados", 
+                            description: "Se han rellenado los campos del formulario con la información del comprobante." 
+                        });
+                    }
+                } catch (scanErr: any) {
+                    console.error("Error al escanear comprobante con IA:", scanErr);
+                    toast({
+                        variant: "destructive",
+                        title: "Aviso de IA",
+                        description: "No se pudo extraer la información automáticamente, pero la imagen se adjuntó con éxito."
+                    });
+                }
+            }
         } catch (err: any) {
             console.error('Error subiendo comprobante manual:', err);
             toast({
