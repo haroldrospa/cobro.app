@@ -462,10 +462,43 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       if (!content) throw new Error("Respuesta vacía de Groq");
 
       let clean = content.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        clean = jsonMatch[0];
-      }
+      
+      const extractJSON = (str: string): string => {
+        const firstBrace = str.indexOf('{');
+        if (firstBrace === -1) return str;
+        let braceCount = 0;
+        let inString = false;
+        let escaped = false;
+        for (let i = firstBrace; i < str.length; i++) {
+          const char = str[i];
+          if (escaped) {
+            escaped = false;
+            continue;
+          }
+          if (char === '\\') {
+            escaped = true;
+            continue;
+          }
+          if (char === '"') {
+            inString = !inString;
+            continue;
+          }
+          if (!inString) {
+            if (char === '{') {
+              braceCount++;
+            } else if (char === '}') {
+              braceCount--;
+              if (braceCount === 0) {
+                return str.slice(firstBrace, i + 1);
+              }
+            }
+          }
+        }
+        const match = str.match(/\{[\s\S]*\}/);
+        return match ? match[0] : str;
+      };
+
+      clean = extractJSON(clean);
       
       // Sanitizar comas sobrantes antes de cierres (trailing commas)
       clean = clean.replace(/,(\s*[\]}])/g, '$1');

@@ -849,11 +849,47 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         if (!content) throw new Error("No content received from Groq");
         
         content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            content = jsonMatch[0];
-        }
-        return JSON.parse(content);
+        
+        // Extraer primer JSON equilibrado
+        const extractJSON = (str: string): string => {
+            const firstBrace = str.indexOf('{');
+            if (firstBrace === -1) return str;
+            let braceCount = 0;
+            let inString = false;
+            let escaped = false;
+            for (let i = firstBrace; i < str.length; i++) {
+                const char = str[i];
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+                if (char === '\\') {
+                    escaped = true;
+                    continue;
+                }
+                if (char === '"') {
+                    inString = !inString;
+                    continue;
+                }
+                if (!inString) {
+                    if (char === '{') {
+                        braceCount++;
+                    } else if (char === '}') {
+                        braceCount--;
+                        if (braceCount === 0) {
+                            return str.slice(firstBrace, i + 1);
+                        }
+                    }
+                }
+            }
+            const match = str.match(/\{[\s\S]*\}/);
+            return match ? match[0] : str;
+        };
+
+        let clean = extractJSON(content);
+        // Sanitizar comas sobrantes antes de cierres (trailing commas)
+        clean = clean.replace(/,\s*([\]}])/g, '$1');
+        return JSON.parse(clean);
     };
 
     const saveExpenseToDb = async (data: any) => {
