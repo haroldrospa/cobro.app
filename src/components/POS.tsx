@@ -2454,7 +2454,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             <MenuIcon className="h-6 w-6" />
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/85 p-4 pb-12 rounded-t-[2.5rem] shadow-2xl">
+        <DrawerContent className="bg-background border-t border-zinc-800/80 p-4 pb-12 rounded-t-[2.5rem] shadow-2xl">
           <DrawerHeader className="border-b border-white/[0.04] pb-4.5 mb-4">
             <DrawerTitle className="text-lg font-black text-white flex items-center justify-between">
               <div className="flex items-center gap-3.5">
@@ -2582,22 +2582,34 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
               Operaciones de Caja
             </div>
             <div className="grid grid-cols-2 gap-3.5 mb-6">
+              {/* Opción A: Ventas del Día grande arriba */}
+              <DrawerClose asChild>
+                <Button
+                  variant="ghost"
+                  onClick={onDailySales}
+                  className="col-span-2 h-20 flex flex-row items-center gap-4 px-5 rounded-[1.5rem] bg-zinc-900/40 hover:bg-zinc-900/60 border border-white/[0.03] hover:border-blue-500/30 hover:bg-blue-500/[0.01] shadow-lg shadow-black/25 group transition-all duration-300 active:scale-[0.98]"
+                >
+                  <div className="p-3 rounded-2xl transition-all duration-300 border flex items-center justify-center shrink-0 bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                    <Receipt className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[7.5px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Operación Principal</span>
+                    <span className="font-extrabold text-zinc-200 group-hover:text-white transition-colors tracking-wider text-xs uppercase">
+                      Ventas del Día
+                    </span>
+                  </div>
+                </Button>
+              </DrawerClose>
+
+              {/* Las otras 4 opciones organizadas en 2x2 */}
               {[
-                { 
-                  icon: Receipt, 
-                  label: 'Ventas del Día', 
-                  action: onDailySales, 
-                  color: 'text-blue-400', 
-                  bg: 'bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]',
-                  btnStyle: 'hover:border-blue-500/30 hover:bg-blue-500/[0.02]'
-                },
                 { 
                   icon: RefreshCcw, 
                   label: 'Devoluciones', 
                   action: onRefund, 
                   color: 'text-orange-400', 
                   bg: 'bg-orange-500/10 border-orange-500/20 group-hover:bg-orange-500/20 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.3)]',
-                  btnStyle: 'hover:border-orange-500/30 hover:bg-orange-500/[0.02]'
+                  btnStyle: 'hover:border-orange-500/30 hover:bg-orange-500/[0.01]'
                 },
                 { 
                   icon: HandCoins, 
@@ -2605,7 +2617,16 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   action: onCashMovements, 
                   color: 'text-emerald-400', 
                   bg: 'bg-emerald-500/10 border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]',
-                  btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.02]'
+                  btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.01]'
+                },
+                { 
+                  icon: DollarSign, 
+                  label: 'Cobros Deudas', 
+                  action: onDebtSelect, 
+                  color: 'text-amber-400', 
+                  bg: 'bg-amber-500/10 border-amber-500/20 group-hover:bg-amber-500/20 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]',
+                  btnStyle: 'hover:border-amber-500/30 hover:bg-amber-500/[0.01]',
+                  isDebt: true
                 },
                 activeSession
                   ? { 
@@ -2614,7 +2635,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                       action: onCloseDay, 
                       color: 'text-rose-400', 
                       bg: 'bg-rose-500/10 border-rose-500/20 group-hover:bg-rose-500/20 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.3)]',
-                      btnStyle: 'hover:border-rose-500/30 hover:bg-rose-500/[0.02]'
+                      btnStyle: 'hover:border-rose-500/30 hover:bg-rose-500/[0.01]'
                     }
                   : { 
                       icon: Unlock, 
@@ -2622,40 +2643,26 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                       action: onOpenRegister, 
                       color: 'text-emerald-400', 
                       bg: 'bg-emerald-500/10 border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]',
-                      btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.02]'
+                      btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.01]'
                     },
-                { 
-                  icon: DollarSign, 
-                  label: 'Cobros Deudas', 
-                  action: onDebtSelect, 
-                  color: 'text-amber-400', 
-                  bg: 'bg-amber-500/10 border-amber-500/20 group-hover:bg-amber-500/20 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]',
-                  btnStyle: 'hover:border-amber-500/30 hover:bg-amber-500/[0.02]', 
-                  colSpan: true 
-                },
               ].map((item, idx) => (
                 <DrawerClose asChild key={idx}>
                   <Button
                     variant="ghost"
                     onClick={item.action}
                     className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-[1.5rem] bg-zinc-950/40 hover:bg-zinc-900/40 border border-white/[0.03] shadow-lg shadow-black/20 group transition-all duration-300 active:scale-[0.97]",
-                      item.colSpan ? "col-span-2 h-16 flex-row gap-4 px-5 justify-start" : "h-24",
+                      "flex flex-col items-center justify-center p-3 rounded-[1.5rem] bg-zinc-900/40 hover:bg-zinc-900/60 border border-white/[0.03] shadow-lg shadow-black/25 group transition-all duration-300 active:scale-[0.97] h-24",
                       item.btnStyle
                     )}
                   >
                     <div className={cn(
-                      "p-2.5 rounded-xl transition-all duration-300 border flex items-center justify-center shrink-0",
-                      item.bg,
-                      !item.colSpan && "mb-2"
+                      "p-2.5 rounded-xl transition-all duration-300 border flex items-center justify-center shrink-0 mb-2",
+                      item.bg
                     )}>
                       <item.icon className={cn("h-5 w-5", item.color)} />
                     </div>
-                    <div className={cn(
-                      "flex flex-col text-left",
-                      !item.colSpan && "items-center text-center"
-                    )}>
-                      {item.colSpan && (
+                    <div className="flex flex-col items-center text-center">
+                      {item.isDebt && (
                         <span className="text-[7px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-0.5">Créditos</span>
                       )}
                       <span className="font-extrabold text-zinc-300 group-hover:text-white transition-colors tracking-wider text-[10px] uppercase">
