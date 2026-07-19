@@ -2454,16 +2454,16 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             <MenuIcon className="h-6 w-6" />
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-background border-zinc-800 p-4 pb-12 rounded-t-[2.5rem] shadow-2xl">
-          <DrawerHeader className="border-b border-white/[0.04] pb-4 mb-4">
+        <DrawerContent className="bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/85 p-4 pb-12 rounded-t-[2.5rem] shadow-2xl">
+          <DrawerHeader className="border-b border-white/[0.04] pb-4.5 mb-4">
             <DrawerTitle className="text-lg font-black text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-500 h-9 w-9 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/10 shrink-0">
-                  <Layers className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-3.5">
+                <div className="bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 h-10 w-10 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0 border border-emerald-400/20">
+                  <Layers className="h-5.5 w-5.5 text-white" />
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-sm font-bold tracking-tight text-white leading-none mb-0.5">Menú Principal</span>
-                  <span className="text-[10px] font-medium text-zinc-500 leading-none">{userName || 'Vendedor'}</span>
+                  <span className="text-sm font-black tracking-tight text-white leading-none mb-1">Menú Principal</span>
+                  <span className="text-[10px] font-bold text-zinc-500 leading-none tracking-wide">{userName || 'Harold Rosado'}</span>
                 </div>
               </div>
             </DrawerTitle>
@@ -2477,10 +2477,10 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   <Button
                     variant="ghost"
                     onClick={() => onNavigate(item.href)}
-                    className="w-full h-16 justify-between px-4 rounded-[1.25rem] bg-gradient-to-r from-zinc-900/60 to-zinc-950/60 hover:from-emerald-500/5 hover:to-teal-500/5 border border-white/[0.04] hover:border-emerald-500/20 group transition-all duration-300 mb-3.5"
+                    className="w-full h-16 justify-between px-4 rounded-[1.5rem] bg-zinc-900/20 hover:bg-zinc-900/40 border border-white/[0.03] hover:border-emerald-500/20 group transition-all duration-300 mb-3.5 shadow-md shadow-black/10 active:scale-[0.98]"
                   >
                     <div className="flex items-center min-w-0">
-                      <div className="bg-zinc-800/80 group-hover:bg-emerald-500/15 p-2.5 rounded-xl mr-3.5 transition-all duration-300 border border-white/[0.03] group-hover:border-emerald-500/10 shrink-0">
+                      <div className="bg-zinc-900/60 group-hover:bg-emerald-500/10 p-2.5 rounded-xl mr-3.5 transition-all duration-300 border border-white/[0.02] group-hover:border-emerald-500/20 shrink-0">
                         <Icon className="h-5 w-5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
                       </div>
                       <div className="text-left min-w-0">
@@ -2495,7 +2495,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             })}
  
             {/* MODO DEL POS Segmented Control */}
-            <div className="flex flex-col gap-2 p-3.5 rounded-[1.25rem] bg-zinc-900/20 border border-white/[0.04] mb-3.5">
+            <div className="flex flex-col gap-2 p-3.5 rounded-[1.5rem] bg-zinc-900/20 border border-white/[0.03] mb-3.5 shadow-md shadow-black/10">
               <div className="flex items-center justify-between px-0.5">
                 <div className="flex flex-col text-left">
                   <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.15em]">Modo del POS</span>
@@ -2504,7 +2504,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 bg-zinc-950/80 p-1 rounded-xl border border-white/[0.05] gap-1">
+              <div className="grid grid-cols-2 bg-zinc-950/80 p-1 rounded-xl border border-white/[0.04] gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -2536,7 +2536,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
  
             {/* View Mode (List/Grid) for Catalog */}
             {layoutMode === 'catalog' && (
-              <div className="flex flex-col gap-2 p-3.5 rounded-[1.25rem] bg-zinc-900/20 border border-white/[0.04] mb-3.5 transition-all duration-300">
+              <div className="flex flex-col gap-2 p-3.5 rounded-[1.5rem] bg-zinc-900/20 border border-white/[0.03] mb-3.5 transition-all duration-300 shadow-md shadow-black/10">
                 <div className="flex items-center justify-between px-0.5">
                   <div className="flex flex-col text-left">
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.15em]">Vista de Catálogo</span>
@@ -2545,7 +2545,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 bg-zinc-950/80 p-1 rounded-xl border border-white/[0.05] gap-1">
+                <div className="grid grid-cols-2 bg-zinc-950/80 p-1 rounded-xl border border-white/[0.04] gap-1">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -2577,47 +2577,104 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             )}
  
             {/* Caja Operations Grid */}
-            <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-500 px-1 mb-2.5 mt-1">Operaciones de Caja</div>
-            <div className="grid grid-cols-2 gap-2 mb-6">
+            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 px-1 mb-3.5 mt-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Operaciones de Caja
+            </div>
+            <div className="grid grid-cols-2 gap-3.5 mb-6">
               {[
-                { icon: Receipt, label: 'Ventas del Día', action: onDailySales, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10 hover:border-blue-500/25 group-hover:bg-blue-500/10' },
-                { icon: RefreshCcw, label: 'Devoluciones', action: onRefund, color: 'text-orange-400', bg: 'bg-orange-500/5 border-orange-500/10 hover:border-orange-500/25 group-hover:bg-orange-500/10' },
-                { icon: HandCoins, label: 'Movimientos', action: onCashMovements, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/25 group-hover:bg-emerald-500/10' },
+                { 
+                  icon: Receipt, 
+                  label: 'Ventas del Día', 
+                  action: onDailySales, 
+                  color: 'text-blue-400', 
+                  bg: 'bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]',
+                  btnStyle: 'hover:border-blue-500/30 hover:bg-blue-500/[0.02]'
+                },
+                { 
+                  icon: RefreshCcw, 
+                  label: 'Devoluciones', 
+                  action: onRefund, 
+                  color: 'text-orange-400', 
+                  bg: 'bg-orange-500/10 border-orange-500/20 group-hover:bg-orange-500/20 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.3)]',
+                  btnStyle: 'hover:border-orange-500/30 hover:bg-orange-500/[0.02]'
+                },
+                { 
+                  icon: HandCoins, 
+                  label: 'Movimientos', 
+                  action: onCashMovements, 
+                  color: 'text-emerald-400', 
+                  bg: 'bg-emerald-500/10 border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]',
+                  btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.02]'
+                },
                 activeSession
-                  ? { icon: Lock, label: 'Cierre de Caja', action: onCloseDay, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10 hover:border-rose-500/25 group-hover:bg-rose-500/10' }
-                  : { icon: Unlock, label: 'Abrir Caja', action: onOpenRegister, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/25 group-hover:bg-emerald-500/10' },
-                { icon: DollarSign, label: 'Cobros Deudas', action: onDebtSelect, color: 'text-amber-400', bg: 'bg-amber-500/5 border-amber-500/10 hover:border-amber-500/25 group-hover:bg-amber-500/10', colSpan: true },
+                  ? { 
+                      icon: Lock, 
+                      label: 'Cierre de Caja', 
+                      action: onCloseDay, 
+                      color: 'text-rose-400', 
+                      bg: 'bg-rose-500/10 border-rose-500/20 group-hover:bg-rose-500/20 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.3)]',
+                      btnStyle: 'hover:border-rose-500/30 hover:bg-rose-500/[0.02]'
+                    }
+                  : { 
+                      icon: Unlock, 
+                      label: 'Abrir Caja', 
+                      action: onOpenRegister, 
+                      color: 'text-emerald-400', 
+                      bg: 'bg-emerald-500/10 border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]',
+                      btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.02]'
+                    },
+                { 
+                  icon: DollarSign, 
+                  label: 'Cobros Deudas', 
+                  action: onDebtSelect, 
+                  color: 'text-amber-400', 
+                  bg: 'bg-amber-500/10 border-amber-500/20 group-hover:bg-amber-500/20 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]',
+                  btnStyle: 'hover:border-amber-500/30 hover:bg-amber-500/[0.02]', 
+                  colSpan: true 
+                },
               ].map((item, idx) => (
                 <DrawerClose asChild key={idx}>
                   <Button
                     variant="ghost"
                     onClick={item.action}
                     className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-2xl bg-zinc-900/30 hover:bg-zinc-900/50 border border-white/[0.03] hover:border-zinc-800/80 group transition-all duration-300",
-                      item.colSpan ? "col-span-2 h-16 flex-row gap-3" : "h-22"
+                      "flex flex-col items-center justify-center p-3 rounded-[1.5rem] bg-zinc-950/40 hover:bg-zinc-900/40 border border-white/[0.03] shadow-lg shadow-black/20 group transition-all duration-300 active:scale-[0.97]",
+                      item.colSpan ? "col-span-2 h-16 flex-row gap-4 px-5 justify-start" : "h-24",
+                      item.btnStyle
                     )}
                   >
                     <div className={cn(
-                      "p-2 rounded-xl transition-all duration-300",
+                      "p-2.5 rounded-xl transition-all duration-300 border flex items-center justify-center shrink-0",
                       item.bg,
-                      !item.colSpan && "mb-1.5"
+                      !item.colSpan && "mb-2"
                     )}>
                       <item.icon className={cn("h-5 w-5", item.color)} />
                     </div>
-                    <span className="font-bold text-zinc-300 group-hover:text-white transition-colors tracking-wide text-[10px] text-center uppercase">{item.label}</span>
+                    <div className={cn(
+                      "flex flex-col text-left",
+                      !item.colSpan && "items-center text-center"
+                    )}>
+                      {item.colSpan && (
+                        <span className="text-[7px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-0.5">Créditos</span>
+                      )}
+                      <span className="font-extrabold text-zinc-300 group-hover:text-white transition-colors tracking-wider text-[10px] uppercase">
+                        {item.label}
+                      </span>
+                    </div>
                   </Button>
                 </DrawerClose>
               ))}
             </div>
  
             {/* Logout Button */}
-            <div className="px-1 mt-2">
+            <div className="px-1 mt-3">
               <Button
                 onClick={onLogout}
                 variant="ghost"
-                className="w-full h-14 bg-rose-950/15 hover:bg-rose-900/20 text-rose-400 font-extrabold rounded-[1.25rem] border border-rose-500/10 hover:border-rose-500/30 transition-all duration-300 uppercase tracking-widest text-[10px] sm:text-xs flex items-center justify-center gap-2"
+                className="w-full h-14 bg-gradient-to-r from-rose-500/10 via-red-500/5 to-rose-500/10 hover:from-rose-500/20 hover:via-red-500/15 hover:to-rose-500/20 text-rose-400 hover:text-rose-300 font-extrabold rounded-[1.5rem] border border-rose-500/20 hover:border-rose-500/40 shadow-lg shadow-rose-950/20 transition-all duration-300 uppercase tracking-widest text-[10px] sm:text-xs flex items-center justify-center gap-2 active:scale-[0.98]"
               >
-                <LogOut className="h-4.5 w-4.5" />
+                <LogOut className="h-4.5 w-4.5 animate-pulse" />
                 Cerrar Sesión
               </Button>
             </div>
