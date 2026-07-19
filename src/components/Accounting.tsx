@@ -3278,105 +3278,100 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
             </Dialog>
 
             {/* Interactive Zoomable Receipt Lightbox */}
-            <AnimatePresence>
-                {previewImageUrl && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex flex-col bg-black/90 backdrop-blur-sm select-none"
-                    >
-                        {/* Control Bar */}
-                        <div className="flex items-center justify-between p-4 bg-black/35 border-b border-white/10 text-white z-10">
-                            <div className="flex flex-col text-left">
-                                <span className="text-xs font-semibold text-white/90">Vista Previa de Comprobante</span>
-                                <span className="text-[10px] text-white/50">Arrastra para mover • Rueda del mouse para zoom</span>
-                            </div>
+            <Dialog open={!!previewImageUrl} onOpenChange={(open) => {
+                if (!open) setPreviewImageUrl(null);
+            }}>
+                <DialogContent className="max-w-[100vw] w-screen h-screen p-0 m-0 border-none rounded-none bg-black/95 text-white flex flex-col select-none z-[150] gap-0 [&>button]:hidden animate-none">
+                    {/* Control Bar */}
+                    <div className="flex items-center justify-between p-4 bg-black/35 border-b border-white/10 text-white z-10">
+                        <div className="flex flex-col text-left">
+                            <span className="text-xs font-semibold text-white/90">Vista Previa de Comprobante</span>
+                            <span className="text-[10px] text-white/50">Arrastra para mover • Rueda del mouse para zoom</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                onClick={handleZoomOut}
+                                title="Alejar (Zoom Out)"
+                            >
+                                <ZoomOut className="h-4 w-4" />
+                            </Button>
                             
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
-                                    onClick={handleZoomOut}
-                                    title="Alejar (Zoom Out)"
-                                >
-                                    <ZoomOut className="h-4 w-4" />
-                                </Button>
-                                
-                                <span className="text-xs font-bold w-12 text-center text-white/80">
-                                    {Math.round(previewImageScale * 100)}%
-                                </span>
-                                
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
-                                    onClick={handleZoomIn}
-                                    title="Acercar (Zoom In)"
-                                >
-                                    <ZoomIn className="h-4 w-4" />
-                                </Button>
+                            <span className="text-xs font-bold w-12 text-center text-white/80">
+                                {Math.round(previewImageScale * 100)}%
+                            </span>
+                            
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                onClick={handleZoomIn}
+                                title="Acercar (Zoom In)"
+                            >
+                                <ZoomIn className="h-4 w-4" />
+                            </Button>
 
-                                <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                            <div className="h-4 w-[1px] bg-white/10 mx-1" />
 
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
-                                    onClick={handleRotate}
-                                    title="Rotar 90°"
-                                >
-                                    <RotateCw className="h-4 w-4" />
-                                </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                onClick={handleRotate}
+                                title="Rotar 90°"
+                            >
+                                <RotateCw className="h-4 w-4" />
+                            </Button>
 
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
-                                    onClick={handleResetZoom}
-                                    title="Restablecer"
-                                >
-                                    <RefreshCw className="h-4 w-4" />
-                                </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                onClick={handleResetZoom}
+                                title="Restablecer"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
 
-                                <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                            <div className="h-4 w-[1px] bg-white/10 mx-1" />
 
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 bg-white/10 text-white hover:bg-white/20 hover:text-white rounded-xl ml-2"
-                                    onClick={() => setPreviewImageUrl(null)}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9 bg-white/10 text-white hover:bg-white/20 hover:text-white rounded-xl ml-2"
+                                onClick={() => setPreviewImageUrl(null)}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
                         </div>
+                    </div>
 
-                        {/* Image Viewer Body */}
-                        <div
-                            className="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing bg-black/40"
-                            onMouseDown={handleMouseDown}
-                            onMouseMove={handleMouseMove}
-                            onMouseUp={handleMouseUp}
-                            onMouseLeave={handleMouseUp}
-                            onWheel={handleWheel}
-                        >
-                            <img
-                                src={previewImageUrl}
-                                alt="Vista previa de factura"
-                                style={{
-                                    transform: `translate(${previewImagePosition.x}px, ${previewImagePosition.y}px) scale(${previewImageScale}) rotate(${previewImageRotation}deg)`,
-                                    transition: isDraggingPreview ? 'none' : 'transform 0.15s ease-out',
-                                    maxHeight: '85vh',
-                                    maxWidth: '90vw'
-                                }}
-                                className="object-contain pointer-events-none transition-transform select-none"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    {/* Image Viewer Body */}
+                    <div
+                        className="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing bg-black/40"
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                        onWheel={handleWheel}
+                    >
+                        <img
+                            src={previewImageUrl || ''}
+                            alt="Vista previa de factura"
+                            style={{
+                                transform: `translate(${previewImagePosition.x}px, ${previewImagePosition.y}px) scale(${previewImageScale}) rotate(${previewImageRotation}deg)`,
+                                transition: isDraggingPreview ? 'none' : 'transform 0.15s ease-out',
+                                maxHeight: '85vh',
+                                maxWidth: '90vw'
+                            }}
+                            className="object-contain pointer-events-none transition-transform select-none"
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div >
     );
 }
