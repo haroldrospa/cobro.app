@@ -121,23 +121,23 @@ export const MobileBottomNav: React.FC = () => {
       <div
         className={cn(
           'fixed bottom-0 left-0 right-0 z-40 md:hidden',
-          'bg-card/95 backdrop-blur-xl border border-border/50 rounded-t-[32px] shadow-[0_-20px_40px_rgba(0,0,0,0.4)]',
+          'bg-background border-t border-zinc-800/80 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.5)]',
           'transition-transform duration-300 ease-out',
           moreOpen ? 'translate-y-0' : 'translate-y-full pointer-events-none'
         )}
       >
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
+          <div className="w-12 h-1.5 rounded-full bg-zinc-700/60" />
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-          <span className="font-semibold text-base tracking-wide text-foreground">Menú</span>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/60">
+          <span className="font-bold text-base tracking-wide text-white">Menú</span>
           <button
             onClick={() => setMoreOpen(false)}
-            className="p-2 rounded-full bg-secondary/50 hover:bg-secondary transition-colors"
+            className="p-2 rounded-full bg-zinc-900/60 hover:bg-zinc-800 transition-colors"
           >
-            <X className="h-5 w-5 text-muted-foreground" />
+            <X className="h-5 w-5 text-zinc-400" />
           </button>
         </div>
 
@@ -151,14 +151,16 @@ export const MobileBottomNav: React.FC = () => {
                 to={item.href}
                 onClick={() => setMoreOpen(false)}
                 className={cn(
-                  'flex flex-col items-center gap-1.5 p-3 rounded-xl transition-colors',
+                  'flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border transition-all duration-300 active:scale-[0.95] group h-22',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-foreground hover:bg-secondary/70'
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
+                    : 'bg-zinc-900/40 hover:bg-zinc-900/60 border-white/[0.03] hover:border-white/[0.08] text-zinc-300 hover:text-white shadow-md shadow-black/10'
                 )}
               >
-                <Icon className="h-5 w-5" />
-                <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
+                <Icon className={cn("h-5.5 w-5.5 transition-colors duration-300", isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-200")} />
+                <span className={cn("text-[11px] font-bold text-center leading-tight transition-colors duration-300", isActive ? "text-white" : "text-zinc-300 group-hover:text-white")}>
+                  {item.name}
+                </span>
               </Link>
             );
           })}
@@ -166,10 +168,12 @@ export const MobileBottomNav: React.FC = () => {
           {/* Botón cerrar sesión */}
           <button
             onClick={handleLogout}
-            className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+            className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border border-rose-500/10 bg-rose-950/10 text-rose-400 hover:bg-rose-950/20 hover:text-rose-300 hover:border-rose-500/20 transition-all duration-300 active:scale-[0.95] group h-22 shadow-md shadow-black/10"
           >
-            <LogOut className="h-5 w-5" />
-            <span className="text-xs font-medium">Salir</span>
+            <LogOut className="h-5.5 w-5.5 text-rose-400 group-hover:text-rose-300 transition-colors duration-300" />
+            <span className="text-[11px] font-bold text-center leading-tight text-rose-400 group-hover:text-rose-300 transition-colors duration-300">
+              Salir
+            </span>
           </button>
         </div>
 
