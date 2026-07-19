@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -350,6 +350,47 @@ function AccountingContent() {
     const [activeTab, setActiveTab] = useState('overview');
     const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
     const [expenseEntryMode, setExpenseEntryMode] = useState<string>('manual');
+
+    // States for interactive zoomable receipt preview
+    const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+    const [previewImageScale, setPreviewImageScale] = useState(1);
+    const [previewImageRotation, setPreviewImageRotation] = useState(0);
+    const [previewImagePosition, setPreviewImagePosition] = useState({ x: 0, y: 0 });
+    const [isDraggingPreview, setIsDraggingPreview] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+    // Zoom & Pan helper handlers
+    const handleZoomIn = () => setPreviewImageScale(s => Math.min(s + 0.25, 4));
+    const handleZoomOut = () => setPreviewImageScale(s => Math.max(s - 0.25, 0.5));
+    const handleResetZoom = () => {
+        setPreviewImageScale(1);
+        setPreviewImageRotation(0);
+        setPreviewImagePosition({ x: 0, y: 0 });
+    };
+    const handleRotate = () => setPreviewImageRotation(r => (r + 90) % 360);
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDraggingPreview(true);
+        setDragStart({ x: e.clientX - previewImagePosition.x, y: e.clientY - previewImagePosition.y });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDraggingPreview) return;
+        setPreviewImagePosition({
+            x: e.clientX - dragStart.x,
+            y: e.clientY - dragStart.y
+        });
+    };
+
+    const handleMouseUp = () => {
+        setIsDraggingPreview(false);
+    };
+
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+        const zoomFactor = e.deltaY < 0 ? 0.1 : -0.1;
+        setPreviewImageScale(s => Math.min(Math.max(s + zoomFactor, 0.5), 4));
+    };
 
     const [isScanning, setIsScanning] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2202,11 +2243,24 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             </div>
                                         ) : newExpense.image_url ? (
                                             <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
-                                                <img
-                                                    src={newExpense.image_url}
-                                                    alt="Comprobante"
-                                                    className="w-12 h-12 rounded-lg object-cover border border-border/80"
-                                                />
+                                                <div 
+                                                    className="group relative cursor-pointer overflow-hidden rounded-lg border border-border/80 w-12 h-12 flex-shrink-0"
+                                                    onClick={() => {
+                                                        setPreviewImageUrl(newExpense.image_url);
+                                                        setPreviewImageScale(1);
+                                                        setPreviewImageRotation(0);
+                                                        setPreviewImagePosition({ x: 0, y: 0 });
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={newExpense.image_url}
+                                                        alt="Comprobante"
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                        <Search className="h-4 w-4 text-white" />
+                                                    </div>
+                                                </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
                                                     <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
@@ -2585,11 +2639,24 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                 </div>
                                             ) : newExpense.image_url ? (
                                                 <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
-                                                    <img
-                                                        src={newExpense.image_url}
-                                                        alt="Comprobante"
-                                                        className="w-12 h-12 rounded-lg object-cover border border-border/80"
-                                                    />
+                                                    <div 
+                                                     className="group relative cursor-pointer overflow-hidden rounded-lg border border-border/80 w-12 h-12 flex-shrink-0"
+                                                     onClick={() => {
+                                                         setPreviewImageUrl(newExpense.image_url);
+                                                         setPreviewImageScale(1);
+                                                         setPreviewImageRotation(0);
+                                                         setPreviewImagePosition({ x: 0, y: 0 });
+                                                     }}
+                                                 >
+                                                     <img
+                                                         src={newExpense.image_url}
+                                                         alt="Comprobante"
+                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                     />
+                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                         <Search className="h-4 w-4 text-white" />
+                                                     </div>
+                                                 </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
                                                         <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
@@ -2797,12 +2864,26 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             
                             {selectedExpenseForDetails?.image_url ? (
                                 <div className="space-y-3">
-                                    <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-muted/10">
+                                    <div 
+                                        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/60 bg-muted/10 max-h-[260px]"
+                                        onClick={() => {
+                                            setPreviewImageUrl(selectedExpenseForDetails.image_url);
+                                            setPreviewImageScale(1);
+                                            setPreviewImageRotation(0);
+                                            setPreviewImagePosition({ x: 0, y: 0 });
+                                        }}
+                                    >
                                         <img
                                             src={selectedExpenseForDetails.image_url}
                                             alt="Factura / Comprobante"
-                                            className="w-full max-h-[260px] object-contain mx-auto rounded-2xl"
+                                            className="w-full max-h-[260px] object-contain mx-auto rounded-2xl group-hover:scale-[1.02] transition-transform duration-200"
                                         />
+                                        <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                            <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg">
+                                                <Search className="h-3.5 w-3.5" />
+                                                <span>Click para Zoom</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="flex gap-2 justify-center">
                                         <a
@@ -3195,6 +3276,107 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Interactive Zoomable Receipt Lightbox */}
+            <AnimatePresence>
+                {previewImageUrl && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex flex-col bg-black/90 backdrop-blur-sm select-none"
+                    >
+                        {/* Control Bar */}
+                        <div className="flex items-center justify-between p-4 bg-black/35 border-b border-white/10 text-white z-10">
+                            <div className="flex flex-col text-left">
+                                <span className="text-xs font-semibold text-white/90">Vista Previa de Comprobante</span>
+                                <span className="text-[10px] text-white/50">Arrastra para mover • Rueda del mouse para zoom</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                    onClick={handleZoomOut}
+                                    title="Alejar (Zoom Out)"
+                                >
+                                    <ZoomOut className="h-4 w-4" />
+                                </Button>
+                                
+                                <span className="text-xs font-bold w-12 text-center text-white/80">
+                                    {Math.round(previewImageScale * 100)}%
+                                </span>
+                                
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                    onClick={handleZoomIn}
+                                    title="Acercar (Zoom In)"
+                                >
+                                    <ZoomIn className="h-4 w-4" />
+                                </Button>
+
+                                <div className="h-4 w-[1px] bg-white/10 mx-1" />
+
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                    onClick={handleRotate}
+                                    title="Rotar 90°"
+                                >
+                                    <RotateCw className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-xl"
+                                    onClick={handleResetZoom}
+                                    title="Restablecer"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                </Button>
+
+                                <div className="h-4 w-[1px] bg-white/10 mx-1" />
+
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 bg-white/10 text-white hover:bg-white/20 hover:text-white rounded-xl ml-2"
+                                    onClick={() => setPreviewImageUrl(null)}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Image Viewer Body */}
+                        <div
+                            className="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing bg-black/40"
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                            onWheel={handleWheel}
+                        >
+                            <img
+                                src={previewImageUrl}
+                                alt="Vista previa de factura"
+                                style={{
+                                    transform: `translate(${previewImagePosition.x}px, ${previewImagePosition.y}px) scale(${previewImageScale}) rotate(${previewImageRotation}deg)`,
+                                    transition: isDraggingPreview ? 'none' : 'transform 0.15s ease-out',
+                                    maxHeight: '85vh',
+                                    maxWidth: '90vw'
+                                }}
+                                className="object-contain pointer-events-none transition-transform select-none"
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div >
     );
 }
