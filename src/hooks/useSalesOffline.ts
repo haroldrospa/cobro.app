@@ -376,13 +376,19 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     // --- RPC PATH: Intentar facturación atómica de 1 roundtrip ---
     try {
         console.log('⚡ Ejecutando facturación rápida via RPC...');
-        const rpcItems = saleData.items.map(item => ({
-            id: item.id,
-            price: item.price,
-            quantity: item.quantity,
-            tax: item.tax,
-            cost_includes_tax: item.cost_includes_tax || false
-        }));
+        // Filter out virtual/special items that don't have real product UUIDs.
+        // These are display-only line items (card surcharge, previous debt payment)
+        // and are NOT stored in sale_items table, so they must NOT be sent to the RPC.
+        const VIRTUAL_ITEM_IDS = ['surcharge-card', 'previous-debt-payment'];
+        const rpcItems = saleData.items
+            .filter(item => !VIRTUAL_ITEM_IDS.includes(item.id))
+            .map(item => ({
+                id: item.id,
+                price: item.price,
+                quantity: item.quantity,
+                tax: item.tax,
+                cost_includes_tax: item.cost_includes_tax || false
+            }));
 
         const { data: rpcResult, error: rpcError } = await supabase.rpc('create_sale_transaction_v3', {
             p_sale_id: saleData.id || crypto.randomUUID(),

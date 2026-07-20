@@ -134,16 +134,27 @@ export const useSales = (filters: SalesFilters = {}) => {
             formattedWildcardTerm = cleanTerm.slice(0, 3) + '%' + cleanTerm.slice(3);
           }
 
-          // Invoice specific search - Exclude customer name to strictly find the invoice
-          // Searching: 
-          // 1. Exact term (B02-0000...)
-          // 2. Clean term (B020000...)
-          // 3. Hyphen wildcard from input (B02%0000...)
-          // 4. Formatted wildcard (B02%... inserted automatically)
+          // Invoice specific search - only look at invoice_number column
           query = query.or(`invoice_number.ilike.%${term}%,invoice_number.ilike.%${cleanTerm}%,invoice_number.ilike.%${hyphenWildcardTerm}%,invoice_number.ilike.%${formattedWildcardTerm}%`);
         } else {
-          // Standard search (Customer name or Invoice number)
-          query = query.or(`invoice_number.ilike.%${term}%,customer.name.ilike.%${term}%`);
+          // Standard search: PostgREST does NOT support filtering related-table columns
+          // inside or(). Pre-fetch matching customer IDs, then build a sales-only or filter.
+          const { data: matchingCustomers } = await supabase
+            .from('customers')
+            .select('id')
+            .ilike('name', `%${term}%`)
+            .limit(100);
+
+          const customerIds = matchingCustomers?.map(c => c.id) ?? [];
+
+          if (customerIds.length > 0) {
+            // Build or with invoice_number + matched customer_ids
+            const customerIdFilters = customerIds.map(id => `customer_id.eq.${id}`).join(',');
+            query = query.or(`invoice_number.ilike.%${term}%,${customerIdFilters}`);
+          } else {
+            // No matching customers — only filter by invoice_number
+            query = query.ilike('invoice_number', `%${term}%`);
+          }
         }
       }
 
