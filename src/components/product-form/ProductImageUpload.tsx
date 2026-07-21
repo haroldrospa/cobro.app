@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Upload, X, ImageIcon, Link, Sparkles } from 'lucide-react';
-import { removeBackground } from '@imgly/background-removal';
+import { removeImageBackgroundCanvas } from '@/utils/removeImageBackground';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -73,7 +73,6 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
           const { error: createError } = await supabase.storage.createBucket('product-images', {
             public: true,
             fileSizeLimit: 5242880,
-            // Sin restricción de mime types para aceptar cualquier imagen
           });
 
           if (createError && !createError.message?.includes('already exists')) {
@@ -114,7 +113,6 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         description: "La imagen se ha subido correctamente.",
       });
     } catch (error: any) {
-      // Mostrar el error exacto de Supabase para facilitar el diagnóstico
       const exactError = error?.message || error?.error_description || JSON.stringify(error);
       console.error('[Storage] Error subiendo imagen:', exactError);
 
@@ -129,35 +127,17 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
     }
   };
 
-  // AI Background removal function
+  // Fast & non-blocking AI Background removal function
   const handleAIRemoveBackground = async (imageSource: string | File) => {
     try {
       setIsRemovingBg(true);
       toast({
-        title: "Procesando con IA...",
-        description: "Removiendo el fondo de la imagen del producto. Esto tomará solo unos segundos.",
+        title: "Removiendo fondo...",
+        description: "Procesando la imagen...",
       });
 
-      let imgInput: string | Blob | File = imageSource;
-
-      // Si es una URL remota, convertirla a Blob para evitar problemas de CORS o fetch en la librería
-      if (typeof imageSource === 'string' && (imageSource.startsWith('http://') || imageSource.startsWith('https://'))) {
-        try {
-          const res = await fetch(imageSource);
-          if (res.ok) {
-            imgInput = await res.blob();
-          }
-        } catch (fetchErr) {
-          console.warn('[AI] Fetch directo de URL falló, usando URL directa:', fetchErr);
-        }
-      }
-
-      // Ejecutar remoción de fondo con @imgly/background-removal
-      const blob = await removeBackground(imgInput, {
-        progress: (key, current, total) => {
-          console.log(`[AI BgRemoval] ${key}: ${current}/${total}`);
-        }
-      });
+      // Ejecutar la remoción de fondo instantánea con Canvas
+      const blob = await removeImageBackgroundCanvas(imageSource);
 
       const file = new File([blob], `product-no-bg-${Date.now()}.png`, { type: 'image/png' });
       const filePath = `no-bg-${Math.random().toString(36).substring(2, 9)}.png`;
