@@ -1415,29 +1415,31 @@ const Reports = () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead className="text-center">Transacciones</TableHead>
-                      <TableHead className="text-right">Total Vendido</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dailySalesData.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center py-6">No hay datos en este rango.</TableCell></TableRow> :
-                      dailySalesData.map((d, i) => (
-                        <TableRow 
-                          key={i} 
-                          className="cursor-pointer hover:bg-zinc-900/60 transition-colors"
-                          onClick={() => setSelectedDailySalesDate(d.key)}
-                        >
-                          <TableCell className="font-medium text-white">{d.date}</TableCell>
-                          <TableCell className="text-center">{d.count}</TableCell>
-                          <TableCell className="text-right font-bold text-emerald-400">${d.total.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto w-full">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Fecha</TableHead>
+                        <TableHead className="text-center whitespace-nowrap">Transacciones</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Total Vendido</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailySalesData.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center py-6">No hay datos en este rango.</TableCell></TableRow> :
+                        dailySalesData.map((d, i) => (
+                          <TableRow 
+                            key={i} 
+                            className="cursor-pointer hover:bg-muted/60 transition-colors"
+                            onClick={() => setSelectedDailySalesDate(d.key)}
+                          >
+                            <TableCell className="font-medium whitespace-nowrap">{d.date}</TableCell>
+                            <TableCell className="text-center">{d.count}</TableCell>
+                            <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">${d.total.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1447,12 +1449,12 @@ const Reports = () => {
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6 pb-2">
                 <CardTitle>Ventas por Hora</CardTitle>
                 <CardDescription>Identifica tus horas pico de mayor venta.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full mb-6">
+              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+                <div className="h-[250px] sm:h-[300px] w-full mb-6">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={hourlySalesData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -1469,28 +1471,30 @@ const Reports = () => {
                   </ResponsiveContainer>
                 </div>
                 <ScrollArea className="h-[400px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Hora</TableHead>
-                        <TableHead className="text-center">Transacciones</TableHead>
-                        <TableHead className="text-right">Total Vendido</TableHead>
-                        <TableHead className="text-right">Promedio / Hora</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {hourlySalesData.map((d, i) => (
-                        <TableRow key={i} className={d.total > 0 ? 'bg-muted/20' : ''}>
-                          <TableCell className="font-medium">{d.label}</TableCell>
-                          <TableCell className="text-center">{d.count}</TableCell>
-                          <TableCell className="text-right font-bold text-primary">${d.total.toLocaleString()}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            ${d.count > 0 ? (d.total / d.count).toFixed(0) : 0}
-                          </TableCell>
+                  <div className="overflow-x-auto w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Hora</TableHead>
+                          <TableHead className="text-center whitespace-nowrap">Transacciones</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Total Vendido</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Promedio / Hora</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {hourlySalesData.map((d, i) => (
+                          <TableRow key={i} className={d.total > 0 ? 'bg-muted/20' : ''}>
+                            <TableCell className="font-medium whitespace-nowrap">{d.label}</TableCell>
+                            <TableCell className="text-center">{d.count}</TableCell>
+                            <TableCell className="text-right font-bold text-primary whitespace-nowrap">${d.total.toLocaleString()}</TableCell>
+                            <TableCell className="text-right text-muted-foreground whitespace-nowrap">
+                              ${d.count > 0 ? (d.total / d.count).toFixed(0) : 0}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </ScrollArea>
               </CardContent>
             </Card>
@@ -1512,59 +1516,63 @@ const Reports = () => {
 
         return (
           <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6 pb-2">
               <CardTitle>{title}</CardTitle>
               <CardDescription>Mostrando {currentList.length} comprobantes emitidos en el periodo.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table className="border-collapse">
-                <TableHeader>
-                  <TableRow className="border-b border-border/40 hover:bg-transparent">
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Fecha</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">NCF</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Cliente</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 hidden sm:table-cell">RNC/Cédula</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-right hidden sm:table-cell">ITBIS</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-right">Total</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-center">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentList.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No se encontraron facturas de este tipo.</TableCell></TableRow> :
-                    currentList.map(s => (
-                      <TableRow key={s.id} onClick={() => setSelectedSale(s)} className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/20 group">
-                        <TableCell className="py-4 text-sm text-muted-foreground">{format(new Date(s.created_at), 'dd/MM/yyyy')}</TableCell>
-                        <TableCell className="py-4 text-xs font-mono text-muted-foreground tracking-tight">{s.invoice_number}</TableCell>
-                        <TableCell className="py-4 text-sm font-medium">{s.customer?.name || 'Consumidor Final'}</TableCell>
-                        <TableCell className="py-4 text-sm text-muted-foreground hidden sm:table-cell">{s.customer?.rnc || '-'}</TableCell>
-                        <TableCell className="py-4 text-right text-sm text-muted-foreground hidden sm:table-cell">${(s.tax_total || 0).toLocaleString()}</TableCell>
-                        <TableCell className="py-4 text-right text-sm font-semibold">${s.total.toLocaleString()}</TableCell>
-                        <TableCell className="py-4 text-center">
-                          <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
-                              <Printer className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  }
-                </TableBody>
-                <TableFooter className="bg-transparent border-t border-border/50">
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={4} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-6">Total General</TableCell>
-                    <TableCell className="text-right text-sm font-semibold text-muted-foreground hidden sm:table-cell">${totalTax.toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-lg font-black text-primary">${totalAmount.toLocaleString()}</TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableFooter>
-              </Table>
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+              <div className="overflow-x-auto w-full">
+                <Table className="border-collapse min-w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-border/40 hover:bg-transparent">
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">Fecha</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">NCF</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 min-w-[140px]">Cliente</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 hidden sm:table-cell whitespace-nowrap">RNC/Cédula</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right hidden sm:table-cell whitespace-nowrap">ITBIS</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right whitespace-nowrap">Total</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-center whitespace-nowrap">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentList.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No se encontraron facturas de este tipo.</TableCell></TableRow> :
+                      currentList.map(s => (
+                        <TableRow key={s.id} onClick={() => setSelectedSale(s)} className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/20 group">
+                          <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{format(new Date(s.created_at), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className="py-3 text-xs font-mono text-muted-foreground tracking-tight whitespace-nowrap">{s.invoice_number}</TableCell>
+                          <TableCell className="py-3 text-xs sm:text-sm font-semibold max-w-[150px] sm:max-w-none truncate" title={s.customer?.name || 'Consumidor Final'}>
+                            {s.customer?.name || 'Consumidor Final'}
+                          </TableCell>
+                          <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap">{s.customer?.rnc || '-'}</TableCell>
+                          <TableCell className="py-3 text-right text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap">${(s.tax_total || 0).toLocaleString()}</TableCell>
+                          <TableCell className="py-3 text-right text-xs sm:text-sm font-bold whitespace-nowrap">${s.total.toLocaleString()}</TableCell>
+                          <TableCell className="py-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    }
+                  </TableBody>
+                  <TableFooter className="bg-transparent border-t border-border/50">
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={4} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-4">Total General</TableCell>
+                      <TableCell className="text-right text-sm font-semibold text-muted-foreground hidden sm:table-cell whitespace-nowrap">${totalTax.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-base sm:text-lg font-black text-primary whitespace-nowrap">${totalAmount.toLocaleString()}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         );
@@ -1572,39 +1580,41 @@ const Reports = () => {
       case 'closings':
         return (
           <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6 pb-2">
               <CardTitle>Historial de Cierres de Caja</CardTitle>
               <CardDescription>Registro de aperturas y cierres de turno.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha Apertura</TableHead>
-                    <TableHead>Fecha Cierre</TableHead>
-                    <TableHead>Responsable</TableHead>
-                    <TableHead className="text-right">Esperado</TableHead>
-                    <TableHead className="text-right">Real</TableHead>
-                    <TableHead className="text-right">Diferencia</TableHead>
-                    <TableHead className="text-center">Detalle</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredClosings.map(c => (
-                    <TableRow key={c.id} onClick={() => setSelectedClosing(c)} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell>{format(new Date(c.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                      <TableCell>{c.closing_time ? format(new Date(c.closing_time), 'dd/MM/yyyy HH:mm') : 'ABIERTO'}</TableCell>
-                      <TableCell>{c.profile?.full_name}</TableCell>
-                      <TableCell className="text-right">${(c.expected_cash || 0).toLocaleString()}</TableCell>
-                      <TableCell className="text-right font-bold">${(c.actual_cash || 0).toLocaleString()}</TableCell>
-                      <TableCell className={`text-right font-bold ${(c.difference || 0) < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                        {(c.difference || 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-center"><Eye className="h-4 w-4 inline text-muted-foreground" /></TableCell>
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+              <div className="overflow-x-auto w-full">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Fecha Apertura</TableHead>
+                      <TableHead className="whitespace-nowrap">Fecha Cierre</TableHead>
+                      <TableHead className="whitespace-nowrap">Responsable</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Esperado</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Real</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Diferencia</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">Detalle</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClosings.map(c => (
+                      <TableRow key={c.id} onClick={() => setSelectedClosing(c)} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell className="whitespace-nowrap">{format(new Date(c.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                        <TableCell className="whitespace-nowrap">{c.closing_time ? format(new Date(c.closing_time), 'dd/MM/yyyy HH:mm') : 'ABIERTO'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{c.profile?.full_name}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">${(c.expected_cash || 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-bold whitespace-nowrap">${(c.actual_cash || 0).toLocaleString()}</TableCell>
+                        <TableCell className={`text-right font-bold whitespace-nowrap ${(c.difference || 0) < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                          {(c.difference || 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-center"><Eye className="h-4 w-4 inline text-muted-foreground" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         );
@@ -1612,34 +1622,36 @@ const Reports = () => {
       case 'receivables':
         return (
           <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6 pb-2">
               <CardTitle>Cuentas por Cobrar</CardTitle>
               <CardDescription>Cartera de clientes con balance pendiente.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Límite de Crédito</TableHead>
-                    <TableHead className="text-right">Deuda Actual</TableHead>
-                    <TableHead className="text-right">Disponible</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {receivables.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No hay clientes con deuda.</TableCell></TableRow> :
-                    receivables.map(c => (
-                      <TableRow key={c.id} onClick={() => setSelectedCustomerForDebt(c)} className="cursor-pointer hover:bg-muted/50" title="Ver facturas pendientes">
-                        <TableCell className="font-medium text-primary">{c.name}</TableCell>
-                        <TableCell>{c.phone || '-'}</TableCell>
-                        <TableCell>${(c.credit_limit || 0).toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-bold text-red-600">${(c.credit_used || 0).toLocaleString()}</TableCell>
-                        <TableCell className="text-right text-green-600">${((c.credit_limit || 0) - (c.credit_used || 0)).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+              <div className="overflow-x-auto w-full">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Cliente</TableHead>
+                      <TableHead className="whitespace-nowrap">Teléfono</TableHead>
+                      <TableHead className="whitespace-nowrap">Límite de Crédito</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Deuda Actual</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Disponible</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {receivables.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No hay clientes con deuda.</TableCell></TableRow> :
+                      receivables.map(c => (
+                        <TableRow key={c.id} onClick={() => setSelectedCustomerForDebt(c)} className="cursor-pointer hover:bg-muted/50" title="Ver facturas pendientes">
+                          <TableCell className="font-medium text-primary whitespace-nowrap">{c.name}</TableCell>
+                          <TableCell className="whitespace-nowrap">{c.phone || '-'}</TableCell>
+                          <TableCell className="whitespace-nowrap">${(c.credit_limit || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-bold text-red-600 whitespace-nowrap">${(c.credit_used || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-right text-green-600 whitespace-nowrap">${((c.credit_limit || 0) - (c.credit_used || 0)).toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         );
@@ -1654,39 +1666,41 @@ const Reports = () => {
                   <h3 className="text-2xl font-bold text-primary">${inventoryCost.toLocaleString()}</h3>
                 </CardContent>
               </Card>
-              <Card className="bg-green-50 border-green-200">
+              <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
                 <CardContent className="p-4">
                   <p className="text-sm font-medium text-muted-foreground">Valor de Venta Potencial</p>
-                  <h3 className="text-2xl font-bold text-green-700">${inventoryValue.toLocaleString()}</h3>
+                  <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">${inventoryValue.toLocaleString()}</h3>
                 </CardContent>
               </Card>
             </div>
             <Card>
-              <CardHeader><CardTitle>Detalle de Inventario</CardTitle></CardHeader>
-              <CardContent>
+              <CardHeader className="p-4 sm:p-6 pb-2"><CardTitle>Detalle de Inventario</CardTitle></CardHeader>
+              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
                 <ScrollArea className="h-[500px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Producto</TableHead>
-                        <TableHead className="text-center">Stock</TableHead>
-                        <TableHead className="text-right">Costo Unit.</TableHead>
-                        <TableHead className="text-right">Precio Venta</TableHead>
-                        <TableHead className="text-right">Valuación (Costo)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredInventory.map(p => (
-                        <TableRow key={p.id}>
-                          <TableCell>{p.name}</TableCell>
-                          <TableCell className="text-center font-bold">{p.stock}</TableCell>
-                          <TableCell className="text-right">${(p.cost || 0).toLocaleString()}</TableCell>
-                          <TableCell className="text-right">${p.price.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">${(p.stock * (p.cost || 0)).toLocaleString()}</TableCell>
+                  <div className="overflow-x-auto w-full">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Producto</TableHead>
+                          <TableHead className="text-center whitespace-nowrap">Stock</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Costo Unit.</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Precio Venta</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Valuación (Costo)</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredInventory.map(p => (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-semibold whitespace-nowrap">{p.name}</TableCell>
+                            <TableCell className="text-center font-bold">{p.stock}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap">${(p.cost || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap">${p.price.toLocaleString()}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap">${(p.stock * (p.cost || 0)).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </ScrollArea>
               </CardContent>
             </Card>
@@ -1696,31 +1710,33 @@ const Reports = () => {
       case 'movements':
         return (
           <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader><CardTitle>Historial de Movimientos</CardTitle></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Motivo</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMovements.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center py-8">No hay movimientos.</TableCell></TableRow> :
-                    filteredMovements.map(m => (
-                      <TableRow key={m.id}>
-                        <TableCell>{format(new Date(m.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                        <TableCell>
-                          {m.type === 'deposit' ? <span className="text-green-600 flex items-center gap-1"><ArrowUpCircle className="h-3 w-3" /> Entrada</span> : <span className="text-red-600 flex items-center gap-1"><ArrowDownCircle className="h-3 w-3" /> Salida</span>}
-                        </TableCell>
-                        <TableCell>{m.reason}</TableCell>
-                        <TableCell className="text-right font-bold">RD$ {m.amount.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
+            <CardHeader className="p-4 sm:p-6 pb-2"><CardTitle>Historial de Movimientos</CardTitle></CardHeader>
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+              <div className="overflow-x-auto w-full">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Fecha</TableHead>
+                      <TableHead className="whitespace-nowrap">Tipo</TableHead>
+                      <TableHead className="whitespace-nowrap">Motivo</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMovements.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center py-8">No hay movimientos.</TableCell></TableRow> :
+                      filteredMovements.map(m => (
+                        <TableRow key={m.id}>
+                          <TableCell className="whitespace-nowrap">{format(new Date(m.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {m.type === 'deposit' ? <span className="text-green-600 flex items-center gap-1"><ArrowUpCircle className="h-3 w-3" /> Entrada</span> : <span className="text-red-600 flex items-center gap-1"><ArrowDownCircle className="h-3 w-3" /> Salida</span>}
+                          </TableCell>
+                          <TableCell>{m.reason}</TableCell>
+                          <TableCell className="text-right font-bold whitespace-nowrap">RD$ {m.amount.toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         );
@@ -1845,142 +1861,147 @@ const Reports = () => {
                   
                   <div className="border rounded-xl bg-card overflow-hidden">
                     <ScrollArea className="h-[500px]">
-                      <Table>
-                        <TableHeader className="sticky top-0 bg-background z-20 shadow-sm border-b">
-                          <TableRow>
-                            <TableHead className="font-bold">Producto</TableHead>
-                            <TableHead className="font-bold">Categoría</TableHead>
-                            <TableHead className="text-right font-bold">Unidades Vendidas</TableHead>
-                            <TableHead className="text-right font-bold pr-6">Ingresos Generados</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {rankingList.length === 0 ? (
+                      <div className="overflow-x-auto w-full">
+                        <Table className="min-w-full">
+                          <TableHeader className="sticky top-0 bg-background z-20 shadow-sm border-b">
                             <TableRow>
-                              <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                                No se encontraron productos vendidos con los filtros actuales.
-                              </TableCell>
+                              <TableHead className="font-bold whitespace-nowrap">Producto</TableHead>
+                              <TableHead className="font-bold whitespace-nowrap">Categoría</TableHead>
+                              <TableHead className="text-right font-bold whitespace-nowrap">Unidades Vendidas</TableHead>
+                              <TableHead className="text-right font-bold pr-6 whitespace-nowrap">Ingresos Generados</TableHead>
                             </TableRow>
-                          ) : (
-                            rankingList.map((p, idx) => {
-                              const productDoc = products.find(prod => prod.name === p.name || prod.id === p.name); // try matching ID first because key is ID or Name, but `soldProductsData` sets `p.name` visually
-                              return (
-                                <TableRow 
-                                  key={idx} 
-                                  className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                  onClick={() => {
-                                    if (productDoc) {
-                                      setSelectedProducts([productDoc.id]);
-                                      setProductSearch('');
-                                    } else {
-                                      const foundByName = products.find(prod => prod.name === p.name);
-                                      if (foundByName) {
-                                         setSelectedProducts([foundByName.id]);
-                                         setProductSearch('');
+                          </TableHeader>
+                          <TableBody>
+                            {rankingList.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                                  No se encontraron productos vendidos con los filtros actuales.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              rankingList.map((p, idx) => {
+                                const productDoc = products.find(prod => prod.name === p.name || prod.id === p.name);
+                                return (
+                                  <TableRow 
+                                    key={idx} 
+                                    className="hover:bg-muted/30 transition-colors cursor-pointer"
+                                    onClick={() => {
+                                      if (productDoc) {
+                                        setSelectedProducts([productDoc.id]);
+                                        setProductSearch('');
+                                      } else {
+                                        const foundByName = products.find(prod => prod.name === p.name);
+                                        if (foundByName) {
+                                           setSelectedProducts([foundByName.id]);
+                                           setProductSearch('');
+                                        }
                                       }
-                                    }
-                                  }}
-                                  title="Haz clic para ver el historial de ventas"
-                                >
-                                  <TableCell className="font-semibold text-primary">{p.name}</TableCell>
-                                  <TableCell className="text-xs text-muted-foreground uppercase">{p.category}</TableCell>
-                                  <TableCell className="text-right font-black text-emerald-600">{p.quantity}</TableCell>
-                                  <TableCell className="text-right font-bold pr-6">
-                                    ${p.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })
-                          )}
-                        </TableBody>
-                      </Table>
+                                    }}
+                                    title="Haz clic para ver el historial de ventas"
+                                  >
+                                    <TableCell className="font-semibold text-primary max-w-[160px] sm:max-w-none truncate" title={p.name}>{p.name}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground uppercase whitespace-nowrap">{p.category}</TableCell>
+                                    <TableCell className="text-right font-black text-emerald-600 whitespace-nowrap">{p.quantity}</TableCell>
+                                    <TableCell className="text-right font-bold pr-6 whitespace-nowrap">
+                                      ${p.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </ScrollArea>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               <Card className="border-primary/20">
-                <CardHeader className="pb-3 border-b bg-muted/10 mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <CardHeader className="p-4 sm:p-6 pb-3 border-b bg-muted/10 mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                    <CardTitle className="text-xl">Historial de Ventas</CardTitle>
-                    <CardDescription>Detalle de transacciones para el producto seleccionado.</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Historial de Ventas</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Detalle de transacciones para el producto seleccionado.</CardDescription>
                   </div>
                   <Button 
                     variant="outline" 
-                    className="hover:bg-muted cursor-pointer shrink-0" 
+                    size="sm"
+                    className="hover:bg-muted cursor-pointer shrink-0 font-bold text-xs" 
                     onClick={() => setSelectedProducts([])}
                   >
                     Volver al Ranking
                   </Button>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
                   <div className="animate-in slide-in-from-top-4">
-                    {/* Summary row */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex flex-col items-center justify-center">
-                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Producto</span>
-                        <span className="font-black text-center leading-tight truncate w-full" title={selectedProd.name}>{selectedProd.name}</span>
+                    {/* Summary row - 2 cols on mobile */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-6">
+                      <div className="bg-primary/5 p-3 sm:p-4 rounded-xl border border-primary/20 flex flex-col items-center justify-center min-w-0">
+                        <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1 truncate w-full text-center">Producto</span>
+                        <span className="font-black text-center text-xs sm:text-sm leading-tight truncate w-full" title={selectedProd.name}>{selectedProd.name}</span>
                       </div>
-                      <div className="bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center">
-                        <span className="text-[10px] text-emerald-600/70 uppercase font-black tracking-widest mb-1">Unidades Vendidas</span>
-                        <span className="font-black text-2xl text-emerald-600">{totalQty}</span>
+                      <div className="bg-emerald-500/5 p-3 sm:p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center">
+                        <span className="text-[9px] sm:text-[10px] text-emerald-600/70 dark:text-emerald-400/70 uppercase font-black tracking-widest mb-1 truncate w-full text-center">Vendidas</span>
+                        <span className="font-black text-lg sm:text-2xl text-emerald-600 dark:text-emerald-400">{totalQty}</span>
                       </div>
-                      <div className="bg-amber-500/5 p-4 rounded-xl border border-amber-500/20 flex flex-col items-center justify-center">
-                        <span className="text-[10px] text-amber-600/70 uppercase font-black tracking-widest mb-1">Ingresos de Ventas</span>
-                        <span className="font-black text-2xl text-amber-600">${totalRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <div className="bg-amber-500/5 p-3 sm:p-4 rounded-xl border border-amber-500/20 flex flex-col items-center justify-center">
+                        <span className="text-[9px] sm:text-[10px] text-amber-600/70 dark:text-amber-400/70 uppercase font-black tracking-widest mb-1 truncate w-full text-center">Ingresos</span>
+                        <span className="font-black text-base sm:text-2xl text-amber-600 dark:text-amber-400">${totalRev.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                       </div>
-                      <div className="bg-muted/30 p-4 rounded-xl border flex flex-col items-center justify-center">
-                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Total Transacciones</span>
-                        <span className="font-black text-2xl">{drillSales.length}</span>
+                      <div className="bg-muted/30 p-3 sm:p-4 rounded-xl border flex flex-col items-center justify-center">
+                        <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1 truncate w-full text-center">Ventas</span>
+                        <span className="font-black text-lg sm:text-2xl">{drillSales.length}</span>
                       </div>
                     </div>
 
                     <div className="border rounded-xl bg-card overflow-hidden">
-                      <div className="p-4 border-b bg-muted/30 flex items-center justify-between">
-                         <h3 className="font-semibold text-sm">Historial de Ventas</h3>
-                         <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded-full border">{drillSales.length} registros encontrados</span>
+                      <div className="p-3 sm:p-4 border-b bg-muted/30 flex items-center justify-between">
+                         <h3 className="font-semibold text-xs sm:text-sm">Historial de Ventas</h3>
+                         <span className="text-[10px] sm:text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full border">{drillSales.length} registros</span>
                       </div>
                       <ScrollArea className="h-[450px]">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-20 shadow-sm border-b-2">
-                            <TableRow>
-                              <TableHead className="w-10 text-center font-bold">#</TableHead>
-                              <TableHead className="font-bold">Fecha</TableHead>
-                              <TableHead className="font-bold">Factura</TableHead>
-                              <TableHead className="font-bold md:w-1/3">Cliente</TableHead>
-                              <TableHead className="text-right font-bold w-20">Cant.</TableHead>
-                              <TableHead className="text-right font-bold w-28">Precio U.</TableHead>
-                              <TableHead className="text-right font-bold w-32 pr-4">Total</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {drillSales.length === 0 ? (
+                        <div className="overflow-x-auto w-full">
+                          <Table className="min-w-full">
+                            <TableHeader className="sticky top-0 bg-background z-20 shadow-sm border-b-2">
                               <TableRow>
-                                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                                  No hay ventas para este producto en el rango de fechas actual.
-                                </TableCell>
+                                <TableHead className="w-8 text-center font-bold whitespace-nowrap">#</TableHead>
+                                <TableHead className="font-bold whitespace-nowrap">Fecha</TableHead>
+                                <TableHead className="font-bold whitespace-nowrap">Factura</TableHead>
+                                <TableHead className="font-bold whitespace-nowrap min-w-[120px]">Cliente</TableHead>
+                                <TableHead className="text-right font-bold w-16 whitespace-nowrap">Cant.</TableHead>
+                                <TableHead className="text-right font-bold w-24 whitespace-nowrap">Precio U.</TableHead>
+                                <TableHead className="text-right font-bold w-28 pr-4 whitespace-nowrap">Total</TableHead>
                               </TableRow>
-                            ) : (
-                              drillSales.map((row, idx) => (
-                                <TableRow key={row.id} className="hover:bg-muted/30 transition-colors">
-                                  <TableCell className="text-muted-foreground text-xs text-center font-bold">{idx + 1}</TableCell>
-                                  <TableCell className="text-[11px] whitespace-nowrap">
-                                    {format(new Date(row.date), 'dd/MM/yy HH:mm', { locale: es })}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-[11px] text-primary font-bold">{row.invoice}</TableCell>
-                                  <TableCell className="text-[11px] font-semibold truncate max-w-[200px]" title={row.customer}>{row.customer}</TableCell>
-                                  <TableCell className="text-right font-black text-xs">{row.qty}</TableCell>
-                                  <TableCell className="text-right text-muted-foreground font-medium text-xs">
-                                    ${row.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                  </TableCell>
-                                  <TableCell className="text-right font-black text-emerald-600 text-[11px] pr-4">
-                                    ${row.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </TableHeader>
+                            <TableBody>
+                              {drillSales.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                    No hay ventas para este producto en el rango de fechas actual.
                                   </TableCell>
                                 </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
+                              ) : (
+                                drillSales.map((row, idx) => (
+                                  <TableRow key={row.id} className="hover:bg-muted/30 transition-colors">
+                                    <TableCell className="text-muted-foreground text-xs text-center font-bold whitespace-nowrap">{idx + 1}</TableCell>
+                                    <TableCell className="text-[11px] whitespace-nowrap">
+                                      {format(new Date(row.date), 'dd/MM/yy HH:mm', { locale: es })}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-[11px] text-primary font-bold whitespace-nowrap">{row.invoice}</TableCell>
+                                    <TableCell className="text-[11px] font-semibold truncate max-w-[130px] sm:max-w-[200px]" title={row.customer}>{row.customer}</TableCell>
+                                    <TableCell className="text-right font-black text-xs whitespace-nowrap">{row.qty}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground font-medium text-xs whitespace-nowrap">
+                                      ${row.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </TableCell>
+                                    <TableCell className="text-right font-black text-emerald-600 dark:text-emerald-400 text-[11px] pr-4 whitespace-nowrap">
+                                      ${row.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </ScrollArea>
                     </div>
                   </div>
