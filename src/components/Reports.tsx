@@ -1318,45 +1318,45 @@ const Reports = () => {
       case 'dashboard':
         return (
           <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Ventas Totales</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Ventas Totales</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">${filteredSales.reduce((a, b) => a + b.total, 0).toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">{filteredSales.length} transacciones</p>
+                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-bold">${filteredSales.reduce((a, b) => a + b.total, 0).toLocaleString()}</div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">{filteredSales.length} transacciones</p>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Ticket Promedio</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Ticket Promedio</CardTitle>
+                  <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
+                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-bold">
                     ${filteredSales.length > 0 ? (filteredSales.reduce((a, b) => a + b.total, 0) / filteredSales.length).toFixed(2) : 0}
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Crédito Pendiente</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Crédito Pendiente</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground shrink-0" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">${receivables.reduce((a, c) => a + (c.credit_used || 0), 0).toLocaleString()}</div>
+                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-bold text-orange-600">${receivables.reduce((a, c) => a + (c.credit_used || 0), 0).toLocaleString()}</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Utilidad Estimada</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Utilidad Estimada</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">${profitData.profit.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">{profitData.margin.toFixed(1)}% Margen</p>
+                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-bold text-green-600">${profitData.profit.toLocaleString()}</div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">{profitData.margin.toFixed(1)}% Margen</p>
                 </CardContent>
               </Card>
             </div>
@@ -1998,32 +1998,35 @@ const Reports = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-8rem)] overflow-hidden bg-background rounded-xl border border-border/50 shadow-sm mt-2">
-      {/* --- SIDEBAR --- */}
-      <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-muted/20 flex flex-col">
-        <div className="p-5 border-b mt-2">
-          <h2 className="font-bold text-xl flex items-center gap-2">
-            <LayoutDashboard className="h-5 w-5 text-primary" />
-            Reportes
-          </h2>
+      {/* --- DESKTOP SIDEBAR --- */}
+      <div className="hidden md:flex w-72 border-r bg-muted/10 flex-col shrink-0">
+        <div className="p-5 border-b flex items-center gap-3 bg-card/50">
+          <div className="p-2.5 bg-primary/10 text-primary rounded-xl">
+            <LayoutDashboard className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-black text-lg tracking-tight">Reportes</h2>
+            <p className="text-[11px] text-muted-foreground font-medium">Panel de Analíticas</p>
+          </div>
         </div>
-        <ScrollArea className="flex-1 max-h-[150px] md:max-h-none">
-          <div className="p-3 space-y-1">
+        <ScrollArea className="flex-1 p-3">
+          <div className="space-y-1">
             {REPORT_TYPES.map(report => (
               <button
                 key={report.id}
                 onClick={() => setActiveReport(report.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left",
+                  "w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs transition-all text-left group",
                   activeReport === report.id
-                    ? "bg-primary text-primary-foreground shadow-sm font-medium"
-                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-md font-bold"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                 )}
               >
-                <report.icon className="h-4 w-4 shrink-0" />
+                <report.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-110", activeReport === report.id ? "text-primary-foreground" : "text-muted-foreground")} />
                 <div className="flex-1 overflow-hidden">
-                  <p className="truncate leading-tight py-0.5">{report.label}</p>
+                  <p className="truncate leading-snug">{report.label}</p>
                 </div>
-                {activeReport === report.id && <ChevronRight className="h-3 w-3 opacity-50" />}
+                {activeReport === report.id && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />}
               </button>
             ))}
           </div>
@@ -2032,55 +2035,25 @@ const Reports = () => {
 
       {/* --- MAIN CONTENT --- */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative">
-        {/* Modern Centered Premium Header */}
-        <div className="border-b bg-background/80 backdrop-blur-xl sticky top-0 z-30 px-6 pt-10 pb-8 space-y-8">
-          <div className="max-w-xl mx-auto flex flex-col items-center text-center gap-6 mt-2">
-            
-            {/* Title Section */}
-            <div className="space-y-3">
-              <h1 className="text-3xl font-black tracking-tighter uppercase md:hidden leading-normal py-1">
-                Reportes
-              </h1>
-              <h2 className="text-3xl font-black text-foreground hidden md:block tracking-tighter uppercase leading-normal py-1">
-                {REPORT_TYPES.find(r => r.id === activeReport)?.label}
-              </h2>
-              <div className="flex items-center justify-center gap-2 text-primary/80">
-                <div className="h-px w-8 bg-primary/30" />
-                <p className="text-xs font-bold uppercase tracking-[0.2em] py-1">
-                  {REPORT_TYPES.find(r => r.id === activeReport)?.description}
-                </p>
-                <div className="h-px w-8 bg-primary/30" />
-              </div>
-            </div>
-
-            {/* Loading Indicator for large data sets */}
-            {isFetchingSales && (
-              <div className="flex items-center justify-center gap-2 text-primary text-sm font-bold bg-primary/10 px-4 py-2 rounded-full animate-pulse shadow-sm border border-primary/20">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Cargando datos del periodo seleccionado...
-              </div>
-            )}
-
-            {/* Centered Report Selector */}
-            <div className="w-full md:hidden">
+        
+        {/* --- MOBILE HEADER (Optimized & Compact) --- */}
+        <div className="md:hidden border-b bg-background/95 backdrop-blur-xl sticky top-0 z-30 p-3 space-y-3 shadow-sm">
+          {/* Top Row: Report Select & Actions */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
               <Select value={activeReport} onValueChange={setActiveReport}>
-                <SelectTrigger className="w-full h-14 bg-muted/20 border-border/50 rounded-2xl shadow-2xl focus:ring-primary/20 text-lg font-bold transition-all hover:bg-muted/30">
-                  <div className="flex items-center justify-center gap-3 w-full">
-                    {React.createElement(REPORT_TYPES.find(r => r.id === activeReport)?.icon || LayoutDashboard, { className: "h-5 w-5 text-primary" })}
-                    <SelectValue placeholder="Seleccionar reporte" />
+                <SelectTrigger className="w-full h-11 bg-muted/30 border-border/40 rounded-xl font-bold text-sm">
+                  <div className="flex items-center gap-2.5 truncate">
+                    {React.createElement(REPORT_TYPES.find(r => r.id === activeReport)?.icon || LayoutDashboard, { className: "h-4 w-4 text-primary shrink-0" })}
+                    <span className="truncate">{REPORT_TYPES.find(r => r.id === activeReport)?.label}</span>
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-primary/10 bg-background/95 backdrop-blur-xl">
+                <SelectContent className="rounded-xl max-h-[70vh]">
                   {REPORT_TYPES.map(report => (
-                    <SelectItem key={report.id} value={report.id} className="py-4 focus:bg-primary/5 rounded-xl mx-1">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-primary/5 rounded-lg">
-                          <report.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <span className="font-bold text-sm tracking-tight">{report.label}</span>
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{report.description}</span>
-                        </div>
+                    <SelectItem key={report.id} value={report.id} className="py-3 font-medium">
+                      <div className="flex items-center gap-3">
+                        <report.icon className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-xs font-bold">{report.label}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -2088,50 +2061,71 @@ const Reports = () => {
               </Select>
             </div>
 
-            {/* Centered Action Group */}
-            <div className="flex flex-col items-center gap-4 w-full">
-              <div className="w-full max-w-[300px]">
-                <DateRangePicker
-                  dateRange={dateRange}
-                  onDateRangeChange={setDateRange}
-                />
-              </div>
-              
-              <div className="flex items-center justify-center gap-3 bg-muted/20 p-2 rounded-2xl border border-border/50 shadow-inner">
-                <Button variant="ghost" size="icon" className="h-12 w-12 text-primary hover:bg-primary/10 rounded-xl transition-all hover:scale-110" onClick={() => generatePDF()} title="Descargar PDF">
-                  <FileText className="h-6 w-6" />
-                </Button>
-                <div className="w-px h-6 bg-border/50" />
-                <Button variant="ghost" size="icon" className="h-12 w-12 text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all hover:scale-110" onClick={() => generateExcel()} title="Descargar Excel">
-                  <FileSpreadsheet className="h-6 w-6" />
-                </Button>
-                <div className="w-px h-6 bg-border/50" />
-                <Button variant="ghost" size="icon" className="h-12 w-12 text-blue-500 hover:bg-blue-500/10 rounded-xl transition-all hover:scale-110" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
-                  <Mail className="h-6 w-6" />
-                </Button>
-              </div>
+            {/* Compact Action Buttons */}
+            <div className="flex items-center gap-1 shrink-0 bg-muted/20 p-1 rounded-xl border border-border/40">
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10 rounded-lg" onClick={() => generatePDF()} title="Descargar PDF">
+                <FileText className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-600 hover:bg-emerald-500/10 rounded-lg" onClick={() => generateExcel()} title="Descargar Excel">
+                <FileSpreadsheet className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-blue-600 hover:bg-blue-500/10 rounded-lg" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
+                <Mail className="h-4 w-4" />
+              </Button>
             </div>
+          </div>
 
-            {/* SIMPLIFIED FILTERS BUTTON (Optionally centered) */}
-            <div className="flex flex-wrap justify-center gap-2 w-full pt-4 border-t border-border/30">
+          {/* Quick Horizontal Scroll Pill Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs border-y border-border/30 py-2">
+            {REPORT_TYPES.map(report => {
+              const Icon = report.icon;
+              const isActive = activeReport === report.id;
+              return (
+                <button
+                  key={report.id}
+                  onClick={() => setActiveReport(report.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all shrink-0",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/40 text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{report.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Date Picker & Quick Filters */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex-1">
+              <DateRangePicker
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
               <Select value={filterCustomer} onValueChange={setFilterCustomer}>
-                <SelectTrigger className="h-10 px-4 rounded-xl border-none bg-muted/30 hover:bg-muted/50 text-[11px] font-black uppercase tracking-widest transition-all">
-                  <SelectValue placeholder="CLTE" />
+                <SelectTrigger className="h-9 flex-1 sm:w-36 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
+                  <SelectValue placeholder="Cliente" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="all">TODOS LOS CLIENTES</SelectItem>
+                  <SelectItem value="all">Todos los Clientes</SelectItem>
                   {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name.toUpperCase()}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
-                <SelectTrigger className="h-10 px-4 rounded-xl border-none bg-muted/30 hover:bg-muted/50 text-[11px] font-black uppercase tracking-widest transition-all">
-                  <SelectValue placeholder="PAGO" />
+                <SelectTrigger className="h-9 flex-1 sm:w-32 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
+                  <SelectValue placeholder="Método" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="all">TODOS LOS MÉTODOS</SelectItem>
+                  <SelectItem value="all">Todos los Métodos</SelectItem>
                   {uniquePaymentMethods.map(m => (
                     <SelectItem key={m} value={m}>{m.toUpperCase()}</SelectItem>
                   ))}
@@ -2139,17 +2133,106 @@ const Reports = () => {
               </Select>
 
               {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all') && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10 px-4 rounded-xl text-[10px] font-black text-destructive hover:bg-destructive/10 uppercase tracking-[0.2em]">
-                   REINICIAR
+                <Button variant="ghost" size="icon" onClick={clearFilters} className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" title="Limpiar Filtros">
+                  <XCircle className="h-4 w-4" />
                 </Button>
               )}
+            </div>
+          </div>
+
+          {/* Loading Bar */}
+          {isFetchingSales && (
+            <div className="flex items-center justify-center gap-2 text-primary text-xs font-bold bg-primary/10 py-1.5 px-3 rounded-lg animate-pulse">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              Cargando datos...
+            </div>
+          )}
+        </div>
+
+        {/* --- DESKTOP HEADER --- */}
+        <div className="hidden md:block border-b bg-background/80 backdrop-blur-xl sticky top-0 z-30 px-6 py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            {/* Title & Description */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-black tracking-tight">
+                  {REPORT_TYPES.find(r => r.id === activeReport)?.label}
+                </h1>
+                {isFetchingSales && (
+                  <span className="flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full animate-pulse">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Actualizando
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground font-medium">
+                {REPORT_TYPES.find(r => r.id === activeReport)?.description}
+              </p>
+            </div>
+
+            {/* Actions & Filters Row */}
+            <div className="flex flex-wrap items-center gap-3">
+              <DateRangePicker
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
+
+              <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border/40">
+                <Select value={filterCustomer} onValueChange={setFilterCustomer}>
+                  <SelectTrigger className="h-9 text-xs font-bold bg-transparent border-none w-36">
+                    <SelectValue placeholder="Cliente" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Todos los Clientes</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="w-px h-5 bg-border/50" />
+
+                <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
+                  <SelectTrigger className="h-9 text-xs font-bold bg-transparent border-none w-32">
+                    <SelectValue placeholder="Método Pago" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Todos Métodos</SelectItem>
+                    {uniquePaymentMethods.map(m => (
+                      <SelectItem key={m} value={m}>{m.toUpperCase()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all') && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2 text-[11px] font-bold text-destructive hover:bg-destructive/10">
+                    Limpiar
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/40">
+                <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg gap-1.5" onClick={() => generatePDF()} title="Descargar PDF">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden xl:inline">PDF</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 rounded-lg gap-1.5" onClick={() => generateExcel()} title="Descargar Excel">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span className="hidden xl:inline">Excel</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-bold text-blue-600 hover:bg-blue-500/10 rounded-lg gap-1.5" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
+                  <Mail className="h-4 w-4" />
+                  <span className="hidden xl:inline">Email</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Report Display Area */}
-        <ScrollArea className="flex-1 p-6 bg-muted/10">
-          <div className="max-w-6xl mx-auto">
+        <ScrollArea className="flex-1 p-3 md:p-6 bg-muted/5">
+          <div className="max-w-6xl mx-auto space-y-6">
             {renderContent()}
           </div>
         </ScrollArea>
