@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Upload, X, ImageIcon, Link, Sparkles } from 'lucide-react';
-// import { removeBackground } from '@imgly/background-removal';
+import { removeBackground } from '@imgly/background-removal';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -131,11 +131,76 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
 
   // AI Background removal function
   const handleAIRemoveBackground = async (imageSource: string | File) => {
-    toast({
-      title: "IA no disponible",
-      description: "La remoción de fondo está temporalmente deshabilitada para optimizar el despliegue.",
-      variant: "destructive"
-    });
+    try {
+      setIsRemovingBg(true);
+      toast({
+        title: "Procesando con IA...",
+        description: "Removiendo el fondo de la imagen del producto. Esto tomará solo unos segundos.",
+      });
+
+      let imgInput: string | Blob | File = imageSource;
+
+      // Si es una URL remota, convertirla a Blob para evitar problemas de CORS o fetch en la librería
+      if (typeof imageSource === 'string' && (imageSource.startsWith('http://') || imageSource.startsWith('https://'))) {
+        try {
+          const res = await fetch(imageSource);
+          if (res.ok) {
+            imgInput = await res.blob();
+          }
+        } catch (fetchErr) {
+          console.warn('[AI] Fetch directo de URL falló, usando URL directa:', fetchErr);
+        }
+      }
+
+      // Ejecutar remoción de fondo con @imgly/background-removal
+      const blob = await removeBackground(imgInput, {
+        progress: (key, current, total) => {
+          console.log(`[AI BgRemoval] ${key}: ${current}/${total}`);
+        }
+      });
+
+      const file = new File([blob], `product-no-bg-${Date.now()}.png`, { type: 'image/png' });
+      const filePath = `no-bg-${Math.random().toString(36).substring(2, 9)}.png`;
+
+      // Vista previa instantánea
+      const localBlobUrl = URL.createObjectURL(blob);
+      setLocalPreviewUrl(localBlobUrl);
+      setImageError(false);
+
+      // Subir imagen limpia PNG transparente a Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file, {
+          contentType: 'image/png',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.warn('[Storage] No se pudo guardar en Supabase, se mantendrá preview local:', uploadError.message);
+        onImageUpload(localBlobUrl);
+      } else {
+        const { data: publicUrlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        const newPublicUrl = publicUrlData.publicUrl;
+        onImageUpload(newPublicUrl);
+      }
+
+      toast({
+        title: "¡Fondo removido!",
+        description: "El fondo de la imagen se ha eliminado correctamente.",
+      });
+    } catch (error: any) {
+      console.error('[AI BgRemoval Error]:', error);
+      toast({
+        variant: "destructive",
+        title: "Error al remover fondo",
+        description: error?.message || "No se pudo remover el fondo de esta imagen. Inténtalo con otra fotografía.",
+      });
+    } finally {
+      setIsRemovingBg(false);
+    }
   };
 
   // Intermediate trigger that passes existing state
