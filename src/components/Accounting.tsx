@@ -800,8 +800,8 @@ function AccountingContent() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Reducir resolución para no saturar memoria de móviles y ahorrar tokens/latencia
-                const MAX_WIDTH = 1200; 
+                // Reducir resolución a 900px para economizar consumo de tokens de IA por factura (hasta 50% ahorro)
+                const MAX_WIDTH = 900; 
                 let width = img.width;
                 let height = img.height;
                 
@@ -821,7 +821,7 @@ function AccountingContent() {
                 }
 
                 ctx.drawImage(img, 0, 0, width, height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
                 
                 if (dataUrl === 'data:,' || dataUrl.length < 100) {
                     // Fallback si el canvas falló silenciosamente (común en algunos móviles)
@@ -890,6 +890,8 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 let content = data.choices?.[0]?.message?.content;
                 if (!content) throw new Error("No content received from Groq");
                 
+                // Eliminar bloques de pensamiento de modelos de razonamiento (<think>...</think>)
+                content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
                 content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
                 
                 // Extraer primer JSON equilibrado
@@ -937,22 +939,36 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
             const errorData = await response.json().catch(() => ({}));
             const errorMsg = JSON.stringify(errorData);
 
-            if (response.status === 429 && attempt < maxRetries) {
-                attempt++;
-                let waitMs = Math.pow(2, attempt) * 5000;
-                const matchSeconds = errorMsg.match(/try again in ([\d\.]+)s/i);
-                if (matchSeconds && matchSeconds[1]) {
-                    const parsedSec = parseFloat(matchSeconds[1]);
-                    if (!isNaN(parsedSec) && parsedSec > 0) {
-                        waitMs = Math.ceil((parsedSec + 2) * 1000);
+            if (response.status === 429) {
+                let waitMs = Math.pow(2, attempt + 1) * 5000;
+                
+                // Extraer tiempo de espera con soporte para minutos y segundos (ej: 7m23.6s o 18.6s)
+                const minMatch = errorMsg.match(/try again in (?:(\d+)m)?\s*([\d\.]+)s?/i);
+                if (minMatch) {
+                    const minutes = parseFloat(minMatch[1] || '0');
+                    const seconds = parseFloat(minMatch[2] || '0');
+                    const totalSec = (minutes * 60) + seconds;
+                    if (!isNaN(totalSec) && totalSec > 0) {
+                        waitMs = Math.ceil((totalSec + 2) * 1000);
                     }
                 }
 
-                const waitSec = Math.ceil(waitMs / 1000);
-                onStatusUpdate?.(`Límite IA alcanzado (429). Esperando ${waitSec}s... (${attempt}/${maxRetries})`);
+                // Detectar si se superó la cuota diaria (TPD - Tokens Per Day)
+                const isDailyLimit = errorMsg.includes("tokens per day") || errorMsg.includes("TPD") || waitMs > 60000;
 
-                await new Promise(resolve => setTimeout(resolve, waitMs));
-                continue;
+                if (isDailyLimit) {
+                    const waitMin = Math.ceil(waitMs / 60000);
+                    throw new Error(`Se agotó la cuota diaria gratuita de IA en Groq (200,000 tokens/día). Reintenta en ~${waitMin} min o introduce tu propia Groq API Key en Configuración.`);
+                }
+
+                if (attempt < maxRetries) {
+                    attempt++;
+                    const waitSec = Math.ceil(waitMs / 1000);
+                    onStatusUpdate?.(`Límite por minuto alcanzado (429). Esperando ${waitSec}s... (Intento ${attempt}/${maxRetries})`);
+
+                    await new Promise(resolve => setTimeout(resolve, waitMs));
+                    continue;
+                }
             }
 
             throw new Error(`Groq API Error: ${response.status} ${errorMsg}`);
