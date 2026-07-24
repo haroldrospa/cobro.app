@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw, Pencil } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -82,7 +82,7 @@ function AccountingContent() {
     const dateTo = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
     const { data: sales = [], isLoading: loadingSales } = useSales({ dateFrom, dateTo });
-    const { expenses, createExpense, deleteExpense, isLoading: loadingExpenses, isCreating } = useExpenses();
+    const { expenses, createExpense, updateExpense, deleteExpense, isLoading: loadingExpenses, isCreating, isUpdating: isUpdatingExpense } = useExpenses();
     const { suppliers, createSupplier, deleteSupplier, isLoading: loadingSuppliers } = useSuppliers();
     const { settings: storeSettings, updateSettings } = useStoreSettings();
 
@@ -433,6 +433,28 @@ function AccountingContent() {
     const [isUploadingManualImage, setIsUploadingManualImage] = useState(false);
     const [selectedExpenseForDetails, setSelectedExpenseForDetails] = useState<Expense | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [isEditingExpenseDetails, setIsEditingExpenseDetails] = useState(false);
+    const [editExpenseForm, setEditExpenseForm] = useState<{
+        description: string;
+        amount: string;
+        category: string;
+        supplier_name: string;
+        supplier_id: string | null;
+        date: string;
+        invoice_number: string;
+        image_url: string | null;
+    }>({
+        description: '',
+        amount: '',
+        category: 'Otros',
+        supplier_name: '',
+        supplier_id: null,
+        date: '',
+        invoice_number: '',
+        image_url: null,
+    });
+    const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
+    const editFileInputRef = useRef<HTMLInputElement>(null);
 
     const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
     const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({});
@@ -747,6 +769,120 @@ function AccountingContent() {
     const handleDeleteExpense = async (id: string) => {
         if (confirm('¿Estás seguro de borrar este gasto?')) {
             await deleteExpense(id);
+        }
+    };
+
+    const handleStartEditExpense = (expense: Expense) => {
+        const formattedDate = expense.date && isValid(new Date(expense.date))
+            ? format(new Date(expense.date), 'yyyy-MM-dd')
+            : format(new Date(), 'yyyy-MM-dd');
+
+        setEditExpenseForm({
+            description: expense.description || '',
+            amount: expense.amount ? expense.amount.toString() : '',
+            category: expense.category || 'Otros',
+            supplier_name: expense.supplier_name && expense.supplier_name !== 'N/A' ? expense.supplier_name : '',
+            supplier_id: expense.supplier_id || null,
+            date: formattedDate,
+            invoice_number: expense.invoice_number || '',
+            image_url: expense.image_url || null,
+        });
+        setIsEditingExpenseDetails(true);
+    };
+
+    const handleUploadEditImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        try {
+            setIsUploadingEditImage(true);
+            const uploadedUrl = await uploadReceiptImage(files[0]);
+            if (uploadedUrl) {
+                setEditExpenseForm(prev => ({ ...prev, image_url: uploadedUrl }));
+                toast({ title: "Comprobante actualizado", description: "La imagen del comprobante se ha subido." });
+            } else {
+                toast({ variant: "destructive", title: "Error", description: "No se pudo subir la imagen." });
+            }
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "Error", description: err.message || "Error al subir imagen." });
+        } finally {
+            setIsUploadingEditImage(false);
+        }
+    };
+
+    const handleSaveEditedExpense = async () => {
+        if (!selectedExpenseForDetails) return;
+        if (!editExpenseForm.description.trim() || !editExpenseForm.amount) {
+            toast({
+                variant: "destructive",
+                title: "Campos requeridos",
+                description: "El concepto y el monto son obligatorios."
+            });
+            return;
+        }
+
+        try {
+            let finalSupplierId = editExpenseForm.supplier_id;
+            const trimmedSupplier = editExpenseForm.supplier_name.trim();
+            if (trimmedSupplier) {
+                const foundSupplier = suppliers.find(s => s.name.toLowerCase() === trimmedSupplier.toLowerCase());
+                if (foundSupplier) {
+                    finalSupplierId = foundSupplier.id;
+                } else {
+                    try {
+                        const newSup = await createSupplier({ name: trimmedSupplier });
+                        if (newSup?.id) finalSupplierId = newSup.id;
+                    } catch (e) {
+                        console.warn("No se pudo autocrear el proveedor:", e);
+                    }
+                }
+            } else {
+                finalSupplierId = null;
+            }
+
+            const dateObj = editExpenseForm.date ? new Date(`${editExpenseForm.date}T12:00:00`) : new Date();
+
+            const updated = await updateExpense({
+                id: selectedExpenseForDetails.id,
+                description: editExpenseForm.description.trim(),
+                amount: parseFloat(editExpenseForm.amount) || 0,
+                category: editExpenseForm.category || 'Otros',
+                supplier_id: finalSupplierId,
+                supplier_name: trimmedSupplier || 'N/A',
+                invoice_number: editExpenseForm.invoice_number.trim() || null,
+                image_url: editExpenseForm.image_url || null,
+                date: dateObj
+            });
+
+            const mergedUpdated: Expense = updated ? {
+                ...selectedExpenseForDetails,
+                ...updated,
+                supplier_name: trimmedSupplier || 'N/A'
+            } : {
+                ...selectedExpenseForDetails,
+                description: editExpenseForm.description.trim(),
+                amount: parseFloat(editExpenseForm.amount) || 0,
+                category: editExpenseForm.category || 'Otros',
+                supplier_id: finalSupplierId,
+                supplier_name: trimmedSupplier || 'N/A',
+                invoice_number: editExpenseForm.invoice_number.trim() || null,
+                image_url: editExpenseForm.image_url || null,
+                date: dateObj
+            };
+
+            setSelectedExpenseForDetails(mergedUpdated);
+            setIsEditingExpenseDetails(false);
+        } catch (err: any) {
+            console.error("Error guardando cambios del gasto:", err);
+        }
+    };
+
+    const handleDeleteExpenseFromDetails = async () => {
+        if (!selectedExpenseForDetails) return;
+        if (confirm("¿Estás seguro de que deseas eliminar este gasto?")) {
+            await deleteExpense(selectedExpenseForDetails.id);
+            setIsDetailsOpen(false);
+            setSelectedExpenseForDetails(null);
+            setIsEditingExpenseDetails(false);
         }
     };
 
@@ -2892,20 +3028,23 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Expense Details */}
-            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-card border border-border/60 rounded-3xl">
+            {/* Dialog: Expense Details & Editing */}
+            <Dialog open={isDetailsOpen} onOpenChange={(open) => {
+                setIsDetailsOpen(open);
+                if (!open) setIsEditingExpenseDetails(false);
+            }}>
+                <DialogContent className="sm:max-w-[520px] p-0 overflow-hidden bg-card border border-border/60 rounded-3xl">
                     <DialogHeader className="p-6 pb-4 border-b border-border/30 bg-muted/20">
                         <div className="flex justify-between items-start gap-4">
                             <div>
                                 <DialogTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-                                    <span>📄 Detalle del Gasto</span>
+                                    <span>{isEditingExpenseDetails ? "✏️ Editar Gasto" : "📄 Detalle del Gasto"}</span>
                                 </DialogTitle>
                                 <DialogDescription className="text-xs font-semibold text-muted-foreground mt-1">
-                                    Información del comprobante de compra
+                                    {isEditingExpenseDetails ? "Modifica los campos del comprobante de gasto" : "Información del comprobante de compra"}
                                 </DialogDescription>
                             </div>
-                            {selectedExpenseForDetails?.category && (
+                            {!isEditingExpenseDetails && selectedExpenseForDetails?.category && (
                                 <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider border ${
                                     isReinvestment(selectedExpenseForDetails.category)
                                         ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
@@ -2917,124 +3056,324 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
                     </DialogHeader>
                     
-                    <div className="p-6 space-y-5">
-                        {/* Summary details */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Concepto</span>
-                                <p className="text-sm font-bold text-foreground truncate">{selectedExpenseForDetails?.description}</p>
+                    {isEditingExpenseDetails ? (
+                        /* EDIT MODE FORM */
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <div className="space-y-1.5">
+                                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                                    Concepto / Descripción *
+                                </Label>
+                                <Input
+                                    value={editExpenseForm.description}
+                                    onChange={(e) => setEditExpenseForm(prev => ({ ...prev, description: e.target.value }))}
+                                    placeholder="Ej. Compra de mercancía"
+                                    className="rounded-xl font-semibold"
+                                />
                             </div>
-                            <div className="space-y-1 text-right">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Monto</span>
-                                <p className="text-lg font-black text-green-400">${(selectedExpenseForDetails?.amount || 0).toLocaleString()}</p>
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/20">
-                            <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                                    <Building2 className="h-3 w-3" /> Proveedor
-                                </span>
-                                <p className="text-xs font-semibold text-foreground">{selectedExpenseForDetails?.supplier_name || 'N/A'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" /> Fecha de Transacción
-                                </span>
-                                <p className="text-xs font-semibold text-foreground">
-                                    {selectedExpenseForDetails?.date && isValid(new Date(selectedExpenseForDetails.date))
-                                        ? format(new Date(selectedExpenseForDetails.date), 'dd/MM/yyyy')
-                                        : '-'}
-                                </p>
-                            </div>
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        Monto ($) *
+                                    </Label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={editExpenseForm.amount}
+                                        onChange={(e) => setEditExpenseForm(prev => ({ ...prev, amount: e.target.value }))}
+                                        placeholder="0.00"
+                                        className="rounded-xl font-bold text-green-400"
+                                    />
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/20">
-                            <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                                    <Receipt className="h-3 w-3" /> No. Factura
-                                </span>
-                                <p className="text-xs font-semibold text-foreground">{selectedExpenseForDetails?.invoice_number || 'N/A'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Fecha Registro</span>
-                                <p className="text-xs font-semibold text-muted-foreground">
-                                    {selectedExpenseForDetails?.created_at && isValid(new Date(selectedExpenseForDetails.created_at))
-                                        ? format(new Date(selectedExpenseForDetails.created_at), 'dd/MM/yyyy HH:mm')
-                                        : '-'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Invoice Image preview */}
-                        <div className="space-y-2 pt-4 border-t border-border/20">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                                <Camera className="h-3 w-3" /> Factura Adjunta
-                            </span>
-                            
-                            {selectedExpenseForDetails?.image_url ? (
-                                <div className="space-y-3">
-                                    <div 
-                                        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/60 bg-muted/10 max-h-[260px]"
-                                        onClick={() => {
-                                            setPreviewImageUrl(selectedExpenseForDetails.image_url);
-                                            setPreviewImageScale(1);
-                                            setPreviewImageRotation(0);
-                                            setPreviewImagePosition({ x: 0, y: 0 });
-                                        }}
+                                <div className="space-y-1.5">
+                                    <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        Categoría
+                                    </Label>
+                                    <Select
+                                        value={editExpenseForm.category}
+                                        onValueChange={(val) => setEditExpenseForm(prev => ({ ...prev, category: val }))}
                                     >
+                                        <SelectTrigger className="rounded-xl font-semibold">
+                                            <SelectValue placeholder="Seleccionar" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Inventario">Inventario</SelectItem>
+                                            <SelectItem value="Servicios Públicos">Servicios Públicos</SelectItem>
+                                            <SelectItem value="Alquiler">Alquiler</SelectItem>
+                                            <SelectItem value="Nómina">Nómina</SelectItem>
+                                            <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+                                            <SelectItem value="Marketing">Marketing</SelectItem>
+                                            <SelectItem value="Impuestos">Impuestos</SelectItem>
+                                            <SelectItem value="Otros">Otros</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        Proveedor
+                                    </Label>
+                                    <Input
+                                        value={editExpenseForm.supplier_name}
+                                        onChange={(e) => setEditExpenseForm(prev => ({ ...prev, supplier_name: e.target.value }))}
+                                        placeholder="Nombre del proveedor"
+                                        className="rounded-xl font-semibold"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        Fecha Transacción
+                                    </Label>
+                                    <Input
+                                        type="date"
+                                        value={editExpenseForm.date}
+                                        onChange={(e) => setEditExpenseForm(prev => ({ ...prev, date: e.target.value }))}
+                                        className="rounded-xl font-semibold"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                                    No. Factura / Comprobante (NCF)
+                                </Label>
+                                <Input
+                                    value={editExpenseForm.invoice_number}
+                                    onChange={(e) => setEditExpenseForm(prev => ({ ...prev, invoice_number: e.target.value }))}
+                                    placeholder="Ej. B0100000001"
+                                    className="rounded-xl font-semibold"
+                                />
+                            </div>
+
+                            {/* Image Edit Section */}
+                            <div className="space-y-2 pt-2 border-t border-border/20">
+                                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                    <Camera className="h-3.5 w-3.5" /> Factura Adjunta
+                                </Label>
+
+                                <input
+                                    type="file"
+                                    ref={editFileInputRef}
+                                    accept="image/*,.pdf"
+                                    className="hidden"
+                                    onChange={handleUploadEditImage}
+                                />
+
+                                {editExpenseForm.image_url ? (
+                                    <div className="relative rounded-2xl overflow-hidden border border-border/60 max-h-[180px] bg-muted/10 group">
                                         <img
-                                            src={selectedExpenseForDetails.image_url}
-                                            alt="Factura / Comprobante"
-                                            className="w-full max-h-[260px] object-contain mx-auto rounded-2xl group-hover:scale-[1.02] transition-transform duration-200"
+                                            src={editExpenseForm.image_url}
+                                            alt="Factura adjunta"
+                                            className="w-full max-h-[180px] object-contain mx-auto"
                                         />
-                                        <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                                            <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg">
-                                                <Search className="h-3.5 w-3.5" />
-                                                <span>Click para Zoom</span>
-                                            </div>
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity duration-200">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="secondary"
+                                                onClick={() => editFileInputRef.current?.click()}
+                                                disabled={isUploadingEditImage}
+                                                className="rounded-xl text-xs font-bold"
+                                            >
+                                                {isUploadingEditImage ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
+                                                Cambiar
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => setEditExpenseForm(prev => ({ ...prev, image_url: null }))}
+                                                className="rounded-xl text-xs font-bold"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Quitar
+                                            </Button>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2 justify-center">
-                                        <a
-                                            href={selectedExpenseForDetails.image_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex-1 py-2 rounded-xl bg-muted/35 text-foreground border border-border/50 text-xs font-bold hover:bg-muted/50 transition-all flex items-center justify-center gap-1.5"
-                                        >
-                                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span>Ver Completa</span>
-                                        </a>
-                                        <Button
-                                            type="button"
-                                            onClick={() => handleDownloadImage(
-                                                selectedExpenseForDetails.image_url!,
-                                                `factura-${selectedExpenseForDetails.invoice_number || selectedExpenseForDetails.id.slice(0,8)}.jpg`
-                                            )}
-                                            className="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                                        >
-                                            <Download className="h-3.5 w-3.5" />
-                                            <span>Descargar</span>
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-dashed border-border/60 bg-muted/5 text-center text-muted-foreground">
-                                    <Receipt className="h-6 w-6 mb-2 text-muted-foreground/40" />
-                                    <p className="text-xs font-semibold">No hay imagen adjunta</p>
-                                    <p className="text-[10px] text-muted-foreground/60">Este gasto se registró sin imagen de comprobante</p>
-                                </div>
-                            )}
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full border-dashed border-border/60 rounded-2xl py-6 flex flex-col items-center gap-1.5 hover:bg-muted/10"
+                                        onClick={() => editFileInputRef.current?.click()}
+                                        disabled={isUploadingEditImage}
+                                    >
+                                        {isUploadingEditImage ? (
+                                            <Loader2 className="h-5 w-5 animate-spin text-green-500" />
+                                        ) : (
+                                            <Upload className="h-5 w-5 text-muted-foreground" />
+                                        )}
+                                        <span className="text-xs font-bold">
+                                            {isUploadingEditImage ? "Subiendo imagen..." : "Subir o cambiar comprobante"}
+                                        </span>
+                                    </Button>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        /* READ-ONLY VIEW MODE */
+                        <div className="p-6 space-y-5">
+                            {/* Summary details */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Concepto</span>
+                                    <p className="text-sm font-bold text-foreground truncate">{selectedExpenseForDetails?.description}</p>
+                                </div>
+                                <div className="space-y-1 text-right">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Monto</span>
+                                    <p className="text-lg font-black text-green-400">${(selectedExpenseForDetails?.amount || 0).toLocaleString()}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/20">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                        <Building2 className="h-3 w-3" /> Proveedor
+                                    </span>
+                                    <p className="text-xs font-semibold text-foreground">{selectedExpenseForDetails?.supplier_name || 'N/A'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" /> Fecha de Transacción
+                                    </span>
+                                    <p className="text-xs font-semibold text-foreground">
+                                        {selectedExpenseForDetails?.date && isValid(new Date(selectedExpenseForDetails.date))
+                                            ? format(new Date(selectedExpenseForDetails.date), 'dd/MM/yyyy')
+                                            : '-'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/20">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                        <Receipt className="h-3 w-3" /> No. Factura
+                                    </span>
+                                    <p className="text-xs font-semibold text-foreground">{selectedExpenseForDetails?.invoice_number || 'N/A'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Fecha Registro</span>
+                                    <p className="text-xs font-semibold text-muted-foreground">
+                                        {selectedExpenseForDetails?.created_at && isValid(new Date(selectedExpenseForDetails.created_at))
+                                            ? format(new Date(selectedExpenseForDetails.created_at), 'dd/MM/yyyy HH:mm')
+                                            : '-'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Invoice Image preview */}
+                            <div className="space-y-2 pt-4 border-t border-border/20">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                    <Camera className="h-3 w-3" /> Factura Adjunta
+                                </span>
+                                
+                                {selectedExpenseForDetails?.image_url ? (
+                                    <div className="space-y-3">
+                                        <div 
+                                            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/60 bg-muted/10 max-h-[260px]"
+                                            onClick={() => {
+                                                setPreviewImageUrl(selectedExpenseForDetails.image_url);
+                                                setPreviewImageScale(1);
+                                                setPreviewImageRotation(0);
+                                                setPreviewImagePosition({ x: 0, y: 0 });
+                                            }}
+                                        >
+                                            <img
+                                                src={selectedExpenseForDetails.image_url}
+                                                alt="Factura / Comprobante"
+                                                className="w-full max-h-[260px] object-contain mx-auto rounded-2xl group-hover:scale-[1.02] transition-transform duration-200"
+                                            />
+                                            <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg">
+                                                    <Search className="h-3.5 w-3.5" />
+                                                    <span>Click para Zoom</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 justify-center">
+                                            <a
+                                                href={selectedExpenseForDetails.image_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 py-2 rounded-xl bg-muted/35 text-foreground border border-border/50 text-xs font-bold hover:bg-muted/50 transition-all flex items-center justify-center gap-1.5"
+                                            >
+                                                <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                                                <span>Ver Completa</span>
+                                            </a>
+                                            <Button
+                                                type="button"
+                                                onClick={() => handleDownloadImage(
+                                                    selectedExpenseForDetails.image_url!,
+                                                    `factura-${selectedExpenseForDetails.invoice_number || selectedExpenseForDetails.id.slice(0,8)}.jpg`
+                                                )}
+                                                className="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                                            >
+                                                <Download className="h-3.5 w-3.5" />
+                                                <span>Descargar</span>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-dashed border-border/60 bg-muted/5 text-center text-muted-foreground">
+                                        <Receipt className="h-6 w-6 mb-2 text-muted-foreground/40" />
+                                        <p className="text-xs font-semibold">No hay imagen adjunta</p>
+                                        <p className="text-[10px] text-muted-foreground/60">Este gasto se registró sin imagen de comprobante</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                     
-                    <DialogFooter className="p-4 border-t border-border/30 bg-muted/10 sm:justify-end">
-                        <Button
-                            onClick={() => setIsDetailsOpen(false)}
-                            className="w-full sm:w-auto font-bold rounded-xl px-5"
-                        >
-                            Cerrar
-                        </Button>
+                    <DialogFooter className="p-4 border-t border-border/30 bg-muted/10 flex flex-row items-center justify-between gap-2">
+                        {isEditingExpenseDetails ? (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsEditingExpenseDetails(false)}
+                                    className="font-bold rounded-xl text-xs"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleSaveEditedExpense}
+                                    disabled={isUpdatingExpense}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs px-5 flex items-center gap-1.5"
+                                >
+                                    {isUpdatingExpense ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                    <span>Guardar Cambios</span>
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleDeleteExpenseFromDetails}
+                                        className="border-destructive/30 text-destructive hover:bg-destructive/10 rounded-xl font-bold text-xs"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => selectedExpenseForDetails && handleStartEditExpense(selectedExpenseForDetails)}
+                                        className="border-green-500/30 text-green-400 hover:bg-green-500/10 rounded-xl font-bold text-xs"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5 mr-1" /> Editar Gasto
+                                    </Button>
+                                </div>
+                                <Button
+                                    onClick={() => setIsDetailsOpen(false)}
+                                    className="font-bold rounded-xl px-5 text-xs"
+                                >
+                                    Cerrar
+                                </Button>
+                            </>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

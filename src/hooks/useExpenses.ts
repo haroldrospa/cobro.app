@@ -28,6 +28,8 @@ export type CreateExpenseDTO = Omit<Expense, 'id' | 'created_at' | 'store_id' | 
     store_id?: string;
 };
 
+export type UpdateExpenseDTO = Partial<Omit<Expense, 'id'>> & { id: string };
+
 export const useExpenses = () => {
     const { data: userStore } = useUserStore();
     const queryClient = useQueryClient();
@@ -208,6 +210,87 @@ export const useExpenses = () => {
         },
     });
 
+    const updateExpenseMutation = useMutation({
+        mutationFn: async (expenseToUpdate: UpdateExpenseDTO) => {
+            const { id, ...updates } = expenseToUpdate;
+            const storeId = userStore?.id;
+
+            const saveDate = updates.date ? (updates.date instanceof Date ? updates.date.toISOString() : new Date(updates.date).toISOString()) : undefined;
+
+            const payload: any = { ...updates };
+            if (saveDate) payload.date = saveDate;
+
+            if (navigator.onLine && storeId) {
+                console.log('🌐 Online: Actualizando gasto en Supabase...');
+                const dbPayload: any = {};
+                if (updates.description !== undefined) dbPayload.description = updates.description;
+                if (updates.amount !== undefined) dbPayload.amount = updates.amount;
+                if (updates.category !== undefined) dbPayload.category = updates.category;
+                if (updates.supplier_id !== undefined) dbPayload.supplier_id = updates.supplier_id;
+                if (updates.invoice_number !== undefined) dbPayload.invoice_number = updates.invoice_number;
+                if (updates.image_url !== undefined) dbPayload.image_url = updates.image_url;
+                if (saveDate !== undefined) dbPayload.date = saveDate;
+
+                const { data, error } = await supabase
+                    .from('expenses')
+                    .update(dbPayload)
+                    .eq('id', id)
+                    .select(`
+                        *,
+                        suppliers (
+                            name
+                        )
+                    `)
+                    .single();
+
+                if (error) {
+                    console.error('❌ Error actualizando gasto en BD:', error);
+                    throw error;
+                }
+
+                const updatedExpense = {
+                    ...data,
+                    date: !isNaN(new Date(data.date).getTime()) ? new Date(data.date) : new Date(),
+                    amount: (typeof data.amount === 'number' && !isNaN(data.amount)) ? data.amount : 0,
+                    supplier_name: data.suppliers?.name || updates.supplier_name || 'N/A',
+                    synced: 1
+                } as Expense;
+
+                await offlineDB.put(OfflineStore.EXPENSES, updatedExpense);
+                return updatedExpense;
+            } else {
+                console.log('📵 Offline: Actualizando localmente...');
+                const existing = await offlineDB.get(OfflineStore.EXPENSES, id);
+                const updated = {
+                    ...existing,
+                    ...payload,
+                    synced: 0
+                };
+                await offlineDB.put(OfflineStore.EXPENSES, updated);
+                await offlineDB.addToSyncQueue({
+                    store: OfflineStore.EXPENSES,
+                    operation: 'UPDATE',
+                    data: updated
+                });
+                return updated as Expense;
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['expenses'] });
+            toast({
+                title: "Gasto actualizado",
+                description: "Los datos del gasto se han actualizado correctamente.",
+            });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Error",
+                description: error.message || "No se pudo actualizar el gasto.",
+                variant: "destructive",
+            });
+        }
+    });
+
     const deleteExpenseMutation = useMutation({
         mutationFn: async (id: string) => {
             // 1. Delete locally
@@ -256,7 +339,9 @@ export const useExpenses = () => {
         expenses,
         isLoading,
         createExpense: createExpenseMutation.mutateAsync,
+        updateExpense: updateExpenseMutation.mutateAsync,
         deleteExpense: deleteExpenseMutation.mutateAsync,
         isCreating: createExpenseMutation.isPending,
+        isUpdating: updateExpenseMutation.isPending,
     };
 };
