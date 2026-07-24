@@ -841,7 +841,11 @@ function AccountingContent() {
                 reader.readAsDataURL(processableFile);
             };
             
-             const scanInvoice = async (file: File, apiKey: string, onStatusUpdate?: (msg: string) => void): Promise<any> => {
+            img.src = url;
+        });
+    };
+
+    const scanInvoice = async (file: File, apiKey: string, onStatusUpdate?: (msg: string) => void): Promise<any> => {
         const base64DataUrl = await preprocessImage(file);
         const base64Data = base64DataUrl.split(',')[1];
         const mimeType = base64DataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
