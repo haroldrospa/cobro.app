@@ -60,6 +60,7 @@ function AccountingContent() {
         extractedData?: any;
         imageUrl?: string;
         error?: string;
+        statusMessage?: string;
     };
 
     const [scanQueue, setScanQueue] = useState<QueueItem[]>([]);
@@ -840,16 +841,12 @@ function AccountingContent() {
                 reader.readAsDataURL(processableFile);
             };
             
-            img.src = url;
-        });
-    };
-
-    const scanInvoice = async (file: File, apiKey: string): Promise<any> => {
+             const scanInvoice = async (file: File, apiKey: string, onStatusUpdate?: (msg: string) => void): Promise<any> => {
         const base64DataUrl = await preprocessImage(file);
         const base64Data = base64DataUrl.split(',')[1];
         const mimeType = base64DataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
 
-        const prompt = `Analiza esta factura y extrae los siguientes datos en formato JSON estrictamente:
+        const prompt = `Analiza esta factura y extrae los siguientes datos en formato JSON strictly:
 - date (formato YYYY-MM-DD)
 - description (resumen breve del gasto)
 - amount (número, sin símbolos)
@@ -859,78 +856,103 @@ function AccountingContent() {
 
 Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date": "2023-01-01", "description": "Compra de agua", "amount": 100, "supplier_name": "Agua Pura", "invoice_number": "B0100000001", "category": "Otros"}`;
 
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: "qwen/qwen3.6-27b",
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            { type: "text", text: prompt },
-                            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-                        ]
-                    }
-                ],
-                temperature: 0.1
-            })
-        });
+        const maxRetries = 4;
+        let attempt = 0;
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Groq API Error: ${response.status} ${JSON.stringify(errorData)}`);
-        }
+        while (attempt <= maxRetries) {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "qwen/qwen3.6-27b",
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: prompt },
+                                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
+                            ]
+                        }
+                    ],
+                    temperature: 0.1
+                })
+            });
 
-        const data = await response.json();
-        let content = data.choices?.[0]?.message?.content;
-        if (!content) throw new Error("No content received from Groq");
-        
-        content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
-        
-        // Extraer primer JSON equilibrado
-        const extractJSON = (str: string): string => {
-            const firstBrace = str.indexOf('{');
-            if (firstBrace === -1) return str;
-            let braceCount = 0;
-            let inString = false;
-            let escaped = false;
-            for (let i = firstBrace; i < str.length; i++) {
-                const char = str[i];
-                if (escaped) {
-                    escaped = false;
-                    continue;
-                }
-                if (char === '\\') {
-                    escaped = true;
-                    continue;
-                }
-                if (char === '"') {
-                    inString = !inString;
-                    continue;
-                }
-                if (!inString) {
-                    if (char === '{') {
-                        braceCount++;
-                    } else if (char === '}') {
-                        braceCount--;
-                        if (braceCount === 0) {
-                            return str.slice(firstBrace, i + 1);
+            if (response.ok) {
+                const data = await response.json();
+                let content = data.choices?.[0]?.message?.content;
+                if (!content) throw new Error("No content received from Groq");
+                
+                content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
+                
+                // Extraer primer JSON equilibrado
+                const extractJSON = (str: string): string => {
+                    const firstBrace = str.indexOf('{');
+                    if (firstBrace === -1) return str;
+                    let braceCount = 0;
+                    let inString = false;
+                    let escaped = false;
+                    for (let i = firstBrace; i < str.length; i++) {
+                        const char = str[i];
+                        if (escaped) {
+                            escaped = false;
+                            continue;
+                        }
+                        if (char === '\\') {
+                            escaped = true;
+                            continue;
+                        }
+                        if (char === '"') {
+                            inString = !inString;
+                            continue;
+                        }
+                        if (!inString) {
+                            if (char === '{') {
+                                braceCount++;
+                            } else if (char === '}') {
+                                braceCount--;
+                                if (braceCount === 0) {
+                                    return str.slice(firstBrace, i + 1);
+                                }
+                            }
                         }
                     }
-                }
-            }
-            const match = str.match(/\{[\s\S]*\}/);
-            return match ? match[0] : str;
-        };
+                    const match = str.match(/\{[\s\S]*\}/);
+                    return match ? match[0] : str;
+                };
 
-        let clean = extractJSON(content);
-        // Sanitizar comas sobrantes antes de cierres (trailing commas)
-        clean = clean.replace(/,\s*([\]}])/g, '$1');
-        return JSON.parse(clean);
+                let clean = extractJSON(content);
+                // Sanitizar comas sobrantes antes de cierres (trailing commas)
+                clean = clean.replace(/,\s*([\]}])/g, '$1');
+                return JSON.parse(clean);
+            }
+
+            const errorData = await response.json().catch(() => ({}));
+            const errorMsg = JSON.stringify(errorData);
+
+            if (response.status === 429 && attempt < maxRetries) {
+                attempt++;
+                let waitMs = Math.pow(2, attempt) * 5000;
+                const matchSeconds = errorMsg.match(/try again in ([\d\.]+)s/i);
+                if (matchSeconds && matchSeconds[1]) {
+                    const parsedSec = parseFloat(matchSeconds[1]);
+                    if (!isNaN(parsedSec) && parsedSec > 0) {
+                        waitMs = Math.ceil((parsedSec + 2) * 1000);
+                    }
+                }
+
+                const waitSec = Math.ceil(waitMs / 1000);
+                onStatusUpdate?.(`Límite IA alcanzado (429). Esperando ${waitSec}s... (${attempt}/${maxRetries})`);
+
+                await new Promise(resolve => setTimeout(resolve, waitMs));
+                continue;
+            }
+
+            throw new Error(`Groq API Error: ${response.status} ${errorMsg}`);
+        }
     };
 
     const saveExpenseToDb = async (data: any) => {
@@ -1042,70 +1064,54 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         }
     };
 
-
-    const processReceiptImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files || files.length === 0) return;
-
+    const processQueueItems = async (itemsToProcess: QueueItem[]) => {
         const userKey = cleanKey(storeSettings?.ai_api_key);
         const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
         const apiKey = userKey || systemKey;
-
-        console.log("Resolved API Key source:", userKey ? "User custom key (from DB)" : systemKey ? "System fallback key (from env)" : "No key found");
-        console.log("Using API Key (first 10 chars):", apiKey ? apiKey.slice(0, 10) + "..." : "none");
 
         if (!apiKey) {
             toast({ title: "Requerido", description: "Primero guarda tu API Key de Groq en la configuración de la ventana.", variant: "destructive" });
             return;
         }
 
-        const isMassive = files.length > 1;
-
-        // Create new queue items
-        const newItems: QueueItem[] = Array.from(files).map(f => ({
-            id: Math.random().toString(36).substr(2, 9),
-            file: f,
-            status: 'pending'
-        }));
-
-        // Append to existing queue
-        const prevLength = scanQueue.length;
-        setScanQueue(prev => [...prev, ...newItems]);
-        setReviewIndex(prevLength);
         setIsScanning(true);
-        console.log(`🚀 Iniciando escaneo de ${newItems.length} nuevos archivos...`);
 
         try {
-            // Procesamiento SECUENCIAL para evitar saturar la memoria y red en móviles
-            for (const item of newItems) {
+            for (let i = 0; i < itemsToProcess.length; i++) {
+                const item = itemsToProcess[i];
                 // Marcar como escaneando
-                setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'scanning' } : i));
+                setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'scanning', statusMessage: undefined } : q));
 
                 try {
                     console.log(`Scanning item ${item.file.name}...`);
-                    const data = await scanInvoice(item.file, apiKey);
-                    
-                    // Subir imagen del comprobante a Supabase Storage
+                    const data = await scanInvoice(item.file, apiKey, (statusMsg) => {
+                        setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, statusMessage: statusMsg } : q));
+                    });
+
                     console.log(`Uploading receipt image to storage...`);
                     const imageUrl = await uploadReceiptImage(item.file);
                     const dataWithImage = { ...data, image_url: imageUrl };
 
-                    setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'success', extractedData: dataWithImage } : i));
+                    setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'success', extractedData: dataWithImage, statusMessage: undefined } : q));
                     console.log(`✅ Factura procesada exitosamente.`);
+
+                    // Pausa de 2.5s entre solicitudes para evitar sobrepasar límites de tokens por minuto (TPM)
+                    if (i < itemsToProcess.length - 1) {
+                        await new Promise(res => setTimeout(res, 2500));
+                    }
                 } catch (err: any) {
                     console.error(`❌ Error procesando factura (${item.file.name}):`, err);
-                    
                     const errorMsg = err.message || "Error desconocido";
-                    setScanQueue(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error', error: errorMsg } : i));
-                    
-                    // Si no es masivo, mostrar toast inmediato del error específico
-                    if (!isMassive) {
-                        toast({ 
-                            title: "Error de Escaneo", 
-                            description: errorMsg.includes("401") ? "API Key inválida o vencida." : 
-                                         errorMsg.includes("413") ? "Imagen demasiado grande." : 
-                                         errorMsg, 
-                            variant: "destructive" 
+                    setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: errorMsg, statusMessage: undefined } : q));
+
+                    if (itemsToProcess.length === 1) {
+                        toast({
+                            title: "Error de Escaneo",
+                            description: errorMsg.includes("429") ? "Límite de solicitudes por minuto alcanzado. Haz clic en Reintentar." :
+                                         errorMsg.includes("401") ? "API Key inválida o vencida." :
+                                         errorMsg.includes("413") ? "Imagen demasiado grande." :
+                                         errorMsg,
+                            variant: "destructive"
                         });
                     }
                 }
@@ -1116,6 +1122,40 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
             setIsScanning(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
+    };
+
+    const processReceiptImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        const newItems: QueueItem[] = Array.from(files).map(f => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file: f,
+            status: 'pending'
+        }));
+
+        const prevLength = scanQueue.length;
+        setScanQueue(prev => [...prev, ...newItems]);
+        setReviewIndex(prevLength);
+        console.log(`🚀 Iniciando escaneo de ${newItems.length} nuevos archivos...`);
+
+        await processQueueItems(newItems);
+    };
+
+    const handleRetryFailedItems = async () => {
+        const failedItems = scanQueue.filter(item => item.status === 'error');
+        if (failedItems.length === 0) return;
+
+        setScanQueue(prev => prev.map(q => q.status === 'error' ? { ...q, status: 'pending', error: undefined, statusMessage: undefined } : q));
+        await processQueueItems(failedItems);
+    };
+
+    const handleRetrySingleItem = async (itemId: string) => {
+        const item = scanQueue.find(q => q.id === itemId);
+        if (!item) return;
+
+        setScanQueue(prev => prev.map(q => q.id === itemId ? { ...q, status: 'pending', error: undefined, statusMessage: undefined } : q));
+        await processQueueItems([item]);
     };
 
     const resetApiKey = () => {
@@ -2356,19 +2396,36 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                     <span className="text-xs font-bold truncate max-w-[140px] text-foreground">
                                                         {item.file.name}
                                                     </span>
-                                                    <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">
+                                                    <span className="text-[10px] font-semibold text-muted-foreground mt-0.5 truncate max-w-[150px]">
                                                         {item.status === 'pending' && "En cola..."}
-                                                        {item.status === 'scanning' && "Analizando..."}
+                                                        {item.status === 'scanning' && (item.statusMessage || "Analizando...")}
                                                         {item.status === 'saved' && "✓ Guardada"}
-                                                        {item.status === 'error' && "⚠ Error"}
+                                                        {item.status === 'error' && "⚠ Error al procesar"}
                                                         {item.status === 'success' && "Listo para revisar"}
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="shrink-0">
+                                            <div className="shrink-0 flex items-center gap-1">
                                                 {item.status === 'scanning' && <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />}
                                                 {item.status === 'saved' && <Check className="h-4 w-4 text-emerald-500 font-bold" />}
-                                                {item.status === 'error' && <AlertCircle className="h-4 w-4 text-red-500" />}
+                                                {item.status === 'error' && (
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="h-6 w-6 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-full"
+                                                            title="Reintentar escaneo"
+                                                            disabled={isScanning}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRetrySingleItem(item.id);
+                                                            }}
+                                                        >
+                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                                                    </div>
+                                                )}
                                                 {item.status === 'success' && <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
                                             </div>
                                         </div>
@@ -2377,6 +2434,17 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
                                 {/* Save All / Actions */}
                                 <div className="pt-2 border-t mt-auto flex flex-col gap-2">
+                                    {scanQueue.some(i => i.status === 'error') && (
+                                        <Button 
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full border-amber-500/40 text-amber-500 hover:bg-amber-500/10 font-bold uppercase tracking-wider text-[10px] h-9 rounded-xl shadow-sm gap-1.5"
+                                            onClick={handleRetryFailedItems}
+                                            disabled={isScanning}
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" /> Reintentar fallidos ({scanQueue.filter(i => i.status === 'error').length})
+                                        </Button>
+                                    )}
                                     {scanQueue.some(i => i.status === 'success') && (
                                         <Button 
                                             size="sm"
@@ -2404,18 +2472,40 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             {/* Right Column: Review Details Form */}
                             <div className="md:col-span-7 flex flex-col justify-center">
                                 {scanQueue[reviewIndex]?.status === 'scanning' ? (
-                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 text-center">
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 text-center p-4">
                                         <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center animate-pulse">
                                             <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
                                         </div>
                                         <p className="text-sm font-bold text-foreground">Analizando factura con IA...</p>
-                                        <p className="text-xs text-muted-foreground">La IA de Groq está leyendo los datos del comprobante.</p>
+                                        <p className="text-xs text-muted-foreground max-w-xs">
+                                            {scanQueue[reviewIndex]?.statusMessage || "La IA de Groq está leyendo los datos del comprobante."}
+                                        </p>
                                     </div>
                                 ) : scanQueue[reviewIndex]?.status === 'pending' ? (
                                     <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 text-center text-muted-foreground">
                                         <Clock className="h-8 w-8 animate-pulse text-emerald-500" />
                                         <p className="text-sm font-semibold">En cola de procesamiento</p>
                                         <p className="text-xs">Se iniciará el escaneo automáticamente en unos momentos.</p>
+                                    </div>
+                                ) : scanQueue[reviewIndex]?.status === 'error' ? (
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-4 text-center p-6 bg-red-500/5 rounded-2xl border border-red-500/20">
+                                        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                                            <AlertCircle className="h-6 w-6" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-bold text-foreground">No se pudo procesar esta factura</p>
+                                            <p className="text-xs text-muted-foreground max-w-sm line-clamp-3">
+                                                {scanQueue[reviewIndex]?.error || "Ocurrió un error al comunicarse con la IA de Groq."}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-2 rounded-xl"
+                                            onClick={() => handleRetrySingleItem(scanQueue[reviewIndex].id)}
+                                            disabled={isScanning}
+                                        >
+                                            <RefreshCw className="h-4 w-4" /> Reintentar escaneo de esta factura
+                                        </Button>
                                     </div>
                                 ) : (
                                     /* Form for success/error/saved */
