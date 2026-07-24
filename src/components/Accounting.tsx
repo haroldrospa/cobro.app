@@ -3376,6 +3376,10 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 if (!open) setPreviewImageUrl(null);
             }}>
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 m-0 border-none rounded-none bg-black/95 text-white flex flex-col select-none z-[150] gap-0 [&>button]:hidden animate-none">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Vista Previa de Comprobante</DialogTitle>
+                        <DialogDescription>Visualizador interactivo de imagen de comprobante o factura</DialogDescription>
+                    </DialogHeader>
                     {/* Control Bar */}
                     <div className="flex items-center justify-between p-4 bg-black/35 border-b border-white/10 text-white z-10">
                         <div className="flex flex-col text-left">
