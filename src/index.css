@@ -317,9 +317,28 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Hint the browser to composite interactive elements */
-button, a, [role="button"] {
+/* ── Native Mobile Feel Rules ── */
+* {
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+button, a, [role="button"], input, select, textarea {
   touch-action: manipulation;
+}
+
+/* Active native scale effect for interactive cards & buttons */
+.active-press {
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.12s ease;
+}
+.active-press:active {
+  transform: scale(0.96);
+  opacity: 0.88;
+}
+
+/* Native non-selectable UI text for controls & navigation */
+button, nav, header, [role="button"], [role="tab"] {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Prevent layout shift on images */

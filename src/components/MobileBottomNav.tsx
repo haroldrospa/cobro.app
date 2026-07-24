@@ -28,6 +28,8 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { invalidateSessionCache } from '@/lib/authSession';
 
+import { triggerHaptic } from '@/lib/haptics';
+
 /**
  * Barra de navegación inferior para mobile.
  * Solo se muestra en pantallas < md (768px).
@@ -55,6 +57,7 @@ export const MobileBottomNav: React.FC = () => {
   if (isHiddenRoute && !isKitchen && !isDelivery) return null;
 
   const handleLogout = async () => {
+    triggerHaptic('medium');
     setMoreOpen(false);
     invalidateSessionCache();
     await supabase.auth.signOut();
@@ -77,7 +80,7 @@ export const MobileBottomNav: React.FC = () => {
       ];
     }
 
-    // Admin/manager: 5 tabs principales
+    // Admin/manager: 4 tabs principales
     return [
       { name: 'POS', href: '/pos', icon: ShoppingCart },
       { name: 'Inicio', href: '/dashboard', icon: Home },
@@ -112,8 +115,11 @@ export const MobileBottomNav: React.FC = () => {
       {/* Overlay oscuro cuando el menú "Más" está abierto */}
       {moreOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 md:hidden"
-          onClick={() => setMoreOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden"
+          onClick={() => {
+            triggerHaptic('light');
+            setMoreOpen(false);
+          }}
         />
       )}
 
@@ -121,23 +127,26 @@ export const MobileBottomNav: React.FC = () => {
       <div
         className={cn(
           'fixed bottom-0 left-0 right-0 z-40 md:hidden',
-          'bg-background border-t border-zinc-800/80 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.5)]',
+          'bg-background border-t border-border/80 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.5)]',
           'transition-transform duration-300 ease-out',
           moreOpen ? 'translate-y-0' : 'translate-y-full pointer-events-none'
         )}
       >
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-12 h-1.5 rounded-full bg-zinc-700/60" />
+          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/60">
-          <span className="font-bold text-base tracking-wide text-white">Menú</span>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">
+          <span className="font-bold text-base tracking-wide text-foreground">Menú</span>
           <button
-            onClick={() => setMoreOpen(false)}
-            className="p-2 rounded-full bg-zinc-900/60 hover:bg-zinc-800 transition-colors"
+            onClick={() => {
+              triggerHaptic('light');
+              setMoreOpen(false);
+            }}
+            className="p-2 rounded-full bg-muted/60 hover:bg-muted active:scale-95 transition-all"
           >
-            <X className="h-5 w-5 text-zinc-400" />
+            <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
@@ -149,16 +158,19 @@ export const MobileBottomNav: React.FC = () => {
               <Link
                 key={item.href}
                 to={item.href}
-                onClick={() => setMoreOpen(false)}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setMoreOpen(false);
+                }}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border transition-all duration-300 active:scale-[0.95] group h-22',
+                  'flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border transition-all duration-200 active:scale-[0.93] group h-22 select-none',
                   isActive
                     ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
-                    : 'bg-zinc-900/40 hover:bg-zinc-900/60 border-white/[0.03] hover:border-white/[0.08] text-zinc-300 hover:text-white shadow-md shadow-black/10'
+                    : 'bg-muted/40 hover:bg-muted/60 border-border/40 text-muted-foreground hover:text-foreground shadow-md shadow-black/5'
                 )}
               >
-                <Icon className={cn("h-5.5 w-5.5 transition-colors duration-300", isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-200")} />
-                <span className={cn("text-[11px] font-bold text-center leading-tight transition-colors duration-300", isActive ? "text-white" : "text-zinc-300 group-hover:text-white")}>
+                <Icon className={cn("h-5.5 w-5.5 transition-colors duration-200", isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground")} />
+                <span className={cn("text-[11px] font-bold text-center leading-tight transition-colors duration-200", isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground")}>
                   {item.name}
                 </span>
               </Link>
@@ -168,10 +180,10 @@ export const MobileBottomNav: React.FC = () => {
           {/* Botón cerrar sesión */}
           <button
             onClick={handleLogout}
-            className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border border-rose-500/10 bg-rose-950/10 text-rose-400 hover:bg-rose-950/20 hover:text-rose-300 hover:border-rose-500/20 transition-all duration-300 active:scale-[0.95] group h-22 shadow-md shadow-black/10"
+            className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-200 active:scale-[0.93] group h-22 select-none"
           >
-            <LogOut className="h-5.5 w-5.5 text-rose-400 group-hover:text-rose-300 transition-colors duration-300" />
-            <span className="text-[11px] font-bold text-center leading-tight text-rose-400 group-hover:text-rose-300 transition-colors duration-300">
+            <LogOut className="h-5.5 w-5.5 text-rose-400 group-hover:text-rose-300 transition-colors" />
+            <span className="text-[11px] font-bold text-center leading-tight text-rose-400 group-hover:text-rose-300 transition-colors">
               Salir
             </span>
           </button>
@@ -183,10 +195,10 @@ export const MobileBottomNav: React.FC = () => {
 
       {/* Barra de tabs inferior */}
       <nav 
-        className="fixed left-4 right-4 z-50 md:hidden"
-        style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+        className="fixed left-4 right-4 z-50 md:hidden select-none"
+        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="flex items-stretch bg-card/95 backdrop-blur-xl border border-border/60 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] rounded-[24px]">
+        <div className="flex items-stretch bg-card/95 border border-border/80 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.35)] rounded-[24px] overflow-hidden">
           {primaryItems.map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href ||
@@ -195,19 +207,20 @@ export const MobileBottomNav: React.FC = () => {
               <Link
                 key={item.href}
                 to={item.href}
+                onClick={() => triggerHaptic('light')}
                 className={cn(
-                  'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-300',
+                  'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-200 active:scale-[0.92]',
                   isActive
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Icon className={cn('h-[22px] w-[22px] transition-transform duration-300', isActive && 'scale-110 drop-shadow-sm')} />
-                <span className="text-[10px] font-medium tracking-wide">{item.name}</span>
+                <Icon className={cn('h-[22px] w-[22px] transition-transform duration-200', isActive && 'scale-110 drop-shadow-xs')} />
+                <span className="text-[10px] font-bold tracking-tight">{item.name}</span>
                 {isActive && (
                   <motion.div
                     layoutId="mobile-nav-indicator"
-                    className="absolute bottom-0 h-1.5 w-12 rounded-t-full bg-primary"
+                    className="absolute bottom-0 h-1.5 w-10 rounded-t-full bg-primary"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
@@ -218,18 +231,21 @@ export const MobileBottomNav: React.FC = () => {
           {/* Botón "Más" */}
           {moreItems.length > 0 && (
             <button
-              onClick={() => setMoreOpen(v => !v)}
+              onClick={() => {
+                triggerHaptic('light');
+                setMoreOpen(v => !v);
+              }}
               className={cn(
-                'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-300',
+                'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-200 active:scale-[0.92]',
                 moreOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <MoreHorizontal className={cn('h-[22px] w-[22px] transition-transform duration-300', moreOpen && 'scale-110')} />
-              <span className="text-[10px] font-medium tracking-wide">Más</span>
+              <MoreHorizontal className={cn('h-[22px] w-[22px] transition-transform duration-200', moreOpen && 'scale-110')} />
+              <span className="text-[10px] font-bold tracking-tight">Más</span>
               {moreOpen && (
                   <motion.div
                     layoutId="mobile-nav-indicator"
-                    className="absolute bottom-0 h-1.5 w-12 rounded-t-full bg-primary"
+                    className="absolute bottom-0 h-1.5 w-10 rounded-t-full bg-primary"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
               )}
