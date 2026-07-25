@@ -31,6 +31,14 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
+  // Automatically close payment view and cart drawer when cart becomes empty (e.g. sale completed, printed or cleared)
+  React.useEffect(() => {
+    if (cart.length === 0) {
+      setIsPaymentOpen(false);
+      setIsCartOpen(false);
+    }
+  }, [cart.length]);
+
   const openPaymentSummary = () => {
     setIsCartOpen(false);
     setIsPaymentOpen(true);
