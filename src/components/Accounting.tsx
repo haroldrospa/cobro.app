@@ -1535,12 +1535,12 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
             )}
 
             <Tabs id="accounting-tabs" defaultValue="expenses" className="space-y-8">
-                <div className="flex justify-center w-full">
-                    <TabsList className="bg-muted/20 p-1 rounded-2xl border border-border/50 h-auto self-center">
-                        <TabsTrigger value="expenses" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Gastos</TabsTrigger>
-                        <TabsTrigger value="fixed-expenses" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Gastos Fijos</TabsTrigger>
-                        <TabsTrigger value="suppliers" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Proveedores</TabsTrigger>
-                        <TabsTrigger value="reports" className="rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg">Reportes</TabsTrigger>
+                <div className="flex justify-center w-full max-w-full overflow-x-auto px-1">
+                    <TabsList className="bg-muted/20 p-1 rounded-2xl border border-border/50 h-auto self-center flex-nowrap max-w-full overflow-x-auto justify-start sm:justify-center whitespace-nowrap scrollbar-none">
+                        <TabsTrigger value="expenses" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Gastos</TabsTrigger>
+                        <TabsTrigger value="fixed-expenses" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Gastos Fijos</TabsTrigger>
+                        <TabsTrigger value="suppliers" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Proveedores</TabsTrigger>
+                        <TabsTrigger value="reports" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Reportes</TabsTrigger>
                     </TabsList>
                 </div>
 
@@ -2099,7 +2099,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     setScanQueue([]);
                 }
             }}>
-                <DialogContent centerOnMobile className={cn("p-4 sm:p-6 max-h-[85dvh] gap-3 sm:gap-4 overflow-y-auto transition-all duration-300", scanQueue.length > 0 ? "sm:max-w-4xl" : "sm:max-w-[560px]")}>
+                <DialogContent centerOnMobile className={cn("p-3 sm:p-6 max-h-[90dvh] gap-3 sm:gap-4 overflow-y-auto overflow-x-hidden w-full transition-all duration-300", scanQueue.length > 0 ? "sm:max-w-4xl" : "sm:max-w-[560px]")}>
                     <DialogHeader>
                         <DialogTitle>
                             {scanQueue.length > 0 ? "Gestión de Facturas (IA)" : "Registrar Nuevo Gasto"}
@@ -2529,9 +2529,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
                     ) : (
                         /* Split screen view when files are in the queue */
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-[450px]">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 min-h-0 md:min-h-[450px] w-full max-w-full overflow-x-hidden">
                             {/* Left Column: Queue Manager */}
-                            <div className="md:col-span-5 flex flex-col gap-4 border-r border-border/20 pr-4">
+                            <div className="md:col-span-5 flex flex-col gap-4 md:border-r border-b md:border-b-0 border-border/20 pr-0 md:pr-4 pb-4 md:pb-0 w-full max-w-full overflow-x-hidden">
                                 <div className="flex justify-between items-center pb-2 border-b">
                                     <h3 className="font-black text-xs uppercase tracking-wider text-muted-foreground">Lista de Facturas</h3>
                                     <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
@@ -2651,7 +2651,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             </div>
                             
                             {/* Right Column: Review Details Form */}
-                            <div className="md:col-span-7 flex flex-col justify-center">
+                            <div className="md:col-span-7 flex flex-col justify-center w-full max-w-full overflow-x-hidden pt-4 md:pt-0">
                                 {scanQueue[reviewIndex]?.status === 'scanning' ? (
                                     <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 text-center p-4">
                                         <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center animate-pulse">
