@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Printer, Usb, Bluetooth, Loader2, Monitor, AlertCircle } from 'lucide-react';
+import { Printer, Usb, Bluetooth, Loader2, Monitor, AlertCircle, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +33,49 @@ export const PrinterSelectionDialog: React.FC<PrinterSelectionDialogProps> = ({
   const [connectionType, setConnectionType] = useState<'usb' | 'bluetooth' | null>(null);
   const { toast } = useToast();
   const { printSettings, companyInfo: dbCompanyInfo } = usePrintSettings();
+
+  const handleRawBTThermalPrint = async () => {
+    try {
+      const { printInvoiceViaRawBT } = await import('@/utils/rawbtPrinter');
+      const companyInfo = {
+        name: dbCompanyInfo.name,
+        rnc: dbCompanyInfo.rnc,
+        phone: dbCompanyInfo.phone,
+        address: dbCompanyInfo.address,
+      };
+
+      const paperSize = (printSettings.paperSize === '58mm' || printSettings.paperSize === '80mm')
+        ? printSettings.paperSize
+        : '80mm';
+
+      if (saleData) {
+        const invoiceData = {
+          companyInfo,
+          invoiceNumber: saleData.invoiceNumber || 'INV-000001',
+          items: saleData.items,
+          subtotal: saleData.total - (saleData.items.reduce((sum: number, item: any) => sum + (item.tax_amount || 0), 0)),
+          tax: saleData.items.reduce((sum: number, item: any) => sum + (item.tax_amount || 0), 0),
+          total: saleData.total,
+          customer: saleData.customer,
+          paymentMethod: saleData.paymentMethod,
+          change: saleData.change,
+        };
+
+        printInvoiceViaRawBT(invoiceData, paperSize);
+        toast({
+          title: "Enviado a RawBT",
+          description: "Se ha abierto el comando de impresión en RawBT",
+        });
+        onClose();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error RawBT",
+        description: error.message || "Error al enviar la impresión a RawBT",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Print using ESC/POS commands for thermal printers
   const handleUSBThermalPrint = async () => {
@@ -241,6 +284,24 @@ export const PrinterSelectionDialog: React.FC<PrinterSelectionDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-3 py-2">
+          {/* RawBT Mobile App Option */}
+          <Card className="group hover:shadow-md transition-all duration-200 border-2 border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 cursor-pointer">
+            <Button
+              variant="ghost"
+              className="w-full h-auto py-3 px-3 flex items-center gap-3 hover:bg-transparent"
+              onClick={handleRawBTThermalPrint}
+              disabled={isConnecting}
+            >
+              <div className="p-2 rounded-md bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors">
+                <Smartphone className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div className="text-left flex-1">
+                <span className="font-bold text-sm block text-emerald-400">📱 RawBT App (Bluetooth / USB Móvil)</span>
+                <span className="text-xs text-muted-foreground">Impresión térmica directa para celulares y tablets Android usando la app RawBT.</span>
+              </div>
+            </Button>
+          </Card>
+
           {/* System Printer - For ANY printer installed in OS */}
           <Card className="group hover:shadow-md transition-all duration-200 hover:border-green-500/50 cursor-pointer border-2 border-green-500/30 bg-green-500/5">
             <Button
