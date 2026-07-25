@@ -1626,7 +1626,7 @@ const POSContent: React.FC = () => {
               userName={profile?.full_name}
             />
           }
-          cart={cart}
+          cart={cartWithOffers}
           cartComponent={
             <MobileCartView
               cart={cartWithOffers}
