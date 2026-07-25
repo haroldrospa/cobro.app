@@ -226,34 +226,66 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       <ChevronsUpDown className="h-3.5 w-3.5 opacity-30 flex-shrink-0 [@media(max-height:580px)]:h-3 [@media(max-height:580px)]:w-3" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0 bg-popover border-border rounded-xl shadow-lg" align="start">
-                    <Command>
-                      <CommandInput placeholder="Buscar cliente..." className="h-8 text-xs" />
-                      <CommandList className="max-h-[160px]">
-                        <CommandEmpty className="p-2 text-xs text-muted-foreground font-bold uppercase tracking-widest text-center">No encontrado</CommandEmpty>
+                  <PopoverContent 
+                    side="bottom" 
+                    sideOffset={6} 
+                    collisionPadding={12} 
+                    className="w-[calc(100vw-2.5rem)] sm:w-[320px] max-w-[340px] p-0 bg-zinc-950/98 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-[150] overflow-hidden" 
+                    align="start"
+                  >
+                    <Command className="bg-transparent border-none">
+                      <CommandInput 
+                        placeholder="Buscar por nombre, RNC o teléfono..." 
+                        className="h-10 text-xs font-bold text-white placeholder:text-zinc-500 bg-zinc-900/80 border-b border-white/10" 
+                      />
+                      <CommandList className="max-h-[35vh] sm:max-h-[220px] overflow-y-auto p-1.5 scrollbar-thin">
+                        <CommandEmpty className="p-4 text-xs text-zinc-400 font-bold uppercase tracking-widest text-center">
+                          No se encontraron clientes
+                        </CommandEmpty>
                         <CommandGroup>
                           <CommandItem
                             value="general-consumidor-final"
                             onSelect={() => { onCustomerChange?.(""); setOpenCustomerPopover(false); }}
-                            className="p-1.5 cursor-pointer rounded-lg mx-1 my-0.5 text-xs"
+                            className={cn(
+                              "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
+                              !selectedCustomer 
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
+                                : "hover:bg-white/5 text-zinc-200 font-medium"
+                            )}
                           >
-                            <Check className={cn("mr-2 h-3.5 w-3.5 text-primary", !selectedCustomer ? "opacity-100" : "opacity-0")} />
-                            <span className="font-semibold">Consumidor Final</span>
+                            <div className="flex items-center gap-2">
+                              <User className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                              <span className="truncate">Consumidor Final</span>
+                            </div>
+                            {!selectedCustomer && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
                           </CommandItem>
-                          {customers.map((customer) => (
-                            <CommandItem
-                              key={customer.id}
-                              value={`${customer.name} ${customer.rnc || ''} ${customer.phone || ''} ${customer.id}`}
-                              onSelect={() => { onCustomerChange?.(customer.id); setOpenCustomerPopover(false); }}
-                              className="p-1.5 cursor-pointer rounded-lg mx-1 my-0.5 text-xs"
-                            >
-                              <Check className={cn("mr-2 h-3.5 w-3.5 text-primary", selectedCustomer === customer.id ? "opacity-100" : "opacity-0")} />
-                              <div className="flex flex-col">
-                                <span className="font-semibold truncate">{customer.name}</span>
-                                {customer.rnc && <span className="text-[8px] text-muted-foreground">RNC: {customer.rnc}</span>}
-                              </div>
-                            </CommandItem>
-                          ))}
+
+                          {customers.map((customer) => {
+                            const isSelected = selectedCustomer === customer.id;
+                            return (
+                              <CommandItem
+                                key={customer.id}
+                                value={`${customer.name} ${customer.rnc || ''} ${customer.phone || ''} ${customer.id}`}
+                                onSelect={() => { onCustomerChange?.(customer.id); setOpenCustomerPopover(false); }}
+                                className={cn(
+                                  "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
+                                  isSelected 
+                                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
+                                    : "hover:bg-white/5 text-zinc-200 font-medium"
+                                )}
+                              >
+                                <div className="flex flex-col min-w-0 flex-1 pr-2 text-left">
+                                  <span className="truncate text-xs">{customer.name}</span>
+                                  {customer.rnc && (
+                                    <span className="text-[10px] font-mono text-zinc-400 font-semibold mt-0.5">
+                                      RNC: {customer.rnc}
+                                    </span>
+                                  )}
+                                </div>
+                                {isSelected && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>

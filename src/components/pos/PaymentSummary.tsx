@@ -271,44 +271,75 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
                        </Button>
                      </PopoverTrigger>
-                     <PopoverContent className="w-[300px] p-0 bg-popover border-border z-50">
-                       <Command>
-                         <CommandInput placeholder="Buscar por nombre o RNC..." className="h-8 text-xs" />
-                         <CommandList className="max-h-[200px]">
-                           <CommandEmpty className="py-2 text-xs text-center text-muted-foreground">No encontrado.</CommandEmpty>
-                           <CommandGroup>
-                             <CommandItem
-                               value="none-customer-item-placeholder"
-                               onSelect={() => {
-                                 onCustomerChange("");
-                                 setIsCustomerOpen(false);
-                               }}
-                               className="text-xs py-1.5 cursor-pointer"
-                             >
-                               <Check className={cn("mr-2 h-3 w-3", !selectedCustomer ? "opacity-100" : "opacity-0")} />
-                               Seleccionar Cliente...
-                             </CommandItem>
-                             {customers.map((c) => (
-                               <CommandItem
-                                 key={c.id}
-                                 value={`${c.name} ${c.rnc || ''} ${c.id}`}
-                                 onSelect={() => {
-                                   onCustomerChange(c.id);
-                                   setIsCustomerOpen(false);
-                                 }}
-                                 className="text-xs py-1.5 cursor-pointer"
-                               >
-                                 <Check className={cn("mr-2 h-3 w-3", selectedCustomer === c.id ? "opacity-100" : "opacity-0")} />
-                                 <div className="flex flex-col overflow-hidden">
-                                   <span className="truncate">{c.name}</span>
-                                   {c.rnc && <span className="text-[10px] text-muted-foreground">RNC: {c.rnc}</span>}
-                                 </div>
-                               </CommandItem>
-                             ))}
-                           </CommandGroup>
-                         </CommandList>
-                       </Command>
-                     </PopoverContent>
+                        <PopoverContent 
+                        side="bottom" 
+                        sideOffset={6} 
+                        collisionPadding={12} 
+                        className="w-[calc(100vw-2.5rem)] sm:w-[300px] max-w-[340px] p-0 bg-zinc-950/98 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden" 
+                        align="start"
+                      >
+                        <Command className="bg-transparent border-none">
+                          <CommandInput 
+                            placeholder="Buscar por nombre o RNC..." 
+                            className="h-10 text-xs font-bold text-white placeholder:text-zinc-500 bg-zinc-900/80 border-b border-white/10" 
+                          />
+                          <CommandList className="max-h-[35vh] sm:max-h-[200px] overflow-y-auto p-1.5 scrollbar-thin">
+                            <CommandEmpty className="p-4 text-xs text-center text-zinc-400 font-bold uppercase tracking-widest">
+                              No se encontraron clientes
+                            </CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="none-customer-item-placeholder"
+                                onSelect={() => {
+                                  onCustomerChange("");
+                                  setIsCustomerOpen(false);
+                                }}
+                                className={cn(
+                                  "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
+                                  !selectedCustomer 
+                                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
+                                    : "hover:bg-white/5 text-zinc-200 font-medium"
+                                )}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <User className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                                  <span className="truncate">Seleccionar Cliente...</span>
+                                </div>
+                                {!selectedCustomer && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
+                              </CommandItem>
+                              {customers.map((c) => {
+                                const isSelected = selectedCustomer === c.id;
+                                return (
+                                  <CommandItem
+                                    key={c.id}
+                                    value={`${c.name} ${c.rnc || ''} ${c.id}`}
+                                    onSelect={() => {
+                                      onCustomerChange(c.id);
+                                      setIsCustomerOpen(false);
+                                    }}
+                                    className={cn(
+                                      "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
+                                      isSelected 
+                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
+                                        : "hover:bg-white/5 text-zinc-200 font-medium"
+                                    )}
+                                  >
+                                    <div className="flex flex-col min-w-0 flex-1 pr-2 text-left">
+                                      <span className="truncate text-xs">{c.name}</span>
+                                      {c.rnc && (
+                                        <span className="text-[10px] font-mono text-zinc-400 font-semibold mt-0.5">
+                                          RNC: {c.rnc}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {isSelected && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
                    </Popover>
                    {selectedCustomerData && (
                      <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 bg-background/50 p-1.5 rounded border border-border/50">
