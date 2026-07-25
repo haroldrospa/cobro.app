@@ -48,10 +48,10 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent hideCloseButton className="sm:max-w-[400px] bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-0 overflow-hidden rounded-[2rem]">
+      <DialogContent hideCloseButton className="w-[calc(100%-1rem)] max-w-[400px] bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-0 overflow-y-auto max-h-[90dvh] rounded-[2rem]">
         <div className="relative">
           {/* Header Area with Subtle Gradient */}
-          <div className="bg-gradient-to-b from-green-500/10 to-transparent p-6 pb-2">
+          <div className="bg-gradient-to-b from-green-500/10 to-transparent p-5 sm:p-6 pb-2">
             <DialogHeader>
               <div className="flex items-center justify-between mb-2">
                 <div className="bg-green-500/20 p-2 rounded-xl">
@@ -66,21 +66,21 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <DialogTitle className="text-2xl font-black text-white tracking-tight">
+              <DialogTitle className="text-xl sm:text-2xl font-black text-white tracking-tight text-left">
                 Ajustar Cantidad
               </DialogTitle>
-              <div className="mt-2 p-3 bg-white/5 rounded-2xl border border-white/5">
+              <div className="mt-2 p-3 bg-white/5 rounded-2xl border border-white/5 text-left">
                 <p className="text-[10px] uppercase tracking-widest font-black text-green-500/70 mb-1">Producto</p>
                 <p className="font-bold text-zinc-200 line-clamp-1">{itemName}</p>
               </div>
             </DialogHeader>
           </div>
           
-          <form onSubmit={handleConfirm} className="p-6 pt-2 space-y-6">
+          <form onSubmit={handleConfirm} className="p-4 sm:p-6 pt-2 space-y-4 sm:space-y-6">
             <div className="space-y-4">
               <div className="relative group">
                 <div className="absolute inset-0 bg-green-500/5 blur-2xl group-focus-within:bg-green-500/10 transition-all rounded-full" />
-                <div className="relative bg-zinc-900/50 border border-white/5 rounded-[2rem] p-6 text-center shadow-inner">
+                <div className="relative bg-zinc-900/50 border border-white/5 rounded-[2rem] p-4 sm:p-6 text-center shadow-inner">
                   <Label htmlFor="quantity-input" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 block mb-2">
                     Ingresar Cantidad
                   </Label>
@@ -97,7 +97,12 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
                         setQuantity(val);
                       }
                     }}
-                    className="text-5xl md:text-5xl font-black h-20 text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-800"
+                    onFocus={(e) => {
+                      setTimeout(() => {
+                        e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                      }, 100);
+                    }}
+                    className="text-3xl sm:text-5xl font-black h-16 sm:h-20 text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-800"
                     placeholder="0.000"
                     autoComplete="off"
                   />
