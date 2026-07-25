@@ -315,7 +315,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Optimistic render: if cached user exists, show children while session validates
+  // If session verification has completed and there is no valid session, redirect to login
+  if (!loading && !session) {
+    localStorage.removeItem('cobro_last_user_id');
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Optimistic render: if cached user exists while session verification is still in progress, show children
   if (hasCachedUser && !profileMissing) {
     return <>{children}</>;
   }

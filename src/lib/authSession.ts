@@ -33,11 +33,16 @@ export async function getSessionSafe(): Promise<Session | null> {
           const { data, error } = await supabase.auth.getSession();
           if (error) {
             console.warn('[authSession] getSession error:', error.message);
-            break;
+            _lastSessionResult = null;
+            _lastSessionTs = 0;
+            return null;
           }
           if (data.session) {
             _lastSessionResult = data.session;
             _lastSessionTs = Date.now();
+          } else {
+            _lastSessionResult = null;
+            _lastSessionTs = 0;
           }
           return data.session;
         } catch (e: any) {
@@ -49,11 +54,13 @@ export async function getSessionSafe(): Promise<Session | null> {
           }
           if (!isAbort) {
             console.warn('[authSession] getSession falló definitivamente:', e?.message);
+            _lastSessionResult = null;
+            _lastSessionTs = 0;
           }
           break;
         }
       }
-      return _lastSessionResult;
+      return null;
     })().finally(() => {
       _pendingSessionPromise = null;
     });
