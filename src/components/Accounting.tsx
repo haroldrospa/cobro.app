@@ -333,8 +333,6 @@ function AccountingContent() {
         }
     };
 
-    console.log("=== VERSION DE DEPURACION DE IA DE LA CONTABILIDAD CARGADA ===");
-
     const handleDeleteSupplier = async (id: string, name: string) => {
         if (confirm(`¿Estás seguro de eliminar el proveedor "${name}"?`)) {
             try {
@@ -996,7 +994,7 @@ function AccountingContent() {
 
 Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date": "2023-01-01", "description": "Compra de agua", "amount": 100, "supplier_name": "Agua Pura", "invoice_number": "B0100000001", "category": "Otros"}`;
 
-        const maxRetries = 4;
+        const maxRetries = 5;
         let attempt = 0;
 
         while (attempt <= maxRetries) {
@@ -1008,6 +1006,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 },
                 body: JSON.stringify({
                     model: "qwen/qwen3.6-27b",
+                    response_format: { type: "json_object" },
                     messages: [
                         {
                             role: "user",
@@ -1028,6 +1027,14 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 
                 // Eliminar bloques de pensamiento de modelos de razonamiento (<think>...</think>)
                 content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+                if (content.includes('<think>')) {
+                    const braceIdx = content.indexOf('{');
+                    if (braceIdx !== -1) {
+                        content = content.substring(braceIdx);
+                    } else {
+                        content = content.replace(/<think>[\s\S]*/gi, '').trim();
+                    }
+                }
                 content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
                 
                 // Extraer primer JSON equilibrado
@@ -1069,14 +1076,32 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 let clean = extractJSON(content);
                 // Sanitizar comas sobrantes antes de cierres (trailing commas)
                 clean = clean.replace(/,\s*([\]}])/g, '$1');
-                return JSON.parse(clean);
+
+                const firstBrace = clean.indexOf('{');
+                const lastBrace = clean.lastIndexOf('}');
+                if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+                    throw new Error("No se pudo extraer una estructura JSON válida de la respuesta de la IA.");
+                }
+                clean = clean.substring(firstBrace, lastBrace + 1);
+
+                try {
+                    return JSON.parse(clean);
+                } catch (parseErr) {
+                    console.warn("Fallo al parsear JSON devuelto por Groq:", parseErr, "Raw clean:", clean);
+                    try {
+                        const sanitized = clean.replace(/[\r\n\t]+/g, ' ');
+                        return JSON.parse(sanitized);
+                    } catch (secErr) {
+                        throw new Error("La respuesta de la IA no tenía un formato JSON válido. Por favor reintenta.");
+                    }
+                }
             }
 
             const errorData = await response.json().catch(() => ({}));
             const errorMsg = JSON.stringify(errorData);
 
             if (response.status === 429) {
-                let waitMs = Math.pow(2, attempt + 1) * 5000;
+                let waitMs = Math.pow(2, attempt + 1) * 4000;
                 
                 // Extraer tiempo de espera con soporte para minutos y segundos (ej: 7m23.6s o 18.6s)
                 const minMatch = errorMsg.match(/try again in (?:(\d+)m)?\s*([\d\.]+)s?/i);
@@ -1089,12 +1114,12 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     }
                 }
 
-                // Detectar si se superó la cuota diaria (TPD - Tokens Per Day)
-                const isDailyLimit = errorMsg.includes("tokens per day") || errorMsg.includes("TPD") || waitMs > 60000;
+                // Detectar si se superó la cuota diaria verdaderamente (TPD / RPD o espera > 10 min)
+                const isDailyLimit = /tokens per day|TPD|requests per day|RPD/i.test(errorMsg) || waitMs > 600000;
 
                 if (isDailyLimit) {
                     const waitMin = Math.ceil(waitMs / 60000);
-                    throw new Error(`Se agotó la cuota diaria gratuita de IA en Groq (200,000 tokens/día). Reintenta en ~${waitMin} min o introduce tu propia Groq API Key en Configuración.`);
+                    throw new Error(`Se agotó la cuota diaria gratuita de IA en Groq. Reintenta en ~${waitMin} min o introduce tu propia Groq API Key en Configuración.`);
                 }
 
                 if (attempt < maxRetries) {

@@ -461,7 +461,16 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       let content = resData.choices?.[0]?.message?.content;
       if (!content) throw new Error("Respuesta vacía de Groq");
 
-      let clean = content.replace(/```json/gi, '').replace(/```/g, '').trim();
+      let clean = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      if (clean.includes('<think>')) {
+        const braceIdx = clean.indexOf('{');
+        if (braceIdx !== -1) {
+          clean = clean.substring(braceIdx);
+        } else {
+          clean = clean.replace(/<think>[\s\S]*/gi, '').trim();
+        }
+      }
+      clean = clean.replace(/```json/gi, '').replace(/```/g, '').trim();
       
       const extractJSON = (str: string): string => {
         const firstBrace = str.indexOf('{');
