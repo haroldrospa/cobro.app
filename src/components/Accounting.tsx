@@ -2094,6 +2094,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
             {/* Dialog: Add Expense */}
             <Dialog open={isAddExpenseOpen} onOpenChange={(open) => {
+                setIsAddExpenseOpen(open);
                 if (!open) {
                     setIsScanning(false);
                     setScanQueue([]);
