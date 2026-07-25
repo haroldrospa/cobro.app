@@ -3058,32 +3058,32 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 setIsDetailsOpen(open);
                 if (!open) setIsEditingExpenseDetails(false);
             }}>
-                <DialogContent className="sm:max-w-[520px] p-0 overflow-hidden bg-card border border-border/60 rounded-3xl">
-                    <DialogHeader className="p-6 pb-4 border-b border-border/30 bg-muted/20">
-                        <div className="flex justify-between items-start gap-4">
-                            <div>
+                <DialogContent className="sm:max-w-[520px] p-0 overflow-hidden bg-card border border-border/60 rounded-3xl max-h-[90dvh] flex flex-col">
+                    <DialogHeader className="p-4 sm:p-6 pb-4 border-b border-border/30 bg-muted/20 pr-12 shrink-0">
+                        <div className="flex flex-col gap-1 pr-4">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <DialogTitle className="text-xl font-black tracking-tight flex items-center gap-2">
                                     <span>{isEditingExpenseDetails ? "✏️ Editar Gasto" : "📄 Detalle del Gasto"}</span>
                                 </DialogTitle>
-                                <DialogDescription className="text-xs font-semibold text-muted-foreground mt-1">
-                                    {isEditingExpenseDetails ? "Modifica los campos del comprobante de gasto" : "Información del comprobante de compra"}
-                                </DialogDescription>
+                                {!isEditingExpenseDetails && selectedExpenseForDetails?.category && (
+                                    <span className={`px-2.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-wider border ${
+                                        isReinvestment(selectedExpenseForDetails.category)
+                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                            : 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                    }`}>
+                                        {selectedExpenseForDetails.category}
+                                    </span>
+                                )}
                             </div>
-                            {!isEditingExpenseDetails && selectedExpenseForDetails?.category && (
-                                <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider border ${
-                                    isReinvestment(selectedExpenseForDetails.category)
-                                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                        : 'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                                }`}>
-                                    {selectedExpenseForDetails.category}
-                                </span>
-                            )}
+                            <DialogDescription className="text-xs font-semibold text-muted-foreground">
+                                {isEditingExpenseDetails ? "Modifica los campos del comprobante de gasto" : "Información del comprobante de compra"}
+                            </DialogDescription>
                         </div>
                     </DialogHeader>
                     
                     {isEditingExpenseDetails ? (
                         /* EDIT MODE FORM */
-                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(90dvh-130px)] flex-1">
                             <div className="space-y-1.5">
                                 <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                                     Concepto / Descripción *
@@ -3240,7 +3240,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
                     ) : (
                         /* READ-ONLY VIEW MODE */
-                        <div className="p-6 space-y-5">
+                        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto max-h-[calc(90dvh-130px)] flex-1">
                             {/* Summary details */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
@@ -3352,7 +3352,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
                     )}
                     
-                    <DialogFooter className="p-4 border-t border-border/30 bg-muted/10 flex flex-row items-center justify-between gap-2">
+                    <DialogFooter className="p-4 border-t border-border/30 bg-muted/10 flex flex-row items-center justify-between gap-2 shrink-0">
                         {isEditingExpenseDetails ? (
                             <>
                                 <Button
@@ -3405,7 +3405,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
             {/* Dialog: Add/Edit Fixed Expense */}
             <Dialog open={isAddFixedOpen} onOpenChange={setIsAddFixedOpen}>
-                <DialogContent className="sm:max-w-[425px] rounded-2xl border border-border/50">
+                <DialogContent className="sm:max-w-[425px] rounded-2xl border border-border/50 max-h-[90dvh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-left">
                             {editingFixed ? "Editar Gasto Fijo" : "Registrar Gasto Fijo Mensual"}
@@ -3486,7 +3486,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
             {/* Dialog: Registrar Deuda */}
             <Dialog open={isAddDebtOpen} onOpenChange={setIsAddDebtOpen}>
-                <DialogContent className="sm:max-w-[425px] rounded-2xl border border-border/50">
+                <DialogContent className="sm:max-w-[425px] rounded-2xl border border-border/50 max-h-[90dvh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-left flex items-center gap-2">
                             <Building2 className="h-5 w-5 text-primary" />
@@ -3677,7 +3677,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
             {/* Dialog: Registrar Pago / Abono a Deuda */}
             <Dialog open={isPayDebtOpen} onOpenChange={setIsPayDebtOpen}>
-                <DialogContent className="sm:max-w-[400px] rounded-2xl border border-border/50">
+                <DialogContent className="sm:max-w-[400px] rounded-2xl border border-border/50 max-h-[90dvh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-left flex items-center gap-2">
                             <DollarSign className="h-5 w-5 text-emerald-500" />
