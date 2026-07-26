@@ -972,6 +972,8 @@ function AccountingContent() {
                 if (uploadedUrl) {
                     finalImageUrl = uploadedUrl;
                 }
+            }
+
             const saveDate = newExpense.date instanceof Date ? newExpense.date : new Date(newExpense.date || Date.now());
 
             await createExpense({
