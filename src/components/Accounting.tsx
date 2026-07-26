@@ -564,6 +564,7 @@ function AccountingContent() {
     useEffect(() => {
         if (scanQueue.length > 0 && scanQueue[reviewIndex]) {
             const item = scanQueue[reviewIndex];
+            const previewUrl = item.imageUrl || item.extractedData?.image_url || (item.file ? URL.createObjectURL(item.file) : null);
             if ((item.status === 'success' || item.status === 'saved') && item.extractedData) {
                 const data = item.extractedData;
                 setNewExpense(prev => ({
@@ -574,18 +575,19 @@ function AccountingContent() {
                     supplier_name: data.supplier_name || '',
                     invoice_number: data.invoice_number || '',
                     category: data.category || 'Otros',
-                    image_url: data.image_url || null
+                    image_url: data.image_url || previewUrl || null
                 }));
             } else if (item.status === 'error') {
-                toast({ title: "Error", description: item.error || "No se pudo leer esta factura. Ingrésala manual.", variant: "destructive" });
+                toast({ title: "Error de escaneo", description: item.error || "No se pudo leer esta factura. Ingrésala manualmente.", variant: "destructive" });
+                const fileNameWithoutExt = item.file?.name ? item.file.name.replace(/\.[^/.]+$/, "") : '';
                 setNewExpense({
                     date: new Date(),
-                    description: '',
+                    description: fileNameWithoutExt,
                     amount: '',
                     category: 'Inventario',
                     supplier_name: '',
                     invoice_number: '',
-                    image_url: null
+                    image_url: previewUrl
                 });
             }
         }
@@ -701,6 +703,16 @@ function AccountingContent() {
                 }
             }
 
+            let finalImageUrl = newExpense.image_url;
+            const currentItem = scanQueue.length > 0 ? scanQueue[reviewIndex] : null;
+
+            if ((!finalImageUrl || finalImageUrl.startsWith('blob:')) && currentItem?.file) {
+                const uploadedUrl = await uploadReceiptImage(currentItem.file);
+                if (uploadedUrl) {
+                    finalImageUrl = uploadedUrl;
+                }
+            }
+
             await createExpense({
                 date: newExpense.date || new Date(),
                 description: newExpense.description,
@@ -708,7 +720,7 @@ function AccountingContent() {
                 category: newExpense.category || 'Otros',
                 supplier_id: finalSupplierId,
                 invoice_number: newExpense.invoice_number,
-                image_url: newExpense.image_url
+                image_url: finalImageUrl
             });
 
             console.log("Expense created successfully via mutation");
@@ -717,9 +729,8 @@ function AccountingContent() {
 
             if (scanQueue.length > 0) {
                 // Mark current item as saved in scanQueue
-                const currentItem = scanQueue[reviewIndex];
                 if (currentItem) {
-                    setScanQueue(prev => prev.map(i => i.id === currentItem.id ? { ...i, status: 'saved' } : i));
+                    setScanQueue(prev => prev.map(i => i.id === currentItem.id ? { ...i, status: 'saved', imageUrl: finalImageUrl || i.imageUrl } : i));
                 }
 
                 // Find the next item that is 'success' or 'error' and not 'saved'
@@ -1263,17 +1274,23 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 // Marcar como escaneando
                 setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'scanning', statusMessage: undefined } : q));
 
+                let imageUrl = item.imageUrl;
+
                 try {
+                    console.log(`Uploading receipt image to storage...`);
+                    if (!imageUrl || imageUrl.startsWith('blob:')) {
+                        const uploadedUrl = await uploadReceiptImage(item.file);
+                        if (uploadedUrl) imageUrl = uploadedUrl;
+                    }
+
                     console.log(`Scanning item ${item.file.name}...`);
                     const data = await scanInvoice(item.file, apiKey, (statusMsg) => {
                         setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, statusMessage: statusMsg } : q));
                     });
 
-                    console.log(`Uploading receipt image to storage...`);
-                    const imageUrl = await uploadReceiptImage(item.file);
-                    const dataWithImage = { ...data, image_url: imageUrl };
+                    const dataWithImage = { ...data, image_url: imageUrl || item.imageUrl };
 
-                    setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'success', extractedData: dataWithImage, statusMessage: undefined } : q));
+                    setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'success', extractedData: dataWithImage, imageUrl: imageUrl || item.imageUrl, statusMessage: undefined } : q));
                     console.log(`✅ Factura procesada exitosamente.`);
 
                     // Pausa de 2.5s entre solicitudes para evitar sobrepasar límites de tokens por minuto (TPM)
@@ -1283,12 +1300,18 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 } catch (err: any) {
                     console.error(`❌ Error procesando factura (${item.file.name}):`, err);
                     const errorMsg = err.message || "Error desconocido";
-                    setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: errorMsg, statusMessage: undefined } : q));
+
+                    if (!imageUrl || imageUrl.startsWith('blob:')) {
+                        const uploadedUrl = await uploadReceiptImage(item.file);
+                        if (uploadedUrl) imageUrl = uploadedUrl;
+                    }
+
+                    setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: errorMsg, imageUrl: imageUrl || item.imageUrl, statusMessage: undefined } : q));
 
                     if (itemsToProcess.length === 1) {
                         toast({
                             title: "Error de Escaneo",
-                            description: errorMsg.includes("429") ? "Límite de solicitudes por minuto alcanzado. Haz clic en Reintentar." :
+                            description: errorMsg.includes("429") ? "Límite de solicitudes por minuto alcanzado. Haz clic en Reintentar o ingrésala manual." :
                                          errorMsg.includes("401") ? "API Key inválida o vencida." :
                                          errorMsg.includes("413") ? "Imagen demasiado grande." :
                                          errorMsg,
@@ -1309,11 +1332,20 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
-        const newItems: QueueItem[] = Array.from(files).map(f => ({
-            id: Math.random().toString(36).substr(2, 9),
-            file: f,
-            status: 'pending'
-        }));
+        const newItems: QueueItem[] = Array.from(files).map(f => {
+            let blobUrl: string | undefined = undefined;
+            try {
+                blobUrl = URL.createObjectURL(f);
+            } catch (e) {
+                console.error("Error creating Object URL:", e);
+            }
+            return {
+                id: Math.random().toString(36).substr(2, 9),
+                file: f,
+                status: 'pending',
+                imageUrl: blobUrl
+            };
+        });
 
         const prevLength = scanQueue.length;
         setScanQueue(prev => [...prev, ...newItems]);
@@ -2669,34 +2701,58 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         <p className="text-sm font-semibold">En cola de procesamiento</p>
                                         <p className="text-xs">Se iniciará el escaneo automáticamente en unos momentos.</p>
                                     </div>
-                                ) : scanQueue[reviewIndex]?.status === 'error' ? (
-                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-4 text-center p-6 bg-red-500/5 rounded-2xl border border-red-500/20">
-                                        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
-                                            <AlertCircle className="h-6 w-6" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-bold text-foreground">No se pudo procesar esta factura</p>
-                                            <p className="text-xs text-muted-foreground max-w-sm line-clamp-3">
-                                                {scanQueue[reviewIndex]?.error || "Ocurrió un error al comunicarse con la IA de Groq."}
-                                            </p>
-                                        </div>
-                                        <Button
-                                            size="sm"
-                                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-2 rounded-xl"
-                                            onClick={() => handleRetrySingleItem(scanQueue[reviewIndex].id)}
-                                            disabled={isScanning}
-                                        >
-                                            <RefreshCw className="h-4 w-4" /> Reintentar escaneo de esta factura
-                                        </Button>
-                                    </div>
                                 ) : (
                                     /* Form for success/error/saved */
                                     <div className="flex flex-col gap-3">
+                                        {scanQueue[reviewIndex]?.status === 'error' && (
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-500 gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-xs text-foreground">No se pudo escanear automáticamente</p>
+                                                        <p className="text-[10px] text-muted-foreground truncate max-w-[200px] sm:max-w-[280px]">
+                                                            {scanQueue[reviewIndex]?.error || "Ocurrió un error en el escaneo."}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        type="button"
+                                                        className="h-7 text-[11px] font-bold border-red-500/40 text-red-400 hover:bg-red-500/20 gap-1 rounded-lg"
+                                                        onClick={() => handleRetrySingleItem(scanQueue[reviewIndex].id)}
+                                                        disabled={isScanning}
+                                                    >
+                                                        <RefreshCw className="h-3 w-3" /> Reintentar
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="flex items-center justify-between pb-1 border-b border-border/30">
                                             <h4 className="font-black text-xs uppercase tracking-wider text-muted-foreground">Datos del Gasto Seleccionado</h4>
-                                            <span className="text-[10px] font-bold text-muted-foreground max-w-[200px] truncate">
-                                                {scanQueue[reviewIndex]?.file.name}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                {newExpense.image_url && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 px-2 rounded-lg gap-1"
+                                                        onClick={() => {
+                                                            setPreviewImageUrl(newExpense.image_url);
+                                                            setPreviewImageScale(1);
+                                                            setPreviewImageRotation(0);
+                                                            setPreviewImagePosition({ x: 0, y: 0 });
+                                                        }}
+                                                    >
+                                                        <Eye className="h-3 w-3" /> Ver Foto Ampliada
+                                                    </Button>
+                                                )}
+                                                <span className="text-[10px] font-bold text-muted-foreground max-w-[150px] truncate">
+                                                    {scanQueue[reviewIndex]?.file.name}
+                                                </span>
+                                            </div>
                                         </div>
 
                                         {/* Type Selector */}
