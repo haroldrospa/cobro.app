@@ -160,6 +160,22 @@ function AccountingContent() {
         }
     };
 
+    const handleDeductInvoiceFromCuadre = (targetDate: Date, cuadreLabel?: string) => {
+        setNewExpense({
+            description: cuadreLabel ? `Factura descontada de cuadre (${cuadreLabel})` : 'Factura descontada del cuadre',
+            amount: '',
+            category: 'Inventario',
+            supplier_name: '',
+            invoice_number: '',
+            date: targetDate
+        });
+        setScanQueue([]);
+        setReviewIndex(0);
+        setIsScanning(false);
+        setExpenseType('reinversion');
+        setIsAddExpenseOpen(true);
+    };
+
     const { 
         fixedExpenses, 
         createFixedExpense, 
@@ -1963,17 +1979,28 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 Control de cierres de caja (ingresos) comparados con egresos diarios para {currentDate ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}.
                             </p>
                         </div>
-                        <Button
-                            size="sm"
-                            onClick={() => {
-                                setDeductForm({ amount: '', reason: '', date: format(currentDate || new Date(), 'yyyy-MM-dd') });
-                                setIsDeductOpen(true);
-                            }}
-                            className="bg-amber-600 hover:bg-amber-500 text-white font-black uppercase text-xs h-10 px-4 rounded-xl gap-2 shadow-sm shrink-0 active:scale-95 transition-all"
-                        >
-                            <TrendingDown className="h-4 w-4" />
-                            Descontar Dinero al Cuadre
-                        </Button>
+                        <div className="flex flex-wrap gap-2 shrink-0">
+                            <Button
+                                size="sm"
+                                onClick={() => handleDeductInvoiceFromCuadre(currentDate || new Date())}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-xs h-10 px-4 rounded-xl gap-2 shadow-md active:scale-95 transition-all"
+                            >
+                                <Receipt className="h-4 w-4" />
+                                Descontar Factura al Cuadre
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    setDeductForm({ amount: '', reason: '', date: format(currentDate || new Date(), 'yyyy-MM-dd') });
+                                    setIsDeductOpen(true);
+                                }}
+                                className="border-amber-500/40 text-amber-500 hover:bg-amber-500/10 font-bold text-xs h-10 px-3 rounded-xl gap-1.5 active:scale-95 transition-all"
+                            >
+                                <TrendingDown className="h-4 w-4" />
+                                Retiro Directo
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Monthly Summary KPI Cards */}
@@ -2083,7 +2110,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                     <TableCell className="py-4">
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-sm capitalize text-foreground">
-                                                                {format(day.dateObj, 'EEEE, d "de" MMMM', { locale: es })}
+                                                                {format(day.dateObj, "EEEE, d 'de' MMMM", { locale: es })}
                                                             </span>
                                                             <span className="text-[10px] text-muted-foreground font-semibold">
                                                                 {day.dateKey}
@@ -2130,17 +2157,30 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-right py-4 pr-6">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-8 px-3 rounded-xl text-xs font-bold text-primary hover:bg-primary/10 gap-1.5"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setSelectedDayDetail(day);
-                                                            }}
-                                                        >
-                                                            <Eye className="h-3.5 w-3.5" /> Detalle
-                                                        </Button>
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-8 px-2.5 rounded-xl text-xs font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 gap-1"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeductInvoiceFromCuadre(day.dateObj, format(day.dateObj, 'dd/MM/yyyy'));
+                                                                }}
+                                                            >
+                                                                <Receipt className="h-3.5 w-3.5" /> Descontar Factura
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-8 px-3 rounded-xl text-xs font-bold text-primary hover:bg-primary/10 gap-1.5"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedDayDetail(day);
+                                                                }}
+                                                            >
+                                                                <Eye className="h-3.5 w-3.5" /> Detalle
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -2159,7 +2199,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             <div className="flex justify-between items-start border-b border-border/30 pb-2">
                                                 <div>
                                                     <h4 className="font-bold text-sm capitalize text-foreground">
-                                                        {format(day.dateObj, 'EEEE, d "de" MMMM', { locale: es })}
+                                                        {format(day.dateObj, "EEEE, d 'de' MMMM", { locale: es })}
                                                     </h4>
                                                     <span className="text-[10px] text-muted-foreground font-semibold">{day.dateKey}</span>
                                                 </div>
@@ -2187,9 +2227,22 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                         day.totalDifference === 0 ? 'Caja cuadrada' : day.totalDifference > 0 ? `Sobrante +$${day.totalDifference}` : `Faltante -$${Math.abs(day.totalDifference)}`
                                                     )}
                                                 </span>
-                                                <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold text-primary gap-1">
-                                                    <Eye className="h-3 w-3" /> Ver Detalle
-                                                </Button>
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-7 text-[10px] font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 gap-1"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeductInvoiceFromCuadre(day.dateObj, format(day.dateObj, 'dd/MM/yyyy'));
+                                                        }}
+                                                    >
+                                                        <Receipt className="h-3 w-3" /> Descontar Factura
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold text-primary gap-1">
+                                                        <Eye className="h-3 w-3" /> Ver Detalle
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -4439,7 +4492,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             <DialogHeader>
                                 <DialogTitle className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
                                     <Calendar className="h-5 w-5 text-primary" />
-                                    Detalle Diario: {format(selectedDayDetail.dateObj, 'EEEE, d "de" MMMM yyyy', { locale: es })}
+                                    Detalle Diario: {format(selectedDayDetail.dateObj, "EEEE, d 'de' MMMM yyyy", { locale: es })}
                                 </DialogTitle>
                                 <DialogDescription className="text-xs text-muted-foreground">
                                     Desglose completo de cierres de caja (ingresos) y gastos (egresos) registrados este día.
@@ -4466,10 +4519,21 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
                             {/* Section 1: Cuadres de Caja */}
                             <div className="space-y-3">
-                                <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                                    <Wallet className="h-4 w-4 text-emerald-500" />
-                                    Cierres de Caja (Cuadres) del Día ({selectedDayDetail.closings.length})
-                                </h4>
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                        <Wallet className="h-4 w-4 text-emerald-500" />
+                                        Cierres de Caja (Cuadres) del Día ({selectedDayDetail.closings.length})
+                                    </h4>
+                                    <Button
+                                        size="sm"
+                                        className="h-7 text-[10px] font-black uppercase bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg gap-1 shadow-sm"
+                                        onClick={() => {
+                                            handleDeductInvoiceFromCuadre(selectedDayDetail.dateObj, format(selectedDayDetail.dateObj, 'dd/MM/yyyy'));
+                                        }}
+                                    >
+                                        <Receipt className="h-3 w-3" /> Descontar Factura a este Cuadre
+                                    </Button>
+                                </div>
 
                                 {selectedDayDetail.closings.length === 0 ? (
                                     <div className="p-4 text-center bg-muted/10 rounded-xl text-xs text-muted-foreground italic">
@@ -4483,9 +4547,24 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                     <span className="text-foreground">
                                                         Cerrado por: {c.profile?.full_name || 'Cajero'}
                                                     </span>
-                                                    <span className="text-muted-foreground text-[10px]">
-                                                        {c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-muted-foreground text-[10px]">
+                                                            {c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''}
+                                                        </span>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-6 px-2 text-[9px] font-bold border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 rounded-md gap-1"
+                                                            onClick={() => {
+                                                                handleDeductInvoiceFromCuadre(
+                                                                    selectedDayDetail.dateObj,
+                                                                    `Cuadre ${c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''}`
+                                                                );
+                                                            }}
+                                                        >
+                                                            <Receipt className="h-3 w-3" /> Descontar Factura
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-border/30 text-[11px]">
                                                     <div>
