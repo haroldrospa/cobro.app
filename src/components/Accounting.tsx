@@ -706,9 +706,12 @@ function AccountingContent() {
             }
 
             const closingIncome = (closing.total_sales_cash || 0) + (closing.total_sales_card || 0) + (closing.total_sales_transfer || 0) + (closing.total_sales_other || 0);
+            const cashInSession = (typeof closing.actual_cash === 'number' && closing.actual_cash > 0) 
+                ? closing.actual_cash 
+                : (closing.total_sales_cash || 0);
 
             map[dateKey].closings.push(closing);
-            map[dateKey].totalSalesCash += (closing.total_sales_cash || 0);
+            map[dateKey].totalSalesCash += cashInSession;
             map[dateKey].totalSalesCard += (closing.total_sales_card || 0);
             map[dateKey].totalSalesTransfer += (closing.total_sales_transfer || 0);
             map[dateKey].totalSalesOther += (closing.total_sales_other || 0);
@@ -2005,9 +2008,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
                     {/* Monthly Summary KPI Cards */}
                     {(() => {
-                        const totalMonthlyGrossClosingIncome = dailyDataMap.reduce((sum, d) => sum + d.totalGrossClosingIncome, 0);
+                        const totalMonthlySalesCash = dailyDataMap.reduce((sum, d) => sum + (d.totalSalesCash || d.totalGrossClosingIncome), 0);
                         const totalMonthlyWithdrawals = dailyDataMap.reduce((sum, d) => sum + d.totalWithdrawals, 0);
-                        const totalMonthlyNetClosingIncome = dailyDataMap.reduce((sum, d) => sum + d.totalClosingIncome, 0);
+                        const totalMonthlyNetCash = totalMonthlySalesCash - totalMonthlyWithdrawals;
                         const totalMonthlyClosings = dailyDataMap.reduce((sum, d) => sum + d.closings.length, 0);
                         const totalMonthlyDifferences = dailyDataMap.reduce((sum, d) => sum + d.totalDifference, 0);
 
@@ -2016,11 +2019,11 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden relative">
                                     <CardHeader className="pb-1 py-3 text-left">
                                         <CardTitle className="text-[10px] font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
-                                            <ArrowUpRight className="h-3.5 w-3.5" /> Ingresos por Cuadres
+                                            <ArrowUpRight className="h-3.5 w-3.5" /> Efectivo Real (Caja)
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="py-2 pb-4 text-left">
-                                        <span className="text-2xl font-black text-emerald-500">${totalMonthlyGrossClosingIncome.toLocaleString()}</span>
+                                        <span className="text-2xl font-black text-emerald-500">${totalMonthlySalesCash.toLocaleString()}</span>
                                         <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">
                                             {totalMonthlyClosings} cuadre{totalMonthlyClosings !== 1 ? 's' : ''} registrado{totalMonthlyClosings !== 1 ? 's' : ''}
                                         </span>
@@ -2042,14 +2045,14 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 <Card className="bg-primary/5 border-primary/20 overflow-hidden relative">
                                     <CardHeader className="pb-1 py-3 text-left">
                                         <CardTitle className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
-                                            <Wallet className="h-3.5 w-3.5" /> Total Neto en Cuadres
+                                            <Wallet className="h-3.5 w-3.5" /> Efectivo Neto Disponible
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="py-2 pb-4 text-left">
                                         <span className="text-2xl font-black text-primary">
-                                            ${totalMonthlyNetClosingIncome.toLocaleString()}
+                                            ${totalMonthlyNetCash.toLocaleString()}
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Total disponible tras descuentos</span>
+                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Efectivo tras descuentos</span>
                                     </CardContent>
                                 </Card>
 
@@ -2093,60 +2096,64 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         <TableHeader className="bg-muted/30">
                                             <TableRow className="border-b border-border/40">
                                                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
-                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-emerald-500">Ingreso Cuadre (Bruto)</TableHead>
+                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-emerald-500">Efectivo Real (Caja)</TableHead>
                                                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-amber-500">Descontado</TableHead>
-                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-primary">Total Neto Cuadre</TableHead>
+                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-primary">Efectivo Neto Disponible</TableHead>
                                                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-center">Diferencia Caja</TableHead>
                                                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right pr-6">Acción</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {dailyDataMap.map((day) => (
-                                                <TableRow
-                                                    key={day.dateKey}
-                                                    className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/30"
-                                                    onClick={() => setSelectedDayDetail(day)}
-                                                >
-                                                    <TableCell className="py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-sm capitalize text-foreground">
-                                                                {format(day.dateObj, "EEEE, d 'de' MMMM", { locale: es })}
-                                                            </span>
-                                                            <span className="text-[10px] text-muted-foreground font-semibold">
-                                                                {day.dateKey}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right py-4">
-                                                        <div className="flex flex-col items-end">
-                                                            <span className="font-black text-sm text-emerald-500">
-                                                                ${day.totalGrossClosingIncome.toLocaleString()}
-                                                            </span>
-                                                            <span className="text-[10px] text-muted-foreground font-semibold">
-                                                                {day.closings.length} cuadre{day.closings.length !== 1 ? 's' : ''}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right py-4">
-                                                        <div className="flex flex-col items-end">
-                                                            <span className={`font-black text-sm ${day.totalWithdrawals > 0 ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                                                                {day.totalWithdrawals > 0 ? `-$${day.totalWithdrawals.toLocaleString()}` : '$0.00'}
-                                                            </span>
-                                                            <span className="text-[10px] text-muted-foreground font-semibold">
-                                                                {day.withdrawals.length} descuento{day.withdrawals.length !== 1 ? 's' : ''}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right py-4">
-                                                        <div className="flex flex-col items-end">
-                                                            <span className="font-black text-base text-primary">
-                                                                ${day.totalClosingIncome.toLocaleString()}
-                                                            </span>
-                                                            <span className="text-[9px] text-muted-foreground font-semibold">
-                                                                Neto disponible
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
+                                            {dailyDataMap.map((day) => {
+                                                const realCash = day.totalSalesCash || day.totalGrossClosingIncome;
+                                                const netCash = realCash - day.totalWithdrawals;
+
+                                                return (
+                                                    <TableRow
+                                                        key={day.dateKey}
+                                                        className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/30"
+                                                        onClick={() => setSelectedDayDetail(day)}
+                                                    >
+                                                        <TableCell className="py-4">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-sm capitalize text-foreground">
+                                                                    {format(day.dateObj, "EEEE, d 'de' MMMM", { locale: es })}
+                                                                </span>
+                                                                <span className="text-[10px] text-muted-foreground font-semibold">
+                                                                    {day.dateKey}
+                                                                </span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right py-4">
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="font-black text-sm text-emerald-500">
+                                                                    ${realCash.toLocaleString()}
+                                                                </span>
+                                                                <span className="text-[10px] text-muted-foreground font-semibold">
+                                                                    {day.closings.length} cuadre{day.closings.length !== 1 ? 's' : ''}
+                                                                </span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right py-4">
+                                                            <div className="flex flex-col items-end">
+                                                                <span className={`font-black text-sm ${day.totalWithdrawals > 0 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                                                                    {day.totalWithdrawals > 0 ? `-$${day.totalWithdrawals.toLocaleString()}` : '$0.00'}
+                                                                </span>
+                                                                <span className="text-[10px] text-muted-foreground font-semibold">
+                                                                    {day.withdrawals.length} descuento{day.withdrawals.length !== 1 ? 's' : ''}
+                                                                </span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right py-4">
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="font-black text-base text-primary">
+                                                                    ${netCash.toLocaleString()}
+                                                                </span>
+                                                                <span className="text-[9px] text-muted-foreground font-semibold">
+                                                                    Efectivo disponible
+                                                                </span>
+                                                            </div>
+                                                        </TableCell>
                                                     <TableCell className="text-center py-4">
                                                         {day.closings.length === 0 ? (
                                                             <span className="text-[11px] text-muted-foreground italic">-</span>
@@ -2192,69 +2199,74 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                     </Table>
                                 </div>
 
-                                {/* Mobile Cards View */}
+                                 {/* Mobile Cards View */}
                                 <div className="md:hidden space-y-3">
-                                    {dailyDataMap.map((day) => (
-                                        <div
-                                            key={day.dateKey}
-                                            onClick={() => setSelectedDayDetail(day)}
-                                            className="bg-card border border-border/50 rounded-2xl p-4 space-y-3 shadow-sm hover:border-primary/40 cursor-pointer transition-all"
-                                        >
-                                            <div className="flex justify-between items-start border-b border-border/30 pb-2">
-                                                <div>
-                                                    <h4 className="font-bold text-sm capitalize text-foreground">
-                                                        {format(day.dateObj, "EEEE, d 'de' MMMM", { locale: es })}
-                                                    </h4>
-                                                    <span className="text-[10px] text-muted-foreground font-semibold">{day.dateKey}</span>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-xs font-bold text-muted-foreground block">Total Neto Cuadre</span>
-                                                    <span className="text-base font-black text-primary">
-                                                        ${day.totalClosingIncome.toLocaleString()}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                    {dailyDataMap.map((day) => {
+                                        const realCash = day.totalSalesCash || day.totalGrossClosingIncome;
+                                        const netCash = realCash - day.totalWithdrawals;
 
-                                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                                <div className="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Ingreso Bruto</span>
-                                                    <span className="font-black text-sm text-emerald-500 block mt-0.5">${day.totalGrossClosingIncome.toLocaleString()}</span>
-                                                    <span className="text-[9px] text-muted-foreground block">{day.closings.length} cierres</span>
+                                        return (
+                                            <div
+                                                key={day.dateKey}
+                                                onClick={() => setSelectedDayDetail(day)}
+                                                className="bg-card border border-border/50 rounded-2xl p-4 space-y-3 shadow-sm hover:border-primary/40 cursor-pointer transition-all"
+                                            >
+                                                <div className="flex justify-between items-start border-b border-border/30 pb-2">
+                                                    <div>
+                                                        <h4 className="font-bold text-sm capitalize text-foreground">
+                                                            {format(day.dateObj, "EEEE, d 'de' MMMM", { locale: es })}
+                                                        </h4>
+                                                        <span className="text-[10px] text-muted-foreground font-semibold">{day.dateKey}</span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-xs font-bold text-muted-foreground block">Efectivo Neto</span>
+                                                        <span className="text-base font-black text-primary">
+                                                            ${netCash.toLocaleString()}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div className="p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                                                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Descontado</span>
-                                                    <span className="font-black text-sm text-amber-500 block mt-0.5">
-                                                        {day.totalWithdrawals > 0 ? `-$${day.totalWithdrawals.toLocaleString()}` : '$0.00'}
-                                                    </span>
-                                                    <span className="text-[9px] text-muted-foreground block">{day.withdrawals.length} descuentos</span>
-                                                </div>
-                                            </div>
 
-                                            <div className="flex justify-between items-center pt-1 text-xs">
-                                                <span className="text-[10px] text-muted-foreground font-semibold">
-                                                    {day.closings.length > 0 && (
-                                                        day.totalDifference === 0 ? 'Caja cuadrada' : day.totalDifference > 0 ? `Sobrante +$${day.totalDifference}` : `Faltante -$${Math.abs(day.totalDifference)}`
-                                                    )}
-                                                </span>
-                                                <div className="flex items-center gap-1">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-7 text-[10px] font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 gap-1"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeductInvoiceFromCuadre(day.dateObj, format(day.dateObj, 'dd/MM/yyyy'));
-                                                        }}
-                                                    >
-                                                        <Receipt className="h-3 w-3" /> Descontar Factura
-                                                    </Button>
-                                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold text-primary gap-1">
-                                                        <Eye className="h-3 w-3" /> Ver Detalle
-                                                    </Button>
+                                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                                    <div className="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                                                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Efectivo Real</span>
+                                                        <span className="font-black text-sm text-emerald-500 block mt-0.5">${realCash.toLocaleString()}</span>
+                                                        <span className="text-[9px] text-muted-foreground block">{day.closings.length} cierres</span>
+                                                    </div>
+                                                    <div className="p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                                                        <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Descontado</span>
+                                                        <span className="font-black text-sm text-amber-500 block mt-0.5">
+                                                            {day.totalWithdrawals > 0 ? `-$${day.totalWithdrawals.toLocaleString()}` : '$0.00'}
+                                                        </span>
+                                                        <span className="text-[9px] text-muted-foreground block">{day.withdrawals.length} descuentos</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex justify-between items-center pt-1 text-xs">
+                                                    <span className="text-[10px] text-muted-foreground font-semibold">
+                                                        {day.closings.length > 0 && (
+                                                            day.totalDifference === 0 ? 'Caja cuadrada' : day.totalDifference > 0 ? `Sobrante +$${day.totalDifference}` : `Faltante -$${Math.abs(day.totalDifference)}`
+                                                        )}
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-7 text-[10px] font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 gap-1"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeductInvoiceFromCuadre(day.dateObj, format(day.dateObj, 'dd/MM/yyyy'));
+                                                            }}
+                                                        >
+                                                            <Receipt className="h-3 w-3" /> Descontar Factura
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold text-primary gap-1">
+                                                            <Eye className="h-3 w-3" /> Ver Detalle
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -4509,24 +4521,31 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             </DialogHeader>
 
                             {/* Day KPI Summary Banner */}
-                            <div className="grid grid-cols-3 gap-3 p-3 bg-muted/20 border border-border/50 rounded-2xl text-center">
-                                <div>
-                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Ingreso Bruto Cuadre</span>
-                                    <span className="text-base sm:text-lg font-black text-emerald-500">${selectedDayDetail.totalGrossClosingIncome.toLocaleString()}</span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Total Descontado</span>
-                                    <span className="text-base sm:text-lg font-black text-amber-500">
-                                        {selectedDayDetail.totalWithdrawals > 0 ? `-$${selectedDayDetail.totalWithdrawals.toLocaleString()}` : '$0.00'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Total Neto en Cuadre</span>
-                                    <span className="text-base sm:text-lg font-black text-primary">
-                                        ${selectedDayDetail.totalClosingIncome.toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
+                            {(() => {
+                                const realCash = selectedDayDetail.totalSalesCash || selectedDayDetail.totalGrossClosingIncome;
+                                const netCash = realCash - selectedDayDetail.totalWithdrawals;
+
+                                return (
+                                    <div className="grid grid-cols-3 gap-3 p-3 bg-muted/20 border border-border/50 rounded-2xl text-center">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Efectivo Real (Caja)</span>
+                                            <span className="text-base sm:text-lg font-black text-emerald-500">${realCash.toLocaleString()}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Total Descontado</span>
+                                            <span className="text-base sm:text-lg font-black text-amber-500">
+                                                {selectedDayDetail.totalWithdrawals > 0 ? `-$${selectedDayDetail.totalWithdrawals.toLocaleString()}` : '$0.00'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Efectivo Neto Disponible</span>
+                                            <span className="text-base sm:text-lg font-black text-primary">
+                                                ${netCash.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Section 1: Cuadres de Caja */}
                             <div className="space-y-3">
