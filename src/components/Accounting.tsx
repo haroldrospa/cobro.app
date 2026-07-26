@@ -2005,9 +2005,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
                     {/* Monthly Summary KPI Cards */}
                     {(() => {
-                        const totalMonthlyClosingIncome = dailyDataMap.reduce((sum, d) => sum + d.totalClosingIncome, 0);
-                        const totalMonthlyExpenses = dailyDataMap.reduce((sum, d) => sum + d.totalExpenses, 0);
-                        const netMonthlyBalance = totalMonthlyClosingIncome - totalMonthlyExpenses;
+                        const totalMonthlyGrossClosingIncome = dailyDataMap.reduce((sum, d) => sum + d.totalGrossClosingIncome, 0);
+                        const totalMonthlyWithdrawals = dailyDataMap.reduce((sum, d) => sum + d.totalWithdrawals, 0);
+                        const totalMonthlyNetClosingIncome = dailyDataMap.reduce((sum, d) => sum + d.totalClosingIncome, 0);
                         const totalMonthlyClosings = dailyDataMap.reduce((sum, d) => sum + d.closings.length, 0);
                         const totalMonthlyDifferences = dailyDataMap.reduce((sum, d) => sum + d.totalDifference, 0);
 
@@ -2020,36 +2020,36 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="py-2 pb-4 text-left">
-                                        <span className="text-2xl font-black text-emerald-500">${totalMonthlyClosingIncome.toLocaleString()}</span>
+                                        <span className="text-2xl font-black text-emerald-500">${totalMonthlyGrossClosingIncome.toLocaleString()}</span>
                                         <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">
                                             {totalMonthlyClosings} cuadre{totalMonthlyClosings !== 1 ? 's' : ''} registrado{totalMonthlyClosings !== 1 ? 's' : ''}
                                         </span>
                                     </CardContent>
                                 </Card>
 
-                                <Card className="bg-red-500/5 border-red-500/20 overflow-hidden relative">
+                                <Card className="bg-amber-500/5 border-amber-500/20 overflow-hidden relative">
                                     <CardHeader className="pb-1 py-3 text-left">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-red-500 flex items-center gap-1.5">
-                                            <ArrowDownRight className="h-3.5 w-3.5" /> Egresos (Gastos)
+                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                                            <TrendingDown className="h-3.5 w-3.5" /> Descontado de Cuadres
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="py-2 pb-4 text-left">
-                                        <span className="text-2xl font-black text-red-500">${totalMonthlyExpenses.toLocaleString()}</span>
-                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Reinv. + Operativos</span>
+                                        <span className="text-2xl font-black text-amber-500">-${totalMonthlyWithdrawals.toLocaleString()}</span>
+                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Facturas + Retiros</span>
                                     </CardContent>
                                 </Card>
 
                                 <Card className="bg-primary/5 border-primary/20 overflow-hidden relative">
                                     <CardHeader className="pb-1 py-3 text-left">
                                         <CardTitle className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
-                                            <DollarSign className="h-3.5 w-3.5" /> Flujo Neto Diario
+                                            <Wallet className="h-3.5 w-3.5" /> Total Neto en Cuadres
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="py-2 pb-4 text-left">
-                                        <span className={`text-2xl font-black ${netMonthlyBalance >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                            ${netMonthlyBalance.toLocaleString()}
+                                        <span className="text-2xl font-black text-primary">
+                                            ${totalMonthlyNetClosingIncome.toLocaleString()}
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Diferencia neta mensual</span>
+                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Total disponible tras descuentos</span>
                                     </CardContent>
                                 </Card>
 
@@ -2093,9 +2093,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         <TableHeader className="bg-muted/30">
                                             <TableRow className="border-b border-border/40">
                                                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
-                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-emerald-500">Ingresos (Cuadres)</TableHead>
-                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-red-500">Egresos (Gastos)</TableHead>
-                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-primary">Balance Neto</TableHead>
+                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-emerald-500">Ingreso Cuadre (Bruto)</TableHead>
+                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-amber-500">Descontado</TableHead>
+                                                <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right text-primary">Total Neto Cuadre</TableHead>
                                                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-center">Diferencia Caja</TableHead>
                                                 <TableHead className="font-black uppercase text-[10px] tracking-widest py-4 text-right pr-6">Acción</TableHead>
                                             </TableRow>
@@ -2120,28 +2120,32 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                     <TableCell className="text-right py-4">
                                                         <div className="flex flex-col items-end">
                                                             <span className="font-black text-sm text-emerald-500">
-                                                                ${day.totalClosingIncome.toLocaleString()}
+                                                                ${day.totalGrossClosingIncome.toLocaleString()}
                                                             </span>
                                                             <span className="text-[10px] text-muted-foreground font-semibold">
                                                                 {day.closings.length} cuadre{day.closings.length !== 1 ? 's' : ''}
-                                                                {day.totalWithdrawals > 0 && ` • -${day.totalWithdrawals.toLocaleString()} retiros`}
                                                             </span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-right py-4">
                                                         <div className="flex flex-col items-end">
-                                                            <span className="font-black text-sm text-red-500">
-                                                                -${day.totalExpenses.toLocaleString()}
+                                                            <span className={`font-black text-sm ${day.totalWithdrawals > 0 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                                                                {day.totalWithdrawals > 0 ? `-$${day.totalWithdrawals.toLocaleString()}` : '$0.00'}
                                                             </span>
                                                             <span className="text-[10px] text-muted-foreground font-semibold">
-                                                                {day.expenses.length} gasto{day.expenses.length !== 1 ? 's' : ''}
+                                                                {day.withdrawals.length} descuento{day.withdrawals.length !== 1 ? 's' : ''}
                                                             </span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-right py-4">
-                                                        <span className={`font-black text-base ${day.netBalance >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                                            ${day.netBalance.toLocaleString()}
-                                                        </span>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="font-black text-base text-primary">
+                                                                ${day.totalClosingIncome.toLocaleString()}
+                                                            </span>
+                                                            <span className="text-[9px] text-muted-foreground font-semibold">
+                                                                Neto disponible
+                                                            </span>
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell className="text-center py-4">
                                                         {day.closings.length === 0 ? (
@@ -2203,21 +2207,26 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                     </h4>
                                                     <span className="text-[10px] text-muted-foreground font-semibold">{day.dateKey}</span>
                                                 </div>
-                                                <span className={`text-base font-black ${day.netBalance >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                                    ${day.netBalance.toLocaleString()}
-                                                </span>
+                                                <div className="text-right">
+                                                    <span className="text-xs font-bold text-muted-foreground block">Total Neto Cuadre</span>
+                                                    <span className="text-base font-black text-primary">
+                                                        ${day.totalClosingIncome.toLocaleString()}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-2 text-xs">
                                                 <div className="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Ingresos Cuadres</span>
-                                                    <span className="font-black text-sm text-emerald-500 block mt-0.5">${day.totalClosingIncome.toLocaleString()}</span>
+                                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Ingreso Bruto</span>
+                                                    <span className="font-black text-sm text-emerald-500 block mt-0.5">${day.totalGrossClosingIncome.toLocaleString()}</span>
                                                     <span className="text-[9px] text-muted-foreground block">{day.closings.length} cierres</span>
                                                 </div>
-                                                <div className="p-2.5 rounded-xl bg-red-500/5 border border-red-500/20">
-                                                    <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider block">Egresos</span>
-                                                    <span className="font-black text-sm text-red-500 block mt-0.5">-${day.totalExpenses.toLocaleString()}</span>
-                                                    <span className="text-[9px] text-muted-foreground block">{day.expenses.length} gastos</span>
+                                                <div className="p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                                                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Descontado</span>
+                                                    <span className="font-black text-sm text-amber-500 block mt-0.5">
+                                                        {day.totalWithdrawals > 0 ? `-$${day.totalWithdrawals.toLocaleString()}` : '$0.00'}
+                                                    </span>
+                                                    <span className="text-[9px] text-muted-foreground block">{day.withdrawals.length} descuentos</span>
                                                 </div>
                                             </div>
 
@@ -4502,17 +4511,19 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             {/* Day KPI Summary Banner */}
                             <div className="grid grid-cols-3 gap-3 p-3 bg-muted/20 border border-border/50 rounded-2xl text-center">
                                 <div>
-                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Ingresos Cuadres</span>
-                                    <span className="text-base sm:text-lg font-black text-emerald-500">${selectedDayDetail.totalClosingIncome.toLocaleString()}</span>
+                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Ingreso Bruto Cuadre</span>
+                                    <span className="text-base sm:text-lg font-black text-emerald-500">${selectedDayDetail.totalGrossClosingIncome.toLocaleString()}</span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider block">Total Egresos</span>
-                                    <span className="text-base sm:text-lg font-black text-red-500">-${selectedDayDetail.totalExpenses.toLocaleString()}</span>
+                                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Total Descontado</span>
+                                    <span className="text-base sm:text-lg font-black text-amber-500">
+                                        {selectedDayDetail.totalWithdrawals > 0 ? `-$${selectedDayDetail.totalWithdrawals.toLocaleString()}` : '$0.00'}
+                                    </span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Balance Neto</span>
-                                    <span className={`text-base sm:text-lg font-black ${selectedDayDetail.netBalance >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                        ${selectedDayDetail.netBalance.toLocaleString()}
+                                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Total Neto en Cuadre</span>
+                                    <span className="text-base sm:text-lg font-black text-primary">
+                                        ${selectedDayDetail.totalClosingIncome.toLocaleString()}
                                     </span>
                                 </div>
                             </div>
