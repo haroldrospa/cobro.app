@@ -4513,119 +4513,118 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 ) : (
                                     <div className="space-y-2">
                                         {selectedDayDetail.closings.map((c: any) => (
-                                            <div key={c.id} className="p-3 bg-card border border-border/50 rounded-xl space-y-2 text-xs">
+                                            <div key={c.id} className="p-3.5 bg-card border border-border/50 rounded-2xl space-y-2 text-xs shadow-sm">
                                                 <div className="flex justify-between items-center font-bold">
                                                     <span className="text-foreground">
                                                         Cerrado por: {c.profile?.full_name || 'Cajero'}
                                                     </span>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                                                            <span className="text-muted-foreground text-[10px]">
-                                                                {c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''}
-                                                            </span>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="h-6 px-2 text-[9px] font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 rounded-md gap-1"
-                                                                onClick={() => {
-                                                                    const sessionTime = c.closing_time ? new Date(c.closing_time) : (c.created_at ? new Date(c.created_at) : selectedDayDetail.dateObj);
-                                                                    const label = `${c.profile?.full_name || 'Cajero'} (${c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''})`;
-                                                                    handleDeductInvoiceFromCuadre(sessionTime, label);
-                                                                }}
-                                                            >
-                                                                <Receipt className="h-3 w-3" /> Descontar Factura
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="h-6 px-2 text-[9px] font-bold border-amber-500/40 text-amber-500 hover:bg-amber-500/10 rounded-md gap-1"
-                                                                onClick={() => {
-                                                                    const sessionTimeStr = c.closing_time ? format(new Date(c.closing_time), "yyyy-MM-dd'T'HH:mm:ss") : selectedDayDetail.dateKey;
-                                                                    setDeductForm({
-                                                                        amount: '',
-                                                                        reason: `Retiro Cuadre (${c.profile?.full_name || 'Cajero'} - ${c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''})`,
-                                                                        date: sessionTimeStr
-                                                                    });
-                                                                    setIsDeductOpen(true);
-                                                                }}
-                                                            >
-                                                                <TrendingDown className="h-3 w-3" /> Descontar Dinero
-                                                            </Button>
-                                                        </div>
+                                                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                        <span className="text-muted-foreground text-[10px]">
+                                                            {c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''}
+                                                        </span>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-6 px-2 text-[9px] font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 rounded-md gap-1"
+                                                            onClick={() => {
+                                                                const sessionTime = c.closing_time ? new Date(c.closing_time) : (c.created_at ? new Date(c.created_at) : selectedDayDetail.dateObj);
+                                                                const label = `${c.profile?.full_name || 'Cajero'} (${c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''})`;
+                                                                handleDeductInvoiceFromCuadre(sessionTime, label);
+                                                            }}
+                                                        >
+                                                            <Receipt className="h-3 w-3" /> Descontar Factura
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-6 px-2 text-[9px] font-bold border-amber-500/40 text-amber-500 hover:bg-amber-500/10 rounded-md gap-1"
+                                                            onClick={() => {
+                                                                const sessionTimeStr = c.closing_time ? format(new Date(c.closing_time), "yyyy-MM-dd'T'HH:mm:ss") : selectedDayDetail.dateKey;
+                                                                setDeductForm({
+                                                                    amount: '',
+                                                                    reason: `Retiro Cuadre (${c.profile?.full_name || 'Cajero'} - ${c.closing_time ? format(new Date(c.closing_time), 'hh:mm a') : ''})`,
+                                                                    date: sessionTimeStr
+                                                                });
+                                                                setIsDeductOpen(true);
+                                                            }}
+                                                        >
+                                                            <TrendingDown className="h-3 w-3" /> Descontar Dinero
+                                                        </Button>
                                                     </div>
-                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/30 text-[11px]">
-                                                        <div>
-                                                            <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Ventas Efectivo</span>
-                                                            <span className="font-bold">${(c.total_sales_cash || 0).toLocaleString()}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Depósitos (+)</span>
-                                                            <span className="font-bold text-emerald-400">+${(c.total_cash_in || 0).toLocaleString()}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Retiros Shift (-)</span>
-                                                            <span className="font-bold text-amber-500">-${(c.total_cash_out || 0).toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
-                                                            <span className="text-[9px] text-emerald-400 font-bold uppercase block">Efectivo Real</span>
-                                                            <span className="font-black text-emerald-400 text-xs">
-                                                                ${(c.actual_cash || c.expected_cash || ((c.total_sales_cash || 0) + (c.total_cash_in || 0) - (c.total_cash_out || 0))).toLocaleString()}
-                                                            </span>
-                                                        </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/30 text-[11px]">
+                                                    <div>
+                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Ventas Efectivo</span>
+                                                        <span className="font-bold">${(c.total_sales_cash || 0).toLocaleString()}</span>
                                                     </div>
-                                                    <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground pt-1 border-t border-border/20">
-                                                        <div>Tarjeta: <span className="font-bold text-foreground">${(c.total_sales_card || 0).toLocaleString()}</span></div>
-                                                        <div>Transfer: <span className="font-bold text-foreground">${(c.total_sales_transfer || 0).toLocaleString()}</span></div>
-                                                        <div>
-                                                            Diferencia: <span className={`font-bold ${(c.difference || 0) === 0 ? 'text-emerald-500' : (c.difference || 0) > 0 ? 'text-emerald-400' : 'text-amber-500'}`}>
-                                                                {(c.difference || 0) === 0 ? '$0.00' : (c.difference || 0) > 0 ? `+$${c.difference}` : `-$${Math.abs(c.difference || 0)}`}
-                                                            </span>
-                                                        </div>
+                                                    <div>
+                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Depósitos (+)</span>
+                                                        <span className="font-bold text-emerald-400">+${(c.total_cash_in || 0).toLocaleString()}</span>
                                                     </div>
+                                                    <div>
+                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Retiros Shift (-)</span>
+                                                        <span className="font-bold text-amber-500">-${(c.total_cash_out || 0).toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
+                                                        <span className="text-[9px] text-emerald-400 font-bold uppercase block">Efectivo Real</span>
+                                                        <span className="font-black text-emerald-400 text-xs">
+                                                            ${(c.actual_cash || c.expected_cash || ((c.total_sales_cash || 0) + (c.total_cash_in || 0) - (c.total_cash_out || 0))).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground pt-1 border-t border-border/20">
+                                                    <div>Tarjeta: <span className="font-bold text-foreground">${(c.total_sales_card || 0).toLocaleString()}</span></div>
+                                                    <div>Transfer: <span className="font-bold text-foreground">${(c.total_sales_transfer || 0).toLocaleString()}</span></div>
+                                                    <div>
+                                                        Diferencia: <span className={`font-bold ${(c.difference || 0) === 0 ? 'text-emerald-500' : (c.difference || 0) > 0 ? 'text-emerald-400' : 'text-amber-500'}`}>
+                                                            {(c.difference || 0) === 0 ? '$0.00' : (c.difference || 0) > 0 ? `+$${c.difference}` : `-$${Math.abs(c.difference || 0)}`}
+                                                        </span>
+                                                    </div>
+                                                </div>
 
-                                                    {/* Descuentos aplicados directamente a este cuadre */}
-                                                    {(() => {
-                                                        const openTime = c.created_at ? new Date(c.created_at).getTime() : 0;
-                                                        const closeTime = c.closing_time ? new Date(c.closing_time).getTime() : new Date().getTime();
-                                                        
-                                                        const sessionWithdrawals = selectedDayDetail.withdrawals.filter((w: any) => {
-                                                            const wTime = new Date(w.created_at).getTime();
-                                                            const inTimeWindow = (openTime > 0 && wTime >= (openTime - 15 * 60 * 1000) && wTime <= (closeTime + 15 * 60 * 1000));
-                                                            const inReason = (w.reason || '').includes(c.profile?.full_name || '') || (w.reason || '').includes(c.id);
-                                                            return inTimeWindow || inReason;
-                                                        });
+                                                {/* Descuentos aplicados directamente a este cuadre */}
+                                                {(() => {
+                                                    const openTime = c.created_at ? new Date(c.created_at).getTime() : 0;
+                                                    const closeTime = c.closing_time ? new Date(c.closing_time).getTime() : new Date().getTime();
+                                                    
+                                                    const sessionWithdrawals = selectedDayDetail.withdrawals.filter((w: any) => {
+                                                        const wTime = new Date(w.created_at).getTime();
+                                                        const inTimeWindow = (openTime > 0 && wTime >= (openTime - 15 * 60 * 1000) && wTime <= (closeTime + 15 * 60 * 1000));
+                                                        const inReason = (w.reason || '').includes(c.profile?.full_name || '') || (w.reason || '').includes(c.id);
+                                                        return inTimeWindow || inReason;
+                                                    });
 
-                                                        return sessionWithdrawals.length > 0 ? (
-                                                            <div className="pt-2 border-t border-border/30 space-y-1.5">
-                                                                <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider block">
-                                                                    Descuentos aplicados a este cuadre ({sessionWithdrawals.length})
-                                                                </span>
-                                                                <div className="space-y-1">
-                                                                    {sessionWithdrawals.map((w: any) => (
-                                                                        <div key={w.id} className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-between text-xs">
-                                                                            <div>
-                                                                                <span className="font-bold text-foreground block">{w.reason}</span>
-                                                                                <span className="text-[9px] text-muted-foreground">
-                                                                                    Registrado por: {w.profile?.full_name || 'Usuario'}
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="font-black text-amber-500">-${(w.amount || 0).toLocaleString()}</span>
-                                                                                <Button
-                                                                                    size="icon"
-                                                                                    variant="ghost"
-                                                                                    className="h-6 w-6 text-muted-foreground hover:text-destructive rounded-md"
-                                                                                    onClick={() => handleDeleteDeduction(w.id)}
-                                                                                >
-                                                                                    <Trash2 className="h-3 w-3" />
-                                                                                </Button>
-                                                                            </div>
+                                                    return sessionWithdrawals.length > 0 ? (
+                                                        <div className="pt-2 border-t border-border/30 space-y-1.5">
+                                                            <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider block">
+                                                                Descuentos aplicados a este cuadre ({sessionWithdrawals.length})
+                                                            </span>
+                                                            <div className="space-y-1">
+                                                                {sessionWithdrawals.map((w: any) => (
+                                                                    <div key={w.id} className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-between text-xs">
+                                                                        <div>
+                                                                            <span className="font-bold text-foreground block">{w.reason}</span>
+                                                                            <span className="text-[9px] text-muted-foreground">
+                                                                                Registrado por: {w.profile?.full_name || 'Usuario'}
+                                                                            </span>
                                                                         </div>
-                                                                    ))}
-                                                                </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="font-black text-amber-500">-${(w.amount || 0).toLocaleString()}</span>
+                                                                            <Button
+                                                                                size="icon"
+                                                                                variant="ghost"
+                                                                                className="h-6 w-6 text-muted-foreground hover:text-destructive rounded-md"
+                                                                                onClick={() => handleDeleteDeduction(w.id)}
+                                                                            >
+                                                                                <Trash2 className="h-3 w-3" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
                                                             </div>
-                                                        ) : null;
-                                                    })()}
+                                                        </div>
+                                                    ) : null;
+                                                })()}
                                             </div>
                                         ))}
                                     </div>
