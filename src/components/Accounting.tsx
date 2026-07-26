@@ -2738,6 +2738,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                     </Button>
                                                 </div>
                                             </div>
+                                        )}
                                         {scanQueue[reviewIndex]?.status === 'saved' && (
                                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 gap-2">
                                                 <div className="flex items-center gap-2 min-w-0">
