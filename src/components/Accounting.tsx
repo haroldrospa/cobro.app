@@ -2669,17 +2669,27 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             <CheckCheck className="h-4 w-4" /> Guardar todo listo
                                         </Button>
                                     )}
-                                    <Button 
-                                        size="sm"
-                                        variant="outline"
-                                        className="w-full text-xs h-9 rounded-xl font-semibold"
-                                        onClick={() => {
-                                            setIsAddExpenseOpen(false);
-                                            setScanQueue([]);
-                                        }}
-                                    >
-                                        Cerrar Ventana
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button 
+                                            size="sm"
+                                            variant="outline"
+                                            className="flex-1 text-xs h-9 rounded-xl font-semibold"
+                                            onClick={() => {
+                                                setIsAddExpenseOpen(false);
+                                                setScanQueue([]);
+                                            }}
+                                        >
+                                            Cerrar Ventana
+                                        </Button>
+                                        <Button 
+                                            size="sm"
+                                            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={isScanning}
+                                        >
+                                            <Plus className="h-3.5 w-3.5" /> Escanear otra
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -2727,6 +2737,27 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                         <RefreshCw className="h-3 w-3" /> Reintentar
                                                     </Button>
                                                 </div>
+                                            </div>
+                                        {scanQueue[reviewIndex]?.status === 'saved' && (
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Check className="h-4 w-4 shrink-0 text-emerald-400 font-bold" />
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-xs text-foreground">Factura registrada exitosamente</p>
+                                                        <p className="text-[10px] text-muted-foreground truncate">
+                                                            Este comprobante ya fue guardado en la contabilidad.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    size="sm"
+                                                    type="button"
+                                                    className="h-7 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shrink-0 gap-1.5 rounded-lg shadow-sm"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    disabled={isScanning}
+                                                >
+                                                    <Plus className="h-3.5 w-3.5" /> Escanear otra
+                                                </Button>
                                             </div>
                                         )}
 
@@ -3027,8 +3058,19 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             </Button>
                                             
                                             {scanQueue[reviewIndex]?.status === 'saved' ? (
-                                                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-2 text-xs font-bold text-emerald-500 flex items-center gap-1.5 shadow-sm">
-                                                    <Check className="h-4 w-4" /> Registrado
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3.5 py-2 text-xs font-bold text-emerald-500 flex items-center gap-1.5 shadow-sm">
+                                                        <Check className="h-4 w-4" /> Registrado
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        type="button"
+                                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 h-9 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        disabled={isScanning}
+                                                    >
+                                                        <Plus className="h-4 w-4" /> Escanear otra factura
+                                                    </Button>
                                                 </div>
                                             ) : (
                                                 <Button 
