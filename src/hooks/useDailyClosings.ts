@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 // Use same interface structure for compatibility, mapped from cash_sessions
 export interface DailyClosing {
@@ -20,28 +21,34 @@ export interface DailyClosing {
     profile?: {
         full_name: string;
     };
-    initial_cash?: number; // New field
+    initial_cash?: number;
 }
 
 export const useDailyClosings = () => {
+    const { profile } = useUserProfile();
+    const storeId = profile?.store_id;
+
     return useQuery({
-        queryKey: ['daily-closings'], // Keep same key for reports compatibility
+        queryKey: ['daily-closings', storeId],
         queryFn: async () => {
-            // Fetch from cash_sessions where closed
+            if (!storeId) return [];
+
+            // Fetch from cash_sessions where closed for this specific store
             // @ts-ignore
             const { data, error } = await supabase
                 .from('cash_sessions')
                 .select('*, profile:closed_by(full_name)')
+                .eq('store_id', storeId)
                 .eq('status', 'closed')
                 .order('closed_at', { ascending: false });
 
             if (error) throw error;
 
             // Map to DailyClosing interface
-            return data.map((session: any) => ({
+            return (data || []).map((session: any) => ({
                 id: session.id,
                 closing_time: session.closed_at,
-                created_at: session.opened_at, // Mapping opened_at as created_at for history view or use closed_at
+                created_at: session.opened_at,
                 total_sales_cash: session.total_sales_cash,
                 total_sales_card: session.total_sales_card,
                 total_sales_transfer: session.total_sales_transfer,
@@ -57,12 +64,12 @@ export const useDailyClosings = () => {
                 initial_cash: session.initial_cash
             })) as DailyClosing[];
         },
+        enabled: !!storeId,
     });
 };
 
 // Deprecated: useCloseSession in useCashSession.ts instead
 export const useCreateDailyClosing = () => {
-    // This is now legacy/unused by the new UI, but kept to prevent breakages if called elsewhere
     return {
         mutateAsync: async (data: any) => {
             console.warn('useCreateDailyClosing is deprecated. Use useCloseSession instead.');
