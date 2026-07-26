@@ -2194,8 +2194,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
+                                            );
+                                        })}
+                                    </TableBody>
                                     </Table>
                                 </div>
 
