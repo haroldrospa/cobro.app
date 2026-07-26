@@ -708,12 +708,12 @@ function AccountingContent() {
 
             const closingIncome = (closing.total_sales_cash || 0) + (closing.total_sales_card || 0) + (closing.total_sales_transfer || 0) + (closing.total_sales_other || 0);
             
-            // Cash earned from cash sales in this shift (excluding opening base float):
-            const cashInSession = (typeof closing.total_sales_cash === 'number' && closing.total_sales_cash > 0) 
-                ? closing.total_sales_cash 
-                : (typeof closing.actual_cash === 'number' && closing.actual_cash > 0
-                    ? Math.max(0, closing.actual_cash - (closing.initial_cash || 0))
-                    : 0);
+            // Real physical cash in this shift (including cash sales + deposits - withdrawals during shift, or actual counted cash):
+            const cashInSession = (typeof closing.actual_cash === 'number' && closing.actual_cash > 0) 
+                ? closing.actual_cash 
+                : (typeof closing.expected_cash === 'number' && closing.expected_cash > 0
+                    ? closing.expected_cash
+                    : ((closing.total_sales_cash || 0) + (closing.total_cash_in || 0) - (closing.total_cash_out || 0)));
 
             map[dateKey].closings.push(closing);
             map[dateKey].totalSalesCash += cashInSession;
@@ -4537,22 +4537,31 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                         </Button>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-border/30 text-[11px]">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/30 text-[11px]">
                                                     <div>
-                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Efectivo</span>
+                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Ventas Efectivo</span>
                                                         <span className="font-bold">${(c.total_sales_cash || 0).toLocaleString()}</span>
                                                     </div>
                                                     <div>
-                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Tarjeta</span>
-                                                        <span className="font-bold">${(c.total_sales_card || 0).toLocaleString()}</span>
+                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Depósitos (+)</span>
+                                                        <span className="font-bold text-emerald-400">+${(c.total_cash_in || 0).toLocaleString()}</span>
                                                     </div>
                                                     <div>
-                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Transferencia</span>
-                                                        <span className="font-bold">${(c.total_sales_transfer || 0).toLocaleString()}</span>
+                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Retiros Shift (-)</span>
+                                                        <span className="font-bold text-amber-500">-${(c.total_cash_out || 0).toLocaleString()}</span>
                                                     </div>
+                                                    <div className="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
+                                                        <span className="text-[9px] text-emerald-400 font-bold uppercase block">Efectivo Real</span>
+                                                        <span className="font-black text-emerald-400 text-xs">
+                                                            ${(c.actual_cash || c.expected_cash || ((c.total_sales_cash || 0) + (c.total_cash_in || 0) - (c.total_cash_out || 0))).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground pt-1 border-t border-border/20">
+                                                    <div>Tarjeta: <span className="font-bold text-foreground">${(c.total_sales_card || 0).toLocaleString()}</span></div>
+                                                    <div>Transfer: <span className="font-bold text-foreground">${(c.total_sales_transfer || 0).toLocaleString()}</span></div>
                                                     <div>
-                                                        <span className="text-[9px] text-muted-foreground uppercase block font-semibold">Diferencia Caja</span>
-                                                        <span className={`font-bold ${(c.difference || 0) === 0 ? 'text-emerald-500' : (c.difference || 0) > 0 ? 'text-emerald-400' : 'text-amber-500'}`}>
+                                                        Diferencia: <span className={`font-bold ${(c.difference || 0) === 0 ? 'text-emerald-500' : (c.difference || 0) > 0 ? 'text-emerald-400' : 'text-amber-500'}`}>
                                                             {(c.difference || 0) === 0 ? '$0.00' : (c.difference || 0) > 0 ? `+$${c.difference}` : `-$${Math.abs(c.difference || 0)}`}
                                                         </span>
                                                     </div>
