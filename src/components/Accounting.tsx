@@ -2006,74 +2006,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
                     </div>
 
-                    {/* Monthly Summary KPI Cards */}
-                    {(() => {
-                        const totalMonthlySalesCash = dailyDataMap.reduce((sum, d) => sum + (d.totalSalesCash || d.totalGrossClosingIncome), 0);
-                        const totalMonthlyWithdrawals = dailyDataMap.reduce((sum, d) => sum + d.totalWithdrawals, 0);
-                        const totalMonthlyNetCash = totalMonthlySalesCash - totalMonthlyWithdrawals;
-                        const totalMonthlyClosings = dailyDataMap.reduce((sum, d) => sum + d.closings.length, 0);
-                        const totalMonthlyDifferences = dailyDataMap.reduce((sum, d) => sum + d.totalDifference, 0);
 
-                        return (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto w-full">
-                                <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden relative">
-                                    <CardHeader className="pb-1 py-3 text-left">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
-                                            <ArrowUpRight className="h-3.5 w-3.5" /> Efectivo Real (Caja)
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="py-2 pb-4 text-left">
-                                        <span className="text-2xl font-black text-emerald-500">${totalMonthlySalesCash.toLocaleString()}</span>
-                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">
-                                            {totalMonthlyClosings} cuadre{totalMonthlyClosings !== 1 ? 's' : ''} registrado{totalMonthlyClosings !== 1 ? 's' : ''}
-                                        </span>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-amber-500/5 border-amber-500/20 overflow-hidden relative">
-                                    <CardHeader className="pb-1 py-3 text-left">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
-                                            <TrendingDown className="h-3.5 w-3.5" /> Descontado de Cuadres
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="py-2 pb-4 text-left">
-                                        <span className="text-2xl font-black text-amber-500">-${totalMonthlyWithdrawals.toLocaleString()}</span>
-                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Facturas + Retiros</span>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-primary/5 border-primary/20 overflow-hidden relative">
-                                    <CardHeader className="pb-1 py-3 text-left">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
-                                            <Wallet className="h-3.5 w-3.5" /> Efectivo Neto Disponible
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="py-2 pb-4 text-left">
-                                        <span className="text-2xl font-black text-primary">
-                                            ${totalMonthlyNetCash.toLocaleString()}
-                                        </span>
-                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">Efectivo tras descuentos</span>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-muted/10 border-border/50 overflow-hidden relative">
-                                    <CardHeader className="pb-1 py-3 text-left">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                                            <AlertCircle className="h-3.5 w-3.5" /> Desviación en Caja
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="py-2 pb-4 text-left">
-                                        <span className={`text-2xl font-black ${totalMonthlyDifferences === 0 ? 'text-muted-foreground' : totalMonthlyDifferences > 0 ? 'text-emerald-400' : 'text-amber-500'}`}>
-                                            {totalMonthlyDifferences > 0 ? `+$${totalMonthlyDifferences.toLocaleString()}` : totalMonthlyDifferences < 0 ? `-$${Math.abs(totalMonthlyDifferences).toLocaleString()}` : '$0.00'}
-                                        </span>
-                                        <span className="text-[10px] text-muted-foreground block mt-0.5 font-bold">
-                                            {totalMonthlyDifferences === 0 ? 'Cajas cuadradas exactas' : totalMonthlyDifferences > 0 ? 'Sobrante acumulado' : 'Faltante acumulado'}
-                                        </span>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        );
-                    })()}
 
                     {/* Table / List View */}
                     <div className="max-w-5xl mx-auto w-full">
