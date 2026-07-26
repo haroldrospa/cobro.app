@@ -57,7 +57,7 @@ export const useCreateCashMovement = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (movement: { type: 'deposit' | 'withdrawal', amount: number, reason: string }) => {
+        mutationFn: async (movement: { type: 'deposit' | 'withdrawal', amount: number, reason: string, created_at?: string }) => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Usuario no autenticado');
 
@@ -76,7 +76,8 @@ export const useCreateCashMovement = () => {
                     profile_id: user.id,
                     type: movement.type,
                     amount: movement.amount,
-                    reason: movement.reason
+                    reason: movement.reason,
+                    ...(movement.created_at ? { created_at: movement.created_at } : {})
                 })
                 .select()
                 .single();
@@ -86,6 +87,26 @@ export const useCreateCashMovement = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+            queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
+        },
+    });
+};
+
+export const useDeleteCashMovement = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('cash_movements')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+            queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
         },
     });
 };

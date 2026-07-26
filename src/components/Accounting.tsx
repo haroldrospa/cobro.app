@@ -23,6 +23,7 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useSupplierDebts, SupplierDebt } from '@/hooks/useSupplierDebts';
 import { useDailyClosings, DailyClosing } from '@/hooks/useDailyClosings';
+import { useCashMovements, useCreateCashMovement, useDeleteCashMovement, CashMovement } from '@/hooks/useCashMovements';
 import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,7 +88,77 @@ function AccountingContent() {
     const { suppliers, createSupplier, deleteSupplier, isLoading: loadingSuppliers } = useSuppliers();
     const { settings: storeSettings, updateSettings } = useStoreSettings();
     const { data: dailyClosings = [], isLoading: loadingClosings } = useDailyClosings();
+    const { data: cashMovements = [], isLoading: loadingMovements } = useCashMovements();
+    const { mutateAsync: createCashMovement, isPending: isCreatingMovement } = useCreateCashMovement();
+    const { mutateAsync: deleteCashMovement, isPending: isDeletingMovement } = useDeleteCashMovement();
+
     const [selectedDayDetail, setSelectedDayDetail] = useState<any>(null);
+    const [isDeductOpen, setIsDeductOpen] = useState(false);
+    const [deductForm, setDeductForm] = useState({
+        amount: '',
+        reason: '',
+        date: format(new Date(), 'yyyy-MM-dd')
+    });
+
+    const handleRegisterDeduction = async () => {
+        if (!deductForm.amount || !deductForm.reason.trim()) {
+            toast({
+                title: "Campos incompletos",
+                description: "Por favor introduce el monto y la razón del descuento.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const amountNum = parseFloat(deductForm.amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            toast({
+                title: "Monto inválido",
+                description: "El monto a descontar debe ser mayor a 0.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            const timestamp = deductForm.date
+                ? new Date(`${deductForm.date}T12:00:00`).toISOString()
+                : new Date().toISOString();
+
+            await createCashMovement({
+                type: 'withdrawal',
+                amount: amountNum,
+                reason: deductForm.reason.trim(),
+                created_at: timestamp
+            });
+
+            toast({
+                title: "Descuento Aplicado",
+                description: `Se descontaron $${amountNum.toLocaleString()} del cuadre exitosamente.`
+            });
+
+            setIsDeductOpen(false);
+            setDeductForm({ amount: '', reason: '', date: format(currentDate || new Date(), 'yyyy-MM-dd') });
+        } catch (err: any) {
+            console.error("Error al descontar del cuadre:", err);
+            toast({
+                title: "Error al aplicar descuento",
+                description: err.message || "No se pudo realizar el descuento.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleDeleteDeduction = async (movementId: string) => {
+        if (confirm("¿Estás seguro de eliminar este descuento/retiro del cuadre?")) {
+            try {
+                await deleteCashMovement(movementId);
+                toast({ title: "Descuento Eliminado", description: "El registro ha sido eliminado." });
+            } catch (err: any) {
+                console.error("Error al eliminar descuento:", err);
+            }
+        }
+    };
 
     const { 
         fixedExpenses, 
@@ -569,10 +640,13 @@ function AccountingContent() {
                 dateObj: Date;
                 closings: DailyClosing[];
                 expenses: Expense[];
+                withdrawals: CashMovement[];
                 totalSalesCash: number;
                 totalSalesCard: number;
                 totalSalesTransfer: number;
                 totalSalesOther: number;
+                totalGrossClosingIncome: number;
+                totalWithdrawals: number;
                 totalClosingIncome: number;
                 totalExpectedCash: number;
                 totalActualCash: number;
@@ -597,10 +671,13 @@ function AccountingContent() {
                     dateObj,
                     closings: [],
                     expenses: [],
+                    withdrawals: [],
                     totalSalesCash: 0,
                     totalSalesCard: 0,
                     totalSalesTransfer: 0,
                     totalSalesOther: 0,
+                    totalGrossClosingIncome: 0,
+                    totalWithdrawals: 0,
                     totalClosingIncome: 0,
                     totalExpectedCash: 0,
                     totalActualCash: 0,
@@ -619,13 +696,48 @@ function AccountingContent() {
             map[dateKey].totalSalesCard += (closing.total_sales_card || 0);
             map[dateKey].totalSalesTransfer += (closing.total_sales_transfer || 0);
             map[dateKey].totalSalesOther += (closing.total_sales_other || 0);
-            map[dateKey].totalClosingIncome += closingIncome;
+            map[dateKey].totalGrossClosingIncome += closingIncome;
             map[dateKey].totalExpectedCash += (closing.expected_cash || 0);
             map[dateKey].totalActualCash += (closing.actual_cash || 0);
             map[dateKey].totalDifference += (closing.difference || 0);
         });
 
-        // 2. Process Expenses for current month
+        // 2. Process Cash Withdrawals / Descuentos for current month
+        (cashMovements || []).forEach(mov => {
+            if (!mov.created_at || mov.type !== 'withdrawal') return;
+            const dateObj = new Date(mov.created_at);
+            if (dateObj.getMonth() !== currentDate.getMonth() || dateObj.getFullYear() !== currentDate.getFullYear()) return;
+
+            const dateKey = format(dateObj, 'yyyy-MM-dd');
+            if (!map[dateKey]) {
+                map[dateKey] = {
+                    dateKey,
+                    dateObj,
+                    closings: [],
+                    expenses: [],
+                    withdrawals: [],
+                    totalSalesCash: 0,
+                    totalSalesCard: 0,
+                    totalSalesTransfer: 0,
+                    totalSalesOther: 0,
+                    totalGrossClosingIncome: 0,
+                    totalWithdrawals: 0,
+                    totalClosingIncome: 0,
+                    totalExpectedCash: 0,
+                    totalActualCash: 0,
+                    totalDifference: 0,
+                    totalExpenses: 0,
+                    reinvestmentExpenses: 0,
+                    operationalExpenses: 0,
+                    netBalance: 0,
+                };
+            }
+
+            map[dateKey].withdrawals.push(mov);
+            map[dateKey].totalWithdrawals += (mov.amount || 0);
+        });
+
+        // 3. Process Expenses for current month
         (filteredExpenses || []).forEach(expense => {
             const expDate = expense.created_at || expense.date;
             if (!expDate) return;
@@ -639,10 +751,13 @@ function AccountingContent() {
                     dateObj,
                     closings: [],
                     expenses: [],
+                    withdrawals: [],
                     totalSalesCash: 0,
                     totalSalesCard: 0,
                     totalSalesTransfer: 0,
                     totalSalesOther: 0,
+                    totalGrossClosingIncome: 0,
+                    totalWithdrawals: 0,
                     totalClosingIncome: 0,
                     totalExpectedCash: 0,
                     totalActualCash: 0,
@@ -664,14 +779,15 @@ function AccountingContent() {
             }
         });
 
-        // 3. Compute net balance for each day
+        // 4. Compute net closing income & net balance for each day
         Object.values(map).forEach(day => {
+            day.totalClosingIncome = day.totalGrossClosingIncome - day.totalWithdrawals;
             day.netBalance = day.totalClosingIncome - day.totalExpenses;
         });
 
         // Sort descending by dateKey
         return Object.values(map).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
-    }, [dailyClosings, filteredExpenses, currentDate]);
+    }, [dailyClosings, cashMovements, filteredExpenses, currentDate]);
 
 
 
@@ -1847,6 +1963,17 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 Control de cierres de caja (ingresos) comparados con egresos diarios para {currentDate ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}.
                             </p>
                         </div>
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                setDeductForm({ amount: '', reason: '', date: format(currentDate || new Date(), 'yyyy-MM-dd') });
+                                setIsDeductOpen(true);
+                            }}
+                            className="bg-amber-600 hover:bg-amber-500 text-white font-black uppercase text-xs h-10 px-4 rounded-xl gap-2 shadow-sm shrink-0 active:scale-95 transition-all"
+                        >
+                            <TrendingDown className="h-4 w-4" />
+                            Descontar Dinero al Cuadre
+                        </Button>
                     </div>
 
                     {/* Monthly Summary KPI Cards */}
@@ -1970,6 +2097,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                             </span>
                                                             <span className="text-[10px] text-muted-foreground font-semibold">
                                                                 {day.closings.length} cuadre{day.closings.length !== 1 ? 's' : ''}
+                                                                {day.totalWithdrawals > 0 && ` • -${day.totalWithdrawals.toLocaleString()} retiros`}
                                                             </span>
                                                         </div>
                                                     </TableCell>
@@ -4385,7 +4513,58 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 )}
                             </div>
 
-                            {/* Section 2: Egresos del Día */}
+                            {/* Section 2: Descuentos y Retiros de Caja */}
+                            <div className="space-y-3 pt-2">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-bold text-xs uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                                        <TrendingDown className="h-4 w-4 text-amber-500" />
+                                        Descuentos y Retiros de Caja ({selectedDayDetail.withdrawals.length})
+                                    </h4>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-[10px] font-bold border-amber-500/40 text-amber-500 hover:bg-amber-500/10 rounded-lg gap-1"
+                                        onClick={() => {
+                                            setDeductForm({ amount: '', reason: '', date: selectedDayDetail.dateKey });
+                                            setIsDeductOpen(true);
+                                        }}
+                                    >
+                                        <Plus className="h-3 w-3" /> Descontar Dinero
+                                    </Button>
+                                </div>
+
+                                {selectedDayDetail.withdrawals.length === 0 ? (
+                                    <div className="p-4 text-center bg-muted/10 rounded-xl text-xs text-muted-foreground italic">
+                                        No hay descuentos ni retiros aplicados a este cuadre.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {selectedDayDetail.withdrawals.map((w: any) => (
+                                            <div key={w.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs">
+                                                <div className="space-y-0.5">
+                                                    <p className="font-bold text-foreground">{w.reason}</p>
+                                                    <p className="text-[10px] text-muted-foreground">
+                                                        Registrado por: {w.profile?.full_name || 'Usuario'}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black text-sm text-amber-500">-${(w.amount || 0).toLocaleString()}</span>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-lg"
+                                                        onClick={() => handleDeleteDeduction(w.id)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Section 3: Egresos del Día */}
                             <div className="space-y-3 pt-2">
                                 <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                                     <TrendingDown className="h-4 w-4 text-red-500" />
@@ -4422,6 +4601,72 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             </DialogFooter>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Descontar Dinero del Cuadre */}
+            <Dialog open={isDeductOpen} onOpenChange={setIsDeductOpen}>
+                <DialogContent className="sm:max-w-[425px] rounded-2xl border border-border/50">
+                    <DialogHeader>
+                        <DialogTitle className="text-left flex items-center gap-2">
+                            <TrendingDown className="h-5 w-5 text-amber-500" />
+                            Descontar Dinero del Cuadre
+                        </DialogTitle>
+                        <DialogDescription className="text-left">
+                            Registra un retiro o ajuste para restar dinero al cuadre de caja de esa fecha.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-3">
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label htmlFor="deduct-date" className="text-xs font-bold text-muted-foreground uppercase">Fecha del Cuadre</Label>
+                            <Input
+                                id="deduct-date"
+                                type="date"
+                                className="h-10 rounded-xl"
+                                value={deductForm.date}
+                                onChange={(e) => setDeductForm({ ...deductForm, date: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label htmlFor="deduct-amount" className="text-xs font-bold text-muted-foreground uppercase">Monto a Descontar ($)</Label>
+                            <Input
+                                id="deduct-amount"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                className="h-10 rounded-xl font-bold text-lg text-amber-500"
+                                value={deductForm.amount}
+                                onChange={(e) => setDeductForm({ ...deductForm, amount: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-2 text-left">
+                            <Label htmlFor="deduct-reason" className="text-xs font-bold text-muted-foreground uppercase">Motivo / Razón del Descuento</Label>
+                            <Input
+                                id="deduct-reason"
+                                placeholder="Ej. Depósito bancario, Retiro de caja, Ajuste"
+                                className="h-10 rounded-xl"
+                                value={deductForm.reason}
+                                onChange={(e) => setDeductForm({ ...deductForm, reason: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2">
+                        <Button variant="ghost" className="rounded-xl h-10 text-xs font-bold" onClick={() => setIsDeductOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleRegisterDeduction}
+                            disabled={isCreatingMovement}
+                            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs h-10 px-6 rounded-xl gap-2"
+                        >
+                            {isCreatingMovement ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingDown className="h-4 w-4" />}
+                            Aplicar Descuento
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div >
