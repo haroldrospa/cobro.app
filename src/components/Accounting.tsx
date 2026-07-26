@@ -674,10 +674,11 @@ function AccountingContent() {
             };
         } = {};
 
-        // 1. Process Closings for current month
+        // 1. Process Closings for current month (grouped by shift start/opening date)
         (dailyClosings || []).forEach(closing => {
-            if (!closing.closing_time) return;
-            const dateObj = new Date(closing.closing_time);
+            const sessionDateStr = closing.created_at || closing.closing_time;
+            if (!sessionDateStr) return;
+            const dateObj = new Date(sessionDateStr);
             if (dateObj.getMonth() !== currentDate.getMonth() || dateObj.getFullYear() !== currentDate.getFullYear()) return;
 
             const dateKey = format(dateObj, 'yyyy-MM-dd');
@@ -706,9 +707,13 @@ function AccountingContent() {
             }
 
             const closingIncome = (closing.total_sales_cash || 0) + (closing.total_sales_card || 0) + (closing.total_sales_transfer || 0) + (closing.total_sales_other || 0);
-            const cashInSession = (typeof closing.actual_cash === 'number' && closing.actual_cash > 0) 
-                ? closing.actual_cash 
-                : (closing.total_sales_cash || 0);
+            
+            // Cash earned from cash sales in this shift (excluding opening base float):
+            const cashInSession = (typeof closing.total_sales_cash === 'number' && closing.total_sales_cash > 0) 
+                ? closing.total_sales_cash 
+                : (typeof closing.actual_cash === 'number' && closing.actual_cash > 0
+                    ? Math.max(0, closing.actual_cash - (closing.initial_cash || 0))
+                    : 0);
 
             map[dateKey].closings.push(closing);
             map[dateKey].totalSalesCash += cashInSession;
@@ -804,8 +809,10 @@ function AccountingContent() {
             day.netBalance = day.totalClosingIncome - day.totalExpenses;
         });
 
-        // Sort descending by dateKey
-        return Object.values(map).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+        // Filter out days that have no closed cash sessions AND no cash withdrawals/deductions
+        return Object.values(map)
+            .filter(day => day.closings.length > 0 || day.withdrawals.length > 0)
+            .sort((a, b) => b.dateKey.localeCompare(a.dateKey));
     }, [dailyClosings, cashMovements, filteredExpenses, currentDate]);
 
 
