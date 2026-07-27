@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   Plus, Edit, Trash2, Search, ChefHat, Package, AlertTriangle,
   Save, X, ChevronDown, ChevronRight, FlaskConical, Scale, Loader2,
-  BookOpen, ShoppingBag, CheckCircle2, DollarSign, Printer
+  BookOpen, ShoppingBag, CheckCircle2, DollarSign, Printer, PlusCircle
 } from 'lucide-react';
+import { AdicionalesControl } from './AdicionalesControl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -422,7 +423,7 @@ const computeAvailableFromRecipe = (recipes: ProductRecipe[]): number => {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
-type Tab = 'ingredients' | 'recipes';
+type Tab = 'ingredients' | 'recipes' | 'extras';
 
 export const RestaurantInventoryControl: React.FC = () => {
   const { toast } = useToast();
@@ -436,6 +437,7 @@ export const RestaurantInventoryControl: React.FC = () => {
   const isLoading = isStoreLoading || isIngredientsLoading || isProductsLoading || isRecipesLoading || !userStore?.id;
 
   const [tab, setTab] = useState<Tab>('ingredients');
+  const [preselectedIngForExtra, setPreselectedIngForExtra] = useState<RestaurantIngredient | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -695,7 +697,7 @@ export const RestaurantInventoryControl: React.FC = () => {
       </div>
 
       {/* Tab Selector */}
-      <div className="flex gap-2 p-1 bg-muted/40 rounded-lg w-fit">
+      <div className="flex gap-2 p-1 bg-muted/40 rounded-lg w-fit flex-wrap">
         <Button variant={tab === 'ingredients' ? 'default' : 'ghost'} size="sm"
           onClick={() => setTab('ingredients')} className="rounded-md">
           <FlaskConical className="h-3.5 w-3.5 mr-1.5" />Ingredientes
@@ -703,6 +705,10 @@ export const RestaurantInventoryControl: React.FC = () => {
         <Button variant={tab === 'recipes' ? 'default' : 'ghost'} size="sm"
           onClick={() => setTab('recipes')} className="rounded-md">
           <BookOpen className="h-3.5 w-3.5 mr-1.5" />Recetas por Producto
+        </Button>
+        <Button variant={tab === 'extras' ? 'default' : 'ghost'} size="sm"
+          onClick={() => setTab('extras')} className="rounded-md text-emerald-400 font-bold">
+          <PlusCircle className="h-3.5 w-3.5 mr-1.5 text-emerald-400" />Adicionales / Extras
         </Button>
       </div>
 
@@ -794,6 +800,15 @@ export const RestaurantInventoryControl: React.FC = () => {
                               </p>
                             </div>
                             <div className="flex gap-1">
+                              <Button variant="ghost" size="icon"
+                                title="Crear Adicional / Extra"
+                                className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-full"
+                                onClick={() => {
+                                  setPreselectedIngForExtra(ing);
+                                  setTab('extras');
+                                }}>
+                                <PlusCircle className="h-3.5 w-3.5" />
+                              </Button>
                               <Button variant="ghost" size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-full"
                                 onClick={() => { setEditingIngredient(ing); setShowIngredientDialog(true); }}>
@@ -1009,6 +1024,17 @@ export const RestaurantInventoryControl: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* ───── TAB: ADICIONALES / EXTRAS ───── */}
+      {tab === 'extras' && (
+        <AdicionalesControl
+          ingredients={ingredients}
+          products={products}
+          recipes={allRecipes}
+          preselectedIngredient={preselectedIngForExtra}
+          onClearPreselectedIngredient={() => setPreselectedIngForExtra(null)}
+        />
       )}
 
       {/* Dialogs */}
