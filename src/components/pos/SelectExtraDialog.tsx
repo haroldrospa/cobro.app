@@ -422,9 +422,6 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 font-black text-xs px-2.5 py-1 rounded-lg">
-                        ${extra.price.toFixed(2)}
-                      </Badge>
                       <Plus className="h-4 w-4 text-muted-foreground group-hover:text-emerald-400 transition-colors" />
                     </div>
                   </div>
