@@ -176,137 +176,189 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
             )}
 
             {/* PRESET PRICES SELECTOR */}
-            <div className="space-y-2 p-3 bg-muted/20 border border-border/40 rounded-xl">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">
-                  Elegir Precio Total u Opción Rápida:
-                </span>
-                <span className="text-xs font-black text-white">
-                  ${(configuredPrice * configuredQuantity).toFixed(2)} total ({configuredQuantity}x ${configuredPrice.toFixed(2)})
-                </span>
-              </div>
+            {(() => {
+              const isFractional = isFractionalUnit(selectedExtra.unit);
+              const basePrice = (selectedExtra.price > 0 && !isCustomMode) ? selectedExtra.price : 0;
 
-              {/* Fast Preset Chips */}
-              <div className="flex flex-wrap gap-1.5">
-                {selectedExtra.price > 0 && !isCustomMode && (
-                  <Badge
-                    variant="outline"
-                    onClick={() => {
-                      setConfiguredPrice(selectedExtra.price);
-                      setConfiguredQuantity(1);
-                    }}
-                    className={`cursor-pointer px-3 py-1 text-xs font-black transition-all rounded-lg ${
-                      configuredPrice === selectedExtra.price && configuredQuantity === 1
-                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
-                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                    }`}
-                  >
-                    1x Base (${selectedExtra.price.toFixed(0)})
-                  </Badge>
-                )}
+              // Generate preset options based on unit type and base price
+              let presetOptions: Array<{ targetPrice: number; qty: number; label: string }> = [];
 
-                {[25, 50, 60, 80, 100, 150, 200, 250].map((presetTarget) => {
-                  const basePrice = (selectedExtra.price > 0 && !isCustomMode) ? selectedExtra.price : presetTarget;
-                  const calculatedQty = (selectedExtra.price > 0 && !isCustomMode) ? Math.max(1, Math.round(presetTarget / basePrice)) : 1;
-                  const currentTotal = configuredPrice * configuredQuantity;
-                  const isActive = currentTotal === presetTarget || (configuredPrice === presetTarget && configuredQuantity === 1);
+              if (basePrice > 0 && !isCustomMode) {
+                if (isFractional) {
+                  // Weighted / fractional item (e.g., lb, kg)
+                  const fractions = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
+                  presetOptions = fractions.map(f => ({
+                    targetPrice: basePrice * f,
+                    qty: f,
+                    label: `$${(basePrice * f).toFixed(0)} (${f} ${selectedExtra.unit || 'lb'})`
+                  }));
+                } else {
+                  // Unit item (e.g. ud, un, pieza) -> Integers only!
+                  const multipliers = [1, 2, 3, 4, 5, 6, 8, 10];
+                  presetOptions = multipliers.map(m => ({
+                    targetPrice: basePrice * m,
+                    qty: m,
+                    label: `$${(basePrice * m).toFixed(0)} (${m}x)`
+                  }));
+                }
+              } else {
+                // Custom extra or no base price
+                const standardAmounts = [25, 50, 60, 80, 100, 150, 200, 250];
+                presetOptions = standardAmounts.map(amt => ({
+                  targetPrice: amt,
+                  qty: 1,
+                  label: `$${amt}`
+                }));
+              }
 
-                  return (
-                    <Badge
-                      key={presetTarget}
-                      variant="outline"
-                      onClick={() => {
-                        if (selectedExtra.price > 0 && !isCustomMode) {
-                          setConfiguredPrice(basePrice);
-                          setConfiguredQuantity(calculatedQty);
-                        } else {
-                          setConfiguredPrice(presetTarget);
-                          setConfiguredQuantity(1);
-                        }
-                      }}
-                      className={`cursor-pointer px-2.5 py-1 text-xs font-black transition-all rounded-lg ${
-                        isActive
-                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
-                          : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-emerald-400 hover:border-emerald-500/40'
-                      }`}
-                    >
-                      ${presetTarget}{selectedExtra.price > 0 && !isCustomMode && calculatedQty > 1 ? ` (${calculatedQty}x)` : ''}
-                    </Badge>
-                  );
-                })}
-              </div>
+              return (
+                <div className="space-y-2 p-3 bg-muted/20 border border-border/40 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">
+                      Elegir Opción o Precio Predeterminado:
+                    </span>
+                    <span className="text-xs font-black text-white">
+                      ${(configuredPrice * configuredQuantity).toFixed(2)} total ({isFractional ? configuredQuantity : Math.round(configuredQuantity)}x ${configuredPrice.toFixed(2)})
+                    </span>
+                  </div>
 
-              {/* Custom price manual input */}
-              <div className="pt-2 flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-semibold">Monto total deseado ($):</span>
-                <div className="relative flex-1">
-                  <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-400" />
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="Ej. 60, 100, 150..."
-                    value={(configuredPrice * configuredQuantity) || ''}
-                    onChange={e => {
-                      const inputVal = Math.max(0, parseFloat(e.target.value) || 0);
-                      if (selectedExtra.price > 0 && !isCustomMode && inputVal > 0) {
-                        const basePrice = selectedExtra.price;
-                        const newQty = Math.max(1, Math.round(inputVal / basePrice));
-                        setConfiguredPrice(basePrice);
-                        setConfiguredQuantity(newQty);
-                      } else {
-                        setConfiguredPrice(inputVal);
-                      }
-                    }}
-                    className="pl-7 h-8 text-xs font-black text-emerald-400 bg-card rounded-lg"
-                  />
+                  {/* Fast Preset Chips */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {presetOptions.map((opt) => {
+                      const currentTotal = configuredPrice * configuredQuantity;
+                      const isActive = Math.abs(currentTotal - opt.targetPrice) < 0.01 || (Math.abs(configuredQuantity - opt.qty) < 0.001 && configuredPrice === basePrice);
+
+                      return (
+                        <Badge
+                          key={opt.label}
+                          variant="outline"
+                          onClick={() => {
+                            if (basePrice > 0 && !isCustomMode) {
+                              setConfiguredPrice(basePrice);
+                              setConfiguredQuantity(opt.qty);
+                            } else {
+                              setConfiguredPrice(opt.targetPrice);
+                              setConfiguredQuantity(1);
+                            }
+                          }}
+                          className={`cursor-pointer px-2.5 py-1 text-xs font-black transition-all rounded-lg ${
+                            isActive
+                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
+                              : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-emerald-400 hover:border-emerald-500/40'
+                          }`}
+                        >
+                          {opt.label}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom price manual input */}
+                  <div className="pt-2 flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground font-semibold">Monto total deseado ($):</span>
+                    <div className="relative flex-1">
+                      <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-400" />
+                      <Input
+                        type="number"
+                        min={basePrice || 0}
+                        placeholder={basePrice ? `Mínimo $${basePrice}` : 'Ej. 60, 100, 150...'}
+                        value={(configuredPrice * configuredQuantity) || ''}
+                        onChange={e => {
+                          const inputVal = Math.max(0, parseFloat(e.target.value) || 0);
+                          if (basePrice > 0 && !isCustomMode) {
+                            if (inputVal < basePrice) {
+                              // If input is less than base unit price, set 1 unit
+                              setConfiguredPrice(basePrice);
+                              setConfiguredQuantity(1);
+                            } else {
+                              const calcQty = isFractional
+                                ? parseFloat((inputVal / basePrice).toFixed(2))
+                                : Math.max(1, Math.round(inputVal / basePrice));
+                              setConfiguredPrice(basePrice);
+                              setConfiguredQuantity(calcQty);
+                            }
+                          } else {
+                            setConfiguredPrice(inputVal);
+                          }
+                        }}
+                        className="pl-7 h-8 text-xs font-black text-emerald-400 bg-card rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  {basePrice > 0 && !isFractional && (
+                    <span className="text-[9px] text-amber-400/90 font-medium block">
+                      * Este ingrediente es por unidad (mínimo 1 ud = ${basePrice.toFixed(2)}). No se vende en fracciones.
+                    </span>
+                  )}
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* QUANTITY SELECTOR */}
-            <div className="space-y-2 p-3 bg-muted/20 border border-border/40 rounded-xl">
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider block">
-                Cantidad / Porciones:
-              </span>
+            {(() => {
+              const isFractional = isFractionalUnit(selectedExtra.unit);
+              const step = isFractional ? 0.25 : 1;
 
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center bg-zinc-900 rounded-xl border border-white/10 p-1 shadow-inner flex-1 max-w-[160px]">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-zinc-400 hover:text-white rounded-lg"
-                    onClick={() => setConfiguredQuantity(prev => Math.max(1, prev - 1))}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <input
-                    type="number"
-                    min="1"
-                    value={configuredQuantity}
-                    onChange={(e) => setConfiguredQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full text-center font-black text-emerald-400 text-sm bg-transparent border-none focus:outline-none focus:ring-0 p-0"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-emerald-400 hover:text-emerald-300 rounded-lg"
-                    onClick={() => setConfiguredQuantity(prev => prev + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Subtotal calculation */}
-                <div className="text-right">
-                  <span className="text-[10px] text-muted-foreground block font-bold">Subtotal Adicional</span>
-                  <span className="text-base font-black text-emerald-400">
-                    +${(configuredPrice * configuredQuantity).toFixed(2)}
+              return (
+                <div className="space-y-2 p-3 bg-muted/20 border border-border/40 rounded-xl">
+                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider block">
+                    Cantidad / Porciones ({isFractional ? selectedExtra.unit || 'peso' : 'Unidades en entero'}):
                   </span>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center bg-zinc-900 rounded-xl border border-white/10 p-1 shadow-inner flex-1 max-w-[170px]">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-zinc-400 hover:text-white rounded-lg"
+                        onClick={() => setConfiguredQuantity(prev => {
+                          const nextVal = prev - step;
+                          return isFractional ? Math.max(0.1, parseFloat(nextVal.toFixed(2))) : Math.max(1, Math.round(nextVal));
+                        })}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <input
+                        type="number"
+                        min={isFractional ? "0.1" : "1"}
+                        step={isFractional ? "0.25" : "1"}
+                        value={isFractional ? configuredQuantity : Math.round(configuredQuantity)}
+                        onChange={(e) => {
+                          const parsed = parseFloat(e.target.value) || (isFractional ? 0.25 : 1);
+                          if (isFractional) {
+                            setConfiguredQuantity(Math.max(0.05, parsed));
+                          } else {
+                            setConfiguredQuantity(Math.max(1, Math.round(parsed)));
+                          }
+                        }}
+                        className="w-full text-center font-black text-emerald-400 text-sm bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-emerald-400 hover:text-emerald-300 rounded-lg"
+                        onClick={() => setConfiguredQuantity(prev => {
+                          const nextVal = prev + step;
+                          return isFractional ? parseFloat(nextVal.toFixed(2)) : Math.round(nextVal + 1);
+                        })}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Subtotal calculation */}
+                    <div className="text-right">
+                      <span className="text-[10px] text-muted-foreground block font-bold">Subtotal Adicional</span>
+                      <span className="text-base font-black text-emerald-400">
+                        +${(configuredPrice * configuredQuantity).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Action Buttons */}
             <div className="flex gap-2 pt-2">
