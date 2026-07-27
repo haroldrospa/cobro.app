@@ -328,6 +328,7 @@ export default React.memo(CartItemComponent, (prev, next) => {
     prev.item.comment === next.item.comment &&
     prev.item.discount?.value === next.item.discount?.value &&
     prev.item.discount?.type === next.item.discount?.type &&
-    prev.item.offerApplied?.id === next.item.offerApplied?.id
+    prev.item.offerApplied?.id === next.item.offerApplied?.id &&
+    JSON.stringify(prev.item.selectedExtras || []) === JSON.stringify(next.item.selectedExtras || [])
   );
 });
