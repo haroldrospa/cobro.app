@@ -179,9 +179,8 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     onClose={() => setIsSelectExtraOpen(false)}
                                     onAddExtra={(extra) => onAddExtra?.(item.cartItemId || item.id, extra)}
                                     itemName={item.name}
-                                    currentQuantity={item.quantity}
                                 />
-                            </div>
+                            )}
 
                             {/* Comment Trigger */}
                             {onUpdateComment && (
