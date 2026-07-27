@@ -590,7 +590,8 @@ const POSContent: React.FC = () => {
 
   const addExtraToCartItem = useCallback((cartItemId: string, extra: any) => {
     setCart(prevCart => prevCart.map(item => {
-      if (item.cartItemId === cartItemId || item.id === cartItemId) {
+      const match = (item.cartItemId && item.cartItemId === cartItemId) || item.id === cartItemId || (item.cartItemId || item.id) === cartItemId;
+      if (match) {
         const currentExtras = item.selectedExtras || [];
         return {
           ...item,
@@ -603,7 +604,8 @@ const POSContent: React.FC = () => {
 
   const removeExtraFromCartItem = useCallback((cartItemId: string, extraId: string) => {
     setCart(prevCart => prevCart.map(item => {
-      if (item.cartItemId === cartItemId || item.id === cartItemId) {
+      const match = (item.cartItemId && item.cartItemId === cartItemId) || item.id === cartItemId || (item.cartItemId || item.id) === cartItemId;
+      if (match) {
         const currentExtras = item.selectedExtras || [];
         return {
           ...item,
@@ -1659,6 +1661,8 @@ const POSContent: React.FC = () => {
               onUpdateQuantity={updateQuantity}
               onUpdateComment={updateComment}
               onUpdateDiscount={updateDiscount}
+              onAddExtra={addExtraToCartItem}
+              onRemoveExtra={removeExtraFromCartItem}
               onRemoveFromCart={removeFromCart}
               calculateItemTotal={calculateItemTotal}
               currentOrderInfo={currentOrderInfo}

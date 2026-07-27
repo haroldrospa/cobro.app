@@ -12,6 +12,8 @@ interface MobileCartViewProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onUpdateComment?: (id: string, comment: string) => void;
   onUpdateDiscount?: (id: string, value: number, type: 'percentage' | 'amount') => void;
+  onAddExtra?: (cartItemId: string, extra: any) => void;
+  onRemoveExtra?: (cartItemId: string, extraId: string) => void;
   onRemoveFromCart: (id: string) => void;
   calculateItemTotal: (item: CartItem) => number;
   currentOrderInfo?: { orderNumber: string; customerName: string } | null;
@@ -27,6 +29,8 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
   onUpdateQuantity,
   onUpdateComment,
   onUpdateDiscount,
+  onAddExtra,
+  onRemoveExtra,
   onRemoveFromCart,
   calculateItemTotal,
   currentOrderInfo,
@@ -166,13 +170,15 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
         <div className="pb-8">
           {cart.map((item) => (
             <MobileCartItem
-              key={item.id}
+              key={item.cartItemId || item.id}
               item={item}
               onUpdateQuantity={onUpdateQuantity}
               onRemoveFromCart={onRemoveFromCart}
               calculateItemTotal={calculateItemTotal}
               onUpdateComment={onUpdateComment}
               onUpdateDiscount={onUpdateDiscount}
+              onAddExtra={onAddExtra}
+              onRemoveExtra={onRemoveExtra}
             />
           ))}
           <div ref={messagesEndRef} className="h-4" />
