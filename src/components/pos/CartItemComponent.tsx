@@ -84,18 +84,20 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
             </Button>
           )}
 
-          {/* Botón Adicionales / Extra [➕] */}
-          {onAddExtra && (
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Adicionar ingrediente extra"
-              onClick={() => setIsSelectExtraOpen(true)}
-              className="h-5 w-5 flex-shrink-0 transition-all ml-0.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-full"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-            </Button>
-          )}
+          {/* Botón Adicionales / Extra [➕] - Siempre visible */}
+          <Button
+            variant="outline"
+            size="sm"
+            title="Adicionar ingrediente extra a este plato"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSelectExtraOpen(true);
+            }}
+            className="h-6 px-1.5 text-[10px] font-bold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 bg-emerald-500/10 rounded-md gap-1 shrink-0 ml-1"
+          >
+            <PlusCircle className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Adicional</span>
+          </Button>
         </div>
 
         {/* Selected Extras List */}

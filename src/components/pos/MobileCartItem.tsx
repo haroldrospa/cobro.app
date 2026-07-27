@@ -159,18 +159,17 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 </Button>
                             </div>
 
-                            {/* Extra Button [➕] */}
-                            {onAddExtra && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    title="Adicionar ingrediente extra"
-                                    onClick={() => setIsSelectExtraOpen(true)}
-                                    className="h-7 w-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg"
-                                >
-                                    <PlusCircle className="h-4 w-4" />
-                                </Button>
-                            )}
+                            {/* Extra Button [➕] - Siempre visible */}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                title="Adicionar ingrediente extra"
+                                onClick={() => setIsSelectExtraOpen(true)}
+                                className="h-7 px-2 text-[10px] font-bold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 bg-emerald-500/10 rounded-lg gap-1 shrink-0"
+                            >
+                                <PlusCircle className="h-3.5 w-3.5" />
+                                <span>+ Extra</span>
+                            </Button>
 
                             {/* Select Extra Dialog */}
                             {isSelectExtraOpen && (
