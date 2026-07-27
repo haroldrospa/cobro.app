@@ -2072,6 +2072,8 @@ const POSContent: React.FC = () => {
                     onUpdateQuantity={updateQuantity}
                     onUpdateComment={updateComment}
                     onUpdateDiscount={updateDiscount}
+                    onAddExtra={addExtraToCartItem}
+                    onRemoveExtra={removeExtraFromCartItem}
                     onRemoveFromCart={removeFromCart}
                     calculateItemTotal={calculateItemTotal}
                     currentOrderInfo={currentOrderInfo}
