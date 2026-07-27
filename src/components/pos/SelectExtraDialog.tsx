@@ -134,6 +134,35 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-3 py-2 text-xs">
+          {/* Quick Preset Price Chips */}
+          <div className="space-y-1.5 p-2 bg-muted/20 border border-border/40 rounded-xl">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+              Precios Rápidos Predeterminados:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {[25, 50, 100, 150, 200, 250].map((preset) => (
+                <Badge
+                  key={preset}
+                  variant="outline"
+                  onClick={() => {
+                    setCustomPrice(String(preset));
+                    if (!customName) {
+                      setCustomName(`Adicional $${preset}`);
+                    }
+                    setIsCustomMode(true);
+                  }}
+                  className={`cursor-pointer px-2.5 py-1 text-xs font-black transition-all ${
+                    Number(customPrice) === preset && isCustomMode
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                  }`}
+                >
+                  +${preset}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
           {/* Mode Switcher */}
           <div className="flex gap-2 p-1 bg-muted/40 rounded-lg">
             <Button
@@ -278,6 +307,24 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                     className="font-bold text-foreground"
                   />
                 </div>
+              </div>
+
+              {/* Quick price chips in custom mode */}
+              <div className="flex flex-wrap gap-1">
+                {[25, 50, 100, 150, 200, 250].map((preset) => (
+                  <Badge
+                    key={`custom-${preset}`}
+                    variant="outline"
+                    onClick={() => setCustomPrice(String(preset))}
+                    className={`cursor-pointer px-2 py-0.5 text-[11px] font-bold ${
+                      Number(customPrice) === preset
+                        ? 'bg-emerald-600 text-white border-emerald-500'
+                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-emerald-400'
+                    }`}
+                  >
+                    ${preset}
+                  </Badge>
+                ))}
               </div>
 
               <Button type="button" onClick={handleAddCustom} className="w-full bg-emerald-600 hover:bg-emerald-500 font-bold gap-2 mt-2">
