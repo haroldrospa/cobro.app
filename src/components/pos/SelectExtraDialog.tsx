@@ -16,7 +16,13 @@ interface SelectExtraDialogProps {
   itemName: string;
 }
 
-type ExtraItem = { id: string; name: string; price: number; ingredient_id?: string };
+type ExtraItem = { id: string; name: string; price: number; unit?: string; ingredient_id?: string };
+
+const isFractionalUnit = (unit?: string) => {
+  if (!unit) return false;
+  const u = unit.toLowerCase().trim();
+  return ['lb', 'kg', 'g', 'oz', 'l', 'ml', 'libra', 'kilo', 'gramo', 'litro'].includes(u);
+};
 
 export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
   isOpen,
@@ -61,6 +67,7 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
           id: `ing-${ing.id}`,
           name: `Extra ${ing.name}`,
           price: estPrice,
+          unit: ing.unit || 'ud',
           ingredient_id: ing.id
         });
       }
