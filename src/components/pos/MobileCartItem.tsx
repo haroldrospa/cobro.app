@@ -112,7 +112,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     variant="outline"
                                     className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 text-[10px] py-0 px-1.5 gap-1 font-bold"
                                 >
-                                    <span>+ {extra.quantity > 1 ? `${extra.quantity}x ` : ''}{extra.name} (+${(extra.price * (extra.quantity || 1)).toFixed(2)})</span>
+                                    <span>+ {extra.quantity > 1 ? `${extra.quantity}x ` : ''}{extra.name} (${extra.price.toFixed(2)} c/u = +${(extra.price * (extra.quantity || 1)).toFixed(2)})</span>
                                     {onRemoveExtra && (
                                         <X
                                             className="h-3 w-3 cursor-pointer hover:text-destructive text-emerald-400/70"

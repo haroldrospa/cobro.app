@@ -198,7 +198,7 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                         : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
                     }`}
                   >
-                    Base (${selectedExtra.price})
+                    Base (${selectedExtra.price}{configuredQuantity > 1 ? ` = $${(selectedExtra.price * configuredQuantity).toFixed(0)}` : ''})
                   </Badge>
                 )}
 
@@ -213,7 +213,7 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                         : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-emerald-400 hover:border-emerald-500/40'
                     }`}
                   >
-                    ${presetPrice}
+                    ${presetPrice}{configuredQuantity > 1 ? ` ($${(presetPrice * configuredQuantity).toFixed(0)})` : ''}
                   </Badge>
                 ))}
               </div>
