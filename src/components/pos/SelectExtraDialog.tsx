@@ -84,17 +84,30 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
     return availableExtras.filter(e => e.name.toLowerCase().includes(term));
   }, [availableExtras, searchTerm]);
 
-  const handleSelectPredefined = (extra: { id: string; name: string; price: number; ingredient_id?: string }) => {
+  const handleSetQty = (extraId: string, val: number) => {
+    setQuantities(prev => ({ ...prev, [extraId]: Math.max(1, val) }));
+  };
+
+  const handleSelectPredefinedWithPrice = (
+    extra: { id: string; name: string; price: number; ingredient_id?: string },
+    customOverridePrice: number
+  ) => {
     const qty = quantities[extra.id] || 1;
+    const finalUnitPrice = customOverridePrice;
+    const totalPrice = finalUnitPrice * qty;
+
     onAddExtra({
-      id: extra.id,
+      id: `${extra.id}-${finalUnitPrice}-${Date.now()}`,
       name: extra.name,
-      price: extra.price,
+      price: finalUnitPrice,
       quantity: qty,
       ingredient_id: extra.ingredient_id
     });
-    const subtotalText = (extra.price * qty).toFixed(2);
-    toast({ title: 'Adicional agregado', description: `Se agregó ${qty > 1 ? `${qty}x ` : ''}"${extra.name}" (+$${subtotalText}) a ${itemName}` });
+
+    toast({
+      title: 'Adicional agregado',
+      description: `Se agregó ${qty > 1 ? `${qty}x ` : ''}"${extra.name}" (+$${totalPrice.toFixed(2)}) a ${itemName}`
+    });
     onClose();
   };
 
@@ -207,61 +220,87 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                   </Button>
                 </div>
               ) : (
-                <div className="max-h-[280px] overflow-y-auto space-y-2 pr-1">
+                <div className="max-h-[300px] overflow-y-auto space-y-2.5 pr-1">
                   {filteredExtras.map(extra => {
                     const q = quantities[extra.id] || 1;
                     const totalPrice = extra.price * q;
                     return (
                       <div
                         key={extra.id}
-                        className="p-2 bg-muted/20 hover:bg-emerald-500/10 border border-border/50 hover:border-emerald-500/40 rounded-xl flex items-center justify-between transition-all gap-2"
+                        className="p-2.5 bg-muted/20 hover:bg-emerald-500/10 border border-border/50 hover:border-emerald-500/40 rounded-xl flex flex-col gap-2 transition-all group"
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <PlusCircle className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-foreground truncate text-xs" title={extra.name}>
-                              {extra.name}
-                            </span>
-                            <span className="text-[10px] text-emerald-400 font-semibold">
-                              ${extra.price.toFixed(2)} c/u
-                            </span>
+                        {/* Top row: Name, unit price, [- qty +] and Add base price button */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer" onClick={() => handleSelectPredefinedWithPrice(extra, extra.price)}>
+                            <PlusCircle className="h-4 w-4 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-black text-foreground truncate text-xs group-hover:text-emerald-400 transition-colors" title={extra.name}>
+                                {extra.name}
+                              </span>
+                              <span className="text-[10px] text-emerald-400/80 font-semibold">
+                                Base: ${extra.price.toFixed(2)} c/u
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quantity Controls + Add Base Button */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center bg-zinc-900 rounded-lg border border-white/10 p-0.5">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-zinc-400 hover:text-white"
+                                onClick={() => handleUpdateQty(extra.id, -1)}
+                              >
+                                <PlusCircle className="h-3 w-3 rotate-45 text-muted-foreground" />
+                              </Button>
+                              <input
+                                type="number"
+                                min="1"
+                                value={q}
+                                onChange={(e) => handleSetQty(extra.id, parseInt(e.target.value) || 1)}
+                                className="w-7 text-center font-black text-emerald-400 text-xs bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-emerald-400 hover:text-emerald-300"
+                                onClick={() => handleUpdateQty(extra.id, 1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleSelectPredefinedWithPrice(extra, extra.price)}
+                              className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-1 shadow-sm shrink-0"
+                            >
+                              <span>+ Agregar (${totalPrice.toFixed(2)})</span>
+                            </Button>
                           </div>
                         </div>
 
-                        {/* Quantity controls + Add button */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className="flex items-center bg-zinc-800/80 rounded-lg border border-white/10 p-0.5">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-zinc-400 hover:text-white"
-                              onClick={() => handleUpdateQty(extra.id, -1)}
-                            >
-                              <PlusCircle className="h-3 w-3 rotate-45 text-muted-foreground" />
-                            </Button>
-                            <span className="w-5 text-center font-bold text-emerald-400 text-xs">
-                              {q}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-emerald-400 hover:text-emerald-300"
-                              onClick={() => handleUpdateQty(extra.id, 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
+                        {/* Bottom row: Per-ingredient preset prices ($50, $100, $150, $200, $250) */}
+                        <div className="flex items-center gap-1.5 pt-1.5 border-t border-border/30">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">
+                            Precios rápidos:
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {[50, 100, 150, 200, 250].map((presetPrice) => (
+                              <Badge
+                                key={presetPrice}
+                                variant="outline"
+                                onClick={() => handleSelectPredefinedWithPrice(extra, presetPrice)}
+                                className="cursor-pointer px-2 py-0.5 text-[10px] font-black bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 transition-all shadow-xs"
+                              >
+                                +${presetPrice}
+                              </Badge>
+                            ))}
                           </div>
-
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleSelectPredefined(extra)}
-                            className="h-7 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1 shadow-sm shrink-0"
-                          >
-                            <span>+ Agregar (${totalPrice.toFixed(2)})</span>
-                          </Button>
                         </div>
                       </div>
                     );
