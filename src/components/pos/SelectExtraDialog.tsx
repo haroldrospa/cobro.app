@@ -54,19 +54,26 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
     const list: Array<ExtraItem> = [];
 
     extraProds.forEach(p => {
-      list.push({ id: p.id, name: p.name, price: p.price });
+      const matchingRecipe = recipes.find(r => r.product_id === p.id);
+      const matchedIng = ingredients.find(i => i.id === matchingRecipe?.ingredient_id || p.name.toLowerCase().includes(i.name.toLowerCase()));
+      list.push({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        unit: matchedIng?.unit || (p as any).unit || 'ud',
+        ingredient_id: matchedIng?.id
+      });
     });
 
     ingredients.forEach(ing => {
       const existing = list.find(l => l.name.toLowerCase().includes(ing.name.toLowerCase()));
       if (!existing) {
-        const portion = ing.unit === 'lb' ? 0.25 : 1;
-        const estCost = ing.cost_per_unit * portion;
-        const estPrice = Math.round(estCost * 2) || 50;
+        // Price per 1 FULL unit of measure (1 lb, 1 ud, 1 kg)
+        const estPricePerUnit = Math.round(ing.cost_per_unit * 2) || 100;
         list.push({
           id: `ing-${ing.id}`,
           name: `Extra ${ing.name}`,
-          price: estPrice,
+          price: estPricePerUnit,
           unit: ing.unit || 'ud',
           ingredient_id: ing.id
         });
@@ -185,9 +192,9 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
             {/* PRESET PRICES SELECTOR */}
             {(() => {
               const isFractional = isFractionalUnit(selectedExtra.unit);
-              const basePrice = (selectedExtra.price > 0 && !isCustomMode) ? selectedExtra.price : 0;
+              const basePrice = configuredPrice || selectedExtra.price || 0;
 
-              // Generate preset options based on unit type and base price
+              // Generate preset options based on unit type and current base price
               let presetOptions: Array<{ targetPrice: number; qty: number; label: string }> = [];
 
               if (basePrice > 0 && !isCustomMode) {
@@ -219,13 +226,30 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
               }
 
               return (
-                <div className="space-y-2 p-3 bg-muted/20 border border-border/40 rounded-xl">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-2.5 p-3 bg-muted/20 border border-border/40 rounded-xl">
+                  {/* Base Unit Price Header */}
+                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-border/30">
                     <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">
-                      Elegir Opción o Precio Predeterminado:
+                      Precio Unitario (${selectedExtra.unit ? `/ ${selectedExtra.unit}` : ''}):
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                      <Input
+                        type="number"
+                        min="0"
+                        value={configuredPrice || ''}
+                        onChange={(e) => setConfiguredPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="w-24 h-7 text-xs font-black text-emerald-400 bg-card rounded-md text-right px-2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Precios / Raciones Rápidas:
                     </span>
                     <span className="text-xs font-black text-white">
-                      ${(configuredPrice * configuredQuantity).toFixed(2)} total ({isFractional ? configuredQuantity : Math.round(configuredQuantity)}x ${configuredPrice.toFixed(2)})
+                      ${(configuredPrice * configuredQuantity).toFixed(2)} total ({isFractional ? configuredQuantity : Math.round(configuredQuantity)} {selectedExtra.unit || 'x'})
                     </span>
                   </div>
 
@@ -233,7 +257,7 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                   <div className="flex flex-wrap gap-1.5">
                     {presetOptions.map((opt) => {
                       const currentTotal = configuredPrice * configuredQuantity;
-                      const isActive = Math.abs(currentTotal - opt.targetPrice) < 0.01 || (Math.abs(configuredQuantity - opt.qty) < 0.001 && configuredPrice === basePrice);
+                      const isActive = Math.abs(currentTotal - opt.targetPrice) < 0.01 || Math.abs(configuredQuantity - opt.qty) < 0.001;
 
                       return (
                         <Badge
@@ -241,7 +265,6 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                           variant="outline"
                           onClick={() => {
                             if (basePrice > 0 && !isCustomMode) {
-                              setConfiguredPrice(basePrice);
                               setConfiguredQuantity(opt.qty);
                             } else {
                               setConfiguredPrice(opt.targetPrice);
@@ -260,40 +283,8 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                     })}
                   </div>
 
-                  {/* Custom price manual input */}
-                  <div className="pt-2 flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground font-semibold">Monto total deseado ($):</span>
-                    <div className="relative flex-1">
-                      <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-400" />
-                      <Input
-                        type="number"
-                        min={basePrice || 0}
-                        placeholder={basePrice ? `Mínimo $${basePrice}` : 'Ej. 60, 100, 150...'}
-                        value={(configuredPrice * configuredQuantity) || ''}
-                        onChange={e => {
-                          const inputVal = Math.max(0, parseFloat(e.target.value) || 0);
-                          if (basePrice > 0 && !isCustomMode) {
-                            if (inputVal < basePrice) {
-                              // If input is less than base unit price, set 1 unit
-                              setConfiguredPrice(basePrice);
-                              setConfiguredQuantity(1);
-                            } else {
-                              const calcQty = isFractional
-                                ? parseFloat((inputVal / basePrice).toFixed(2))
-                                : Math.max(1, Math.round(inputVal / basePrice));
-                              setConfiguredPrice(basePrice);
-                              setConfiguredQuantity(calcQty);
-                            }
-                          } else {
-                            setConfiguredPrice(inputVal);
-                          }
-                        }}
-                        className="pl-7 h-8 text-xs font-black text-emerald-400 bg-card rounded-lg"
-                      />
-                    </div>
-                  </div>
                   {basePrice > 0 && !isFractional && (
-                    <span className="text-[9px] text-amber-400/90 font-medium block">
+                    <span className="text-[9px] text-amber-400/90 font-medium block pt-1">
                       * Este ingrediente es por unidad (mínimo 1 ud = ${basePrice.toFixed(2)}). No se vende en fracciones.
                     </span>
                   )}
