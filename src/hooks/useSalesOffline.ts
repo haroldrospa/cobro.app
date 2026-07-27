@@ -672,6 +672,38 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 );
                 updateAndRecipePromises.push(...recipeDeductions);
             }
+
+            // Deduct ingredient stock for attached extras
+            if (item.selectedExtras && item.selectedExtras.length > 0) {
+                for (const extra of item.selectedExtras) {
+                    if (extra.ingredient_id) {
+                        const ingId = extra.ingredient_id.startsWith('ing-') ? extra.ingredient_id.replace('ing-', '') : extra.ingredient_id;
+                        updateAndRecipePromises.push(
+                            supabase.rpc('decrement_ingredient_stock', {
+                                p_ingredient_id: ingId,
+                                p_amount: (extra.quantity || 1) * item.quantity,
+                            })
+                        );
+                    } else if (extra.id) {
+                        // Check if extra ID has a recipe
+                        const { data: extraRecipes } = await supabase
+                            .from('product_recipes')
+                            .select('ingredient_id, quantity')
+                            .eq('product_id', extra.id);
+
+                        if (extraRecipes && extraRecipes.length > 0) {
+                            extraRecipes.forEach(er => {
+                                updateAndRecipePromises.push(
+                                    supabase.rpc('decrement_ingredient_stock', {
+                                        p_ingredient_id: er.ingredient_id,
+                                        p_amount: er.quantity * (extra.quantity || 1) * item.quantity,
+                                    })
+                                );
+                            });
+                        }
+                    }
+                }
+            }
         } catch (recipeErr) {
             console.warn('⚠️ No se pudieron descontar ingredientes de receta:', recipeErr);
         }

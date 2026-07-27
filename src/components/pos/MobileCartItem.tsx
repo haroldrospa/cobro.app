@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Minus, Plus, Trash2, Package, MessageSquare, Percent } from 'lucide-react';
+import { Minus, Plus, Trash2, Package, MessageSquare, Percent, PlusCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CartItem } from '@/types/pos';
+import { CartItem, CartItemExtra } from '@/types/pos';
 import QuantityDialog from './QuantityDialog';
+import SelectExtraDialog from './SelectExtraDialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,8 @@ interface MobileCartItemProps {
     calculateItemTotal: (item: CartItem) => number;
     onUpdateComment?: (id: string, c: string) => void;
     onUpdateDiscount?: (id: string, value: number, type: 'percentage' | 'amount') => void;
+    onAddExtra?: (cartItemId: string, extra: CartItemExtra) => void;
+    onRemoveExtra?: (cartItemId: string, extraId: string) => void;
 }
 
 /**
@@ -29,11 +32,14 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
     onRemoveFromCart,
     calculateItemTotal,
     onUpdateComment,
-    onUpdateDiscount
+    onUpdateDiscount,
+    onAddExtra,
+    onRemoveExtra
 }) => {
     const [isEditingComment, setIsEditingComment] = useState(false);
     const [isQuantityDialogOpen, setIsQuantityDialogOpen] = useState(false);
     const [isEditingDiscount, setIsEditingDiscount] = useState(false);
+    const [isSelectExtraOpen, setIsSelectExtraOpen] = useState(false);
     const [tempDiscountValue, setTempDiscountValue] = useState(item.discount?.value ? String(item.discount.value) : '');
     const [tempDiscountType, setTempDiscountType] = useState<'percentage' | 'amount'>(item.discount?.type || 'percentage');
 
@@ -97,6 +103,30 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                         </Button>
                     </div>
 
+                    {/* Selected Extras List */}
+                    {item.selectedExtras && item.selectedExtras.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {item.selectedExtras.map((extra, idx) => (
+                                <Badge
+                                    key={`${extra.id}-${idx}`}
+                                    variant="outline"
+                                    className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 text-[10px] py-0 px-1.5 gap-1 font-bold"
+                                >
+                                    <span>+ {extra.name} (+${extra.price})</span>
+                                    {onRemoveExtra && (
+                                        <X
+                                            className="h-3 w-3 cursor-pointer hover:text-destructive text-emerald-400/70"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRemoveExtra(item.cartItemId || item.id, extra.id);
+                                            }}
+                                        />
+                                    )}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Subtle Divider */}
                     <div className="h-px bg-border/50 w-full" />
 
@@ -127,11 +157,27 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 >
                                     <Plus className="h-3.5 w-3.5" />
                                 </Button>
+                            </div>
 
-                                <QuantityDialog
-                                    isOpen={isQuantityDialogOpen}
-                                    onClose={() => setIsQuantityDialogOpen(false)}
-                                    onConfirm={(q) => onUpdateQuantity(item.id, q)}
+                            {/* Extra Button [➕] */}
+                            {onAddExtra && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Adicionar ingrediente extra"
+                                    onClick={() => setIsSelectExtraOpen(true)}
+                                    className="h-7 w-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg"
+                                >
+                                    <PlusCircle className="h-4 w-4" />
+                                </Button>
+                            )}
+
+                            {/* Select Extra Dialog */}
+                            {isSelectExtraOpen && (
+                                <SelectExtraDialog
+                                    isOpen={isSelectExtraOpen}
+                                    onClose={() => setIsSelectExtraOpen(false)}
+                                    onAddExtra={(extra) => onAddExtra?.(item.cartItemId || item.id, extra)}
                                     itemName={item.name}
                                     currentQuantity={item.quantity}
                                 />

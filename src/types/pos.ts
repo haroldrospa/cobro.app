@@ -1,3 +1,12 @@
+export interface CartItemExtra {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  ingredient_id?: string;
+  recipe_quantity?: number;
+}
+
 export interface CartItem {
   id: string;
   cartItemId?: string;
@@ -8,6 +17,7 @@ export interface CartItem {
   cost_includes_tax?: boolean;
   image_url?: string;
   comment?: string;
+  selectedExtras?: CartItemExtra[];
   originalPrice?: number;
   discount?: {
     value: number;

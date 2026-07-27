@@ -1,8 +1,14 @@
 
 import { CartItem, GlobalDiscount } from '@/types/pos';
 
+export const getItemUnitPriceWithExtras = (item: CartItem): number => {
+  const extrasSum = (item.selectedExtras || []).reduce((s, e) => s + (e.price * (e.quantity || 1)), 0);
+  return item.price + extrasSum;
+};
+
 export const calculateItemTotal = (item: CartItem): number => {
-  let itemTotalGross = item.price * item.quantity;
+  const unitPriceWithExtras = getItemUnitPriceWithExtras(item);
+  let itemTotalGross = unitPriceWithExtras * item.quantity;
   if (item.discount && item.discount.value > 0) {
     if (item.discount.type === 'percentage') {
       itemTotalGross = Math.max(0, itemTotalGross - (itemTotalGross * (item.discount.value / 100)));
@@ -18,16 +24,17 @@ export const calculateItemTotal = (item: CartItem): number => {
 };
 
 export const calculateTotals = (cart: CartItem[], globalDiscount?: GlobalDiscount) => {
-  // 1. Calcular Subtotal Bruto (Suma de precios de lista * cantidad)
+  // 1. Calcular Subtotal Bruto (Suma de precios de lista con adicionales * cantidad)
   const grossSubtotal = cart.reduce((sum, item) => {
-    return sum + (item.price * item.quantity);
+    return sum + (getItemUnitPriceWithExtras(item) * item.quantity);
   }, 0);
 
   // Calcular el total de descuentos individuales aplicados en los items
   const individualDiscountTotal = cart.reduce((sum, item) => {
+    const itemUnitPrice = getItemUnitPriceWithExtras(item);
     if (item.discount && item.discount.value > 0) {
       if (item.discount.type === 'percentage') {
-        return sum + ((item.price * item.quantity) * (item.discount.value / 100));
+        return sum + ((itemUnitPrice * item.quantity) * (item.discount.value / 100));
       } else {
         return sum + item.discount.value;
       }
@@ -57,7 +64,7 @@ export const calculateTotals = (cart: CartItem[], globalDiscount?: GlobalDiscoun
 
   cart.forEach((item) => {
     const taxRate = item.tax || 0.18;
-    const itemTotalGross = item.price * item.quantity;
+    const itemTotalGross = getItemUnitPriceWithExtras(item) * item.quantity;
 
     // Descuento individual de este item
     let itemIndividualDiscount = 0;

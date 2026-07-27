@@ -14,6 +14,8 @@ interface CartSummaryProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onUpdateComment: (id: string, comment: string) => void;
   onUpdateDiscount?: (id: string, value: number, type: 'percentage' | 'amount') => void;
+  onAddExtra?: (cartItemId: string, extra: any) => void;
+  onRemoveExtra?: (cartItemId: string, extraId: string) => void;
   onRemoveFromCart: (id: string) => void;
   calculateItemTotal: (item: CartItem) => number;
   currentOrderInfo?: { orderNumber: string; customerName: string } | null;
@@ -33,6 +35,8 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   onUpdateQuantity,
   onUpdateComment,
   onUpdateDiscount,
+  onAddExtra,
+  onRemoveExtra,
   onRemoveFromCart,
   calculateItemTotal,
   currentOrderInfo,
@@ -144,6 +148,8 @@ const CartSummary: React.FC<CartSummaryProps> = ({
                 onUpdateQuantity={onUpdateQuantity}
                 onUpdateComment={onUpdateComment}
                 onUpdateDiscount={onUpdateDiscount}
+                onAddExtra={onAddExtra}
+                onRemoveExtra={onRemoveExtra}
                 onRemove={onRemoveFromCart}
                 calculateItemTotal={calculateItemTotal}
               />
