@@ -179,10 +179,10 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
             <div className="space-y-2 p-3 bg-muted/20 border border-border/40 rounded-xl">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">
-                  Elegir Precio Predeterminado:
+                  Elegir Precio Total u Opción Rápida:
                 </span>
                 <span className="text-xs font-black text-white">
-                  ${configuredPrice.toFixed(2)} c/u
+                  ${(configuredPrice * configuredQuantity).toFixed(2)} total ({configuredQuantity}x ${configuredPrice.toFixed(2)})
                 </span>
               </div>
 
@@ -191,44 +191,72 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                 {selectedExtra.price > 0 && !isCustomMode && (
                   <Badge
                     variant="outline"
-                    onClick={() => setConfiguredPrice(selectedExtra.price)}
+                    onClick={() => {
+                      setConfiguredPrice(selectedExtra.price);
+                      setConfiguredQuantity(1);
+                    }}
                     className={`cursor-pointer px-3 py-1 text-xs font-black transition-all rounded-lg ${
-                      configuredPrice === selectedExtra.price
+                      configuredPrice === selectedExtra.price && configuredQuantity === 1
                         ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
                         : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
                     }`}
                   >
-                    Base (${selectedExtra.price}{configuredQuantity > 1 ? ` = $${(selectedExtra.price * configuredQuantity).toFixed(0)}` : ''})
+                    1x Base (${selectedExtra.price.toFixed(0)})
                   </Badge>
                 )}
 
-                {[25, 50, 60, 80, 100, 150, 200, 250].map((presetPrice) => (
-                  <Badge
-                    key={presetPrice}
-                    variant="outline"
-                    onClick={() => setConfiguredPrice(presetPrice)}
-                    className={`cursor-pointer px-2.5 py-1 text-xs font-black transition-all rounded-lg ${
-                      configuredPrice === presetPrice
-                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
-                        : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-emerald-400 hover:border-emerald-500/40'
-                    }`}
-                  >
-                    ${presetPrice}{configuredQuantity > 1 ? ` ($${(presetPrice * configuredQuantity).toFixed(0)})` : ''}
-                  </Badge>
-                ))}
+                {[25, 50, 60, 80, 100, 150, 200, 250].map((presetTarget) => {
+                  const basePrice = (selectedExtra.price > 0 && !isCustomMode) ? selectedExtra.price : presetTarget;
+                  const calculatedQty = (selectedExtra.price > 0 && !isCustomMode) ? Math.max(1, Math.round(presetTarget / basePrice)) : 1;
+                  const currentTotal = configuredPrice * configuredQuantity;
+                  const isActive = currentTotal === presetTarget || (configuredPrice === presetTarget && configuredQuantity === 1);
+
+                  return (
+                    <Badge
+                      key={presetTarget}
+                      variant="outline"
+                      onClick={() => {
+                        if (selectedExtra.price > 0 && !isCustomMode) {
+                          setConfiguredPrice(basePrice);
+                          setConfiguredQuantity(calculatedQty);
+                        } else {
+                          setConfiguredPrice(presetTarget);
+                          setConfiguredQuantity(1);
+                        }
+                      }}
+                      className={`cursor-pointer px-2.5 py-1 text-xs font-black transition-all rounded-lg ${
+                        isActive
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
+                          : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-emerald-400 hover:border-emerald-500/40'
+                      }`}
+                    >
+                      ${presetTarget}{selectedExtra.price > 0 && !isCustomMode && calculatedQty > 1 ? ` (${calculatedQty}x)` : ''}
+                    </Badge>
+                  );
+                })}
               </div>
 
               {/* Custom price manual input */}
               <div className="pt-2 flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-semibold">Otro precio:</span>
+                <span className="text-[10px] text-muted-foreground font-semibold">Monto total deseado ($):</span>
                 <div className="relative flex-1">
                   <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-400" />
                   <Input
                     type="number"
                     min="0"
-                    placeholder="Escribir precio..."
-                    value={configuredPrice || ''}
-                    onChange={e => setConfiguredPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                    placeholder="Ej. 60, 100, 150..."
+                    value={(configuredPrice * configuredQuantity) || ''}
+                    onChange={e => {
+                      const inputVal = Math.max(0, parseFloat(e.target.value) || 0);
+                      if (selectedExtra.price > 0 && !isCustomMode && inputVal > 0) {
+                        const basePrice = selectedExtra.price;
+                        const newQty = Math.max(1, Math.round(inputVal / basePrice));
+                        setConfiguredPrice(basePrice);
+                        setConfiguredQuantity(newQty);
+                      } else {
+                        setConfiguredPrice(inputVal);
+                      }
+                    }}
                     className="pl-7 h-8 text-xs font-black text-emerald-400 bg-card rounded-lg"
                   />
                 </div>
