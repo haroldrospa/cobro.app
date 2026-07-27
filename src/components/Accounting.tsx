@@ -581,6 +581,17 @@ function AccountingContent() {
     // Expense type: 'reinversion' = Inventario, 'operativo' = all others
     const [expenseType, setExpenseType] = useState<'reinversion' | 'operativo'>('reinversion');
 
+    // Search & Filter States for Expenses
+    const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
+    const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>('all');
+    const [expenseTypeFilter, setExpenseTypeFilter] = useState<'all' | 'reinversion' | 'operativo'>('all');
+    const [expenseHasReceiptFilter, setExpenseHasReceiptFilter] = useState<'all' | 'with_receipt' | 'without_receipt'>('all');
+    const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
+
+    // Search & Filter States for other tabs
+    const [dailySummarySearch, setDailySummarySearch] = useState('');
+    const [fixedExpenseSearch, setFixedExpenseSearch] = useState('');
+
     const operativeCategories = CATEGORIES.filter(c => !REINVESTMENT_CATEGORIES.includes(c));
     const availableCategories = expenseType === 'reinversion' ? REINVESTMENT_CATEGORIES : operativeCategories;
 
@@ -616,6 +627,59 @@ function AccountingContent() {
         const d = new Date(expense.created_at);
         return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
     });
+
+    // Filtered Expenses by Search, Category, Type, and Receipt Attachment
+    const searchedAndFilteredExpenses = useMemo(() => {
+        return (filteredExpenses || []).filter(expense => {
+            if (!expense) return false;
+            
+            // Text Search
+            if (expenseSearchQuery.trim()) {
+                const query = expenseSearchQuery.toLowerCase().trim();
+                const matchDesc = expense.description?.toLowerCase().includes(query);
+                const matchSupplier = expense.supplier_name?.toLowerCase().includes(query);
+                const matchCat = expense.category?.toLowerCase().includes(query);
+                const matchInvoice = expense.invoice_number?.toLowerCase().includes(query);
+                const matchAmount = expense.amount?.toString().includes(query);
+                
+                if (!matchDesc && !matchSupplier && !matchCat && !matchInvoice && !matchAmount) {
+                    return false;
+                }
+            }
+
+            // Category Filter
+            if (expenseCategoryFilter !== 'all' && expense.category !== expenseCategoryFilter) {
+                return false;
+            }
+
+            // Type Filter
+            if (expenseTypeFilter === 'reinversion' && !isReinvestment(expense.category)) {
+                return false;
+            }
+            if (expenseTypeFilter === 'operativo' && isReinvestment(expense.category)) {
+                return false;
+            }
+
+            // Receipt Attachment Filter
+            if (expenseHasReceiptFilter === 'with_receipt' && !expense.image_url) {
+                return false;
+            }
+            if (expenseHasReceiptFilter === 'without_receipt' && expense.image_url) {
+                return false;
+            }
+
+            return true;
+        });
+    }, [filteredExpenses, expenseSearchQuery, expenseCategoryFilter, expenseTypeFilter, expenseHasReceiptFilter]);
+
+    const hasActiveExpenseFilters = expenseSearchQuery.trim() !== '' || expenseCategoryFilter !== 'all' || expenseTypeFilter !== 'all' || expenseHasReceiptFilter !== 'all';
+
+    const clearExpenseFilters = () => {
+        setExpenseSearchQuery('');
+        setExpenseCategoryFilter('all');
+        setExpenseTypeFilter('all');
+        setExpenseHasReceiptFilter('all');
+    };
 
     // Calculations
     let collectedSales = 0;
@@ -818,6 +882,29 @@ function AccountingContent() {
             .filter(day => day.closings.length > 0 || day.withdrawals.length > 0 || day.expenses.length > 0)
             .sort((a, b) => b.dateKey.localeCompare(a.dateKey));
     }, [dailyClosings, cashMovements, filteredExpenses, currentDate]);
+
+    // Filtered daily data by search query
+    const searchedDailyDataMap = useMemo(() => {
+        if (!dailySummarySearch.trim()) return dailyDataMap;
+        const q = dailySummarySearch.toLowerCase().trim();
+        return dailyDataMap.filter(day => {
+            const dateFormatted = format(day.dateObj, "EEEE, d 'de' MMMM", { locale: es }).toLowerCase();
+            const dateKey = day.dateKey.toLowerCase();
+            const totalCash = (day.totalSalesCash || day.totalGrossClosingIncome || 0).toString();
+            return dateFormatted.includes(q) || dateKey.includes(q) || totalCash.includes(q);
+        });
+    }, [dailyDataMap, dailySummarySearch]);
+
+    // Filtered fixed expenses by search query
+    const searchedFixedExpenses = useMemo(() => {
+        if (!fixedExpenseSearch.trim()) return fixedExpenses;
+        const q = fixedExpenseSearch.toLowerCase().trim();
+        return fixedExpenses.filter(f => 
+            f.description.toLowerCase().includes(q) || 
+            f.category.toLowerCase().includes(q) || 
+            f.amount.toString().includes(q)
+        );
+    }, [fixedExpenses, fixedExpenseSearch]);
 
 
 
@@ -1842,14 +1929,201 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 </div>
 
                 <TabsContent value="expenses" className="space-y-6">
-                    <div className="max-w-2xl mx-auto w-full flex items-center gap-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                            <Input placeholder="Buscar por descripción o proveedor..." className="pl-11 h-12 bg-muted/20 border-border/50 rounded-2xl focus:ring-primary/20" />
+                    {/* Main Search & Advanced Filter Controls */}
+                    <div className="max-w-3xl mx-auto w-full space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            {/* Search Input with Clear Button */}
+                            <div className="relative flex-1 w-full">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                                <Input 
+                                    placeholder="Buscar por descripción, proveedor, comprobante, categoría..." 
+                                    value={expenseSearchQuery}
+                                    onChange={(e) => setExpenseSearchQuery(e.target.value)}
+                                    className="pl-11 pr-10 h-12 bg-muted/20 border-border/50 rounded-2xl focus:ring-primary/20 text-sm font-medium" 
+                                />
+                                {expenseSearchQuery && (
+                                    <button
+                                        onClick={() => setExpenseSearchQuery('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/40 transition-colors"
+                                        title="Limpiar búsqueda"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Advanced Filters Popover */}
+                            <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button 
+                                        variant="outline" 
+                                        className={cn(
+                                            "h-12 px-4 sm:px-5 rounded-2xl border-border/50 font-bold text-xs gap-2 shrink-0 transition-all",
+                                            hasActiveExpenseFilters 
+                                                ? "bg-primary/10 border-primary text-primary hover:bg-primary/20 shadow-md" 
+                                                : "bg-muted/20 hover:bg-muted/30"
+                                        )}
+                                    >
+                                        <Filter className="h-4 w-4" />
+                                        <span>Filtros</span>
+                                        {hasActiveExpenseFilters && (
+                                            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 p-5 rounded-3xl space-y-4 border-border/60 shadow-2xl bg-card" align="end">
+                                    <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <Filter className="h-4 w-4 text-primary" />
+                                            <h4 className="font-black text-sm uppercase tracking-wider">Filtrar Gastos</h4>
+                                        </div>
+                                        {hasActiveExpenseFilters && (
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={clearExpenseFilters}
+                                                className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10 rounded-lg"
+                                            >
+                                                Limpiar todo
+                                            </Button>
+                                        )}
+                                    </div>
+
+                                    {/* Filter by Category */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Categoría</Label>
+                                        <Select value={expenseCategoryFilter} onValueChange={setExpenseCategoryFilter}>
+                                            <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/50 text-xs font-bold">
+                                                <SelectValue placeholder="Todas las categorías" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-2xl">
+                                                <SelectItem value="all" className="text-xs font-bold">Todas las categorías</SelectItem>
+                                                {CATEGORIES.map((cat) => (
+                                                    <SelectItem key={cat} value={cat} className="text-xs font-semibold">
+                                                        {cat}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Filter by Expense Type */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Tipo de Gasto</Label>
+                                        <Select value={expenseTypeFilter} onValueChange={(val: any) => setExpenseTypeFilter(val)}>
+                                            <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/50 text-xs font-bold">
+                                                <SelectValue placeholder="Todos los tipos" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-2xl">
+                                                <SelectItem value="all" className="text-xs font-bold">Todos los tipos</SelectItem>
+                                                <SelectItem value="reinversion" className="text-xs font-semibold text-blue-500">Reinversión (Inventario)</SelectItem>
+                                                <SelectItem value="operativo" className="text-xs font-semibold text-orange-500">Gastos Operativos</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Filter by Attachment */}
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Factura Adjunta</Label>
+                                        <Select value={expenseHasReceiptFilter} onValueChange={(val: any) => setExpenseHasReceiptFilter(val)}>
+                                            <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/50 text-xs font-bold">
+                                                <SelectValue placeholder="Todos los comprobantes" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-2xl">
+                                                <SelectItem value="all" className="text-xs font-bold">Todos</SelectItem>
+                                                <SelectItem value="with_receipt" className="text-xs font-semibold text-green-500">📎 Con Factura/Imagen</SelectItem>
+                                                <SelectItem value="without_receipt" className="text-xs font-semibold text-muted-foreground">Sin Comprobante</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="pt-2 flex justify-end">
+                                        <Button 
+                                            size="sm" 
+                                            onClick={() => setIsFilterPopoverOpen(false)}
+                                            className="w-full bg-primary text-primary-foreground font-black text-xs h-9 rounded-xl uppercase tracking-wider"
+                                        >
+                                            Aplicar Filtros
+                                        </Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
-                        <Button variant="outline" className="h-12 w-12 rounded-2xl bg-muted/20 border-border/50">
-                            <Filter className="h-5 w-5 text-muted-foreground" />
-                        </Button>
+
+                        {/* Quick Filter Badges / Chips */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1 overflow-x-auto pb-1 scrollbar-none">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mr-1">Rápidos:</span>
+                            
+                            <button
+                                onClick={() => {
+                                    setExpenseCategoryFilter('all');
+                                    setExpenseTypeFilter('all');
+                                    setExpenseHasReceiptFilter('all');
+                                }}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    !hasActiveExpenseFilters && !expenseSearchQuery
+                                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                        : "bg-muted/20 hover:bg-muted/40 text-muted-foreground border-border/40"
+                                )}
+                            >
+                                Todos ({filteredExpenses.length})
+                            </button>
+
+                            <button
+                                onClick={() => setExpenseCategoryFilter(expenseCategoryFilter === 'Inventario' ? 'all' : 'Inventario')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    expenseCategoryFilter === 'Inventario'
+                                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                                        : "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20"
+                                )}
+                            >
+                                📦 Inventario
+                            </button>
+
+                            <button
+                                onClick={() => setExpenseTypeFilter(expenseTypeFilter === 'operativo' ? 'all' : 'operativo')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    expenseTypeFilter === 'operativo'
+                                        ? "bg-orange-500 text-white border-orange-600 shadow-sm"
+                                        : "bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border-orange-500/20"
+                                )}
+                            >
+                                ⚙️ Operativos
+                            </button>
+
+                            <button
+                                onClick={() => setExpenseHasReceiptFilter(expenseHasReceiptFilter === 'with_receipt' ? 'all' : 'with_receipt')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    expenseHasReceiptFilter === 'with_receipt'
+                                        ? "bg-green-500 text-white border-green-600 shadow-sm"
+                                        : "bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20"
+                                )}
+                            >
+                                📎 Con Factura
+                            </button>
+
+                            {hasActiveExpenseFilters && (
+                                <button
+                                    onClick={clearExpenseFilters}
+                                    className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-destructive bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 transition-all ml-auto flex items-center gap-1"
+                                >
+                                    <X className="h-3 w-3" /> Limpiar Filtros
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Results Counter Banner */}
+                        {hasActiveExpenseFilters && (
+                            <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground font-semibold">
+                                <span>
+                                    Mostrando <strong className="text-foreground">{searchedAndFilteredExpenses.length}</strong> de <strong className="text-foreground">{filteredExpenses.length}</strong> gastos este mes
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-4">
@@ -1871,12 +2145,28 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         <TableRow>
                                             <TableCell colSpan={6} className="h-48 text-center"><LoadingLogo size="sm" /></TableCell>
                                         </TableRow>
-                                    ) : filteredExpenses.length === 0 ? (
+                                    ) : searchedAndFilteredExpenses.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-32 text-center text-muted-foreground font-bold italic">No hay registros este mes</TableCell>
+                                            <TableCell colSpan={6} className="h-36 text-center text-muted-foreground font-bold">
+                                                {hasActiveExpenseFilters ? (
+                                                    <div className="flex flex-col items-center justify-center gap-2 py-4">
+                                                        <p className="text-sm text-foreground">No se encontraron gastos con los filtros aplicados</p>
+                                                        <Button 
+                                                            variant="outline" 
+                                                            size="sm" 
+                                                            onClick={clearExpenseFilters}
+                                                            className="rounded-xl font-black text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10"
+                                                        >
+                                                            <X className="h-3.5 w-3.5" /> Limpiar filtros
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="italic">No hay registros este mes</span>
+                                                )}
+                                            </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredExpenses.map((expense) => (
+                                        searchedAndFilteredExpenses.map((expense) => (
                                             <TableRow
                                                 key={expense.id}
                                                 className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/30"
@@ -1923,10 +2213,24 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         <div className="md:hidden space-y-4">
                             {loadingExpenses ? (
                                 <div className="p-12 flex justify-center"><LoadingLogo size="sm" /></div>
-                            ) : filteredExpenses.length === 0 ? (
-                                <div className="p-12 text-center text-muted-foreground font-black uppercase tracking-widest text-xs border-2 border-dashed rounded-3xl">Sin registros este mes</div>
+                            ) : searchedAndFilteredExpenses.length === 0 ? (
+                                <div className="p-8 text-center bg-card rounded-3xl border border-dashed border-border/60 space-y-3">
+                                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider">
+                                        {hasActiveExpenseFilters ? 'Sin resultados para estos filtros' : 'Sin registros este mes'}
+                                    </p>
+                                    {hasActiveExpenseFilters && (
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={clearExpenseFilters}
+                                            className="rounded-xl font-black text-xs gap-1 text-primary border-primary/30"
+                                        >
+                                            <X className="h-3.5 w-3.5" /> Limpiar Filtros
+                                        </Button>
+                                    )}
+                                </div>
                             ) : (
-                                filteredExpenses.map((expense) => (
+                                searchedAndFilteredExpenses.map((expense) => (
                                     <div
                                         key={expense.id}
                                         className="bg-muted/10 border border-border/50 rounded-3xl p-5 space-y-4 shadow-sm relative overflow-hidden group active:bg-muted/20 cursor-pointer transition-all hover:border-green-500/30"
@@ -2023,17 +2327,49 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
 
                     {/* Table / List View */}
-                    <div className="max-w-5xl mx-auto w-full">
+                    <div className="max-w-5xl mx-auto w-full space-y-4">
+                        {/* Search Bar for Daily Closings */}
+                        <div className="relative max-w-md mx-auto w-full">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar por día o fecha (ej: Lunes, 25)..."
+                                value={dailySummarySearch}
+                                onChange={(e) => setDailySummarySearch(e.target.value)}
+                                className="pl-11 pr-10 h-11 bg-muted/20 border-border/50 rounded-2xl text-xs font-medium focus:ring-primary/20"
+                            />
+                            {dailySummarySearch && (
+                                <button
+                                    onClick={() => setDailySummarySearch('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/40 transition-colors"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                        </div>
+
                         {loadingClosings || loadingExpenses ? (
                             <div className="p-12 text-center bg-card rounded-3xl border border-border/50 shadow-lg">
                                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                                 <p className="text-xs text-muted-foreground mt-3 font-semibold">Cargando cuadres y gastos del mes...</p>
                             </div>
-                        ) : dailyDataMap.length === 0 ? (
+                        ) : searchedDailyDataMap.length === 0 ? (
                             <div className="p-12 text-center bg-card rounded-3xl border border-border/50 shadow-lg space-y-2">
                                 <Wallet className="h-10 w-10 mx-auto text-muted-foreground opacity-50" />
-                                <p className="font-bold text-sm text-foreground">No hay cierres de caja ni egresos registrados en este mes</p>
-                                <p className="text-xs text-muted-foreground">Realiza un cierre de turno desde el POS o registra gastos para ver la comparativa diaria.</p>
+                                <p className="font-bold text-sm text-foreground">
+                                    {dailySummarySearch ? 'No se encontraron cuadres con esa búsqueda' : 'No hay cierres de caja ni egresos registrados en este mes'}
+                                </p>
+                                {dailySummarySearch ? (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setDailySummarySearch('')}
+                                        className="rounded-xl text-xs font-bold gap-1 mt-2"
+                                    >
+                                        <X className="h-3 w-3" /> Limpiar búsqueda
+                                    </Button>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground">Realiza un cierre de turno desde el POS o registra gastos para ver la comparativa diaria.</p>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -2051,7 +2387,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {dailyDataMap.map((day) => {
+                                            {searchedDailyDataMap.map((day) => {
                                                 const realCash = day.totalSalesCash || day.totalGrossClosingIncome;
                                                 const netCash = realCash - day.totalWithdrawals;
 
@@ -2149,7 +2485,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
 
                                  {/* Mobile Cards View */}
                                 <div className="md:hidden space-y-3">
-                                    {dailyDataMap.map((day) => {
+                                    {searchedDailyDataMap.map((day) => {
                                         const realCash = day.totalSalesCash || day.totalGrossClosingIncome;
                                         const netCash = realCash - day.totalWithdrawals;
 
@@ -2529,6 +2865,25 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         );
                     })()}
 
+                    {/* Search Input for Fixed Expenses */}
+                    <div className="relative max-w-md mx-auto w-full">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar gasto fijo por concepto o categoría..."
+                            value={fixedExpenseSearch}
+                            onChange={(e) => setFixedExpenseSearch(e.target.value)}
+                            className="pl-11 pr-10 h-11 bg-muted/20 border-border/50 rounded-2xl text-xs font-medium focus:ring-primary/20"
+                        />
+                        {fixedExpenseSearch && (
+                            <button
+                                onClick={() => setFixedExpenseSearch('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/40 transition-colors"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+
                     {/* Table View */}
                     <div className="max-w-4xl mx-auto w-full overflow-hidden rounded-2xl border border-border/50 shadow-lg bg-card">
                         <Table>
@@ -2550,14 +2905,14 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                             <span className="text-xs text-muted-foreground mt-2 block">Cargando gastos fijos...</span>
                                         </TableCell>
                                     </TableRow>
-                                ) : fixedExpenses.length === 0 ? (
+                                ) : searchedFixedExpenses.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm font-medium">
-                                            No tienes gastos fijos mensuales registrados.
+                                            {fixedExpenseSearch ? 'No se encontraron gastos fijos con ese término de búsqueda.' : 'No tienes gastos fijos mensuales registrados.'}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    fixedExpenses.map((fixed) => {
+                                    searchedFixedExpenses.map((fixed) => {
                                         const paidExpense = filteredExpenses.find(e => e.fixed_expense_id === fixed.id);
                                         const isPaid = !!paidExpense;
 
