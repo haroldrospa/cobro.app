@@ -7,6 +7,7 @@ import QuantityDialog from './QuantityDialog';
 import SelectExtraDialog from './SelectExtraDialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useBusinessType } from '@/hooks/useBusinessType';
 
 interface MobileCartItemProps {
     item: CartItem;
@@ -36,6 +37,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
     onAddExtra,
     onRemoveExtra
 }) => {
+    const { isRestaurant } = useBusinessType();
     const [isEditingComment, setIsEditingComment] = useState(false);
     const [isQuantityDialogOpen, setIsQuantityDialogOpen] = useState(false);
     const [isEditingDiscount, setIsEditingDiscount] = useState(false);
@@ -159,26 +161,30 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                 </Button>
                             </div>
 
-                            {/* Extra Button [➕] - Siempre visible */}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                title="Adicionar ingrediente extra"
-                                onClick={() => setIsSelectExtraOpen(true)}
-                                className="h-7 px-2 text-[10px] font-bold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 bg-emerald-500/10 rounded-lg gap-1 shrink-0"
-                            >
-                                <PlusCircle className="h-3.5 w-3.5" />
-                                <span>+ Extra</span>
-                            </Button>
+                            {/* Extra Button [➕] - Solo visible para restaurantes */}
+                            {isRestaurant && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        title="Adicionar ingrediente extra"
+                                        onClick={() => setIsSelectExtraOpen(true)}
+                                        className="h-7 px-2 text-[10px] font-bold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 bg-emerald-500/10 rounded-lg gap-1 shrink-0"
+                                    >
+                                        <PlusCircle className="h-3.5 w-3.5" />
+                                        <span>+ Extra</span>
+                                    </Button>
 
-                            {/* Select Extra Dialog */}
-                            {isSelectExtraOpen && (
-                                <SelectExtraDialog
-                                    isOpen={isSelectExtraOpen}
-                                    onClose={() => setIsSelectExtraOpen(false)}
-                                    onAddExtra={(extra) => onAddExtra?.(item.cartItemId || item.id, extra)}
-                                    itemName={item.name}
-                                />
+                                    {/* Select Extra Dialog */}
+                                    {isSelectExtraOpen && (
+                                        <SelectExtraDialog
+                                            isOpen={isSelectExtraOpen}
+                                            onClose={() => setIsSelectExtraOpen(false)}
+                                            onAddExtra={(extra) => onAddExtra?.(item.cartItemId || item.id, extra)}
+                                            itemName={item.name}
+                                        />
+                                    )}
+                                </>
                             )}
 
                             {/* Comment Trigger */}
