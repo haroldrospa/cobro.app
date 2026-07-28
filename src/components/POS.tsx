@@ -373,7 +373,8 @@ const POSContent: React.FC = () => {
   const { data: monthlySalesCount = 0 } = useQuery({
     queryKey: ['monthly-sales-count', startOfMonth(currentMonth).toISOString()],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const authRes = await supabase.auth.getUser();
+      const user = authRes?.data?.user;
       if (!user) return 0;
       const { data: profile } = await supabase.from('profiles').select('store_id').eq('id', user.id).maybeSingle();
       if (!profile?.store_id) return 0;
@@ -1181,7 +1182,8 @@ const POSContent: React.FC = () => {
 
       // 7. Crear ticket delta en cocina si hay productos nuevos
       if (hasNewOrModifiedItems && !isOrderMissing && currentOrder) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const authRes = await supabase.auth.getUser();
+        const user = authRes?.data?.user;
         const refOrderNumber = currentOrder.order_number;
         const refCustomerName = currentOrder.customer_name || currentOrderInfo?.customerName || 'Cliente';
         const deltaNotes = `[ACTUALIZADO]\nPedido actualizado de: ${refCustomerName} (#${refOrderNumber})\n${finalNotes}`;
