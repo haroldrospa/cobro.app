@@ -188,6 +188,14 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
                           <p className="text-sm font-semibold font-mono text-emerald-500 mt-0.5">${sale.change_amount.toFixed(2)}</p>
                         </div>
                       )}
+                      {sale.payment_method === 'credit' && sale.due_date && (
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Vencimiento de Crédito</p>
+                          <p className="text-sm font-semibold font-mono text-amber-500 mt-0.5">
+                            {new Date(sale.due_date).toLocaleDateString('es-DO')}
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

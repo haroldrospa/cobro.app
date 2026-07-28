@@ -26,6 +26,7 @@ const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
   const [status, setStatus] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
   const [changeAmount, setChangeAmount] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   const { data: customers = [] } = useCustomers();
   const updateSale = useUpdateSale();
@@ -42,6 +43,14 @@ const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
       setStatus(sale.status || 'completed');
       setAmountReceived(sale.amount_received?.toString() || '');
       setChangeAmount(sale.change_amount?.toString() || '');
+
+      if (sale.due_date) {
+        setDueDate(sale.due_date.split('T')[0]);
+      } else {
+        const defaultDue = new Date();
+        defaultDue.setDate(defaultDue.getDate() + 15);
+        setDueDate(defaultDue.toISOString().split('T')[0]);
+      }
     }
   }, [sale]);
 
@@ -67,6 +76,13 @@ const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
 
       if (changeAmount && !isNaN(parseFloat(changeAmount))) {
         updates.change_amount = parseFloat(changeAmount);
+      }
+
+      if (paymentMethod === 'credit') {
+        updates.payment_status = status === 'completed' ? 'paid' : 'pending';
+        if (dueDate) {
+          updates.due_date = new Date(dueDate + 'T12:00:00').toISOString();
+        }
       }
 
       console.log('Update payload:', updates);
@@ -159,6 +175,18 @@ const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
+
+          {paymentMethod === 'credit' && (
+            <div>
+              <Label htmlFor="due-date">Fecha de Vencimiento de Crédito</Label>
+              <Input
+                id="due-date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+          )}
 
           {paymentMethod === 'cash' && (
             <>

@@ -117,7 +117,7 @@ const POSContent: React.FC = () => {
   const [saleData, setSaleData] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountReceived, setAmountReceived] = useState('');
-  const [creditDays, setCreditDays] = useState(30);
+  const [creditDays, setCreditDays] = useState(15);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mobileViewMode, setMobileViewMode] = useState<'grid' | 'list'>(() => {
     const saved = localStorage.getItem('pos_mobile_view_mode');
@@ -317,6 +317,12 @@ const POSContent: React.FC = () => {
   } as any;
   const { config: alanubeConfig } = useAlanubeConfig();
   const isElectronicActive = alanubeConfig?.is_active || false;
+
+  useEffect(() => {
+    if (storeSettings?.payment_terms != null && Number(storeSettings.payment_terms) > 0) {
+      setCreditDays(Number(storeSettings.payment_terms));
+    }
+  }, [storeSettings?.payment_terms]);
 
   const selectedInvoiceTypeData = invoiceTypes.find(t => t.id === selectedInvoiceType);
   const mappedInvoiceTypeCode = React.useMemo(() => {

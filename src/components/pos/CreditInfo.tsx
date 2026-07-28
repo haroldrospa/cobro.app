@@ -234,7 +234,7 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
           onChange={(e) => onCreditDaysChange(parseInt(e.target.value) || 0)}
           min="1"
           max="180"
-          placeholder="30"
+          placeholder="15"
           className="h-8 text-sm [@media(max-height:580px)]:h-7 [@media(max-height:580px)]:text-xs"
         />
         <p className="text-[10px] text-muted-foreground mt-0.5 [@media(max-height:580px)]:hidden">

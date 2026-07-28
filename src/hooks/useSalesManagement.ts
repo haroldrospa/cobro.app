@@ -383,6 +383,8 @@ export const useUpdateSale = () => {
       customer_id?: string | null;
       payment_method?: string;
       status?: string;
+      payment_status?: string;
+      due_date?: string | null;
       amount_received?: number;
       change_amount?: number;
     }) => {
