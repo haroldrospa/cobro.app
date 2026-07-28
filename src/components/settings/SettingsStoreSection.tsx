@@ -294,6 +294,81 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
             )}
           </div>
 
+          {/* Tipo de Negocio / Rubro Comercial Section */}
+          <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/20 rounded-[2rem] space-y-6">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">
+              <Building2 className="h-4 w-4" />
+              Tipo de Negocio
+            </div>
+            
+            <p className="text-xs text-zinc-400 font-medium">
+              Selecciona el modelo principal de tu establecimiento para ajustar los módulos, la pantalla de cocina KDS y las opciones de adicionales del sistema.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {BUSINESS_TYPES.map((bt) => {
+                const isSelected = (
+                  (bt.id === 'restaurant' && (shopType === 'restaurant' || shopType === 'default' || !shopType)) ||
+                  (bt.id === 'store' && (shopType === 'store' || shopType === 'fashion' || shopType === 'technology')) ||
+                  (bt.id === 'supermarket' && shopType === 'supermarket')
+                );
+                return (
+                  <button
+                    key={bt.id}
+                    onClick={async () => {
+                      setShopType(bt.id);
+                      if (onSaveBusinessType) {
+                        await onSaveBusinessType(bt.id);
+                      } else {
+                        handleSaveSettings('tienda');
+                      }
+                      toast({
+                        title: `Tipo de negocio actualizado`,
+                        description: `Tu establecimiento ahora está configurado como ${bt.label}.`,
+                      });
+                    }}
+                    className={cn(
+                      "flex flex-col p-5 rounded-2xl border transition-all duration-300 text-left relative overflow-hidden group",
+                      isSelected 
+                        ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]" 
+                        : "bg-zinc-950/40 border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/20"
+                    )}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{bt.emoji}</span>
+                        <h4 className={cn(
+                          "font-bold text-sm uppercase tracking-wider",
+                          isSelected ? "text-emerald-500" : "text-zinc-100"
+                        )}>
+                          {bt.label}
+                        </h4>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500 animate-in zoom-in duration-300" />
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed mb-4 flex-1">
+                      {bt.description}
+                    </p>
+
+                    <div className="flex items-center justify-between w-full pt-3 border-t border-zinc-800/40">
+                      <span className={cn(
+                        "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                        isSelected 
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                          : "bg-zinc-900 text-zinc-500 border-zinc-800"
+                      )}>
+                        {isSelected ? 'Activo' : 'Seleccionar'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Shop Theme Grid Section */}
           <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/20 rounded-[2rem] space-y-6">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">
