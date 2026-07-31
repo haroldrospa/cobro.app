@@ -195,7 +195,7 @@ export const MobileBottomNav: React.FC = () => {
 
       {/* Barra de tabs inferior */}
       <nav 
-        className="fixed left-4 right-4 z-50 md:hidden select-none"
+        className="fixed left-4 right-4 z-40 md:hidden select-none"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-stretch bg-card/95 border border-border/80 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.35)] rounded-[24px] overflow-hidden">

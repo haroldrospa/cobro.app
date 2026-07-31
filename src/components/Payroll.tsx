@@ -758,67 +758,68 @@ function PayrollContent() {
             <Dialog open={!!selectedPayroll} onOpenChange={(o) => {
                 if (!o && !isSaving) setSelectedPayroll(null);
             }}>
-                <DialogContent className="max-w-[95vw] sm:max-w-[95vw] w-full h-[90vh] flex flex-col gap-0 p-0 bg-background/95 backdrop-blur-xl border-none shadow-2xl [&>button]:hidden">
+                <DialogContent centerOnMobile={false} className="w-full max-w-[95vw] sm:max-w-[95vw] h-[92vh] sm:h-[90vh] max-h-[100dvh] flex flex-col gap-0 p-0 bg-background/95 backdrop-blur-xl border-none shadow-2xl [&>button]:hidden">
 
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-border/40 bg-background/50">
-                        <div className="flex flex-col gap-1">
-                            <DialogTitle className="text-2xl font-bold tracking-tight">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 border-b border-border/40 bg-background/50 shrink-0">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight capitalize">
                                 {selectedPayroll && format(new Date(selectedPayroll.period_start), 'MMMM yyyy', { locale: es })}
                             </DialogTitle>
                             <DialogDescription className="sr-only">
                                 Detalles de la nómina generada para este periodo.
                             </DialogDescription>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Badge variant="outline" className="capitalize">
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                                <Badge variant="outline" className="capitalize text-xs">
                                     {selectedPayroll?.status === 'paid' ? 'Pagado' : 'Borrador'}
                                 </Badge>
-                                <span>•</span>
+                                <span className="select-none">•</span>
                                 <span>{items.length} Empleados</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            <div className="flex flex-col items-end mr-4 hidden sm:flex">
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Total a Pagar</span>
-                                <span className="text-2xl font-bold text-primary tabular-nums">
+                        <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
+                            <div className="flex flex-col items-start sm:items-end sm:mr-4">
+                                <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Total a Pagar</span>
+                                <span className="text-xl sm:text-2xl font-bold text-primary tabular-nums">
                                     ${items.reduce((sum, item) => sum + (item.net_salary || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             </div>
 
-                            <Button variant="ghost" onClick={() => setSelectedPayroll(null)}>Cerrar</Button>
-
-                            {selectedPayroll?.status !== 'paid' && (
-                                <>
-                                    <Button variant="outline" onClick={handleSyncCredits} disabled={isSaving} className="text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100">
-                                        <RefreshCcw className={`mr-2 h-4 w-4 ${isSaving ? 'animate-spin' : ''}`} />
-                                        Sincronizar Créditos
-                                    </Button>
-                                    <Button variant="outline" onClick={savePayrollDetails} disabled={isSaving}>
-                                        {isSaving ? "Guardando..." : "Guardar Cambios"}
-                                    </Button>
-                                    <Button onClick={async () => {
-                                        await finalizePayroll(selectedPayroll!.id);
-                                        setJustPaidPayroll({ payroll: selectedPayroll!, items: items });
-                                        setIsPrintDialogOpen(true);
-                                        setSelectedPayroll(curr => curr ? { ...curr, status: 'paid' } : null);
-                                    }}>
-                                        <CheckCircle className="mr-2 h-4 w-4" /> Pagar Nómina
-                                    </Button>
-                                </>
-                            )}
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                {selectedPayroll?.status !== 'paid' && (
+                                    <>
+                                        <Button variant="outline" size="sm" onClick={handleSyncCredits} disabled={isSaving} className="text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-4">
+                                            <RefreshCcw className={`mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSaving ? 'animate-spin' : ''}`} />
+                                            Sincronizar Créditos
+                                        </Button>
+                                        <Button variant="outline" size="sm" onClick={savePayrollDetails} disabled={isSaving} className="text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-4">
+                                            {isSaving ? "Guardando..." : "Guardar Cambios"}
+                                        </Button>
+                                        <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-4" onClick={async () => {
+                                            await finalizePayroll(selectedPayroll!.id);
+                                            setJustPaidPayroll({ payroll: selectedPayroll!, items: items });
+                                            setIsPrintDialogOpen(true);
+                                            setSelectedPayroll(curr => curr ? { ...curr, status: 'paid' } : null);
+                                        }}>
+                                            <CheckCircle className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Pagar Nómina
+                                        </Button>
+                                    </>
+                                )}
+                                <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-4" onClick={() => setSelectedPayroll(null)}>Cerrar</Button>
+                            </div>
                         </div>
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 overflow-hidden flex flex-col bg-muted/5">
                         {/* Toolbar */}
-                        <div className="p-4 border-b border-border/40 flex justify-between items-center bg-background/50">
-                            <div className="relative w-72">
+                        <div className="p-3 sm:p-4 border-b border-border/40 flex justify-between items-center bg-background/50 shrink-0">
+                            <div className="relative w-full max-w-xs sm:w-72">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Buscar empleado..."
-                                    className="pl-9 bg-muted/20 border-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                                    className="pl-9 bg-muted/20 border-none focus-visible:ring-1 focus-visible:ring-primary/50 text-xs sm:text-sm"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -827,11 +828,11 @@ function PayrollContent() {
 
                         {/* Table Area */}
                         <div className="flex-1 overflow-auto p-0">
-                            <Table>
+                            <Table className="w-full min-w-[750px]">
                                 <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm z-10">
                                     <TableRow className="hover:bg-transparent border-b border-border/40">
                                         <TableHead className="w-[200px] pl-6">Empleado</TableHead>
-                                        <TableHead className="text-right">Sala. Base</TableHead>
+                                        <TableHead className="text-right">Sal. Base</TableHead>
                                         <TableHead className="text-center">Bonos</TableHead>
 
                                         {(showTSSGroup || showAFPOnly || showSFSOnly) && <TableHead className="text-center font-bold text-xs uppercase text-orange-500">TSS/Ley</TableHead>}
