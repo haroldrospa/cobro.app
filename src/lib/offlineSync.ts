@@ -113,6 +113,9 @@ class OfflineSyncManager {
             await offlineDB.cleanOldSyncedItems();
 
             console.log('✅ Sincronización completada');
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('cobro:sync-completed'));
+            }
         } catch (error: any) {
             if (error?.name === 'AbortError') {
                 console.log('⏹️ Sincronización abortada');
@@ -308,6 +311,9 @@ class OfflineSyncManager {
                     await offlineDB.putBulk(OfflineStore.PRODUCTS, products);
                 }
                 console.log(`📦 ${products.length} productos sincronizados (Limpiados ${toDelete.length} obsoletos)`);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('cobro:offline-products-updated'));
+                }
             }
 
             // Sincronizar categorías

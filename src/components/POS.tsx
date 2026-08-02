@@ -232,11 +232,9 @@ const POSContent: React.FC = () => {
 
   const storeId = profile?.store_id;
 
-  const { products: allProducts, customers = [], refreshMasterData } = useMasterData();
+  const { products: allProducts, customers = [], refreshMasterData, isLoading: isMasterDataLoading } = useMasterData();
   const updateCustomerMutation = useUpdateCustomer();
-  const productsQueryLoading = false;
-  const productsQueryFetching = false;
-  const loadingProducts = (productsQueryLoading || productsQueryFetching) && allProducts.length === 0;
+  const loadingProducts = isMasterDataLoading && allProducts.length === 0;
   const products = React.useMemo(() => allProducts.filter(p => p.status !== 'inactive'), [allProducts]);
   const { data: customerBalance } = useCustomerBalance(selectedCustomer);
   const { data: invoiceTypes = [] } = useInvoiceTypes();
@@ -1936,36 +1934,19 @@ const POSContent: React.FC = () => {
                     isLoading={loadingProducts}
                     userName={profile?.full_name}
                   />
-                  {products.length === 0 && (
-                    <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive flex flex-col gap-2">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <span className="font-bold">🔍 Sin productos en catálogo:</span>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="h-7 text-[11px] border-destructive/30 hover:bg-destructive/20"
-                            onClick={() => refreshMasterData()}
-                          >
-                            <RefreshCcw className="w-3 h-3 mr-1" />
-                            Recargar Catálogo
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="destructive" 
-                            className="h-7 text-[11px]"
-                            onClick={() => {
-                              localStorage.removeItem('cobro_last_user_id');
-                              window.location.href = '/auth';
-                            }}
-                          >
-                            Re-iniciar Sesión
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="text-[11px] opacity-80 space-y-0.5 font-mono">
-                        <div>• Store ID: {storeId || 'null'} | Profile Store ID: {profile?.store_id || 'null'}</div>
-                        <div>• Total Products (MasterData): {allProducts?.length ?? 0} | Session Loaded: {!isLoadingSession ? 'YES' : 'NO'}</div>
+                  {products.length === 0 && !loadingProducts && (
+                    <div className="mt-2 p-3 bg-muted/40 border rounded-xl text-xs flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-muted-foreground font-medium">No hay productos disponibles en el catálogo.</span>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-7 text-[11px]"
+                          onClick={() => refreshMasterData()}
+                        >
+                          <RefreshCcw className="w-3 h-3 mr-1" />
+                          Recargar Catálogo
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -2036,36 +2017,19 @@ const POSContent: React.FC = () => {
                   recipeAvailability={recipeAvailability}
                   userName={profile?.full_name}
                 />
-                {products.length === 0 && (
-                  <div className="m-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive flex flex-col gap-2">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="font-bold">🔍 Sin productos en catálogo:</span>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-7 text-[11px] border-destructive/30 hover:bg-destructive/20"
-                          onClick={() => refreshMasterData()}
-                        >
-                          <RefreshCcw className="w-3 h-3 mr-1" />
-                          Recargar Catálogo
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          className="h-7 text-[11px]"
-                          onClick={() => {
-                            localStorage.removeItem('cobro_last_user_id');
-                            window.location.href = '/auth';
-                          }}
-                        >
-                          Re-iniciar Sesión
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="text-[11px] opacity-80 space-y-0.5 font-mono">
-                      <div>• Store ID: {storeId || 'null'} | Profile Store ID: {profile?.store_id || 'null'}</div>
-                      <div>• Total Products (MasterData): {allProducts?.length ?? 0} | Session Loaded: {!isLoadingSession ? 'YES' : 'NO'}</div>
+                {products.length === 0 && !loadingProducts && (
+                  <div className="m-2 p-3 bg-muted/40 border rounded-xl text-xs flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-muted-foreground font-medium">No hay productos disponibles en el catálogo.</span>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-7 text-[11px]"
+                        onClick={() => refreshMasterData()}
+                      >
+                        <RefreshCcw className="w-3 h-3 mr-1" />
+                        Recargar Catálogo
+                      </Button>
                     </div>
                   </div>
                 )}

@@ -31,6 +31,21 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     refetchProducts();
   }, [refetchCustomers, refetchCategories, refetchProducts]);
 
+  // Escuchar eventos de sincronización para actualizar los datos automáticamente al terminar el sync
+  React.useEffect(() => {
+    const handleSyncComplete = () => {
+      console.log('🔄 MasterDataProvider: Sync completed event received, refreshing master data...');
+      refreshMasterData();
+    };
+
+    window.addEventListener('cobro:sync-completed', handleSyncComplete);
+    window.addEventListener('cobro:offline-products-updated', handleSyncComplete);
+    return () => {
+      window.removeEventListener('cobro:sync-completed', handleSyncComplete);
+      window.removeEventListener('cobro:offline-products-updated', handleSyncComplete);
+    };
+  }, [refreshMasterData]);
+
   // Refrescar automáticamente cuando el storeId se resuelva para evitar condiciones de carrera al iniciar sesión
   React.useEffect(() => {
     if (storeId) {
