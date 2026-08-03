@@ -36,9 +36,9 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
       injectPrintStyles();
 
       let printFormat: '80mm' | '58mm' | 'A4' = '80mm';
-      if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
+      if (printSettings?.paperSize === '58mm') {
         printFormat = '58mm';
-      } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
+      } else if (printSettings?.paperSize === 'A4' || printSettings?.paperSize === 'carta') {
         printFormat = 'A4';
       }
 
@@ -51,11 +51,11 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
       const htmlContent = `
         <div class="invoice-container" style="font-family: monospace; width: ${width}; max-width: ${width}; margin: ${isThermal ? '0' : '0 auto'}; font-size: 12px; line-height: 1.2; padding: 5px; box-sizing: border-box; background: white;">
           <div style="text-align: center; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 5px;">
-            ${companyInfo.logo ? `<img src="${companyInfo.logo}" style="width: ${companyInfo.logoInvoiceSize || companyInfo.logoSize || 80}px; height: auto; display: block; margin: 0 auto; object-fit: contain;"/>` : ''}
-            <div style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">${companyInfo.name || 'Mi Empresa'}</div>
-            ${companyInfo.rnc ? `<div style="font-size: 11px;">RNC: ${companyInfo.rnc}</div>` : ''}
-            ${companyInfo.phone ? `<div style="font-size: 11px;">Tel: ${companyInfo.phone}</div>` : ''}
-            ${companyInfo.address ? `<div style="font-size: 11px;">${companyInfo.address}</div>` : ''}
+            ${companyInfo?.logo ? `<img src="${companyInfo.logo}" style="width: ${companyInfo.logoInvoiceSize || companyInfo.logoSize || 80}px; height: auto; display: block; margin: 0 auto; object-fit: contain;"/>` : ''}
+            <div style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">${companyInfo?.name || 'Mi Empresa'}</div>
+            ${companyInfo?.rnc ? `<div style="font-size: 11px;">RNC: ${companyInfo.rnc}</div>` : ''}
+            ${companyInfo?.phone ? `<div style="font-size: 11px;">Tel: ${companyInfo.phone}</div>` : ''}
+            ${companyInfo?.address ? `<div style="font-size: 11px;">${companyInfo.address}</div>` : ''}
           </div>
           
           <div style="margin: 8px 0; border: 1px solid #000; padding: 5px; text-align: center;">
@@ -64,7 +64,7 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
           </div>
           
           <div style="margin-bottom: 8px; font-size: 11px;">
-            <div><strong>CLIENTE:</strong> ${customer?.name}</div>
+            <div><strong>CLIENTE:</strong> ${customer?.name || ''}</div>
             ${customer?.rnc ? `<div><strong>RNC/Céd.:</strong> ${customer.rnc}</div>` : ''}
             ${customer?.phone ? `<div><strong>Tel.:</strong> ${customer.phone}</div>` : ''}
           </div>
@@ -77,16 +77,16 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
             </div>
             ${pendingSales.map((sale: any) => `
               <div style="display: flex; justify-content: space-between; font-size: 10px; padding: 3px; border-bottom: 1px dotted #ccc;">
-                <span style="flex: 2;">${sale.invoice_number}</span>
-                <span style="flex: 1.5; text-align: right;">${format(new Date(sale.created_at), 'dd/MM/yy')}</span>
-                <span style="flex: 1.5; text-align: right; font-weight: bold;">$${sale.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span style="flex: 2;">${sale.invoice_number || ''}</span>
+                <span style="flex: 1.5; text-align: right;">${sale.created_at ? format(new Date(sale.created_at), 'dd/MM/yy') : '-'}</span>
+                <span style="flex: 1.5; text-align: right; font-weight: bold;">$${(sale.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
             `).join('')}
           </div>
           
           <div style="border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;">
             <span>DEUDA TOTAL:</span>
-            <span>$${totalDebt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            <span>$${(totalDebt || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           
           <div style="text-align: center; margin-top: 20px; font-size: 10px; font-style: italic;">
