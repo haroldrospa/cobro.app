@@ -85,10 +85,14 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
             return;
           }
 
+          const currentPath = window.location.pathname;
+          const isSuperAdmin = session.user.email?.toLowerCase() === 'haroldrospa@gmail.com';
+          const isAdminRoute = currentPath.startsWith('/admin');
+
           // 2. Check Store Status (Optimizado)
           // @ts-ignore
           const store = profile.stores;
-          if (store && store.is_active === false) {
+          if (store && store.is_active === false && !isSuperAdmin && !isAdminRoute) {
             navigate('/store-suspended');
             return;
           }
@@ -96,9 +100,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           // 3. Check Onboarding Status
           const isOwner = profile.role === 'owner';
           const isOnboarded = session.user.user_metadata?.onboarding_completed;
-          const currentPath = window.location.pathname;
           
-          if (isOwner && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended' && currentPath !== '/subscription-expired') {
+          if (isOwner && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended' && currentPath !== '/subscription-expired' && !isSuperAdmin && !isAdminRoute) {
             navigate('/onboarding', { replace: true });
             return;
           } else if ((isOnboarded || !isOwner) && currentPath === '/onboarding') {
@@ -107,23 +110,25 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           }
 
           // 4. Check Subscription Status
-          const { data: subscription } = await supabase
-            .from('company_subscriptions')
-            .select('end_date')
-            .eq('company_id', profile.store_id)
-            .eq('status', 'active')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          if (!isSuperAdmin && !isAdminRoute) {
+            const { data: subscription } = await supabase
+              .from('company_subscriptions')
+              .select('end_date')
+              .eq('company_id', profile.store_id)
+              .eq('status', 'active')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
 
-          if (subscription?.end_date) {
-            const daysRemaining = getDaysRemaining(subscription.end_date);
-            if (daysRemaining <= 0 && currentPath !== '/subscription' && currentPath !== '/subscription-expired' && currentPath !== '/store-suspended') {
-              navigate('/subscription-expired', { replace: true });
-              return;
-            } else if (daysRemaining > 0 && currentPath === '/subscription-expired') {
-              navigate('/app', { replace: true });
-              return;
+            if (subscription?.end_date) {
+              const daysRemaining = getDaysRemaining(subscription.end_date);
+              if (daysRemaining <= 0 && currentPath !== '/subscription' && currentPath !== '/subscription-expired' && currentPath !== '/store-suspended') {
+                navigate('/subscription-expired', { replace: true });
+                return;
+              } else if (daysRemaining > 0 && currentPath === '/subscription-expired') {
+                navigate('/app', { replace: true });
+                return;
+              }
             }
           }
           
@@ -146,12 +151,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
               if (retriedProfile && retriedProfile.store_id && retriedProfile.stores) {
                 localStorage.setItem('cobro_last_user_id', session.user.id);
                 
+                const currentPath = window.location.pathname;
+                const isSuperAdmin = session.user.email?.toLowerCase() === 'haroldrospa@gmail.com';
+                const isAdminRoute = currentPath.startsWith('/admin');
+
                 // Check onboarding for repaired profiles too
                 const isOwnerRetried = retriedProfile.role === 'owner';
                 const isOnboarded = session.user.user_metadata?.onboarding_completed;
-                const currentPath = window.location.pathname;
                 
-                if (isOwnerRetried && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended' && currentPath !== '/subscription-expired') {
+                if (isOwnerRetried && !isOnboarded && currentPath !== '/onboarding' && currentPath !== '/store-suspended' && currentPath !== '/subscription-expired' && !isSuperAdmin && !isAdminRoute) {
                   navigate('/onboarding', { replace: true });
                   return;
                 } else if ((isOnboarded || !isOwnerRetried) && currentPath === '/onboarding') {
@@ -160,23 +168,25 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
                 }
 
                 // 4. Check Subscription Status for retried profile
-                const { data: retriedSub } = await supabase
-                  .from('company_subscriptions')
-                  .select('end_date')
-                  .eq('company_id', retriedProfile.store_id)
-                  .eq('status', 'active')
-                  .order('created_at', { ascending: false })
-                  .limit(1)
-                  .maybeSingle();
+                if (!isSuperAdmin && !isAdminRoute) {
+                  const { data: retriedSub } = await supabase
+                    .from('company_subscriptions')
+                    .select('end_date')
+                    .eq('company_id', retriedProfile.store_id)
+                    .eq('status', 'active')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
 
-                if (retriedSub?.end_date) {
-                  const daysRemaining = getDaysRemaining(retriedSub.end_date);
-                  if (daysRemaining <= 0 && currentPath !== '/subscription' && currentPath !== '/subscription-expired' && currentPath !== '/store-suspended') {
-                    navigate('/subscription-expired', { replace: true });
-                    return;
-                  } else if (daysRemaining > 0 && currentPath === '/subscription-expired') {
-                    navigate('/app', { replace: true });
-                    return;
+                  if (retriedSub?.end_date) {
+                    const daysRemaining = getDaysRemaining(retriedSub.end_date);
+                    if (daysRemaining <= 0 && currentPath !== '/subscription' && currentPath !== '/subscription-expired' && currentPath !== '/store-suspended') {
+                      navigate('/subscription-expired', { replace: true });
+                      return;
+                    } else if (daysRemaining > 0 && currentPath === '/subscription-expired') {
+                      navigate('/app', { replace: true });
+                      return;
+                    }
                   }
                 }
 
