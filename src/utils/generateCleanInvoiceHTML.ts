@@ -57,7 +57,7 @@ export const generateCleanInvoiceHTML = (
   companyData: CompanyData,
   invoiceData: InvoiceData
 ): string => {
-  const logoHeight = companyData.logoSize || 55;
+  const logoHeight = companyData.logoSize || 60;
   const pageMargin = companyData.pageMargin || '0mm';
   const containerPadding = companyData.containerPadding || '6px';
   const baseFontSize = companyData.fontSize || 12;
@@ -72,13 +72,47 @@ export const generateCleanInvoiceHTML = (
     ? companyData.name.split(' ').map(w => w[0]).join('').substring(0, 8).toUpperCase()
     : 'POS';
 
+  // Helper to format currency with thousands separators (e.g. 1,529.66)
+  const fmt = (num: number | undefined): string => {
+    return (num || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const formattedDateStr = invoiceData.date.toLocaleDateString('es-DO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const formattedTimeStr = invoiceData.date.toLocaleTimeString('es-DO', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const pMethod = (invoiceData.paymentMethod?.trim() || 'EFECTIVO').toUpperCase();
+  const rawInvoiceNum = invoiceData.invoiceNumber || '000000';
+  const displayNCF = invoiceData.isElectronic
+    ? (invoiceData.encf || rawInvoiceNum)
+    : rawInvoiceNum;
+
+  const displayPrefix = invoiceData.invoicePrefix || 'FAC-';
+  const fullInvoiceCode = rawInvoiceNum.startsWith('FAC-') || rawInvoiceNum.startsWith('E') || rawInvoiceNum.startsWith('B')
+    ? rawInvoiceNum
+    : `${displayPrefix}${rawInvoiceNum}`;
+
+  const customerTypeLabel = invoiceData.customerName && invoiceData.customerName.toUpperCase() !== 'CLIENTE FINAL' && invoiceData.customerName.toUpperCase() !== 'CONSUMIDOR FINAL'
+    ? 'Comprobante Fiscal'
+    : 'Consumidor Final';
+
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Factura ${invoiceData.invoiceNumber}</title>
+  <title>Factura ${displayNCF}</title>
   <style>
     * {
       margin: 0;
@@ -157,126 +191,136 @@ export const generateCleanInvoiceHTML = (
 <body>
   <div class="invoice-container">
     
-    <!-- Top Monogram Badge / Logo -->
+    <!-- Top Monogram / Logo Section -->
     <div style="text-align: center; margin-bottom: 8px;">
       ${companyData.logo ? `
         <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 4px;">
-          <img src="${companyData.logo}" alt="Logo" style="max-height: ${Math.min(logoHeight, 55)}px; max-width: 80%; object-fit: contain; margin: 0 auto; display: block; filter: grayscale(100%) contrast(150%);" />
+          <img src="${companyData.logo}" alt="Logo" style="max-height: ${Math.min(logoHeight, 65)}px; max-width: 85%; object-fit: contain; margin: 0 auto; display: block;" />
         </div>
       ` : `
-        <div style="display: inline-block; background-color: #000000; color: #ffffff; padding: 4px 14px; border-radius: 6px; font-weight: 900; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
+        <div style="display: inline-block; background-color: #09090b; color: #ffffff; padding: 4px 14px; border-radius: 6px; font-weight: 900; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
           ${companyInitials}
         </div>
       `}
     </div>
     
-    <!-- Header -->
+    <!-- Company Header -->
     <div style="text-align: center; margin-bottom: 10px;">
-      <div style="font-size: ${sizeH1}px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.15;">
+      <div style="font-size: ${sizeH1}px; font-weight: 900; color: #09090b; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.2;">
         ${companyData.name}
       </div>
       ${(companyData.rnc || companyData.phone) ? `
-        <div style="font-size: ${sizeSmall}px; color: #4b5563; margin-top: 3px; font-weight: 500;">
-          ${companyData.rnc ? `RNC: ${companyData.rnc}` : ''} ${companyData.rnc && companyData.phone ? '|' : ''} ${companyData.phone ? `Tel: ${companyData.phone}` : ''}
+        <div style="font-size: ${sizeSmall}px; color: #334155; margin-top: 3px; font-weight: 600;">
+          ${companyData.rnc ? `RNC: ${companyData.rnc}` : ''} ${companyData.rnc && companyData.phone ? '•' : ''} ${companyData.phone ? `Tel: ${companyData.phone}` : ''}
         </div>
       ` : ''}
       ${companyData.address ? `
-        <div style="font-size: ${sizeSmall}px; color: #4b5563; margin-top: 1px; font-weight: 500;">
+        <div style="font-size: ${sizeSmall}px; color: #475569; margin-top: 1px; font-weight: 500;">
           ${companyData.address}
         </div>
       ` : ''}
-      <div style="border-bottom: 2px solid #000000; margin-top: 8px; width: 100%;"></div>
+      <div style="border-bottom: 2px solid #09090b; margin-top: 8px; width: 100%;"></div>
     </div>
     
     <!-- Card 1: Comprobante & Info Card -->
-    <div style="background-color: #f4f4f6; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: ${sizeSmall}px; color: #000000; text-transform: uppercase;">
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: ${sizeSmall}px; color: #0f172a; text-transform: uppercase;">
         <span>${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO' : 'COMPROBANTE DE VENTA'}</span>
-        <span style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: ${sizeSmall}px;">${invoiceData.isElectronic ? (invoiceData.encf || invoiceData.invoiceNumber) : invoiceData.invoiceNumber}</span>
+        <span style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: ${sizeSmall}px; background-color: #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 800;">${displayNCF}</span>
       </div>
       
-      <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: ${sizeXSmall}px;">
+      <!-- Grid layout for Factura/Tipo and Fecha/Hora to prevent text collision -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: ${sizeXSmall}px; border-top: 1px solid #e2e8f0; padding-top: 6px;">
         <div>
-          <div style="color: #64748b; font-weight: 700; text-transform: uppercase;">FACTURA / TIPO</div>
-          <div style="font-weight: 800; color: #000000; margin-top: 1px;">
-            ${invoiceData.invoicePrefix}${invoiceData.invoiceNumber.replace(/^FAC-/, '')} (${invoiceData.customerName && invoiceData.customerName !== 'CLIENTE FINAL' ? 'Comprobante Fiscal' : 'Consumidor Final'})
+          <div style="color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 9px; letter-spacing: 0.4px;">FACTURA / TIPO</div>
+          <div style="font-weight: 800; color: #09090b; margin-top: 2px; line-height: 1.2; word-break: break-word;">
+            ${fullInvoiceCode}
           </div>
+          <div style="font-weight: 600; color: #475569; font-size: 9px;">(${customerTypeLabel})</div>
         </div>
         <div style="text-align: right;">
-          <div style="color: #64748b; font-weight: 700; text-transform: uppercase;">FECHA Y HORA</div>
-          <div style="font-weight: 800; color: #000000; margin-top: 1px;">
-            ${invoiceData.date.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })} (${invoiceData.date.toLocaleDateString('es-DO')})
+          <div style="color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 9px; letter-spacing: 0.4px;">FECHA Y HORA</div>
+          <div style="font-weight: 800; color: #09090b; margin-top: 2px; line-height: 1.2;">
+            ${formattedTimeStr}
           </div>
+          <div style="font-weight: 600; color: #475569; font-size: 9px;">(${formattedDateStr})</div>
         </div>
       </div>
 
-      <div style="border-top: 1px solid #e2e8f0; margin-top: 6px; padding-top: 6px; font-size: ${sizeXSmall}px; line-height: 1.4;">
-        <div><span style="color: #475569; font-weight: 700;">CLIENTE:</span> <strong style="color: #000000; font-weight: 800;">${(invoiceData.customerName || 'CONSUMIDOR FINAL').toUpperCase()}</strong></div>
-        ${invoiceData.cashierName ? `<div><span style="color: #475569; font-weight: 700;">CAJERO:</span> <strong style="color: #000000; font-weight: 800;">${invoiceData.cashierName.toUpperCase()}</strong></div>` : ''}
+      <div style="border-top: 1px solid #e2e8f0; margin-top: 6px; padding-top: 6px; font-size: ${sizeXSmall}px; line-height: 1.45;">
+        <div><span style="color: #64748b; font-weight: 800; font-size: 9px; text-transform: uppercase;">CLIENTE:</span> <strong style="color: #09090b; font-weight: 800;">${(invoiceData.customerName || 'CONSUMIDOR FINAL').toUpperCase()}</strong></div>
+        ${invoiceData.cashierName ? `<div><span style="color: #64748b; font-weight: 800; font-size: 9px; text-transform: uppercase;">CAJERO:</span> <strong style="color: #09090b; font-weight: 800;">${invoiceData.cashierName.toUpperCase()}</strong></div>` : ''}
       </div>
     </div>
 
     <!-- Card 2: Items Table -->
     <div style="margin-bottom: 8px;">
-      <div style="background-color: #0f172a; color: #ffffff; padding: 6px 10px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 800; font-size: ${sizeXSmall}px; text-transform: uppercase; letter-spacing: 0.5px;">
-        <span>CANT / DESCRIPCIÓN</span>
-        <span>TOTAL</span>
+      <!-- Header Bar with solid dark background and bright white text -->
+      <div style="background-color: #09090b; color: #ffffff !important; padding: 6px 10px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 900; font-size: ${sizeXSmall}px; text-transform: uppercase; letter-spacing: 0.8px;">
+        <span style="color: #ffffff !important;">CANT / DESCRIPCIÓN</span>
+        <span style="color: #ffffff !important;">TOTAL</span>
       </div>
       
       <div style="border: 1px solid #e2e8f0; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; padding: 6px 10px; background-color: #ffffff;">
-        ${invoiceData.items.map(item => `
+        ${invoiceData.items && invoiceData.items.length > 0 ? invoiceData.items.map(item => `
           <div style="padding: 6px 0; border-bottom: 1px dotted #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: baseline;">
-              <div style="font-weight: 800; font-size: ${sizeSmall}px; color: #000000; flex: 1; padding-right: 6px;">
-                <span style="background-color: #e2e8f0; color: #000000; padding: 1px 5px; border-radius: 4px; font-weight: 900; font-size: 10px; margin-right: 4px;">${item.quantity}x</span>
+              <div style="font-weight: 800; font-size: ${sizeSmall}px; color: #09090b; flex: 1; padding-right: 6px;">
+                <span style="background-color: #09090b; color: #ffffff !important; padding: 1px 5px; border-radius: 3px; font-weight: 900; font-size: 9px; margin-right: 4px; display: inline-block;">${item.quantity}x</span>
                 ${item.name}
               </div>
-              <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-weight: 900; font-size: ${sizeSmall}px; color: #000000; white-space: nowrap;">
-                ${invoiceData.currency} ${item.total.toFixed(2)}
+              <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-weight: 900; font-size: ${sizeSmall}px; color: #09090b; white-space: nowrap;">
+                ${invoiceData.currency} ${fmt(item.total)}
               </div>
             </div>
             <div style="font-size: ${sizeXSmall}px; color: #64748b; margin-top: 2px;">
-              ${invoiceData.currency} ${item.price.toFixed(2)} c/u ${item.comment ? `• (${item.comment})` : ''}
+              ${invoiceData.currency} ${fmt(item.price)} c/u ${item.comment ? `• (${item.comment})` : ''}
             </div>
           </div>
-        `).join('')}
+        `).join('') : `
+          <div style="padding: 10px 0; text-align: center; color: #64748b; font-size: ${sizeSmall}px;">
+            Sin artículos cargados
+          </div>
+        `}
       </div>
     </div>
 
     <!-- Card 3: Subtotal / ITBIS / TOTAL A PAGAR -->
-    <div style="background-color: #f4f4f6; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;">
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;">
       <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; color: #475569; margin-bottom: 3px;">
         <span>Subtotal:</span>
-        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #000000;">${invoiceData.currency} ${invoiceData.subtotal.toFixed(2)}</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #09090b;">${invoiceData.currency} ${fmt(invoiceData.subtotal)}</span>
       </div>
       <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; color: #475569; margin-bottom: 4px;">
         <span>ITBIS (${invoiceData.taxRate}%):</span>
-        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #000000;">${invoiceData.currency} ${invoiceData.tax.toFixed(2)}</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #09090b;">${invoiceData.currency} ${fmt(invoiceData.tax)}</span>
       </div>
       
-      <div style="border-top: 1px solid #cbd5e1; margin-top: 4px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 900; font-size: ${sizeBase}px; color: #000000; text-transform: uppercase;">TOTAL A PAGAR:</span>
-        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: ${Math.round(sizeBase * 1.3)}px; color: #000000;">${invoiceData.currency} ${invoiceData.total.toFixed(2)}</span>
+      <div style="border-top: 1.5px solid #cbd5e1; margin-top: 4px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 900; font-size: ${sizeBase}px; color: #09090b; text-transform: uppercase;">TOTAL A PAGAR:</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: ${Math.round(sizeBase * 1.35)}px; color: #09090b;">${invoiceData.currency} ${fmt(invoiceData.total)}</span>
       </div>
     </div>
 
     <!-- Card 4: Método de Pago -->
-    <div style="background-color: #f4f4f6; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;">
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <span style="font-weight: 800; font-size: ${sizeXSmall}px; color: #334155; text-transform: uppercase;">MÉTODO DE PAGO:</span>
-        <span style="background-color: #000000; color: #ffffff; font-weight: 900; font-size: 10px; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">
-          ${(invoiceData.paymentMethod || 'EFECTIVO').toUpperCase()}
+        <span style="background-color: #09090b; color: #ffffff !important; font-weight: 900; font-size: 10px; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+          ${pMethod}
         </span>
       </div>
       
-      <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; color: #475569; margin-top: 3px;">
+      <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; color: #475569; margin-top: 4px;">
         <span>Monto Recibido:</span>
-        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #000000;">${invoiceData.currency} ${(invoiceData.amountPaid !== undefined && invoiceData.amountPaid > 0 ? invoiceData.amountPaid : invoiceData.total).toFixed(2)}</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #09090b;">${invoiceData.currency} ${fmt(invoiceData.amountPaid !== undefined && invoiceData.amountPaid > 0 ? invoiceData.amountPaid : invoiceData.total)}</span>
       </div>
 
-      <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; color: #475569; margin-top: 2px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: ${sizeSmall}px; color: #475569; margin-top: 3px;">
         <span>Devuelta:</span>
-        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #059669;">${invoiceData.currency} ${(invoiceData.change || 0).toFixed(2)}</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #059669; background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 6px; border-radius: 4px;">
+          ${invoiceData.currency} ${fmt(invoiceData.change || 0)}
+        </span>
       </div>
     </div>
 
@@ -297,10 +341,11 @@ export const generateCleanInvoiceHTML = (
     ` : ''}
 
     <!-- Barcode & Footer Disclaimer -->
-    <div style="border-top: 2px solid #000000; padding-top: 10px; margin-top: 8px; text-align: center;">
+    <div style="border-top: 2px solid #09090b; padding-top: 10px; margin-top: 8px; text-align: center;">
       ${invoiceData.showBarcode && invoiceData.barcodeDataUrl && !invoiceData.isElectronic ? `
         <div style="margin-bottom: 6px;">
-          <img src="${invoiceData.barcodeDataUrl}" alt="Código de barras" style="max-width: 90%; height: 35px; margin: 0 auto; display: block; filter: grayscale(100%);" />
+          <img src="${invoiceData.barcodeDataUrl}" alt="Código de barras" style="max-width: 90%; height: 38px; margin: 0 auto; display: block; filter: grayscale(100%);" />
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: #475569; margin-top: 2px;">${displayNCF}</div>
         </div>
       ` : ''}
 
@@ -335,12 +380,12 @@ export const generateCleanInvoiceHTML = (
         </div>
       ` : ''}
       
-      <div style="font-weight: 900; font-size: ${sizeSmall}px; color: #000000; text-transform: uppercase; letter-spacing: 0.3px;">
+      <div style="font-weight: 900; font-size: ${sizeSmall}px; color: #09090b; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px;">
         ¡GRACIAS POR SU COMPRA!
       </div>
       
       ${invoiceData.footerText ? `
-        <div style="font-size: ${sizeXSmall}px; color: #64748b; margin-top: 3px; padding: 0 4px;">
+        <div style="font-size: ${sizeXSmall}px; color: #475569; margin-top: 3px; padding: 0 4px;">
           ${invoiceData.footerText}
         </div>
       ` : ''}
