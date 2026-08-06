@@ -80,6 +80,9 @@ export const generateCleanInvoiceHTML = (
     });
   };
 
+  const pmLower = (invoiceData.paymentMethod || '').toLowerCase();
+  const isCreditSale = pmLower === 'credit' || pmLower.includes('crédito') || pmLower.includes('credito');
+
   const formattedDateStr = invoiceData.date.toLocaleDateString('es-DO', {
     day: '2-digit',
     month: '2-digit',
@@ -405,7 +408,7 @@ export const generateCleanInvoiceHTML = (
         </div>
       ` : ''}
 
-      ${invoiceData.paymentTerms ? `
+      ${(isCreditSale && invoiceData.paymentTerms) ? `
         <div style="font-size: ${sizeXSmall}px; color: #000000; font-weight: 700; margin-top: 2px;">
           Términos de pago: ${invoiceData.paymentTerms} días
         </div>
