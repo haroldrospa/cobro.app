@@ -153,9 +153,9 @@ export const generateCleanInvoiceHTML = (
         margin: 0mm;
       }
       html, body {
-        width: 80mm !important;
+        width: 100% !important;
         max-width: 80mm !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         padding: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
@@ -164,10 +164,9 @@ export const generateCleanInvoiceHTML = (
       }
       .invoice-container {
         padding: ${containerPadding} !important;
-        width: 80mm !important;
+        width: 100% !important;
         max-width: 80mm !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        margin: 0 auto !important;
       }
       * {
         -webkit-print-color-adjust: exact !important;
