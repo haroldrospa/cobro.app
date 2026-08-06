@@ -258,7 +258,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                 <div
                   className="bg-white shadow-2xl rounded-xl overflow-hidden h-fit"
                   style={{
-                    width: '70mm',
+                    width: '72mm',
                     boxShadow: '0 25px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)',
                   }}
                 >
@@ -267,7 +267,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                     title="Vista previa de factura"
                     srcDoc={invoiceHTML}
                     style={{
-                      width: '70mm',
+                      width: '72mm',
                       minHeight: '300px',
                       height: 'auto',
                       border: 'none',
