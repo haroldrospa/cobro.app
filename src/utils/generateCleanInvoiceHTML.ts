@@ -133,11 +133,11 @@ export const generateCleanInvoiceHTML = (
     
     html, body {
       width: 100%;
-      max-width: 80mm;
+      max-width: 72mm;
       margin: 0 auto;
       padding: 0;
       background-color: #ffffff;
-      color: #0f172a;
+      color: #000000;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       font-size: ${sizeBase}px;
       -webkit-font-smoothing: antialiased;
@@ -154,7 +154,7 @@ export const generateCleanInvoiceHTML = (
       }
       html, body {
         width: 100% !important;
-        max-width: 80mm !important;
+        max-width: 72mm !important;
         margin: 0 auto !important;
         padding: 0 !important;
         background: #ffffff !important;
@@ -165,8 +165,9 @@ export const generateCleanInvoiceHTML = (
       .invoice-container {
         padding: ${containerPadding} !important;
         width: 100% !important;
-        max-width: 80mm !important;
+        max-width: 72mm !important;
         margin: 0 auto !important;
+        box-sizing: border-box !important;
       }
       * {
         -webkit-print-color-adjust: exact !important;
@@ -176,12 +177,13 @@ export const generateCleanInvoiceHTML = (
     
     .invoice-container {
       background: #ffffff;
-      color: #0f172a;
+      color: #000000;
       padding: ${containerPadding};
       width: 100%;
-      max-width: 80mm;
+      max-width: 72mm;
       margin: 0 auto;
       overflow: visible;
+      box-sizing: border-box;
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -209,23 +211,23 @@ export const generateCleanInvoiceHTML = (
         ${companyData.name}
       </div>
       ${(companyData.rnc || companyData.phone) ? `
-        <div style="font-size: ${sizeSmall}px; color: #334155; margin-top: 3px; font-weight: 600;">
+        <div style="font-size: ${sizeSmall}px; color: #000000; margin-top: 3px; font-weight: 800;">
           ${companyData.rnc ? `RNC: ${companyData.rnc}` : ''} ${companyData.rnc && companyData.phone ? '•' : ''} ${companyData.phone ? `Tel: ${companyData.phone}` : ''}
         </div>
       ` : ''}
       ${companyData.address ? `
-        <div style="font-size: ${sizeSmall}px; color: #475569; margin-top: 1px; font-weight: 500;">
+        <div style="font-size: ${sizeSmall}px; color: #000000; margin-top: 1px; font-weight: 700;">
           ${companyData.address}
         </div>
       ` : ''}
-      <div style="border-bottom: 2px solid #09090b; margin-top: 8px; width: 100%;"></div>
+      <div style="border-bottom: 2px solid #000000; margin-top: 8px; width: 100%;"></div>
     </div>
     
     <!-- Card 1: Comprobante & Info Card -->
-    <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: ${sizeSmall}px; color: #000000; text-transform: uppercase;">
-        <span>${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO' : 'COMPROBANTE DE VENTA'}</span>
-        <span style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: ${sizeSmall}px; background-color: #ffffff; border: 1.5px solid #000000; color: #000000; padding: 1px 6px; border-radius: 4px; font-weight: 900;">${displayNCF}</span>
+    <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 10px; color: #000000; text-transform: uppercase;">
+        <span style="line-height: 1.1; padding-right: 4px;">${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO' : 'COMPROBANTE DE VENTA'}</span>
+        <span style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 10px; background-color: #ffffff; border: 1.5px solid #000000; color: #000000; padding: 2px 5px; border-radius: 4px; font-weight: 900; white-space: nowrap; flex-shrink: 0;">${displayNCF}</span>
       </div>
       
       <!-- Grid layout for Factura/Tipo and Fecha/Hora to prevent text collision -->
