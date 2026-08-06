@@ -100,7 +100,6 @@ export const useSales = (filters: SalesFilters = {}) => {
             discount_amount,
             tax_amount,
             total,
-            comment,
             product:products(name, image_url)
           )
         `;

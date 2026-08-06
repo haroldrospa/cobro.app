@@ -77,7 +77,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               unit_price,
               subtotal,
               total,
-              comment,
               product:products(name)
             )
           `)
