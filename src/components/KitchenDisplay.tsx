@@ -402,22 +402,22 @@ const KitchenDisplay: React.FC = () => {
     };
 
     const getTimeStatus = (createdAt: string) => {
-        if (showHistory) return "bg-zinc-800 text-zinc-400 border-zinc-700";
+        if (showHistory) return "bg-slate-200 text-slate-700 border-slate-300";
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "bg-red-500/25 text-red-300 border-red-500/60 animate-pulse shadow-red-900/50";
-        if (minutes >= redThreshold) return "bg-red-500/20 text-red-400 border-red-500/40";
-        if (minutes >= yellowThreshold) return "bg-amber-500/20 text-amber-400 border-amber-500/40";
-        return "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+        if (minutes >= alertThreshold) return "bg-red-100 text-red-700 border-red-300 animate-pulse font-black";
+        if (minutes >= redThreshold) return "bg-red-100 text-red-700 border-red-300 font-black";
+        if (minutes >= yellowThreshold) return "bg-amber-100 text-amber-800 border-amber-300 font-black";
+        return "bg-emerald-100 text-emerald-800 border-emerald-300 font-black";
     };
 
     const getTimeBg = (createdAt: string) => {
-        if (showHistory) return "bg-zinc-900/90 border-zinc-800 opacity-90";
+        if (showHistory) return "bg-white text-slate-900 border-slate-300 opacity-90 shadow-md";
 
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "bg-zinc-900/95 border-red-600/90 shadow-[0_0_35px_rgba(220,38,38,0.3)] animate-[blink-red_0.8s_ease-in-out_infinite]";
-        if (minutes >= redThreshold) return "bg-zinc-900/95 border-red-500/50 shadow-xl shadow-red-950/30";
-        if (minutes >= yellowThreshold) return "bg-zinc-900/95 border-amber-500/50 shadow-xl shadow-amber-950/30";
-        return "bg-zinc-900/95 border-zinc-800 shadow-2xl hover:border-zinc-700";
+        if (minutes >= alertThreshold) return "bg-white text-slate-950 border-red-500 border-t-4 shadow-[0_0_30px_rgba(220,38,38,0.25)] animate-[blink-red_0.8s_ease-in-out_infinite]";
+        if (minutes >= redThreshold) return "bg-white text-slate-950 border-slate-300 border-t-4 border-t-red-500 shadow-xl";
+        if (minutes >= yellowThreshold) return "bg-white text-slate-950 border-slate-300 border-t-4 border-t-amber-500 shadow-xl";
+        return "bg-white text-slate-950 border-slate-300 border-t-4 border-t-emerald-500 shadow-xl hover:shadow-2xl";
     };
 
     if (!userStore) return <div className="flex items-center justify-center min-h-[60vh] bg-zinc-950 text-white"><Loader2 className="animate-spin h-8 w-8 text-emerald-500" /></div>;
@@ -548,7 +548,7 @@ const KitchenDisplay: React.FC = () => {
             {showDashboard && <KitchenPerformanceDashboard />}
 
             {/* ── Grid de órdenes ── */}
-            {!showDashboard && <div className="flex-1 overflow-y-auto p-5 md:p-6">
+            {!showDashboard && <div className="flex-1 overflow-y-auto p-5 md:p-6 bg-zinc-950">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-24 gap-3 text-zinc-500">
                         <Loader2 className="animate-spin h-12 w-12 text-emerald-500" />
@@ -571,19 +571,19 @@ const KitchenDisplay: React.FC = () => {
                                 key={order.id}
                                 className={`rounded-2xl border-2 overflow-hidden flex flex-col transition-all duration-300 ${getTimeBg(order.created_at)}`}
                             >
-                                {/* Card Header */}
-                                <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800/80 bg-zinc-900/90">
+                                {/* 🧾 Receipt Header */}
+                                <div className="flex items-center justify-between px-4 py-3.5 border-b-2 border-dashed border-slate-300 bg-slate-100">
                                     <div className="flex flex-col gap-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-xs font-mono font-black uppercase bg-zinc-800 text-white px-2.5 py-1 rounded-xl border border-zinc-700 shrink-0 shadow-sm">
+                                            <span className="text-xs font-mono font-black uppercase bg-slate-950 text-white px-2.5 py-1 rounded-lg border border-slate-800 shrink-0 shadow-sm">
                                                 #{order.order_number.split('-').pop()}
                                             </span>
                                             {order.notes && (order.notes.includes('[PARA LLEVAR]') || order.notes.includes('[DELIVERY]')) ? (
-                                                <span className="text-xs font-black bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2.5 py-1 rounded-xl uppercase">
+                                                <span className="text-xs font-black bg-orange-100 text-orange-950 border border-orange-300 px-2.5 py-1 rounded-lg uppercase">
                                                     🛍️ {order.notes.includes('[DELIVERY]') ? 'DELIVERY' : 'LLEVAR'}
                                                 </span>
                                             ) : (
-                                                <span className="text-xs font-black bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-xl uppercase">
+                                                <span className="text-xs font-black bg-blue-100 text-blue-950 border border-blue-300 px-2.5 py-1 rounded-lg uppercase">
                                                     {order.notes && order.notes.includes('[COMPRA AQUÍ]') ? '🏷️ COMPRA' : '🍽️ AQUÍ'}
                                                 </span>
                                             )}
@@ -592,22 +592,22 @@ const KitchenDisplay: React.FC = () => {
                                                     🔄 ACTUALIZADO
                                                 </span>
                                             )}
-                                            {showHistory && <span className="text-xs font-black text-emerald-400 uppercase bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">✓ LISTO</span>}
+                                            {showHistory && <span className="text-xs font-black text-emerald-800 uppercase bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">✓ LISTO</span>}
                                         </div>
-                                        <p className="text-base font-black uppercase tracking-tight text-white truncate max-w-[190px] leading-tight mt-0.5">
+                                        <p className="text-base font-black uppercase tracking-tight text-slate-950 truncate max-w-[190px] leading-tight mt-0.5">
                                             {order.customer_name}
                                         </p>
                                     </div>
-                                    <div className={`px-3 py-1.5 rounded-xl border font-mono font-black text-base flex items-center gap-1.5 shrink-0 shadow-inner ${getTimeStatus(order.created_at)}`}>
+                                    <div className={`px-3 py-1.5 rounded-xl border font-mono font-black text-base flex items-center gap-1.5 shrink-0 shadow-sm ${getTimeStatus(order.created_at)}`}>
                                         <Timer className="h-4.5 w-4.5" />
                                         {formatElapsed(order)}
                                     </div>
                                 </div>
 
-                                {/* Items Table */}
-                                <div className="flex-1 p-3 bg-zinc-950/70">
+                                {/* 🧾 Receipt Body (Items) */}
+                                <div className="flex-1 p-4 bg-white">
                                     <table className="w-full">
-                                        <tbody className="divide-y divide-zinc-800/60">
+                                        <tbody className="divide-y divide-slate-200">
                                             {order.open_order_items.map((item) => {
                                                 let displayTitle = item.product_name;
                                                 let extractedNote = item.comment;
@@ -618,28 +618,28 @@ const KitchenDisplay: React.FC = () => {
                                                 return (
                                                     <tr
                                                         key={item.id}
-                                                        className="hover:bg-zinc-800/60 cursor-pointer transition-all active:scale-[0.98] group rounded-xl"
+                                                        className="hover:bg-slate-100/80 cursor-pointer transition-all active:scale-[0.98] group rounded-xl"
                                                         onClick={() => handleOpenRecipeModal(item.product_name, item.quantity, extractedNote, item.product_id)}
                                                         title="Haz clic para ver la receta e ingredientes"
                                                     >
-                                                        <td className="py-3 pl-3 pr-2.5 align-top w-12">
-                                                            <div className="h-9 w-9 rounded-xl bg-emerald-500/20 text-emerald-400 font-mono font-black text-lg border border-emerald-500/30 flex items-center justify-center shadow-sm shrink-0">
+                                                        <td className="py-3 pl-2 pr-3 align-top w-12">
+                                                            <div className="h-9 w-9 rounded-xl bg-slate-950 text-white font-mono font-black text-lg border border-slate-800 flex items-center justify-center shadow-md shrink-0">
                                                                 {item.quantity}
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 pr-3">
+                                                        <td className="py-3 pr-2">
                                                             <div className="flex items-center justify-between gap-2">
-                                                                <div className="font-black text-base uppercase tracking-tight text-white group-hover:text-emerald-300 transition-colors leading-snug">
+                                                                <div className="font-black text-base uppercase tracking-tight text-slate-950 group-hover:text-emerald-700 transition-colors leading-snug">
                                                                     {displayTitle}
                                                                 </div>
-                                                                <span className="px-2.5 py-1 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 group-hover:text-emerald-400 group-hover:border-emerald-500/40 text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-sm">
+                                                                <span className="px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-300 text-slate-700 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-sm">
                                                                     <UtensilsCrossed className="h-3.5 w-3.5" />
                                                                     Receta
                                                                 </span>
                                                             </div>
                                                             {extractedNote && (
-                                                                <div className="mt-2 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300">
-                                                                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+                                                                <div className="mt-2 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-950">
+                                                                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" />
                                                                     <p className="font-black text-xs uppercase leading-tight">
                                                                         {extractedNote}
                                                                     </p>
@@ -671,14 +671,14 @@ const KitchenDisplay: React.FC = () => {
 
                                         return (
                                             <div
-                                                className={`mx-3 my-2.5 p-3 rounded-xl border ${isUpdateNote ? 'bg-red-500/20 border-red-500/50 cursor-pointer hover:bg-red-500/30 active:scale-[0.98] transition-all' : 'bg-orange-500/20 border-orange-500/40'}`}
+                                                className={`mx-2 my-2.5 p-3 rounded-xl border-2 ${isUpdateNote ? 'bg-red-50 border-red-300 cursor-pointer hover:bg-red-100 active:scale-[0.98] transition-all' : 'bg-orange-50 border-orange-300'}`}
                                                 onClick={isUpdateNote ? handleNoteClick : undefined}
                                             >
-                                                <p className={`text-xs font-black uppercase mb-1 flex items-center gap-1.5 ${isUpdateNote ? 'text-red-400' : 'text-orange-400'}`}>
+                                                <p className={`text-xs font-black uppercase mb-1 flex items-center gap-1.5 ${isUpdateNote ? 'text-red-700' : 'text-orange-800'}`}>
                                                     <AlertTriangle className="h-4 w-4" />
                                                     {isUpdateNote ? '🔄 VER PEDIDO ORIGINAL' : 'NOTA DEL PEDIDO'}
                                                 </p>
-                                                <p className={`text-xs font-bold whitespace-pre-line ${isUpdateNote ? 'text-red-200' : 'text-orange-200'}`}>
+                                                <p className={`text-xs font-bold whitespace-pre-line ${isUpdateNote ? 'text-red-950' : 'text-orange-950'}`}>
                                                     {cleanNote}
                                                 </p>
                                             </div>
@@ -686,11 +686,11 @@ const KitchenDisplay: React.FC = () => {
                                     })()}
                                 </div>
 
-                                {/* Complete Button */}
+                                {/* 🧾 Receipt Footer / Perforation & Button */}
                                 {!showHistory && (
-                                    <div className="p-3 bg-zinc-900/95 border-t border-zinc-800/80">
+                                    <div className="p-3 bg-slate-100 border-t-2 border-dashed border-slate-300">
                                         <Button
-                                            className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-black text-xs tracking-widest uppercase shadow-lg shadow-emerald-950/50 active:scale-[0.98] transition-all"
+                                            className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-widest uppercase shadow-md shadow-emerald-900/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                                             onClick={() => updateStatusMutation.mutate({
                                                 orderId: order.id,
                                                 status: (order.notes?.includes('[PARA LLEVAR]') || order.notes?.includes('[DELIVERY]')) ? 'shipped' : 'completed'
