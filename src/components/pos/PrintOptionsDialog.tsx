@@ -66,7 +66,21 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       try {
         const { data, error } = await supabase
           .from('sales')
-          .select('*')
+          .select(`
+            *,
+            customer:customers(name, rnc, phone, email),
+            profile:profiles(full_name),
+            sale_items:sale_items(
+              id,
+              product_id,
+              quantity,
+              unit_price,
+              subtotal,
+              total,
+              comment,
+              product:products(name)
+            )
+          `)
           .eq('id', propSaleData.id)
           .maybeSingle();
 
@@ -75,7 +89,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
           setLiveSaleData(prev => ({
             ...prev,
             ...data,
-            items: prev?.items || propSaleData.items,
+            items: data.sale_items || data.items || prev?.items || propSaleData.items,
           }));
 
           // If the electronic QR code has loaded successfully, we can clear the polling!
@@ -119,7 +133,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             setLiveSaleData(prev => ({
               ...prev,
               ...payload.new,
-              items: prev?.items || propSaleData.items,
+              items: prev?.items || propSaleData.items || propSaleData.sale_items,
             }));
             if (payload.new.qrcode_url && pollInterval) {
               console.log("🎯 Real-time event loaded QR code. Stopping polling.");
@@ -152,13 +166,24 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const { settings: storeSettings } = useStoreSettings();
 
   const rawSaleData = liveSaleData || propSaleData;
-  const saleData = (() => {
+  const saleData = useMemo(() => {
     if (!rawSaleData) return null;
+    
+    const rawItems = rawSaleData.items || rawSaleData.sale_items || [];
+    const normalizedItems = rawItems.map((item: any) => ({
+      name: item.name || item.product?.name || item.product_name || 'Producto',
+      quantity: item.quantity || 1,
+      price: item.price || item.unit_price || 0,
+      total: item.total || ((item.quantity || 1) * (item.price || item.unit_price || 0)),
+      comment: item.comment,
+      tax_amount: item.tax_amount || item.tax || 0,
+    }));
+
     const invNum = rawSaleData.encf || rawSaleData.invoice_number || rawSaleData.invoiceNumber || '000001';
     const isElec = invNum.startsWith('E') || rawSaleData.is_electronic || !!rawSaleData.encf;
     
-    // Safety Fallback: If accepted but qrcode_url is missing, dynamically build standard DGII verification URL
-    if (isElec && rawSaleData.estado_fiscal === 'ACEPTADO' && !rawSaleData.qrcode_url) {
+    let qrUrl = rawSaleData.qrcode_url;
+    if (isElec && rawSaleData.estado_fiscal === 'ACEPTADO' && !qrUrl) {
       const emisorRnc = dbCompanyInfo?.rnc?.replace(/[^0-9]/g, '') || '';
       const receptorRnc = rawSaleData.customer?.rnc?.replace(/[^0-9]/g, '') || '';
       const rawDate = rawSaleData.fecha_firma || new Date().toISOString();
@@ -174,13 +199,15 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         formattedDate = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
       } catch (_) {}
       
-      return {
-        ...rawSaleData,
-        qrcode_url: `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&MontoTotal=${rawSaleData.total}&CodigoSeguridad=${rawSaleData.codigo_seguridad || ''}&FechaFirma=${encodeURIComponent(formattedDate)}`
-      };
+      qrUrl = `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&MontoTotal=${rawSaleData.total}&CodigoSeguridad=${rawSaleData.codigo_seguridad || ''}&FechaFirma=${encodeURIComponent(formattedDate)}`;
     }
-    return rawSaleData;
-  })();
+
+    return {
+      ...rawSaleData,
+      items: normalizedItems,
+      qrcode_url: qrUrl,
+    };
+  }, [rawSaleData, dbCompanyInfo]);
 
   const invoiceNumber = saleData?.encf || saleData?.invoice_number || saleData?.invoiceNumber || '000001';
 

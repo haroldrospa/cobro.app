@@ -87,7 +87,7 @@ export const useSales = (filters: SalesFilters = {}) => {
         invoice_type:invoice_types(name, code)
       `;
 
-      if (filters.includeItems) {
+      if (filters.includeItems !== false) {
         selectFields += `,
           sale_items:sale_items(
             id,
@@ -100,6 +100,7 @@ export const useSales = (filters: SalesFilters = {}) => {
             discount_amount,
             tax_amount,
             total,
+            comment,
             product:products(name, image_url)
           )
         `;

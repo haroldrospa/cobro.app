@@ -32,11 +32,12 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
   const invoiceHTML = useMemo(() => {
     if (!saleData) return '';
 
-    const items = (saleData.sale_items || []).map((item: any) => ({
-      name: item.product?.name || item.product_name || 'Producto',
+    const rawItems = (saleData as any).sale_items || (saleData as any).items || [];
+    const items = rawItems.map((item: any) => ({
+      name: item.product?.name || item.product_name || item.name || 'Producto',
       quantity: item.quantity || 1,
-      price: item.unit_price || 0,
-      total: item.total || 0,
+      price: item.unit_price || item.price || 0,
+      total: item.total || (item.quantity || 1) * (item.unit_price || item.price || 0),
       comment: item.comment,
     }));
 
