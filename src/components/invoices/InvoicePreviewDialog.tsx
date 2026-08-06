@@ -251,11 +251,10 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                 </div>
               ) : (
                 <div
-                  className="bg-white shadow-2xl rounded overflow-hidden"
+                  className="bg-white shadow-2xl rounded-xl overflow-hidden h-fit"
                   style={{
                     width: '80mm',
-                    minHeight: '120mm',
-                    boxShadow: '0 25px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05)',
+                    boxShadow: '0 25px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)',
                   }}
                 >
                   <iframe
@@ -264,11 +263,11 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                     srcDoc={invoiceHTML}
                     style={{
                       width: '80mm',
-                      minHeight: '120mm',
-                      height: '100%',
+                      minHeight: '300px',
+                      height: 'auto',
                       border: 'none',
                       display: 'block',
-                      borderRadius: '2px',
+                      borderRadius: '8px',
                       overflow: 'hidden',
                     }}
                     scrolling="no"
@@ -286,6 +285,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                                 margin: 0 !important;
                                 padding: 0 !important;
                                 width: 100% !important;
+                                height: auto !important;
                               }
                               ::-webkit-scrollbar {
                                 display: none !important;
@@ -296,23 +296,33 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                           `;
                           doc.head.appendChild(style);
 
-                          // ResizeObserver to adjust height dynamically as content (like images) loads
-                          const resizeObserver = new ResizeObserver((entries) => {
-                            for (const entry of entries) {
-                              const height = doc.body.scrollHeight || entry.contentRect.height;
-                              if (height) {
-                                iframe.style.height = `${height}px`;
-                              }
+                          const updateHeight = () => {
+                            const h = doc.body.scrollHeight || doc.documentElement.scrollHeight;
+                            if (h && h > 0) {
+                              iframe.style.height = `${h + 10}px`;
                             }
+                          };
+
+                          updateHeight();
+
+                          // ResizeObserver for dynamic layout shifts
+                          const resizeObserver = new ResizeObserver(() => {
+                            updateHeight();
                           });
                           resizeObserver.observe(doc.body);
+
+                          // Trigger update when images load
+                          doc.querySelectorAll('img').forEach(img => {
+                            if (!img.complete) {
+                              img.onload = updateHeight;
+                            }
+                          });
                         }
                       } catch (_) {
-                        // Fallback if ResizeObserver or contentWindow access fails
                         try {
                           const height = iframe.contentDocument?.body?.scrollHeight;
                           if (height) {
-                            iframe.style.height = height + 'px';
+                            iframe.style.height = (height + 10) + 'px';
                           }
                         } catch (__) {}
                       }

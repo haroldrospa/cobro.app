@@ -2891,6 +2891,11 @@ const Settings = () => {
                       <div className="absolute top-0 left-0 right-0 h-2 w-full bg-[radial-gradient(circle_at_10px_0,#fcfcfc_10px,transparent_11px)]" style={{ backgroundSize: '20px 10px', marginTop: '-10px', filter: 'drop-shadow(0 -1px 2px rgba(0,0,0,0.1))' }}></div>
                       
                       <div className="p-5">
+                        {/* Top Badge */}
+                        <div className="flex justify-center mb-2">
+                          <span className="text-[8px] font-extrabold uppercase tracking-widest text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">Recibo de Compra</span>
+                        </div>
+
                         {/* Logo */}
                         {companyInfo.logo && (
                           <div className="text-center transition-all duration-300" style={{ marginTop: printSettings.logoMarginTop, marginBottom: printSettings.logoMarginBottom }}>
@@ -2899,10 +2904,10 @@ const Settings = () => {
                               alt="Logo"
                               className="mx-auto w-auto object-contain grayscale opacity-90 mix-blend-multiply"
                               style={{
-                                maxHeight: printSettings.logoWidth === 'full' ? 'none' : `${companyInfo.logoSize}px`,
+                                maxHeight: printSettings.logoWidth === 'full' ? 'none' : `${Math.min(companyInfo.logoSize || 64, 60)}px`,
                                 width: printSettings.logoWidth === 'full' ? '100%' : 'auto',
                                 height: 'auto',
-                                maxWidth: '100%'
+                                maxWidth: '80%'
                               }}
                             />
                           </div>
@@ -2910,63 +2915,71 @@ const Settings = () => {
 
                         {/* Header */}
                         <div className="text-center pb-2 mb-2">
-                          <h2 className="font-extrabold uppercase tracking-tight text-black" style={{ fontSize: '1.25em' }}>{companyInfo.name || 'Mi Negocio'}</h2>
-                          {companyInfo.rnc && <p className="leading-tight text-zinc-700 font-medium" style={{ fontSize: '0.85em' }}>RNC: {companyInfo.rnc}</p>}
-                          {companyInfo.phone && <p className="leading-tight text-zinc-700 font-medium" style={{ fontSize: '0.85em' }}>Tel: {companyInfo.phone}</p>}
-                          {companyInfo.address && <p className="leading-tight text-zinc-700 font-medium mt-0.5" style={{ fontSize: '0.85em' }}>{companyInfo.address}</p>}
+                          <h2 className="font-black uppercase tracking-tight text-zinc-900" style={{ fontSize: '1.25em' }}>{companyInfo.name || 'Mi Negocio'}</h2>
+                          {companyInfo.rnc && <p className="leading-tight text-slate-600 font-medium" style={{ fontSize: '0.85em' }}>RNC: {companyInfo.rnc}</p>}
+                          {companyInfo.phone && <p className="leading-tight text-slate-600 font-medium" style={{ fontSize: '0.85em' }}>Tel: {companyInfo.phone}</p>}
+                          {companyInfo.address && <p className="leading-tight text-slate-600 font-medium mt-0.5" style={{ fontSize: '0.85em' }}>{companyInfo.address}</p>}
                         </div>
 
-                        {/* NCF Card Box */}
-                        <div className="border border-black rounded-lg p-2 my-2 text-center bg-zinc-50/80">
-                          <p className="font-extrabold uppercase tracking-widest text-zinc-700 text-[10px] mb-0.5">
-                            {localBillingMode === 'e-ncf' ? 'Comprobante Fiscal Electrónico (e-CF)' : 'Comprobante Fiscal (NCF)'}
-                          </p>
-                          <p className="font-mono font-extrabold tracking-wider text-black text-sm">
+                        {/* Ultra-Modern NCF Card Box */}
+                        <div className="border-1.5 border-zinc-900 rounded-lg p-2 my-2 text-center bg-slate-50 border border-zinc-800 shadow-sm">
+                          <div className="flex items-center justify-center gap-1 mb-0.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                            <p className="font-extrabold uppercase tracking-widest text-zinc-800 text-[10px]">
+                              {localBillingMode === 'e-ncf' ? 'Comprobante Fiscal Electrónico (e-CF)' : 'Comprobante Fiscal (NCF)'}
+                            </p>
+                          </div>
+                          <p className="font-mono font-extrabold tracking-wider text-zinc-950 text-sm">
                             {localBillingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001'}
                           </p>
-                          <p className="text-[10px] text-zinc-500 font-medium mt-0.5">{new Date().toLocaleDateString('es-DO')} {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[10px] text-slate-500 font-medium mt-0.5">📅 {new Date().toLocaleDateString('es-DO')} • {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
                         </div>
 
                         {/* Customer Info */}
-                        <div className="border-y border-dashed border-zinc-300 py-1.5 my-2 text-[11px]">
-                          <p className="font-bold text-black">CLIENTE: CLIENTE FINAL</p>
+                        <div className="border-y border-dashed border-slate-300 py-1.5 my-2.5 text-[11px]">
+                          <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500">Cliente</p>
+                          <p className="font-bold text-zinc-900">CLIENTE FINAL</p>
                         </div>
 
                         {/* Items ejemplo */}
-                        <div className="my-2 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] font-extrabold text-zinc-500 uppercase pb-1 border-b border-zinc-200 tracking-wider">
-                            <span>Cant. / Descripción</span>
+                        <div className="my-2.5 space-y-1.5">
+                          <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-500 uppercase pb-1 border-b-2 border-zinc-900 tracking-wider">
+                            <span>Artículos / Cant.</span>
                             <span>Total</span>
                           </div>
-                          <div className="flex justify-between items-baseline py-1 border-b border-dotted border-zinc-100 text-[11px]">
-                            <div>
-                              <span className="font-semibold text-black">Producto Ejemplo</span>
-                              <span className="text-[10px] text-zinc-500 ml-1">x1</span>
+                          <div className="py-1 border-b border-dotted border-slate-200 text-[11px]">
+                            <div className="flex justify-between items-baseline">
+                              <span className="font-bold text-zinc-900">Producto Ejemplo</span>
+                              <span className="font-mono font-extrabold text-zinc-900">{invoiceSettings.currency} 100.00</span>
                             </div>
-                            <span className="font-mono font-bold text-black">{invoiceSettings.currency} 100.00</span>
+                            <div>
+                              <span className="text-[10px] text-slate-600 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 inline-block mt-0.5">1 × {invoiceSettings.currency} 100.00</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between items-baseline py-1 border-b border-dotted border-zinc-100 text-[11px]">
-                            <div>
-                              <span className="font-semibold text-black">Servicio Premium</span>
-                              <span className="text-[10px] text-zinc-500 ml-1">x2</span>
+                          <div className="py-1 border-b border-dotted border-slate-200 text-[11px]">
+                            <div className="flex justify-between items-baseline">
+                              <span className="font-bold text-zinc-900">Servicio Premium</span>
+                              <span className="font-mono font-extrabold text-zinc-900">{invoiceSettings.currency} 150.00</span>
                             </div>
-                            <span className="font-mono font-bold text-black">{invoiceSettings.currency} 150.00</span>
+                            <div>
+                              <span className="text-[10px] text-slate-600 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 inline-block mt-0.5">2 × {invoiceSettings.currency} 75.00</span>
+                            </div>
                           </div>
                         </div>
 
                         {/* Totales */}
-                        <div className="space-y-1 my-2 text-[11px]">
-                          <div className="flex justify-between text-zinc-600">
+                        <div className="space-y-1 my-2.5 text-[11px]">
+                          <div className="flex justify-between text-slate-600">
                             <span>Subtotal:</span>
-                            <span className="font-mono font-semibold">{invoiceSettings.currency} 250.00</span>
+                            <span className="font-mono font-bold text-zinc-900">{invoiceSettings.currency} 250.00</span>
                           </div>
-                          <div className="flex justify-between text-zinc-600">
+                          <div className="flex justify-between text-slate-600">
                             <span>ITBIS ({invoiceSettings.defaultTaxRate}%):</span>
-                            <span className="font-mono font-semibold">{invoiceSettings.currency} {(250 * parseFloat(invoiceSettings.defaultTaxRate || '0') / 100).toFixed(2)}</span>
+                            <span className="font-mono font-bold text-zinc-900">{invoiceSettings.currency} {(250 * parseFloat(invoiceSettings.defaultTaxRate || '0') / 100).toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between items-center bg-black text-white rounded-md p-2 mt-2 font-bold">
-                            <span className="text-xs uppercase tracking-wider">TOTAL</span>
-                            <span className="font-mono text-sm font-black">{invoiceSettings.currency} {(250 * (1 + parseFloat(invoiceSettings.defaultTaxRate || '0') / 100)).toFixed(2)}</span>
+                          <div className="flex justify-between items-center bg-zinc-950 text-white rounded-lg p-2.5 mt-2 font-bold shadow-md">
+                            <span className="text-xs uppercase tracking-wider font-black">TOTAL</span>
+                            <span className="font-mono text-base font-black">{invoiceSettings.currency} {(250 * (1 + parseFloat(invoiceSettings.defaultTaxRate || '0') / 100)).toFixed(2)}</span>
                           </div>
                         </div>
 
