@@ -225,32 +225,37 @@ export const generateCleanInvoiceHTML = (
     
     <!-- Card 1: Comprobante & Info Card -->
     <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 10px; color: #000000; text-transform: uppercase;">
-        <span style="line-height: 1.1; padding-right: 4px;">${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO' : 'COMPROBANTE DE VENTA'}</span>
-        <span style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 10px; background-color: #ffffff; border: 1.5px solid #000000; color: #000000; padding: 2px 5px; border-radius: 4px; font-weight: 900; white-space: nowrap; flex-shrink: 0;">${displayNCF}</span>
+      <!-- Prominent High-Contrast NCF Banner -->
+      <div style="background-color: #000000; color: #ffffff !important; border: 2px solid #000000; border-radius: 5px; padding: 4px 6px; text-align: center; margin-bottom: 6px;">
+        <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; color: #ffffff !important;">
+          ${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'COMPROBANTE DE VENTA (NCF)'}
+        </div>
+        <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 15px; font-weight: 900; letter-spacing: 1.5px; color: #ffffff !important; margin-top: 1px; word-break: break-all;">
+          ${displayNCF}
+        </div>
       </div>
       
-      <!-- Grid layout for Factura/Tipo and Fecha/Hora to prevent text collision -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: ${sizeXSmall}px; border-top: 1.5px solid #000000; padding-top: 6px;">
+      <!-- Grid layout for Factura/Tipo and Fecha/Hora -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9px; border-top: 1.5px solid #000000; padding-top: 5px;">
         <div>
-          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: 9px; letter-spacing: 0.4px;">FACTURA / TIPO</div>
-          <div style="font-weight: 900; color: #000000; margin-top: 2px; line-height: 1.2; word-break: break-word;">
+          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.3px;">FACTURA / TIPO</div>
+          <div style="font-weight: 900; color: #000000; margin-top: 1px; line-height: 1.2; word-break: break-word;">
             ${fullInvoiceCode}
           </div>
-          <div style="font-weight: 800; color: #000000; font-size: 9px;">(${customerTypeLabel})</div>
+          <div style="font-weight: 800; color: #000000; font-size: 8.5px;">(${customerTypeLabel})</div>
         </div>
         <div style="text-align: right;">
-          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: 9px; letter-spacing: 0.4px;">FECHA Y HORA</div>
-          <div style="font-weight: 900; color: #000000; margin-top: 2px; line-height: 1.2;">
+          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.3px;">FECHA Y HORA</div>
+          <div style="font-weight: 900; color: #000000; margin-top: 1px; line-height: 1.2;">
             ${formattedTimeStr}
           </div>
-          <div style="font-weight: 800; color: #000000; font-size: 9px;">(${formattedDateStr})</div>
+          <div style="font-weight: 800; color: #000000; font-size: 8.5px;">(${formattedDateStr})</div>
         </div>
       </div>
 
-      <div style="border-top: 1.5px solid #000000; margin-top: 6px; padding-top: 6px; font-size: ${sizeXSmall}px; line-height: 1.45;">
-        <div><span style="color: #000000; font-weight: 900; font-size: 9px; text-transform: uppercase;">CLIENTE:</span> <strong style="color: #000000; font-weight: 900;">${(invoiceData.customerName || 'CONSUMIDOR FINAL').toUpperCase()}</strong></div>
-        ${invoiceData.cashierName ? `<div><span style="color: #000000; font-weight: 900; font-size: 9px; text-transform: uppercase;">CAJERO:</span> <strong style="color: #000000; font-weight: 900;">${invoiceData.cashierName.toUpperCase()}</strong></div>` : ''}
+      <div style="border-top: 1.5px solid #000000; margin-top: 5px; padding-top: 5px; font-size: 9px; line-height: 1.4;">
+        <div><span style="color: #000000; font-weight: 900; font-size: 8.5px; text-transform: uppercase;">CLIENTE:</span> <strong style="color: #000000; font-weight: 900;">${(invoiceData.customerName || 'CONSUMIDOR FINAL').toUpperCase()}</strong></div>
+        ${invoiceData.cashierName ? `<div><span style="color: #000000; font-weight: 900; font-size: 8.5px; text-transform: uppercase;">CAJERO:</span> <strong style="color: #000000; font-weight: 900;">${invoiceData.cashierName.toUpperCase()}</strong></div>` : ''}
       </div>
     </div>
 

@@ -2922,17 +2922,14 @@ const Settings = () => {
                         </div>
 
                         {/* Ultra-Modern NCF Card Box */}
-                        <div className="border-1.5 border-zinc-900 rounded-lg p-2 my-2 text-center bg-slate-50 border border-zinc-800 shadow-sm">
-                          <div className="flex items-center justify-center gap-1 mb-0.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                            <p className="font-extrabold uppercase tracking-widest text-zinc-800 text-[10px]">
-                              {localBillingMode === 'e-ncf' ? 'Comprobante Fiscal Electrónico (e-CF)' : 'Comprobante Fiscal (NCF)'}
-                            </p>
-                          </div>
-                          <p className="font-mono font-extrabold tracking-wider text-zinc-950 text-sm">
+                        <div className="bg-black text-white rounded-md p-2 my-2 text-center border-2 border-black">
+                          <p className="font-extrabold uppercase tracking-widest text-white text-[9px]">
+                            {localBillingMode === 'e-ncf' ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'NCF / COMPROBANTE FISCAL'}
+                          </p>
+                          <p className="font-mono font-black tracking-widest text-white text-base mt-0.5">
                             {localBillingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001'}
                           </p>
-                          <p className="text-[10px] text-slate-500 font-medium mt-0.5">📅 {new Date().toLocaleDateString('es-DO')} • {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[9px] text-white/80 font-bold mt-0.5">📅 {new Date().toLocaleDateString('es-DO')} • {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
                         </div>
 
                         {/* Customer Info */}
