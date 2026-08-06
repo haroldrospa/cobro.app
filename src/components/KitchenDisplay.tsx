@@ -39,6 +39,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface OrderItem {
     id: string;
+    product_id?: string;
     product_name: string;
     quantity: number;
     comment?: string;
@@ -81,10 +82,11 @@ const KitchenDisplay: React.FC = () => {
         }>;
     } | null>(null);
 
-    const handleOpenRecipeModal = async (productName: string, quantity: number, note?: string) => {
+    const handleOpenRecipeModal = async (productName: string, quantity: number, note?: string, productId?: string) => {
+        const rawName = productName.trim();
         const cleanName = productName.replace(/\s*\(.*?\)\s*/g, '').trim();
         setRecipeModal({
-            productName: cleanName,
+            productName: rawName || cleanName,
             quantity,
             note,
             loading: true,
@@ -92,15 +94,31 @@ const KitchenDisplay: React.FC = () => {
         });
 
         try {
-            // Find product ID by name
-            const { data: prodData } = await supabase
-                .from('products')
-                .select('id, name')
-                .eq('name', cleanName)
-                .maybeSingle();
+            let targetProductId = productId;
 
-            let targetProductId = prodData?.id;
+            // Strategy 1: Check exact raw name (e.g. "Carne Salada (Frito)")
+            if (!targetProductId) {
+                const { data: exactProd } = await supabase
+                    .from('products')
+                    .select('id, name')
+                    .eq('name', rawName)
+                    .maybeSingle();
 
+                targetProductId = exactProd?.id;
+            }
+
+            // Strategy 2: Check clean name (e.g. "Carne Salada")
+            if (!targetProductId) {
+                const { data: cleanProd } = await supabase
+                    .from('products')
+                    .select('id, name')
+                    .eq('name', cleanName)
+                    .maybeSingle();
+
+                targetProductId = cleanProd?.id;
+            }
+
+            // Strategy 3: Partial ilike match
             if (!targetProductId) {
                 const { data: altProd } = await supabase
                     .from('products')
@@ -108,6 +126,7 @@ const KitchenDisplay: React.FC = () => {
                     .ilike('name', `%${cleanName}%`)
                     .limit(1)
                     .maybeSingle();
+
                 targetProductId = altProd?.id;
             }
 
@@ -543,7 +562,7 @@ const KitchenDisplay: React.FC = () => {
                                                     <tr
                                                         key={item.id}
                                                         className="hover:bg-emerald-500/10 cursor-pointer transition-all active:scale-[0.98] border-b border-black/5 dark:border-white/5 group"
-                                                        onClick={() => handleOpenRecipeModal(item.product_name, item.quantity, extractedNote)}
+                                                        onClick={() => handleOpenRecipeModal(item.product_name, item.quantity, extractedNote, item.product_id)}
                                                         title="Haz clic para ver la receta e ingredientes"
                                                     >
                                                         <td className="py-2 pl-3 pr-1.5 align-top w-8">
