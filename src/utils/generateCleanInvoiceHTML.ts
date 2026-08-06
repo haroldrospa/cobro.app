@@ -133,8 +133,8 @@ export const generateCleanInvoiceHTML = (
     
     html, body {
       width: 100%;
-      max-width: 72mm;
-      margin: 0 auto;
+      max-width: 100%;
+      margin: 0;
       padding: 0;
       background-color: #ffffff;
       color: #000000;
@@ -145,6 +145,8 @@ export const generateCleanInvoiceHTML = (
       line-height: 1.35;
       height: auto !important;
       min-height: auto !important;
+      box-sizing: border-box;
+      overflow-x: hidden;
     }
     
     @media print {
@@ -154,19 +156,20 @@ export const generateCleanInvoiceHTML = (
       }
       html, body {
         width: 100% !important;
-        max-width: 72mm !important;
-        margin: 0 auto !important;
+        max-width: 100% !important;
+        margin: 0 !important;
         padding: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
         height: auto !important;
         overflow: visible !important;
+        box-sizing: border-box !important;
       }
       .invoice-container {
         padding: ${containerPadding} !important;
         width: 100% !important;
-        max-width: 72mm !important;
-        margin: 0 auto !important;
+        max-width: 100% !important;
+        margin: 0 !important;
         box-sizing: border-box !important;
       }
       * {
@@ -180,9 +183,9 @@ export const generateCleanInvoiceHTML = (
       color: #000000;
       padding: ${containerPadding};
       width: 100%;
-      max-width: 72mm;
-      margin: 0 auto;
-      overflow: visible;
+      max-width: 100%;
+      margin: 0;
+      overflow: hidden;
       box-sizing: border-box;
       page-break-inside: avoid;
       break-inside: avoid;
