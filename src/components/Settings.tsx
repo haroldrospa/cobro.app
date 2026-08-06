@@ -2922,14 +2922,14 @@ const Settings = () => {
                         </div>
 
                         {/* Ultra-Modern NCF Card Box */}
-                        <div className="bg-black text-white rounded-md p-2 my-2 text-center border-2 border-black">
-                          <p className="font-extrabold uppercase tracking-widest text-white text-[9px]">
+                        <div className="bg-white text-black rounded-md p-2 my-2 text-center border-2 border-black">
+                          <p className="font-black uppercase tracking-widest text-black text-[9px]">
                             {localBillingMode === 'e-ncf' ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'NCF / COMPROBANTE FISCAL'}
                           </p>
-                          <p className="font-mono font-black tracking-widest text-white text-base mt-0.5">
+                          <p className="font-mono font-black tracking-widest text-black text-base mt-0.5">
                             {localBillingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001'}
                           </p>
-                          <p className="text-[9px] text-white/80 font-bold mt-0.5">📅 {new Date().toLocaleDateString('es-DO')} • {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[9px] text-black font-bold mt-0.5">📅 {new Date().toLocaleDateString('es-DO')} • {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
                         </div>
 
                         {/* Customer Info */}

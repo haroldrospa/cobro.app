@@ -120,8 +120,14 @@ export const generateCleanInvoiceHTML = (
       box-sizing: border-box;
     }
     
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     @page {
-      size: 80mm auto;
+      size: 70mm auto;
       margin: 0mm;
     }
     
@@ -132,12 +138,12 @@ export const generateCleanInvoiceHTML = (
     }
     
     html, body {
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
-      padding: 0;
-      background-color: #ffffff;
-      color: #000000;
+      width: 70mm !important;
+      max-width: 70mm !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      background-color: #ffffff !important;
+      color: #000000 !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       font-size: ${sizeBase}px;
       -webkit-font-smoothing: antialiased;
@@ -145,19 +151,19 @@ export const generateCleanInvoiceHTML = (
       line-height: 1.35;
       height: auto !important;
       min-height: auto !important;
-      box-sizing: border-box;
-      overflow-x: hidden;
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
     }
     
     @media print {
       @page {
-        size: 80mm auto;
+        size: 70mm auto;
         margin: 0mm;
       }
       html, body {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
+        width: 70mm !important;
+        max-width: 70mm !important;
+        margin: 0 auto !important;
         padding: 0 !important;
         background: #ffffff !important;
         color: #000000 !important;
@@ -167,9 +173,9 @@ export const generateCleanInvoiceHTML = (
       }
       .invoice-container {
         padding: ${containerPadding} !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
+        width: 70mm !important;
+        max-width: 70mm !important;
+        margin: 0 auto !important;
         box-sizing: border-box !important;
       }
       * {
@@ -179,12 +185,12 @@ export const generateCleanInvoiceHTML = (
     }
     
     .invoice-container {
-      background: #ffffff;
-      color: #000000;
+      background: #ffffff !important;
+      color: #000000 !important;
       padding: ${containerPadding};
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
+      width: 70mm;
+      max-width: 70mm;
+      margin: 0 auto;
       overflow: hidden;
       box-sizing: border-box;
       page-break-inside: avoid;
@@ -199,18 +205,18 @@ export const generateCleanInvoiceHTML = (
     <div style="text-align: center; margin-bottom: 8px;">
       ${companyData.logo ? `
         <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 4px;">
-          <img src="${companyData.logo}" alt="Logo" style="max-height: ${Math.min(logoHeight, 65)}px; max-width: 85%; object-fit: contain; margin: 0 auto; display: block;" />
+          <img src="${companyData.logo}" alt="Logo" style="max-height: ${Math.min(logoHeight, 60)}px; max-width: 85%; object-fit: contain; margin: 0 auto; display: block;" />
         </div>
       ` : `
-        <div style="display: inline-block; background-color: #09090b; color: #ffffff; padding: 4px 14px; border-radius: 6px; font-weight: 900; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
+        <div style="display: inline-block; background-color: #ffffff; color: #000000; border: 2px solid #000000; padding: 3px 12px; border-radius: 6px; font-weight: 900; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
           ${companyInitials}
         </div>
       `}
     </div>
     
     <!-- Company Header -->
-    <div style="text-align: center; margin-bottom: 10px;">
-      <div style="font-size: ${sizeH1}px; font-weight: 900; color: #09090b; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.2;">
+    <div style="text-align: center; margin-bottom: 8px;">
+      <div style="font-size: ${sizeH1}px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.2;">
         ${companyData.name}
       </div>
       ${(companyData.rnc || companyData.phone) ? `
@@ -223,17 +229,17 @@ export const generateCleanInvoiceHTML = (
           ${companyData.address}
         </div>
       ` : ''}
-      <div style="border-bottom: 2px solid #000000; margin-top: 8px; width: 100%;"></div>
+      <div style="border-bottom: 2px solid #000000; margin-top: 6px; width: 100%;"></div>
     </div>
     
     <!-- Card 1: Comprobante & Info Card -->
     <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
-      <!-- Prominent High-Contrast NCF Banner -->
-      <div style="background-color: #000000; color: #ffffff !important; border: 2px solid #000000; border-radius: 5px; padding: 4px 6px; text-align: center; margin-bottom: 6px;">
-        <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; color: #ffffff !important;">
+      <!-- Prominent High-Contrast White NCF Banner -->
+      <div style="background-color: #ffffff; color: #000000; border: 2px solid #000000; border-radius: 5px; padding: 4px 6px; text-align: center; margin-bottom: 6px;">
+        <div style="font-size: 8.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; color: #000000;">
           ${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'COMPROBANTE DE VENTA (NCF)'}
         </div>
-        <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 15px; font-weight: 900; letter-spacing: 1.5px; color: #ffffff !important; margin-top: 1px; word-break: break-all;">
+        <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 15px; font-weight: 900; letter-spacing: 1.5px; color: #000000; margin-top: 1px; word-break: break-all;">
           ${displayNCF}
         </div>
       </div>
@@ -264,30 +270,30 @@ export const generateCleanInvoiceHTML = (
 
     <!-- Card 2: Items Table -->
     <div style="margin-bottom: 8px;">
-      <!-- Header Bar with solid dark background and bright white text -->
-      <div style="background-color: #000000; color: #ffffff !important; padding: 6px 10px; border: 2px solid #000000; border-top-left-radius: 6px; border-top-right-radius: 6px; display: flex; justify-content: space-between; font-weight: 900; font-size: ${sizeXSmall}px; text-transform: uppercase; letter-spacing: 0.8px;">
-        <span style="color: #ffffff !important;">CANT / DESCRIPCIÓN</span>
-        <span style="color: #ffffff !important;">TOTAL</span>
+      <!-- Header Bar with white background and bold black border & text -->
+      <div style="background-color: #ffffff; color: #000000; padding: 5px 8px; border: 2px solid #000000; border-top-left-radius: 6px; border-top-right-radius: 6px; display: flex; justify-content: space-between; font-weight: 900; font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px;">
+        <span>CANT / DESCRIPCIÓN</span>
+        <span>TOTAL</span>
       </div>
       
-      <div style="border: 2px solid #000000; border-top: none; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; padding: 6px 10px; background-color: #ffffff;">
+      <div style="border: 2px solid #000000; border-top: none; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; padding: 5px 8px; background-color: #ffffff;">
         ${invoiceData.items && invoiceData.items.length > 0 ? invoiceData.items.map(item => `
-          <div style="padding: 6px 0; border-bottom: 1px dashed #000000;">
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
-              <div style="font-weight: 900; font-size: ${sizeSmall}px; color: #000000; flex: 1; padding-right: 6px;">
-                <span style="background-color: #000000; color: #ffffff !important; padding: 1px 5px; border-radius: 3px; font-weight: 900; font-size: 9px; margin-right: 4px; display: inline-block;">${item.quantity}x</span>
+          <div style="padding: 5px 0; border-bottom: 1px dashed #000000;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
+              <div style="font-weight: 900; font-size: ${sizeSmall}px; color: #000000; flex: 1; word-break: break-word; line-height: 1.25;">
+                <span style="font-weight: 900; font-size: ${sizeSmall}px; color: #000000; margin-right: 3px;">${item.quantity}x</span>
                 ${item.name}
               </div>
-              <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-weight: 900; font-size: ${sizeSmall}px; color: #000000; white-space: nowrap;">
+              <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-weight: 900; font-size: ${sizeSmall}px; color: #000000; white-space: nowrap; flex-shrink: 0;">
                 ${invoiceData.currency} ${fmt(item.total)}
               </div>
             </div>
-            <div style="font-size: ${sizeXSmall}px; color: #000000; font-weight: 700; margin-top: 2px;">
+            <div style="font-size: ${sizeXSmall}px; color: #000000; font-weight: 700; margin-top: 1px;">
               ${invoiceData.currency} ${fmt(item.price)} c/u ${item.comment ? `• (${item.comment})` : ''}
             </div>
           </div>
         `).join('') : `
-          <div style="padding: 10px 0; text-align: center; color: #000000; font-weight: 800; font-size: ${sizeSmall}px;">
+          <div style="padding: 8px 0; text-align: center; color: #000000; font-weight: 800; font-size: ${sizeSmall}px;">
             Sin artículos cargados
           </div>
         `}
@@ -295,7 +301,7 @@ export const generateCleanInvoiceHTML = (
     </div>
 
     <!-- Card 3: Subtotal / ITBIS / TOTAL A PAGAR -->
-    <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px;">
+    <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
       <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; color: #000000; font-weight: 800; margin-bottom: 3px;">
         <span>Subtotal:</span>
         <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #000000;">${invoiceData.currency} ${fmt(invoiceData.subtotal)}</span>
@@ -305,17 +311,17 @@ export const generateCleanInvoiceHTML = (
         <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #000000;">${invoiceData.currency} ${fmt(invoiceData.tax)}</span>
       </div>
       
-      <div style="border-top: 2px solid #000000; margin-top: 4px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="border-top: 2px solid #000000; margin-top: 4px; padding-top: 5px; display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 900; font-size: ${sizeBase}px; color: #000000; text-transform: uppercase;">TOTAL A PAGAR:</span>
-        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: ${Math.round(sizeBase * 1.35)}px; color: #000000;">${invoiceData.currency} ${fmt(invoiceData.total)}</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: ${Math.round(sizeBase * 1.3)}px; color: #000000;">${invoiceData.currency} ${fmt(invoiceData.total)}</span>
       </div>
     </div>
 
     <!-- Card 4: Método de Pago -->
-    <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px;">
+    <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <span style="font-weight: 900; font-size: ${sizeXSmall}px; color: #000000; text-transform: uppercase;">MÉTODO DE PAGO:</span>
-        <span style="background-color: #000000; color: #ffffff !important; font-weight: 900; font-size: 10px; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+        <span style="background-color: #ffffff; color: #000000; border: 1.5px solid #000000; font-weight: 900; font-size: 9.5px; padding: 1px 6px; border-radius: 4px; text-transform: uppercase;">
           ${pMethod}
         </span>
       </div>
