@@ -64,6 +64,76 @@ const KitchenDisplay: React.FC = () => {
         order: KitchenOrder | null;
         loading: boolean;
     } | null>(null);
+
+    const [recipeModal, setRecipeModal] = useState<{
+        productName: string;
+        quantity: number;
+        note?: string;
+        loading: boolean;
+        recipes: Array<{
+            id: string;
+            quantity: number;
+            ingredient?: {
+                id: string;
+                name: string;
+                unit: string;
+            };
+        }>;
+    } | null>(null);
+
+    const handleOpenRecipeModal = async (productName: string, quantity: number, note?: string) => {
+        const cleanName = productName.replace(/\s*\(.*?\)\s*/g, '').trim();
+        setRecipeModal({
+            productName: cleanName,
+            quantity,
+            note,
+            loading: true,
+            recipes: [],
+        });
+
+        try {
+            // Find product ID by name
+            const { data: prodData } = await supabase
+                .from('products')
+                .select('id, name')
+                .eq('name', cleanName)
+                .maybeSingle();
+
+            let targetProductId = prodData?.id;
+
+            if (!targetProductId) {
+                const { data: altProd } = await supabase
+                    .from('products')
+                    .select('id, name')
+                    .ilike('name', `%${cleanName}%`)
+                    .limit(1)
+                    .maybeSingle();
+                targetProductId = altProd?.id;
+            }
+
+            if (targetProductId) {
+                const { data: recipesData } = await supabase
+                    .from('product_recipes')
+                    .select(`
+                        id,
+                        quantity,
+                        ingredient:restaurant_ingredients(id, name, unit)
+                    `)
+                    .eq('product_id', targetProductId);
+
+                setRecipeModal(prev => prev ? {
+                    ...prev,
+                    loading: false,
+                    recipes: (recipesData as any) || [],
+                } : null);
+            } else {
+                setRecipeModal(prev => prev ? { ...prev, loading: false, recipes: [] } : null);
+            }
+        } catch (err) {
+            console.error('Error fetching product recipe:', err);
+            setRecipeModal(prev => prev ? { ...prev, loading: false, recipes: [] } : null);
+        }
+    };
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
@@ -470,15 +540,26 @@ const KitchenDisplay: React.FC = () => {
                                                     if (match) { displayTitle = match[1].trim(); extractedNote = match[2].trim(); }
                                                 }
                                                 return (
-                                                    <tr key={item.id} className="hover:bg-black/5 dark:hover:bg-white/5">
-                                                        <td className="py-1.5 pl-3 pr-1.5 align-top w-8">
-                                                            <div className="h-6 w-6 rounded-md bg-black/10 dark:bg-white/10 flex items-center justify-center font-black text-sm">
+                                                    <tr
+                                                        key={item.id}
+                                                        className="hover:bg-emerald-500/10 cursor-pointer transition-all active:scale-[0.98] border-b border-black/5 dark:border-white/5 group"
+                                                        onClick={() => handleOpenRecipeModal(item.product_name, item.quantity, extractedNote)}
+                                                        title="Haz clic para ver la receta e ingredientes"
+                                                    >
+                                                        <td className="py-2 pl-3 pr-1.5 align-top w-8">
+                                                            <div className="h-6 w-6 rounded-md bg-black/10 dark:bg-white/10 group-hover:bg-emerald-500/20 group-hover:text-emerald-400 flex items-center justify-center font-black text-sm transition-colors">
                                                                 {item.quantity}
                                                             </div>
                                                         </td>
-                                                        <td className="py-1.5 pr-3">
-                                                            <div className="font-black text-xs leading-tight uppercase tracking-tight">
-                                                                {displayTitle}
+                                                        <td className="py-2 pr-3">
+                                                            <div className="flex items-center justify-between gap-1">
+                                                                <div className="font-black text-xs leading-tight uppercase tracking-tight group-hover:text-emerald-300 transition-colors">
+                                                                    {displayTitle}
+                                                                </div>
+                                                                <span className="text-[9px] font-bold text-zinc-400 group-hover:text-emerald-400 flex items-center gap-0.5 shrink-0 opacity-70 group-hover:opacity-100 transition-all">
+                                                                    <UtensilsCrossed className="h-2.5 w-2.5" />
+                                                                    Receta
+                                                                </span>
                                                             </div>
                                                             {extractedNote && (
                                                                 <div className="mt-1 flex items-start gap-1 px-2 py-1 rounded-md bg-amber-400 dark:bg-amber-500">
@@ -704,6 +785,102 @@ const KitchenDisplay: React.FC = () => {
                     </DialogFooter>
                 </DialogContent>
 
+            </Dialog>
+
+            {/* Modal: Receta e Ingredientes del Producto */}
+            <Dialog open={!!recipeModal} onOpenChange={() => setRecipeModal(null)}>
+                <DialogContent className="max-w-md bg-zinc-950 border-zinc-800 text-white flex flex-col rounded-2xl shadow-2xl p-5" style={{ maxHeight: '85vh' }}>
+                    <DialogHeader className="shrink-0 pb-2 border-b border-zinc-800">
+                        <DialogTitle className="flex items-center gap-2 text-white font-black text-base">
+                            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                <UtensilsCrossed className="h-5 w-5" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="uppercase tracking-tight text-white font-black">{recipeModal?.productName}</span>
+                                <span className="text-xs text-zinc-400 font-bold">Receta e Ingredientes del Pedido</span>
+                            </div>
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {recipeModal?.loading ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+                            <p className="text-xs text-zinc-400 font-bold">Consultando receta del producto...</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-4 py-2 overflow-y-auto">
+                            {/* Cantidad ordenada y Nota */}
+                            <div className="flex items-center justify-between p-3 bg-zinc-900/90 border border-zinc-800 rounded-xl">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-zinc-400">Cantidad en Pedido</p>
+                                    <p className="text-lg font-black text-emerald-400">{recipeModal?.quantity} {recipeModal?.quantity === 1 ? 'Unidad' : 'Unidades'}</p>
+                                </div>
+                                {recipeModal?.note && (
+                                    <div className="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300">
+                                        <p className="text-[9px] font-black uppercase flex items-center gap-1">
+                                            <AlertTriangle className="h-3 w-3" />
+                                            {recipeModal.note}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Lista de ingredientes */}
+                            {recipeModal?.recipes && recipeModal.recipes.length > 0 ? (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-black uppercase text-zinc-300 tracking-wider flex items-center gap-1.5">
+                                        <Package className="h-4 w-4 text-emerald-400" />
+                                        Ingredientes requeridos para este pedido
+                                    </p>
+                                    <div className="rounded-xl border border-zinc-800 overflow-hidden bg-zinc-900/50">
+                                        <table className="w-full text-left">
+                                            <thead>
+                                                <tr className="border-b border-zinc-800 bg-zinc-900/80 text-[10px] font-black text-zinc-400 uppercase tracking-wider">
+                                                    <th className="py-2.5 px-3">Ingrediente</th>
+                                                    <th className="py-2.5 px-2 text-center">Porción (1u)</th>
+                                                    <th className="py-2.5 px-3 text-right">Total Pedido</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-zinc-800/60 text-xs">
+                                                {recipeModal.recipes.map((r) => {
+                                                    const ingName = r.ingredient?.name || 'Ingrediente';
+                                                    const ingUnit = r.ingredient?.unit || '';
+                                                    const portion = r.quantity || 0;
+                                                    const totalQty = portion * (recipeModal.quantity || 1);
+
+                                                    return (
+                                                        <tr key={r.id} className="hover:bg-zinc-800/40">
+                                                            <td className="py-2.5 px-3 font-black text-white">{ingName}</td>
+                                                            <td className="py-2.5 px-2 text-center font-bold text-zinc-400">{portion} {ingUnit}</td>
+                                                            <td className="py-2.5 px-3 text-right">
+                                                                <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-mono font-black text-xs border border-emerald-500/30">
+                                                                    {totalQty.toLocaleString('es-DO')} {ingUnit}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-6 text-center bg-zinc-900/50 border border-zinc-800 rounded-xl gap-2">
+                                    <UtensilsCrossed className="h-10 w-10 text-zinc-600 mb-1" />
+                                    <p className="font-black text-sm text-zinc-200">Sin receta/ingredientes vinculados</p>
+                                    <p className="text-xs text-zinc-400 max-w-xs">
+                                        Este producto no tiene ingredientes asignados en el módulo de Inventario.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <DialogFooter className="shrink-0 pt-2 border-t border-zinc-800">
+                        <Button className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs tracking-wider uppercase rounded-xl h-10" onClick={() => setRecipeModal(null)}>
+                            Cerrar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
         </div>
     );
