@@ -125,7 +125,7 @@ export const generateCleanInvoiceHTML = (
     }
     
     @page {
-      size: 80mm 2500mm;
+      size: 80mm auto;
       margin: ${pageMargin};
     }
     
@@ -153,7 +153,7 @@ export const generateCleanInvoiceHTML = (
     
     @media print {
       @page {
-        size: 80mm 2500mm;
+        size: 80mm auto;
         margin: 0mm;
       }
       html, body {
