@@ -24,6 +24,8 @@ import {
     Check,
     LogOut,
     BarChart2,
+    Sun,
+    Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import KitchenPerformanceDashboard from '@/components/kitchen/KitchenPerformanceDashboard';
@@ -163,6 +165,15 @@ const KitchenDisplay: React.FC = () => {
     const [showSettings, setShowSettings] = useState(false);
     const [now, setNow] = useState(new Date());
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [kdsDark, setKdsDark] = useState<boolean>(() => {
+        try { return localStorage.getItem('kds-theme') !== 'light'; }
+        catch { return true; }
+    });
+    const toggleKdsTheme = () => setKdsDark(prev => {
+        const next = !prev;
+        try { localStorage.setItem('kds-theme', next ? 'dark' : 'light'); } catch {}
+        return next;
+    });
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -401,37 +412,116 @@ const KitchenDisplay: React.FC = () => {
         return `${mm}:${ss.toString().padStart(2, '0')}`;
     };
 
+    // ─── Theme-aware color tokens ───────────────────────────────────────────
+    const T = {
+        // Page background
+        pageBg: kdsDark
+            ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950'
+            : 'bg-gradient-to-b from-stone-100 via-zinc-50 to-stone-100',
+        // Top bar
+        headerBg: kdsDark
+            ? 'bg-slate-900/95 border-slate-800/90'
+            : 'bg-white/95 border-stone-200/90',
+        headerText: kdsDark ? 'text-white' : 'text-slate-900',
+        headerSubText: kdsDark ? 'text-slate-400' : 'text-slate-500',
+        // Filter pill container
+        filterBg: kdsDark ? 'bg-slate-950 border-slate-800' : 'bg-stone-200 border-stone-300',
+        filterInactive: kdsDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800',
+        // Header icon badge
+        iconBadge: kdsDark
+            ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
+            : 'bg-emerald-100 border-emerald-300 text-emerald-700',
+        // Card outer frame
+        cardNormal: kdsDark
+            ? 'bg-slate-800 border border-slate-700 shadow-2xl hover:border-slate-500 transition-all'
+            : 'bg-white border border-stone-200 shadow-xl hover:border-stone-400 transition-all',
+        cardYellow: kdsDark
+            ? 'bg-slate-800 border-2 border-amber-400 shadow-xl shadow-amber-950/20'
+            : 'bg-white border-2 border-amber-400 shadow-xl shadow-amber-950/10',
+        cardRed: kdsDark
+            ? 'bg-slate-800 border-2 border-red-500/80 shadow-xl shadow-red-950/20'
+            : 'bg-white border-2 border-red-500/80 shadow-xl shadow-red-950/10',
+        cardAlert: kdsDark
+            ? 'bg-slate-800 border-2 border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.4)] animate-[blink-red_1.2s_ease-in-out_infinite]'
+            : 'bg-white border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.25)] animate-[blink-red_1.2s_ease-in-out_infinite]',
+        cardHistory: kdsDark
+            ? 'bg-slate-800 border border-slate-700 opacity-80 shadow-lg'
+            : 'bg-white border border-stone-200 opacity-80 shadow-lg',
+        // Card header (dark charcoal banner)
+        cardHeader: kdsDark
+            ? 'bg-slate-900 border-b border-slate-800'
+            : 'bg-slate-800 border-b border-slate-700',
+        // Card body
+        cardBody: kdsDark ? 'bg-slate-800 text-slate-100' : 'bg-white text-zinc-900',
+        cardDivider: kdsDark ? 'divide-slate-700' : 'divide-zinc-200',
+        rowHover: kdsDark ? 'hover:bg-slate-700/60' : 'hover:bg-zinc-50',
+        // Qty badge
+        qtyBadge: kdsDark
+            ? 'bg-slate-900 text-white border border-slate-700'
+            : 'bg-zinc-900 text-white',
+        // Product name
+        productName: kdsDark ? 'text-slate-100 group-hover:text-emerald-400' : 'text-zinc-900 group-hover:text-emerald-700',
+        // Recipe pill
+        recipePill: kdsDark
+            ? 'bg-slate-700 border-slate-600 text-slate-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600'
+            : 'bg-zinc-100 border-zinc-300 text-zinc-700 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600',
+        // Variant banner (FRITO etc.)
+        variantBanner: kdsDark
+            ? 'bg-amber-900/40 border border-amber-600/60 text-amber-200'
+            : 'bg-amber-50 border border-amber-300 text-amber-950',
+        // Notes section
+        noteBg: kdsDark ? 'bg-orange-900/30 border-orange-600/50' : 'bg-orange-50 border-orange-300',
+        noteText: kdsDark ? 'text-orange-200' : 'text-orange-950',
+        noteLabel: kdsDark ? 'text-orange-400' : 'text-orange-800',
+        updateBg: kdsDark ? 'bg-red-900/30 border-red-600/50 hover:bg-red-900/50' : 'bg-red-50 border-red-300 hover:bg-red-100',
+        updateText: kdsDark ? 'text-red-200' : 'text-red-950',
+        updateLabel: kdsDark ? 'text-red-400' : 'text-red-700',
+        // Notch circles (dark cutout circles on the card border)
+        notchBg: kdsDark ? 'bg-slate-950' : 'bg-stone-100',
+        notchBorder: kdsDark ? 'border-slate-700' : 'border-stone-300',
+        notchStrip: kdsDark ? 'bg-slate-800 border-t border-dashed border-slate-700' : 'bg-white border-t border-dashed border-zinc-300',
+        // Action button
+        actionBtn: kdsDark
+            ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+            : 'bg-zinc-900 hover:bg-emerald-600 text-white',
+        actionBtnWrap: kdsDark ? 'bg-slate-800 pt-1 pb-4 px-4' : 'bg-white p-4',
+        // Time badge
+        timeBadgeNormal: kdsDark
+            ? 'bg-slate-900 text-slate-300 border border-slate-700'
+            : 'bg-slate-800 text-white border-0',
+        timeBadgeHistory: kdsDark ? 'bg-slate-700 text-slate-400 border-slate-600' : 'bg-zinc-200 text-zinc-600 border-zinc-300',
+    };
+
     const getTimeStatus = (createdAt: string) => {
-        if (showHistory) return "bg-zinc-800 text-zinc-400 border-zinc-700";
+        if (showHistory) return T.timeBadgeHistory + ' font-mono font-black';
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "bg-red-500 text-white font-mono font-black animate-pulse shadow-md";
-        if (minutes >= redThreshold) return "bg-red-600 text-white font-mono font-black shadow-md";
-        if (minutes >= yellowThreshold) return "bg-amber-500 text-amber-950 font-mono font-black shadow-md";
-        return "bg-zinc-800 text-zinc-200 border border-zinc-700 font-mono font-black";
+        if (minutes >= alertThreshold) return 'bg-red-500 text-white font-mono font-black animate-pulse shadow-md';
+        if (minutes >= redThreshold)   return 'bg-red-600 text-white font-mono font-black shadow-md';
+        if (minutes >= yellowThreshold) return 'bg-amber-400 text-amber-950 font-mono font-black shadow-md';
+        return T.timeBadgeNormal + ' font-mono font-black';
     };
 
     const getTimeBg = (createdAt: string) => {
-        if (showHistory) return "bg-white border border-zinc-200 opacity-90 shadow-lg";
-
+        if (showHistory) return T.cardHistory;
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "bg-white border-2 border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.3)] animate-[blink-red_1.2s_ease-in-out_infinite]";
-        if (minutes >= redThreshold) return "bg-white border-2 border-red-500/80 shadow-xl shadow-red-950/20";
-        if (minutes >= yellowThreshold) return "bg-white border-2 border-amber-400 shadow-xl shadow-amber-950/20";
-        return "bg-white border border-zinc-200/80 shadow-xl hover:shadow-2xl hover:border-zinc-400 transition-all";
+        if (minutes >= alertThreshold) return T.cardAlert;
+        if (minutes >= redThreshold)   return T.cardRed;
+        if (minutes >= yellowThreshold) return T.cardYellow;
+        return T.cardNormal;
     };
 
     if (!userStore) return <div className="flex items-center justify-center min-h-[60vh] bg-zinc-950 text-white"><Loader2 className="animate-spin h-8 w-8 text-emerald-500" /></div>;
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex flex-col overflow-hidden text-white font-sans selection:bg-emerald-500/30">
+        <div className={`fixed inset-0 ${T.pageBg} flex flex-col overflow-hidden font-sans selection:bg-emerald-500/30`}>
             <audio ref={audioRef} src="https://assets.mixkit.com/active_storage/sfx/2568/2568-preview.mp3" preload="auto" />
             <audio ref={criticalAudioRef} src="https://assets.mixkit.com/active_storage/sfx/1003/1003-preview.mp3" preload="auto" />
 
             {/* ── Ultra-Professional Header ── */}
-            <div className="flex flex-wrap items-center justify-between px-6 py-3.5 bg-zinc-900/95 border-b border-zinc-800/90 backdrop-blur-xl shrink-0 gap-3 shadow-xl">
+            <div className={`flex flex-wrap items-center justify-between px-6 py-3.5 ${T.headerBg} backdrop-blur-xl shrink-0 gap-3 shadow-xl border-b`}>
                 {/* Branding & Status */}
                 <div className="flex items-center gap-3.5">
-                    <div className={`p-3 rounded-2xl border ${showDashboard ? 'bg-purple-500/20 border-purple-500/30 text-purple-400' : showHistory ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}>
+                    <div className={`p-3 rounded-2xl border ${showDashboard ? 'bg-purple-500/20 border-purple-500/30 text-purple-400' : showHistory ? (kdsDark ? 'bg-slate-700 border-slate-600 text-slate-300' : 'bg-stone-200 border-stone-300 text-slate-600') : T.iconBadge}`}>
                         {showDashboard
                             ? <BarChart2 className="h-6 w-6" />
                             : showHistory
@@ -440,7 +530,7 @@ const KitchenDisplay: React.FC = () => {
                     </div>
                     <div>
                         <div className="flex items-center gap-2.5">
-                            <h1 className="text-lg font-black tracking-wider uppercase text-white leading-none">
+                            <h1 className={`text-lg font-black tracking-wider uppercase leading-none ${T.headerText}`}>
                                 {showDashboard ? 'Rendimiento Cocina' : showHistory ? 'Historial de Pedidos' : 'Pantalla de Cocina (KDS)'}
                             </h1>
                             {!showHistory && !showDashboard && (
@@ -452,7 +542,7 @@ const KitchenDisplay: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                             {!showHistory && !showDashboard && (
-                                <span className="text-xs font-bold text-zinc-300">
+                                <span className={`text-xs font-bold ${T.headerSubText}`}>
                                     {activeOrders.length} {activeOrders.length === 1 ? 'Pedido Pendiente' : 'Pedidos Pendientes'}
                                 </span>
                             )}
@@ -462,28 +552,28 @@ const KitchenDisplay: React.FC = () => {
 
                 {/* Filter Tabs (Dine-in, Takeout, Delivery) */}
                 {!showHistory && !showDashboard && (
-                    <div className="flex items-center bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800/90 gap-1.5 shadow-inner">
+                    <div className={`flex items-center p-1.5 rounded-2xl border gap-1.5 shadow-inner ${T.filterBg}`}>
                         <button
                             onClick={() => setFilterType('all')}
-                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'all' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50' : 'text-zinc-400 hover:text-white'}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'all' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50' : T.filterInactive}`}
                         >
                             Todos ({orders.length})
                         </button>
                         <button
                             onClick={() => setFilterType('dineIn')}
-                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'dineIn' ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/50' : 'text-zinc-400 hover:text-white'}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'dineIn' ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/50' : T.filterInactive}`}
                         >
                             🍽️ Aquí
                         </button>
                         <button
                             onClick={() => setFilterType('takeout')}
-                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'takeout' ? 'bg-orange-600 text-white shadow-lg shadow-orange-950/50' : 'text-zinc-400 hover:text-white'}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'takeout' ? 'bg-orange-600 text-white shadow-lg shadow-orange-950/50' : T.filterInactive}`}
                         >
                             🛍️ Llevar
                         </button>
                         <button
                             onClick={() => setFilterType('delivery')}
-                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'delivery' ? 'bg-purple-600 text-white shadow-lg shadow-purple-950/50' : 'text-zinc-400 hover:text-white'}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${filterType === 'delivery' ? 'bg-purple-600 text-white shadow-lg shadow-purple-950/50' : T.filterInactive}`}
                         >
                             🛵 Delivery
                         </button>
@@ -525,15 +615,25 @@ const KitchenDisplay: React.FC = () => {
                             Stats
                         </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    {/* 🌙 Dark / Light mode toggle */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-10 w-10 rounded-xl transition-all ${kdsDark ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10' : 'text-slate-600 hover:text-slate-900 hover:bg-stone-200'}`}
+                        onClick={toggleKdsTheme}
+                        title={kdsDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                    >
+                        {kdsDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className={`h-10 w-10 rounded-xl ${kdsDark ? 'text-zinc-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-stone-200'}`}
                         onClick={() => { setTempThresholds({ yellow: yellowThreshold, red: redThreshold, alert: alertThreshold }); setShowSettings(true); }} title="Configuración de tiempos">
                         <Settings className="h-4.5 w-4.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800"
-                        onClick={() => setSoundEnabled(!soundEnabled)} title={soundEnabled ? "Sonido activado" : "Sonido desactivado"}>
-                        {soundEnabled ? <Bell className="h-4.5 w-4.5 text-emerald-400" /> : <BellOff className="h-4.5 w-4.5 text-zinc-600" />}
+                    <Button variant="ghost" size="icon" className={`h-10 w-10 rounded-xl ${kdsDark ? 'text-zinc-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-stone-200'}`}
+                        onClick={() => setSoundEnabled(!soundEnabled)} title={soundEnabled ? 'Sonido activado' : 'Sonido desactivado'}>
+                        {soundEnabled ? <Bell className="h-4.5 w-4.5 text-emerald-400" /> : <BellOff className={`h-4.5 w-4.5 ${kdsDark ? 'text-zinc-600' : 'text-stone-400'}`} />}
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    <Button variant="ghost" size="icon" className={`h-10 w-10 rounded-xl ${kdsDark ? 'text-zinc-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-stone-200'}`}
                         onClick={toggleFullscreen} title="Pantalla completa">
                         {isFullscreen ? <Minimize className="h-4.5 w-4.5" /> : <Maximize className="h-4.5 w-4.5" />}
                     </Button>
@@ -569,12 +669,12 @@ const KitchenDisplay: React.FC = () => {
                         {displayedOrders.map((order) => (
                             <div
                                 key={order.id}
-                                className={`rounded-3xl border overflow-hidden flex flex-col transition-all duration-300 relative ${getTimeBg(order.created_at)}`}
+                                className={`rounded-3xl overflow-hidden flex flex-col transition-all duration-300 relative ${getTimeBg(order.created_at)}`}
                             >
                                 {/* 🍎 Apple Receipt Header (Dark Charcoal Banner) */}
-                                <div className="bg-zinc-900 text-white px-5 py-4 flex items-center justify-between border-b border-zinc-800">
+                                <div className={`${T.cardHeader} text-white px-5 py-4 flex items-center justify-between`}>
                                     <div className="flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white shadow-inner">
+                                        <div className="h-9 w-9 rounded-xl bg-slate-700 border border-slate-600 flex items-center justify-center text-white shadow-inner">
                                             <ChefHat className="h-5 w-5" />
                                         </div>
                                         <div>
@@ -610,10 +710,10 @@ const KitchenDisplay: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* 🧾 Receipt Main Body (Pure White) */}
-                                <div className="flex-1 p-5 bg-white text-zinc-900">
+                                {/* 🧾 Receipt Main Body */}
+                                <div className={`flex-1 p-5 ${T.cardBody}`}>
                                     <table className="w-full">
-                                        <tbody className="divide-y divide-zinc-200">
+                                        <tbody className={`divide-y ${T.cardDivider}`}>
                                             {order.open_order_items.map((item) => {
                                                 let displayTitle = item.product_name;
                                                 let extractedNote = item.comment;
@@ -624,27 +724,27 @@ const KitchenDisplay: React.FC = () => {
                                                 return (
                                                     <tr
                                                         key={item.id}
-                                                        className="hover:bg-zinc-50 cursor-pointer transition-all active:scale-[0.98] group rounded-xl"
+                                                        className={`${T.rowHover} cursor-pointer transition-all active:scale-[0.98] group rounded-xl`}
                                                         onClick={() => handleOpenRecipeModal(item.product_name, item.quantity, extractedNote, item.product_id)}
                                                         title="Haz clic para ver la receta e ingredientes"
                                                     >
                                                         <td className="py-3 pl-1 pr-3 align-top w-12">
-                                                            <div className="h-9 w-9 rounded-xl bg-zinc-900 text-white font-mono font-black text-lg flex items-center justify-center shadow-sm shrink-0">
+                                                            <div className={`h-9 w-9 rounded-xl font-mono font-black text-lg flex items-center justify-center shadow-sm shrink-0 ${T.qtyBadge}`}>
                                                                 {item.quantity}
                                                             </div>
                                                         </td>
                                                         <td className="py-3 pr-1">
                                                             <div className="flex items-center justify-between gap-2">
-                                                                <div className="font-black text-base uppercase tracking-tight text-zinc-900 group-hover:text-emerald-700 transition-colors leading-snug">
+                                                                <div className={`font-black text-base uppercase tracking-tight transition-colors leading-snug ${T.productName}`}>
                                                                     {displayTitle}
                                                                 </div>
-                                                                <span className="px-2.5 py-1 rounded-xl bg-zinc-100 border border-zinc-300 text-zinc-700 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-sm">
+                                                                <span className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-sm border ${T.recipePill}`}>
                                                                     <UtensilsCrossed className="h-3.5 w-3.5" />
                                                                     Receta
                                                                 </span>
                                                             </div>
                                                             {extractedNote && (
-                                                                <div className="mt-2.5 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-950">
+                                                                <div className={`mt-2.5 flex items-center gap-2 px-3.5 py-2 rounded-xl ${T.variantBanner}`}>
                                                                     <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" />
                                                                     <p className="font-black text-xs uppercase leading-tight">
                                                                         {extractedNote}
@@ -677,14 +777,14 @@ const KitchenDisplay: React.FC = () => {
 
                                         return (
                                             <div
-                                                className={`mx-1 my-3 p-3 rounded-xl border ${isUpdateNote ? 'bg-red-50 border-red-300 cursor-pointer hover:bg-red-100 active:scale-[0.98] transition-all' : 'bg-orange-50 border-orange-300'}`}
+                                                className={`mx-1 my-3 p-3 rounded-xl border ${isUpdateNote ? T.updateBg + ' cursor-pointer active:scale-[0.98] transition-all' : T.noteBg}`}
                                                 onClick={isUpdateNote ? handleNoteClick : undefined}
                                             >
-                                                <p className={`text-xs font-black uppercase mb-1 flex items-center gap-1.5 ${isUpdateNote ? 'text-red-700' : 'text-orange-800'}`}>
+                                                <p className={`text-xs font-black uppercase mb-1 flex items-center gap-1.5 ${isUpdateNote ? T.updateLabel : T.noteLabel}`}>
                                                     <AlertTriangle className="h-4 w-4" />
                                                     {isUpdateNote ? '🔄 VER PEDIDO ORIGINAL' : 'NOTA DEL PEDIDO'}
                                                 </p>
-                                                <p className={`text-xs font-bold whitespace-pre-line ${isUpdateNote ? 'text-red-950' : 'text-orange-950'}`}>
+                                                <p className={`text-xs font-bold whitespace-pre-line ${isUpdateNote ? T.updateText : T.noteText}`}>
                                                     {cleanNote}
                                                 </p>
                                             </div>
@@ -693,16 +793,16 @@ const KitchenDisplay: React.FC = () => {
                                 </div>
 
                                 {/* 🎫 Paper Receipt Ticket Side Cutout Notches */}
-                                <div className="relative bg-white h-4 w-full flex items-center justify-between border-t border-dashed border-zinc-300">
-                                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-950 border-r border-zinc-300"></div>
-                                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-950 border-l border-zinc-300"></div>
+                                <div className={`relative h-4 w-full flex items-center justify-between ${T.notchStrip}`}>
+                                    <div className={`absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-r ${T.notchBg} ${T.notchBorder}`}></div>
+                                    <div className={`absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-l ${T.notchBg} ${T.notchBorder}`}></div>
                                 </div>
 
                                 {/* 🧾 Receipt Bottom Section & Barcode Action Button */}
                                 {!showHistory && (
-                                    <div className="p-4 bg-white">
+                                    <div className={T.actionBtnWrap}>
                                         <Button
-                                            className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-emerald-600 text-white font-black text-xs tracking-widest uppercase shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+                                            className={`w-full h-12 rounded-xl font-black text-xs tracking-widest uppercase shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 group ${T.actionBtn}`}
                                             onClick={() => updateStatusMutation.mutate({
                                                 orderId: order.id,
                                                 status: (order.notes?.includes('[PARA LLEVAR]') || order.notes?.includes('[DELIVERY]')) ? 'shipped' : 'completed'
@@ -712,7 +812,7 @@ const KitchenDisplay: React.FC = () => {
                                             {updateStatusMutation.isPending
                                                 ? <Loader2 className="animate-spin h-5 w-5" />
                                                 : <>
-                                                    <Check className="h-5 w-5 text-emerald-400 group-hover:text-white" />
+                                                    <Check className={`h-5 w-5 ${kdsDark ? 'text-white' : 'text-emerald-400 group-hover:text-white'}`} />
                                                     MARCAR COMO LISTO
                                                 </>
                                             }
