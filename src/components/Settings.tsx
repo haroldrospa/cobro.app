@@ -2909,49 +2909,64 @@ const Settings = () => {
                         )}
 
                         {/* Header */}
-                        <div className="text-center border-b-[1.5px] border-black/80 pb-3 mb-3">
-                          <h2 className="font-bold mb-1 tracking-tight" style={{ fontSize: '1.3em' }}>{companyInfo.name || 'Mi Negocio'}</h2>
-                          {companyInfo.rnc && <p className="leading-tight text-black/80" style={{ fontSize: '0.9em' }}>RNC: {companyInfo.rnc}</p>}
-                          {companyInfo.phone && <p className="leading-tight text-black/80" style={{ fontSize: '0.9em' }}>{companyInfo.phone}</p>}
-                          {companyInfo.address && <p className="leading-tight text-black/80 mt-1" style={{ fontSize: '0.9em' }}>{companyInfo.address}</p>}
+                        <div className="text-center pb-2 mb-2">
+                          <h2 className="font-extrabold uppercase tracking-tight text-black" style={{ fontSize: '1.25em' }}>{companyInfo.name || 'Mi Negocio'}</h2>
+                          {companyInfo.rnc && <p className="leading-tight text-zinc-700 font-medium" style={{ fontSize: '0.85em' }}>RNC: {companyInfo.rnc}</p>}
+                          {companyInfo.phone && <p className="leading-tight text-zinc-700 font-medium" style={{ fontSize: '0.85em' }}>Tel: {companyInfo.phone}</p>}
+                          {companyInfo.address && <p className="leading-tight text-zinc-700 font-medium mt-0.5" style={{ fontSize: '0.85em' }}>{companyInfo.address}</p>}
                         </div>
 
-                        {/* Número de factura */}
-                        <div className="text-center py-2 border-b-[1.5px] border-black/80 mb-3">
-                          <p className="font-bold leading-none tracking-wider mb-1" style={{ fontSize: '1.1em' }}>
-                            {localBillingMode === 'e-ncf' ? 'e-CF' : 'NCF'}
+                        {/* NCF Card Box */}
+                        <div className="border border-black rounded-lg p-2 my-2 text-center bg-zinc-50/80">
+                          <p className="font-extrabold uppercase tracking-widest text-zinc-700 text-[10px] mb-0.5">
+                            {localBillingMode === 'e-ncf' ? 'Comprobante Fiscal Electrónico (e-CF)' : 'Comprobante Fiscal (NCF)'}
                           </p>
-                          <p className="font-mono font-bold leading-tight" style={{ fontSize: '1.05em' }}>
+                          <p className="font-mono font-extrabold tracking-wider text-black text-sm">
                             {localBillingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001'}
                           </p>
-                          <p className="leading-tight mt-1 text-black/70" style={{ fontSize: '0.85em' }}>{new Date().toLocaleDateString('es-DO')} {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[10px] text-zinc-500 font-medium mt-0.5">{new Date().toLocaleDateString('es-DO')} {new Date().toLocaleTimeString('es-DO', {hour: '2-digit', minute:'2-digit'})}</p>
+                        </div>
+
+                        {/* Customer Info */}
+                        <div className="border-y border-dashed border-zinc-300 py-1.5 my-2 text-[11px]">
+                          <p className="font-bold text-black">CLIENTE: CLIENTE FINAL</p>
                         </div>
 
                         {/* Items ejemplo */}
-                        <div className="border-t-[1.5px] border-b-[1.5px] border-black/80 py-2 space-y-1.5 mb-3">
-                          <div className="flex justify-between items-start" style={{ fontSize: '0.95em' }}>
-                            <span style={{ paddingRight: '10px' }}>1x Producto Ejemplo</span>
-                            <span className="font-mono whitespace-nowrap">{invoiceSettings.currency} 100.00</span>
+                        <div className="my-2 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-extrabold text-zinc-500 uppercase pb-1 border-b border-zinc-200 tracking-wider">
+                            <span>Cant. / Descripción</span>
+                            <span>Total</span>
                           </div>
-                          <div className="flex justify-between items-start" style={{ fontSize: '0.95em' }}>
-                            <span style={{ paddingRight: '10px' }}>2x Servicio Ejemplo Premium</span>
-                            <span className="font-mono whitespace-nowrap">{invoiceSettings.currency} 150.00</span>
+                          <div className="flex justify-between items-baseline py-1 border-b border-dotted border-zinc-100 text-[11px]">
+                            <div>
+                              <span className="font-semibold text-black">Producto Ejemplo</span>
+                              <span className="text-[10px] text-zinc-500 ml-1">x1</span>
+                            </div>
+                            <span className="font-mono font-bold text-black">{invoiceSettings.currency} 100.00</span>
+                          </div>
+                          <div className="flex justify-between items-baseline py-1 border-b border-dotted border-zinc-100 text-[11px]">
+                            <div>
+                              <span className="font-semibold text-black">Servicio Premium</span>
+                              <span className="text-[10px] text-zinc-500 ml-1">x2</span>
+                            </div>
+                            <span className="font-mono font-bold text-black">{invoiceSettings.currency} 150.00</span>
                           </div>
                         </div>
 
                         {/* Totales */}
-                        <div className="space-y-1 mb-3">
-                          <div className="flex justify-between text-black/80" style={{ fontSize: '0.9em' }}>
+                        <div className="space-y-1 my-2 text-[11px]">
+                          <div className="flex justify-between text-zinc-600">
                             <span>Subtotal:</span>
-                            <span className="font-mono">{invoiceSettings.currency} 250.00</span>
+                            <span className="font-mono font-semibold">{invoiceSettings.currency} 250.00</span>
                           </div>
-                          <div className="flex justify-between text-black/80" style={{ fontSize: '0.9em' }}>
+                          <div className="flex justify-between text-zinc-600">
                             <span>ITBIS ({invoiceSettings.defaultTaxRate}%):</span>
-                            <span className="font-mono">{invoiceSettings.currency} {(250 * parseFloat(invoiceSettings.defaultTaxRate || '0') / 100).toFixed(2)}</span>
+                            <span className="font-mono font-semibold">{invoiceSettings.currency} {(250 * parseFloat(invoiceSettings.defaultTaxRate || '0') / 100).toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between font-bold border-t-[1.5px] border-black/80 pt-2 mt-2" style={{ fontSize: '1.2em' }}>
-                            <span>TOTAL:</span>
-                            <span className="font-mono">{invoiceSettings.currency} {(250 * (1 + parseFloat(invoiceSettings.defaultTaxRate || '0') / 100)).toFixed(2)}</span>
+                          <div className="flex justify-between items-center bg-black text-white rounded-md p-2 mt-2 font-bold">
+                            <span className="text-xs uppercase tracking-wider">TOTAL</span>
+                            <span className="font-mono text-sm font-black">{invoiceSettings.currency} {(250 * (1 + parseFloat(invoiceSettings.defaultTaxRate || '0') / 100)).toFixed(2)}</span>
                           </div>
                         </div>
 

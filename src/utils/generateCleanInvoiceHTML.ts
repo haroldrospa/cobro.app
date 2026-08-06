@@ -55,22 +55,17 @@ export const generateCleanInvoiceHTML = (
 ): string => {
   const logoHeight = companyData.logoSize || 64;
   const pageMargin = companyData.pageMargin || '0mm';
-  const containerPadding = companyData.containerPadding || '4px';
+  const containerPadding = companyData.containerPadding || '6px';
   const logoMarginBottom = companyData.logoMarginBottom || '6px';
   const logoWidth = companyData.logoWidth || 'auto';
   const baseFontSize = companyData.fontSize || 12;
 
-  // App branding
-  const appLogo = '/src/assets/cobro-logo.png'; // Direct path reference since imports might behave differently in util functions depending on context, but let's try to stick to what works. 
-  // actually, let's use the import if possible.
-
-
   // Calculate relative sizes
-  const sizeH1 = Math.round(baseFontSize * 1.5); // 18px
-  const sizeH2 = Math.round(baseFontSize * 1.25); // 15px
-  const sizeBase = baseFontSize; // 12px
-  const sizeSmall = Math.round(baseFontSize * 0.9); // 11px
-  const sizeXSmall = Math.round(baseFontSize * 0.85); // 10px
+  const sizeH1 = Math.round(baseFontSize * 1.4);
+  const sizeH2 = Math.round(baseFontSize * 1.2);
+  const sizeBase = baseFontSize;
+  const sizeSmall = Math.max(9, Math.round(baseFontSize * 0.88));
+  const sizeXSmall = Math.max(8, Math.round(baseFontSize * 0.78));
 
   return `
 <!DOCTYPE html>
@@ -84,10 +79,12 @@ export const generateCleanInvoiceHTML = (
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     
     @page {
-      size: auto;
+      size: 80mm auto;
       margin: ${pageMargin};
     }
     
@@ -97,39 +94,53 @@ export const generateCleanInvoiceHTML = (
       }
     }
     
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #ffffff;
-      color: #000000;
-      padding: 0;
+    html, body {
+      width: 100%;
       max-width: 80mm;
       margin: 0 auto;
+      padding: 0;
+      background-color: #ffffff;
+      color: #111111;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       font-size: ${sizeBase}px;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      font-smoothing: antialiased;
-      line-height: 1.2;
+      line-height: 1.3;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     
     @media print {
-      body {
-        padding: 0;
-        margin: 0;
-        width: 100%;
-        color: #000;
-        background: #fff;
+      html, body {
+        width: 80mm !important;
+        max-width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .invoice-container {
+        padding: ${containerPadding} !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
       * {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
     }
     
     .invoice-container {
       background: #ffffff;
-      color: #000000;
+      color: #111111;
       padding: ${containerPadding};
-      border: none;
+      width: 100%;
+      max-width: 80mm;
+      margin: 0 auto;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     
     .logo {
@@ -138,13 +149,15 @@ export const generateCleanInvoiceHTML = (
       display: flex;
       justify-content: center;
       align-items: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     
     .logo img {
       ${logoWidth === 'full'
       ? 'width: 100%; height: auto;'
-      : `max-height: ${logoHeight}px; height: auto; width: auto;`}
-      max-width: 100%;
+      : `max-height: ${Math.min(logoHeight, 60)}px; height: auto; width: auto;`}
+      max-width: 80%;
       object-fit: contain;
       filter: grayscale(100%) contrast(150%);
       display: block;
@@ -154,149 +167,225 @@ export const generateCleanInvoiceHTML = (
     /* Header */
     .header {
       text-align: center;
-      border-bottom: 3px solid #000;
-      padding-bottom: 8px;
-      margin-bottom: 8px;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     
     .company-name {
       font-size: ${sizeH1}px;
       font-weight: 800;
-      color: #000;
-      margin-bottom: 4px;
-      line-height: 1.1;
+      color: #000000;
+      margin-bottom: 2px;
+      line-height: 1.15;
       text-transform: uppercase;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.3px;
     }
     
     .company-info {
       font-size: ${sizeSmall}px;
       font-weight: 500;
-      color: #000;
-      line-height: 1.3;
+      color: #333333;
+      line-height: 1.35;
     }
     
-    /* Invoice Number */
-    .invoice-number {
+    /* Modern NCF Card Box */
+    .ncf-card {
+      border: 1px solid #111111;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin: 8px 0;
       text-align: center;
-      border-bottom: 2px solid #000;
+      background-color: #fafafa;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    
+    .ncf-label {
+      font-size: ${sizeXSmall}px;
+      font-weight: 800;
+      color: #333333;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 2px;
+    }
+    
+    .ncf-id {
+      font-size: ${Math.round(sizeBase * 1.12)}px;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
+      font-weight: 800;
+      color: #000000;
+      letter-spacing: 0.5px;
+    }
+    
+    .ncf-date {
+      font-size: ${sizeXSmall}px;
+      color: #555555;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+    
+    /* Customer Section */
+    .customer-card {
+      border-top: 1px dashed #cbd5e1;
+      border-bottom: 1px dashed #cbd5e1;
       padding: 6px 0;
-      margin-bottom: 6px;
-    }
-    
-    .invoice-label {
-      font-size: ${sizeH2}px;
-      font-weight: bold;
-      color: #000;
-      line-height: 1;
-    }
-    
-    .invoice-id {
-      font-size: ${Math.round(sizeBase * 1.15)}px;
-      font-family: 'Courier New', Courier, monospace;
-      color: #000;
-      margin-top: 4px;
-      font-weight: bold;
-      letter-spacing: 1px;
-    }
-    
-    .invoice-date {
+      margin-bottom: 8px;
       font-size: ${sizeSmall}px;
-      color: #000;
-      margin-top: 4px;
+      color: #111111;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    
+    .customer-name {
+      font-weight: 700;
+      color: #000000;
+      margin-bottom: 1px;
+    }
+
+    .customer-meta {
+      font-size: ${sizeXSmall}px;
+      color: #4b5563;
     }
     
     /* Items */
     .items {
-      border-top: 2px solid #000;
-      border-bottom: 2px solid #000;
-      padding: 4px 0;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
-    
-    .item {
+
+    .items-header {
       display: flex;
       justify-content: space-between;
-      font-size: ${sizeSmall}px;
-      font-weight: 500;
-      color: #000;
+      font-size: ${sizeXSmall}px;
+      font-weight: 800;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid #e5e7eb;
       margin-bottom: 4px;
-      line-height: 1.2;
     }
     
-    /* Ensure item text scales too */
-    .item span {
-        font-size: inherit;
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: ${sizeSmall}px;
+      padding: 3px 0;
+      border-bottom: 1px dotted #f3f4f6;
+    }
+    
+    .item-left {
+      flex: 1;
+      padding-right: 6px;
     }
     
     .item-name {
-      flex: 1;
-      padding-right: 4px;
+      font-weight: 600;
+      color: #000000;
+      line-height: 1.25;
     }
-    
-    .item-price {
-      font-family: 'Courier New', monospace;
-      white-space: nowrap;
+
+    .item-qty {
+      font-size: ${sizeXSmall}px;
+      color: #6b7280;
       margin-left: 4px;
       font-weight: 500;
     }
     
-    /* Totals */
-    .totals {
-      margin-bottom: 6px;
+    .item-price {
+      font-family: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
+      font-weight: 700;
+      color: #000000;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
     }
     
-    .total-line {
+    /* Totals */
+    .totals-container {
+      margin-top: 6px;
+      margin-bottom: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    
+    .total-row {
       display: flex;
       justify-content: space-between;
       font-size: ${sizeSmall}px;
-      color: #000;
-      margin-bottom: 2px;
-      line-height: 1.3;
+      color: #4b5563;
+      margin-bottom: 3px;
     }
     
-    .total-line.grand-total {
-      border-top: 3px solid #000;
-      padding-top: 10px;
+    .total-val {
+      font-family: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
+      font-weight: 600;
+      color: #111111;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    /* High-contrast Grand Total Banner */
+    .grand-total-card {
+      background-color: #000000;
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 7px 10px;
       margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .grand-total-label {
+      font-size: ${sizeBase}px;
+      font-weight: 800;
+      color: #ffffff !important;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .grand-total-val {
+      font-family: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
       font-size: ${sizeH2}px;
       font-weight: 900;
-    }
-    
-    .total-value {
-      font-family: 'Courier New', Courier, monospace;
-      font-weight: bold;
+      color: #ffffff !important;
+      font-variant-numeric: tabular-nums;
     }
     
     /* Footer */
     .footer {
-      border-top: 2px solid #000;
+      border-top: 1px dashed #cbd5e1;
       padding-top: 8px;
-      margin-top: 12px;
+      margin-top: 10px;
       text-align: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     
     .footer-text {
       font-size: ${sizeSmall}px;
-      font-weight: 500;
-      color: #000;
-      margin-bottom: 8px;
+      font-weight: 600;
+      color: #111111;
+      margin-bottom: 4px;
     }
     
     .payment-terms {
       font-size: ${sizeXSmall}px;
-      font-weight: 500;
-      color: #000;
-      margin-bottom: 12px;
-      text-align: center;
+      color: #6b7280;
+      margin-bottom: 6px;
     }
     
-    /* Barcode - CENTERED */
+    /* Barcode */
     .barcode {
       text-align: center;
-      margin-top: 16px;
-      padding-top: 12px;
-      border-top: 2px dashed #000;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     
     .barcode img {
@@ -309,27 +398,29 @@ export const generateCleanInvoiceHTML = (
 
     /* App Watermark */
     .app-watermark {
-      margin-top: 16px;
-      padding-top: 12px;
+      margin-top: 12px;
+      padding-top: 8px;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 8px;
-      opacity: 1;
-      border-top: 1px dashed #000;
+      gap: 6px;
+      border-top: 1px dashed #e2e8f0;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
+    
     .app-watermark img {
-      height: 16px;
+      height: 14px;
       width: auto;
-      filter: grayscale(100%) contrast(150%);
+      filter: grayscale(100%);
     }
+    
     .app-watermark span {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 800;
-      color: #000;
+      color: #111111;
       text-transform: uppercase;
       letter-spacing: 1px;
-      font-family: 'Inter', sans-serif;
     }
   </style>
 </head>
@@ -345,50 +436,53 @@ export const generateCleanInvoiceHTML = (
       <div class="company-name">${companyData.name}</div>
       <div class="company-info">
         ${companyData.rnc ? `RNC: ${companyData.rnc}<br>` : ''}
-        ${companyData.phone ? `${companyData.phone}<br>` : ''}
+        ${companyData.phone ? `Tel: ${companyData.phone}<br>` : ''}
         ${companyData.address ? `${companyData.address}` : ''}
       </div>
     </div>
     
-    <div class="invoice-number">
-      <div class="invoice-label">${invoiceData.isElectronic ? 'e-CF' : 'NCF'}</div>
-      <div class="invoice-id">${invoiceData.isElectronic ? (invoiceData.encf || invoiceData.invoiceNumber) : invoiceData.invoiceNumber}</div>
-      <div class="invoice-date">${invoiceData.date.toLocaleDateString('es-DO')}</div>
+    <div class="ncf-card">
+      <div class="ncf-label">${invoiceData.isElectronic ? 'Comprobante Fiscal Electrónico (e-CF)' : 'Comprobante Fiscal (NCF)'}</div>
+      <div class="ncf-id">${invoiceData.isElectronic ? (invoiceData.encf || invoiceData.invoiceNumber) : invoiceData.invoiceNumber}</div>
+      <div class="ncf-date">${invoiceData.date.toLocaleDateString('es-DO')} ${invoiceData.date.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}</div>
     </div>
     
-    <div style="border-top: 2px dashed #000; padding: 6px 0; margin-bottom: 6px; font-size: ${sizeSmall}px; text-align: left;">
-      <div style="font-weight: bold; margin-bottom: 2px;">CLIENTE: ${invoiceData.customerName || 'CLIENTE FINAL'}</div>
-      ${invoiceData.customerRnc ? `<div style="margin-bottom: 2px;">RNC/Cédula: ${invoiceData.customerRnc}</div>` : ''}
-      ${invoiceData.customerPhone ? `<div style="margin-bottom: 2px;">Tel: ${invoiceData.customerPhone}</div>` : ''}
-      ${invoiceData.customerAddress ? `<div style="margin-bottom: 2px;">${invoiceData.customerAddress}</div>` : ''}
+    <div class="customer-card">
+      <div class="customer-name">CLIENTE: ${invoiceData.customerName || 'CLIENTE FINAL'}</div>
+      ${invoiceData.customerRnc ? `<div class="customer-meta">RNC/Cédula: ${invoiceData.customerRnc}</div>` : ''}
+      ${invoiceData.customerPhone ? `<div class="customer-meta">Tel: ${invoiceData.customerPhone}</div>` : ''}
+      ${invoiceData.customerAddress ? `<div class="customer-meta">${invoiceData.customerAddress}</div>` : ''}
     </div>
     
     <div class="items">
+      <div class="items-header">
+        <span>Cant. / Descripción</span>
+        <span>Total</span>
+      </div>
       ${invoiceData.items.map(item => `
-        <div class="item">
-          <div style="display: flex; flex-direction: column; width: 100%;">
-            <div style="display: flex; justify-content: space-between;">
-              <span class="item-name">${item.name} x${item.quantity}</span>
-              <span class="item-price">${invoiceData.currency} ${item.total.toFixed(2)}</span>
-            </div>
-            ${item.comment ? `<div style="font-size: 0.85em; color: #666; font-style: italic; margin-left: 4px;">(${item.comment})</div>` : ''}
+        <div class="item-row">
+          <div class="item-left">
+            <span class="item-name">${item.name}</span>
+            <span class="item-qty">x${item.quantity}</span>
+            ${item.comment ? `<div style="font-size: ${sizeXSmall}px; color: #6b7280; font-style: italic; margin-top: 1px;">(${item.comment})</div>` : ''}
           </div>
+          <span class="item-price">${invoiceData.currency} ${item.total.toFixed(2)}</span>
         </div>
       `).join('')}
     </div>
     
-    <div class="totals">
-      <div class="total-line">
+    <div class="totals-container">
+      <div class="total-row">
         <span>Subtotal:</span>
-        <span class="total-value">${invoiceData.currency} ${invoiceData.subtotal.toFixed(2)}</span>
+        <span class="total-val">${invoiceData.currency} ${invoiceData.subtotal.toFixed(2)}</span>
       </div>
-      <div class="total-line">
+      <div class="total-row">
         <span>ITBIS (${invoiceData.taxRate}%):</span>
-        <span class="total-value">${invoiceData.currency} ${invoiceData.tax.toFixed(2)}</span>
+        <span class="total-val">${invoiceData.currency} ${invoiceData.tax.toFixed(2)}</span>
       </div>
-      <div class="total-line grand-total">
-        <span>TOTAL:</span>
-        <span class="total-value">${invoiceData.currency} ${invoiceData.total.toFixed(2)}</span>
+      <div class="grand-total-card">
+        <span class="grand-total-label">TOTAL</span>
+        <span class="grand-total-val">${invoiceData.currency} ${invoiceData.total.toFixed(2)}</span>
       </div>
     </div>
     
@@ -399,14 +493,14 @@ export const generateCleanInvoiceHTML = (
     ` : ''}
     
     ${invoiceData.paymentTerms ? `
-      <div class="payment-terms">
+      <div class="payment-terms" style="text-align: center;">
         Términos de pago: ${invoiceData.paymentTerms} días
       </div>
     ` : ''}
 
     ${(invoiceData.loyaltyPointsEarned !== undefined || invoiceData.loyaltyPoints !== undefined) ? `
-      <div style="border-top: 1px dashed #000; margin-top: 8px; padding-top: 6px; text-align: center;">
-        <div style="font-size: ${sizeSmall}px; font-weight: bold; margin-bottom: 2px;">★ PUNTOS DE LEALTAD ★</div>
+      <div style="border-top: 1px dashed #cbd5e1; margin-top: 8px; padding-top: 6px; text-align: center; page-break-inside: avoid; break-inside: avoid;">
+        <div style="font-size: ${sizeSmall}px; font-weight: 700; margin-bottom: 2px;">★ PUNTOS DE LEALTAD ★</div>
         ${invoiceData.loyaltyPointsEarned !== undefined && invoiceData.loyaltyPointsEarned > 0 ? `
           <div style="font-size: ${sizeSmall}px; margin-bottom: 1px;">
             Ganados esta compra: <strong>+${invoiceData.loyaltyPointsEarned} pts</strong>
@@ -427,14 +521,14 @@ export const generateCleanInvoiceHTML = (
     ` : ''}
 
     ${invoiceData.isElectronic && invoiceData.qrCodeUrl ? `
-      <div style="text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px dashed #000;">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceData.qrCodeUrl)}" alt="Código QR Fiscal" style="width: 110px; height: 110px; display: block; margin: 0 auto;" />
+      <div style="text-align: center; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; page-break-inside: avoid; break-inside: avoid;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceData.qrCodeUrl)}" alt="Código QR Fiscal" style="width: 104px; height: 104px; display: block; margin: 0 auto;" />
         
-        <div style="font-size: 10px; text-align: left; margin: 8px auto 0 auto; width: fit-content; font-family: monospace; line-height: 1.4;">
-          ${invoiceData.securityCode ? `<div><strong>Código de seguridad:</strong> ${invoiceData.securityCode}</div>` : ''}
+        <div style="font-size: 9px; text-align: left; margin: 6px auto 0 auto; width: fit-content; font-family: 'JetBrains Mono', monospace; line-height: 1.35;">
+          ${invoiceData.securityCode ? `<div><strong>Cód. Seguridad:</strong> ${invoiceData.securityCode}</div>` : ''}
           ${invoiceData.signatureDate ? `
             <div>
-              <strong>Fecha firma digital:</strong> 
+              <strong>Firma digital:</strong> 
               ${(() => {
                 try {
                   const d = new Date(invoiceData.signatureDate);
@@ -453,7 +547,7 @@ export const generateCleanInvoiceHTML = (
           ` : ''}
         </div>
         
-        <div style="font-size: 8px; font-weight: bold; color: #666; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Comprobante Autorizado por la DGII</div>
+        <div style="font-size: 8px; font-weight: 700; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Comprobante Autorizado por la DGII</div>
       </div>
     ` : ''}
 

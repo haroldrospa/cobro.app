@@ -158,11 +158,13 @@ export const injectPrintStyles = (): void => {
       body.print-80mm .printable-content {
         width: 80mm !important;
         max-width: 80mm !important;
-        font-family: 'Courier New', Courier, monospace;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: ${baseFontSize}px;
         line-height: 1.3;
         padding: 2mm;
         box-sizing: border-box;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
       
       body.print-80mm h1 {
@@ -232,11 +234,13 @@ export const injectPrintStyles = (): void => {
       body.print-58mm .printable-content {
         width: 58mm !important;
         max-width: 58mm !important;
-        font-family: 'Courier New', Courier, monospace;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: ${Math.max(8, baseFontSize - 2)}px;
         line-height: 1.2;
         padding: 1mm;
         box-sizing: border-box;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
       
       body.print-58mm h1,
