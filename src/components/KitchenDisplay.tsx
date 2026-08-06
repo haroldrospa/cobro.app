@@ -416,80 +416,80 @@ const KitchenDisplay: React.FC = () => {
     const T = {
         // Page background
         pageBg: kdsDark
-            ? 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950'
+            ? 'bg-zinc-950'
             : 'bg-gradient-to-b from-stone-100 via-zinc-50 to-stone-100',
         // Top bar
         headerBg: kdsDark
-            ? 'bg-slate-900/95 border-slate-800/90'
+            ? 'bg-zinc-900/95 border-zinc-800/90'
             : 'bg-white/95 border-stone-200/90',
         headerText: kdsDark ? 'text-white' : 'text-slate-900',
-        headerSubText: kdsDark ? 'text-slate-400' : 'text-slate-500',
+        headerSubText: kdsDark ? 'text-zinc-400' : 'text-slate-500',
         // Filter pill container
-        filterBg: kdsDark ? 'bg-slate-950 border-slate-800' : 'bg-stone-200 border-stone-300',
-        filterInactive: kdsDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800',
+        filterBg: kdsDark ? 'bg-black border-zinc-800' : 'bg-stone-200 border-stone-300',
+        filterInactive: kdsDark ? 'text-zinc-400 hover:text-white' : 'text-slate-500 hover:text-slate-800',
         // Header icon badge
         iconBadge: kdsDark
             ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
             : 'bg-emerald-100 border-emerald-300 text-emerald-700',
         // Card outer frame
         cardNormal: kdsDark
-            ? 'bg-slate-800 border border-slate-700 shadow-2xl hover:border-slate-500 transition-all'
+            ? 'bg-zinc-900 border border-zinc-800 shadow-2xl hover:border-zinc-600 transition-all'
             : 'bg-white border border-stone-200 shadow-xl hover:border-stone-400 transition-all',
         cardYellow: kdsDark
-            ? 'bg-slate-800 border-2 border-amber-400 shadow-xl shadow-amber-950/20'
+            ? 'bg-zinc-900 border-2 border-amber-400 shadow-xl'
             : 'bg-white border-2 border-amber-400 shadow-xl shadow-amber-950/10',
         cardRed: kdsDark
-            ? 'bg-slate-800 border-2 border-red-500/80 shadow-xl shadow-red-950/20'
+            ? 'bg-zinc-900 border-2 border-red-500/80 shadow-xl'
             : 'bg-white border-2 border-red-500/80 shadow-xl shadow-red-950/10',
         cardAlert: kdsDark
-            ? 'bg-slate-800 border-2 border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.4)] animate-[blink-red_1.2s_ease-in-out_infinite]'
+            ? 'bg-zinc-900 border-2 border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.5)] animate-[blink-red_1.2s_ease-in-out_infinite]'
             : 'bg-white border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.25)] animate-[blink-red_1.2s_ease-in-out_infinite]',
         cardHistory: kdsDark
-            ? 'bg-slate-800 border border-slate-700 opacity-80 shadow-lg'
+            ? 'bg-zinc-900 border border-zinc-800 opacity-80 shadow-lg'
             : 'bg-white border border-stone-200 opacity-80 shadow-lg',
-        // Card header (dark charcoal banner)
+        // Card header (dark banner — always charcoal/black)
         cardHeader: kdsDark
-            ? 'bg-slate-900 border-b border-slate-800'
+            ? 'bg-black border-b border-zinc-800'
             : 'bg-slate-800 border-b border-slate-700',
         // Card body
-        cardBody: kdsDark ? 'bg-slate-800 text-slate-100' : 'bg-white text-zinc-900',
-        cardDivider: kdsDark ? 'divide-slate-700' : 'divide-zinc-200',
-        rowHover: kdsDark ? 'hover:bg-slate-700/60' : 'hover:bg-zinc-50',
+        cardBody: kdsDark ? 'bg-zinc-900 text-zinc-100' : 'bg-white text-zinc-900',
+        cardDivider: kdsDark ? 'divide-zinc-800' : 'divide-zinc-200',
+        rowHover: kdsDark ? 'hover:bg-zinc-800/80' : 'hover:bg-zinc-50',
         // Qty badge
         qtyBadge: kdsDark
-            ? 'bg-slate-900 text-white border border-slate-700'
+            ? 'bg-black text-white border border-zinc-700'
             : 'bg-zinc-900 text-white',
         // Product name
-        productName: kdsDark ? 'text-slate-100 group-hover:text-emerald-400' : 'text-zinc-900 group-hover:text-emerald-700',
+        productName: kdsDark ? 'text-zinc-100 group-hover:text-emerald-400' : 'text-zinc-900 group-hover:text-emerald-700',
         // Recipe pill
         recipePill: kdsDark
-            ? 'bg-slate-700 border-slate-600 text-slate-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600'
+            ? 'bg-zinc-800 border-zinc-700 text-zinc-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600'
             : 'bg-zinc-100 border-zinc-300 text-zinc-700 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600',
         // Variant banner (FRITO etc.)
         variantBanner: kdsDark
-            ? 'bg-amber-900/40 border border-amber-600/60 text-amber-200'
+            ? 'bg-amber-900/30 border border-amber-600/50 text-amber-200'
             : 'bg-amber-50 border border-amber-300 text-amber-950',
         // Notes section
-        noteBg: kdsDark ? 'bg-orange-900/30 border-orange-600/50' : 'bg-orange-50 border-orange-300',
+        noteBg: kdsDark ? 'bg-orange-950/40 border-orange-700/50' : 'bg-orange-50 border-orange-300',
         noteText: kdsDark ? 'text-orange-200' : 'text-orange-950',
         noteLabel: kdsDark ? 'text-orange-400' : 'text-orange-800',
-        updateBg: kdsDark ? 'bg-red-900/30 border-red-600/50 hover:bg-red-900/50' : 'bg-red-50 border-red-300 hover:bg-red-100',
+        updateBg: kdsDark ? 'bg-red-950/40 border-red-700/50 hover:bg-red-950/60' : 'bg-red-50 border-red-300 hover:bg-red-100',
         updateText: kdsDark ? 'text-red-200' : 'text-red-950',
         updateLabel: kdsDark ? 'text-red-400' : 'text-red-700',
-        // Notch circles (dark cutout circles on the card border)
-        notchBg: kdsDark ? 'bg-slate-950' : 'bg-stone-100',
-        notchBorder: kdsDark ? 'border-slate-700' : 'border-stone-300',
-        notchStrip: kdsDark ? 'bg-slate-800 border-t border-dashed border-slate-700' : 'bg-white border-t border-dashed border-zinc-300',
+        // Notch circles
+        notchBg: kdsDark ? 'bg-zinc-950' : 'bg-stone-100',
+        notchBorder: kdsDark ? 'border-zinc-800' : 'border-stone-300',
+        notchStrip: kdsDark ? 'bg-zinc-900 border-t border-dashed border-zinc-800' : 'bg-white border-t border-dashed border-zinc-300',
         // Action button
         actionBtn: kdsDark
             ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
             : 'bg-zinc-900 hover:bg-emerald-600 text-white',
-        actionBtnWrap: kdsDark ? 'bg-slate-800 pt-1 pb-4 px-4' : 'bg-white p-4',
+        actionBtnWrap: kdsDark ? 'bg-zinc-900 pt-1 pb-4 px-4' : 'bg-white p-4',
         // Time badge
         timeBadgeNormal: kdsDark
-            ? 'bg-slate-900 text-slate-300 border border-slate-700'
+            ? 'bg-black text-zinc-300 border border-zinc-700'
             : 'bg-slate-800 text-white border-0',
-        timeBadgeHistory: kdsDark ? 'bg-slate-700 text-slate-400 border-slate-600' : 'bg-zinc-200 text-zinc-600 border-zinc-300',
+        timeBadgeHistory: kdsDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-zinc-200 text-zinc-600 border-zinc-300',
     };
 
     const getTimeStatus = (createdAt: string) => {
