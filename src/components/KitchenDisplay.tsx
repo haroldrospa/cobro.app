@@ -402,22 +402,22 @@ const KitchenDisplay: React.FC = () => {
     };
 
     const getTimeStatus = (createdAt: string) => {
-        if (showHistory) return "bg-slate-200 text-slate-700 border-slate-300";
+        if (showHistory) return "bg-zinc-800 text-zinc-400 border-zinc-700";
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "bg-red-100 text-red-700 border-red-300 animate-pulse font-black";
-        if (minutes >= redThreshold) return "bg-red-100 text-red-700 border-red-300 font-black";
-        if (minutes >= yellowThreshold) return "bg-amber-100 text-amber-800 border-amber-300 font-black";
-        return "bg-emerald-100 text-emerald-800 border-emerald-300 font-black";
+        if (minutes >= alertThreshold) return "bg-red-500 text-white font-mono font-black animate-pulse shadow-md";
+        if (minutes >= redThreshold) return "bg-red-600 text-white font-mono font-black shadow-md";
+        if (minutes >= yellowThreshold) return "bg-amber-500 text-amber-950 font-mono font-black shadow-md";
+        return "bg-zinc-800 text-zinc-200 border border-zinc-700 font-mono font-black";
     };
 
     const getTimeBg = (createdAt: string) => {
-        if (showHistory) return "bg-white text-slate-900 border-slate-300 opacity-90 shadow-md";
+        if (showHistory) return "bg-white border border-zinc-300 opacity-90 shadow-lg";
 
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "bg-white text-slate-950 border-red-500 border-t-4 shadow-[0_0_30px_rgba(220,38,38,0.25)] animate-[blink-red_0.8s_ease-in-out_infinite]";
-        if (minutes >= redThreshold) return "bg-white text-slate-950 border-slate-300 border-t-4 border-t-red-500 shadow-xl";
-        if (minutes >= yellowThreshold) return "bg-white text-slate-950 border-slate-300 border-t-4 border-t-amber-500 shadow-xl";
-        return "bg-white text-slate-950 border-slate-300 border-t-4 border-t-emerald-500 shadow-xl hover:shadow-2xl";
+        if (minutes >= alertThreshold) return "bg-white border-2 border-red-500 shadow-[0_0_30px_rgba(220,38,38,0.25)] animate-[blink-red_0.8s_ease-in-out_infinite]";
+        if (minutes >= redThreshold) return "bg-white border-2 border-red-500 shadow-xl";
+        if (minutes >= yellowThreshold) return "bg-white border-2 border-amber-400 shadow-xl";
+        return "bg-white border border-zinc-200 shadow-2xl hover:shadow-2xl hover:border-zinc-400 transition-all";
     };
 
     if (!userStore) return <div className="flex items-center justify-center min-h-[60vh] bg-zinc-950 text-white"><Loader2 className="animate-spin h-8 w-8 text-emerald-500" /></div>;
@@ -565,49 +565,55 @@ const KitchenDisplay: React.FC = () => {
                         </p>
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
                         {displayedOrders.map((order) => (
                             <div
                                 key={order.id}
-                                className={`rounded-2xl border-2 overflow-hidden flex flex-col transition-all duration-300 ${getTimeBg(order.created_at)}`}
+                                className={`rounded-3xl border overflow-hidden flex flex-col transition-all duration-300 relative ${getTimeBg(order.created_at)}`}
                             >
-                                {/* 🧾 Receipt Header */}
-                                <div className="flex items-center justify-between px-4 py-3.5 border-b-2 border-dashed border-slate-300 bg-slate-100">
-                                    <div className="flex flex-col gap-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-xs font-mono font-black uppercase bg-slate-950 text-white px-2.5 py-1 rounded-lg border border-slate-800 shrink-0 shadow-sm">
-                                                #{order.order_number.split('-').pop()}
-                                            </span>
-                                            {order.notes && (order.notes.includes('[PARA LLEVAR]') || order.notes.includes('[DELIVERY]')) ? (
-                                                <span className="text-xs font-black bg-orange-100 text-orange-950 border border-orange-300 px-2.5 py-1 rounded-lg uppercase">
-                                                    🛍️ {order.notes.includes('[DELIVERY]') ? 'DELIVERY' : 'LLEVAR'}
-                                                </span>
-                                            ) : (
-                                                <span className="text-xs font-black bg-blue-100 text-blue-950 border border-blue-300 px-2.5 py-1 rounded-lg uppercase">
-                                                    {order.notes && order.notes.includes('[COMPRA AQUÍ]') ? '🏷️ COMPRA' : '🍽️ AQUÍ'}
-                                                </span>
-                                            )}
-                                            {order.notes && order.notes.includes('[ACTUALIZADO]') && (
-                                                <span className="text-[10px] font-black bg-red-600 text-white px-2 py-0.5 rounded-lg uppercase animate-pulse shadow-md">
-                                                    🔄 ACTUALIZADO
-                                                </span>
-                                            )}
-                                            {showHistory && <span className="text-xs font-black text-emerald-800 uppercase bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">✓ LISTO</span>}
+                                {/* 🍎 Apple Receipt Header (Dark Charcoal Banner) */}
+                                <div className="bg-zinc-900 text-white px-5 py-4 flex items-center justify-between border-b border-zinc-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-9 w-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white shadow-inner">
+                                            <ChefHat className="h-5 w-5" />
                                         </div>
-                                        <p className="text-base font-black uppercase tracking-tight text-slate-950 truncate max-w-[190px] leading-tight mt-0.5">
-                                            {order.customer_name}
-                                        </p>
+                                        <div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-xs font-mono font-black bg-black text-white px-2.5 py-0.5 rounded-md border border-zinc-700 shrink-0">
+                                                    #{order.order_number.split('-').pop()}
+                                                </span>
+                                                {order.notes && (order.notes.includes('[PARA LLEVAR]') || order.notes.includes('[DELIVERY]')) ? (
+                                                    <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 border border-orange-500/40 px-2 py-0.5 rounded-md uppercase">
+                                                        🛍️ {order.notes.includes('[DELIVERY]') ? 'DELIVERY' : 'LLEVAR'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] font-black bg-blue-500/20 text-blue-400 border border-blue-500/40 px-2 py-0.5 rounded-md uppercase">
+                                                        {order.notes && order.notes.includes('[COMPRA AQUÍ]') ? '🏷️ COMPRA' : '🍽️ AQUÍ'}
+                                                    </span>
+                                                )}
+                                                {order.notes && order.notes.includes('[ACTUALIZADO]') && (
+                                                    <span className="text-[9px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded uppercase animate-pulse shadow-md">
+                                                        🔄 ACTUALIZADO
+                                                    </span>
+                                                )}
+                                                {showHistory && <span className="text-[10px] font-black text-emerald-400 uppercase bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">✓ LISTO</span>}
+                                            </div>
+                                            <p className="text-base font-black uppercase tracking-tight text-white truncate max-w-[190px] leading-tight mt-1">
+                                                {order.customer_name}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className={`px-3 py-1.5 rounded-xl border font-mono font-black text-base flex items-center gap-1.5 shrink-0 shadow-sm ${getTimeStatus(order.created_at)}`}>
-                                        <Timer className="h-4.5 w-4.5" />
+
+                                    <div className={`px-3 py-1.5 rounded-xl border font-mono font-black text-sm flex items-center gap-1.5 shrink-0 ${getTimeStatus(order.created_at)}`}>
+                                        <Timer className="h-4 w-4" />
                                         {formatElapsed(order)}
                                     </div>
                                 </div>
 
-                                {/* 🧾 Receipt Body (Items) */}
-                                <div className="flex-1 p-4 bg-white">
+                                {/* 🧾 Receipt Main Body (Pure White) */}
+                                <div className="flex-1 p-5 bg-white text-zinc-900">
                                     <table className="w-full">
-                                        <tbody className="divide-y divide-slate-200">
+                                        <tbody className="divide-y divide-zinc-200">
                                             {order.open_order_items.map((item) => {
                                                 let displayTitle = item.product_name;
                                                 let extractedNote = item.comment;
@@ -618,27 +624,27 @@ const KitchenDisplay: React.FC = () => {
                                                 return (
                                                     <tr
                                                         key={item.id}
-                                                        className="hover:bg-slate-100/80 cursor-pointer transition-all active:scale-[0.98] group rounded-xl"
+                                                        className="hover:bg-zinc-50 cursor-pointer transition-all active:scale-[0.98] group rounded-xl"
                                                         onClick={() => handleOpenRecipeModal(item.product_name, item.quantity, extractedNote, item.product_id)}
                                                         title="Haz clic para ver la receta e ingredientes"
                                                     >
-                                                        <td className="py-3 pl-2 pr-3 align-top w-12">
-                                                            <div className="h-9 w-9 rounded-xl bg-slate-950 text-white font-mono font-black text-lg border border-slate-800 flex items-center justify-center shadow-md shrink-0">
+                                                        <td className="py-3 pl-1 pr-3 align-top w-12">
+                                                            <div className="h-9 w-9 rounded-xl bg-zinc-900 text-white font-mono font-black text-lg flex items-center justify-center shadow-sm shrink-0">
                                                                 {item.quantity}
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 pr-2">
+                                                        <td className="py-3 pr-1">
                                                             <div className="flex items-center justify-between gap-2">
-                                                                <div className="font-black text-base uppercase tracking-tight text-slate-950 group-hover:text-emerald-700 transition-colors leading-snug">
+                                                                <div className="font-black text-base uppercase tracking-tight text-zinc-900 group-hover:text-emerald-700 transition-colors leading-snug">
                                                                     {displayTitle}
                                                                 </div>
-                                                                <span className="px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-300 text-slate-700 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-sm">
+                                                                <span className="px-2.5 py-1 rounded-xl bg-zinc-100 border border-zinc-300 text-zinc-700 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-sm">
                                                                     <UtensilsCrossed className="h-3.5 w-3.5" />
                                                                     Receta
                                                                 </span>
                                                             </div>
                                                             {extractedNote && (
-                                                                <div className="mt-2 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-950">
+                                                                <div className="mt-2.5 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-950">
                                                                     <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" />
                                                                     <p className="font-black text-xs uppercase leading-tight">
                                                                         {extractedNote}
@@ -671,7 +677,7 @@ const KitchenDisplay: React.FC = () => {
 
                                         return (
                                             <div
-                                                className={`mx-2 my-2.5 p-3 rounded-xl border-2 ${isUpdateNote ? 'bg-red-50 border-red-300 cursor-pointer hover:bg-red-100 active:scale-[0.98] transition-all' : 'bg-orange-50 border-orange-300'}`}
+                                                className={`mx-1 my-3 p-3 rounded-xl border ${isUpdateNote ? 'bg-red-50 border-red-300 cursor-pointer hover:bg-red-100 active:scale-[0.98] transition-all' : 'bg-orange-50 border-orange-300'}`}
                                                 onClick={isUpdateNote ? handleNoteClick : undefined}
                                             >
                                                 <p className={`text-xs font-black uppercase mb-1 flex items-center gap-1.5 ${isUpdateNote ? 'text-red-700' : 'text-orange-800'}`}>
@@ -686,11 +692,17 @@ const KitchenDisplay: React.FC = () => {
                                     })()}
                                 </div>
 
-                                {/* 🧾 Receipt Footer / Perforation & Button */}
+                                {/* 🎫 Paper Receipt Ticket Side Cutout Notches */}
+                                <div className="relative bg-white h-4 w-full flex items-center justify-between border-t border-dashed border-zinc-300">
+                                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-950 border-r border-zinc-300"></div>
+                                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-950 border-l border-zinc-300"></div>
+                                </div>
+
+                                {/* 🧾 Receipt Bottom Section & Barcode Action Button */}
                                 {!showHistory && (
-                                    <div className="p-3 bg-slate-100 border-t-2 border-dashed border-slate-300">
+                                    <div className="p-4 bg-white">
                                         <Button
-                                            className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-widest uppercase shadow-md shadow-emerald-900/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                            className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-emerald-600 text-white font-black text-xs tracking-widest uppercase shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
                                             onClick={() => updateStatusMutation.mutate({
                                                 orderId: order.id,
                                                 status: (order.notes?.includes('[PARA LLEVAR]') || order.notes?.includes('[DELIVERY]')) ? 'shipped' : 'completed'
@@ -699,7 +711,10 @@ const KitchenDisplay: React.FC = () => {
                                         >
                                             {updateStatusMutation.isPending
                                                 ? <Loader2 className="animate-spin h-5 w-5" />
-                                                : <><Check className="h-5 w-5 mr-1.5" />MARCAR COMO LISTO</>
+                                                : <>
+                                                    <Check className="h-5 w-5 text-emerald-400 group-hover:text-white" />
+                                                    MARCAR COMO LISTO
+                                                </>
                                             }
                                         </Button>
                                     </div>
