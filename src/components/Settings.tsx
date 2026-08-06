@@ -3034,16 +3034,16 @@ const Settings = () => {
                           </div>
                         )}
 
-                        {/* Marca de Agua Cobro */}
-                        <div className="flex items-center justify-center gap-2 mt-5 pt-3 border-t border-dotted border-black/20 opacity-60">
+                        {/* Marca de Agua CobroApp en grande */}
+                        <div className="flex items-center justify-center gap-2 mt-5 pt-3 border-t border-dashed border-slate-300">
                           <img
                             src={`${window.location.origin}/cobro-logo.png`}
-                            alt="Cobro"
-                            style={{ height: '14px', width: 'auto', filter: 'grayscale(100%) opacity(0.8)' }}
+                            alt="CobroApp"
+                            style={{ height: '20px', width: 'auto' }}
                             className="inline-block"
                           />
-                          <span style={{ fontSize: '9px', fontWeight: 700, color: '#111', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-                            Cobro App
+                          <span className="text-base font-black text-zinc-950 uppercase tracking-widest">
+                            COBROAPP
                           </span>
                         </div>
                       </div>

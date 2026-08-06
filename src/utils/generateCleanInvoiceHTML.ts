@@ -396,8 +396,11 @@ export const generateCleanInvoiceHTML = (
         </div>
       ` : ''}
 
-      <div style="margin-top: 8px; font-size: 8px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px;">
-        ${companyData.name?.toUpperCase() || 'COBRO'} POS
+      <div style="margin-top: 14px; padding-top: 10px; border-top: 1.5px dashed #cbd5e1; display: flex; justify-content: center; align-items: center; gap: 8px;">
+        <img src="${typeof window !== 'undefined' ? window.location.origin : ''}/cobro-logo.png" alt="CobroApp" style="height: 20px; width: auto; display: block;" />
+        <span style="font-size: 15px; font-weight: 900; color: #09090b; text-transform: uppercase; letter-spacing: 2px; font-family: 'Inter', -apple-system, sans-serif;">
+          COBROAPP
+        </span>
       </div>
     </div>
 
