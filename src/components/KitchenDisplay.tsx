@@ -380,6 +380,17 @@ const KitchenDisplay: React.FC = () => {
         toast({ title: "Configuración guardada", description: "Los umbrales de tiempo han sido actualizados." });
     };
 
+    const [filterType, setFilterType] = useState<'all' | 'dineIn' | 'takeout' | 'delivery'>('all');
+
+    const displayedOrders = orders.filter(order => {
+        if (filterType === 'all') return true;
+        const notes = order.notes || '';
+        if (filterType === 'dineIn') return !notes.includes('[PARA LLEVAR]') && !notes.includes('[DELIVERY]');
+        if (filterType === 'takeout') return notes.includes('[PARA LLEVAR]');
+        if (filterType === 'delivery') return notes.includes('[DELIVERY]');
+        return true;
+    });
+
     const formatElapsed = (order: KitchenOrder) => {
         const endTime = (showHistory && order.order_status !== 'preparing')
             ? new Date(order.updated_at)
@@ -391,109 +402,144 @@ const KitchenDisplay: React.FC = () => {
     };
 
     const getTimeStatus = (createdAt: string) => {
-        if (showHistory) return "text-zinc-500";
+        if (showHistory) return "bg-zinc-800 text-zinc-400 border-zinc-700";
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "text-red-600 animate-[pulse_0.4s_ease-in-out_infinite] scale-110 drop-shadow-sm";
-        if (minutes >= redThreshold) return "text-red-600";
-        if (minutes >= yellowThreshold) return "text-yellow-600 dark:text-yellow-400";
-        return "text-emerald-500";
+        if (minutes >= alertThreshold) return "bg-red-500/20 text-red-400 border-red-500/50 animate-pulse";
+        if (minutes >= redThreshold) return "bg-red-500/15 text-red-400 border-red-500/30";
+        if (minutes >= yellowThreshold) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+        return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
     };
 
     const getTimeBg = (createdAt: string) => {
-        if (showHistory) return "bg-white dark:bg-zinc-900 border-border opacity-90";
+        if (showHistory) return "bg-zinc-900/90 border-zinc-800 opacity-90";
 
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "border-red-600 shadow-[0_0_25px_rgba(220,38,38,0.4)] animate-[blink-red_0.8s_ease-in-out_infinite]";
-        if (minutes >= redThreshold) return "bg-red-50 dark:bg-red-950/20 border-red-400 dark:border-red-800/60";
-        if (minutes >= yellowThreshold) return "bg-yellow-100 dark:bg-yellow-950/40 border-yellow-400 dark:border-yellow-800/60";
-        return "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/50";
+        if (minutes >= alertThreshold) return "bg-zinc-900 border-red-600/80 shadow-[0_0_30px_rgba(220,38,38,0.25)] animate-[blink-red_0.8s_ease-in-out_infinite]";
+        if (minutes >= redThreshold) return "bg-zinc-900 border-red-500/40 shadow-lg shadow-red-950/20";
+        if (minutes >= yellowThreshold) return "bg-zinc-900 border-amber-500/40 shadow-lg shadow-amber-950/20";
+        return "bg-zinc-900 border-zinc-800 shadow-xl hover:border-zinc-700";
     };
 
-    if (!userStore) return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
+    if (!userStore) return <div className="flex items-center justify-center min-h-[60vh] bg-zinc-950 text-white"><Loader2 className="animate-spin h-8 w-8 text-emerald-500" /></div>;
 
     return (
-        <div className="fixed inset-0 bg-zinc-950 flex flex-col overflow-hidden">
-        <audio ref={audioRef} src="https://assets.mixkit.com/active_storage/sfx/2568/2568-preview.mp3" preload="auto" />
+        <div className="fixed inset-0 bg-zinc-950 flex flex-col overflow-hidden text-white font-sans selection:bg-emerald-500/30">
+            <audio ref={audioRef} src="https://assets.mixkit.com/active_storage/sfx/2568/2568-preview.mp3" preload="auto" />
             <audio ref={criticalAudioRef} src="https://assets.mixkit.com/active_storage/sfx/1003/1003-preview.mp3" preload="auto" />
 
-            {/* ── Header compacto ── */}
-            <div className="flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0">
-                <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-lg ${showDashboard ? 'bg-purple-500/20' : showHistory ? 'bg-zinc-700' : 'bg-primary/20'}`}>
+            {/* ── Ultra-Professional Header ── */}
+            <div className="flex flex-wrap items-center justify-between px-5 py-3 bg-zinc-900/90 border-b border-zinc-800/80 backdrop-blur-xl shrink-0 gap-3 shadow-lg">
+                {/* Branding & Status */}
+                <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl border ${showDashboard ? 'bg-purple-500/20 border-purple-500/30 text-purple-400' : showHistory ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}>
                         {showDashboard
-                            ? <BarChart2 className="h-5 w-5 text-purple-400" />
+                            ? <BarChart2 className="h-5 w-5" />
                             : showHistory
-                                ? <HistoryIcon className="h-5 w-5 text-zinc-400" />
-                                : <ChefHat className="h-5 w-5 text-primary" />}
+                                ? <HistoryIcon className="h-5 w-5" />
+                                : <ChefHat className="h-5 w-5" />}
                     </div>
                     <div>
-                        <h1 className="text-sm font-black tracking-tight uppercase leading-none">
-                            {showDashboard ? 'Dashboard' : showHistory ? 'Historial' : 'Cocina'}
-                        </h1>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-base font-black tracking-wider uppercase text-white leading-none">
+                                {showDashboard ? 'Rendimiento Cocina' : showHistory ? 'Historial de Pedidos' : 'Pantalla de Cocina (KDS)'}
+                            </h1>
                             {!showHistory && !showDashboard && (
-                                <span className="text-[10px] font-bold text-primary">{activeOrders.length} pendientes</span>
+                                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    LIVE
+                                </span>
                             )}
-                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${showDashboard ? 'bg-purple-400' : showHistory ? 'bg-zinc-400' : 'bg-emerald-500'}`} />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                {showDashboard ? 'Rendimiento' : showHistory ? 'Historial' : 'Live'}
-                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                            {!showHistory && !showDashboard && (
+                                <span className="text-xs font-black text-zinc-300">
+                                    {activeOrders.length} {activeOrders.length === 1 ? 'Pedido Pendiente' : 'Pedidos Pendientes'}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1">
-                    {/* Back to Cocina button (shows when in history or dashboard) */}
+                {/* Filter Tabs (Dine-in, Takeout, Delivery) */}
+                {!showHistory && !showDashboard && (
+                    <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800/80 gap-1">
+                        <button
+                            onClick={() => setFilterType('all')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${filterType === 'all' ? 'bg-emerald-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
+                        >
+                            Todos ({orders.length})
+                        </button>
+                        <button
+                            onClick={() => setFilterType('dineIn')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${filterType === 'dineIn' ? 'bg-blue-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
+                        >
+                            🍽️ Aquí
+                        </button>
+                        <button
+                            onClick={() => setFilterType('takeout')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${filterType === 'takeout' ? 'bg-orange-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
+                        >
+                            🛍️ Llevar
+                        </button>
+                        <button
+                            onClick={() => setFilterType('delivery')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${filterType === 'delivery' ? 'bg-purple-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
+                        >
+                            🛵 Delivery
+                        </button>
+                    </div>
+                )}
+
+                {/* Right Action Controls */}
+                <div className="flex items-center gap-2">
                     {(showHistory || showDashboard) && (
                         <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-lg font-bold px-3 gap-1.5 text-xs"
+                            className="h-9 rounded-xl font-black px-3.5 gap-1.5 text-xs bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-white"
                             onClick={() => { setShowHistory(false); setShowDashboard(false); }}
                         >
-                            <ArrowLeft className="h-3.5 w-3.5" />
-                            Cocina
+                            <ArrowLeft className="h-4 w-4" />
+                            Volver a Cocina
                         </Button>
                     )}
-                    {/* Historial button */}
                     {!showHistory && !showDashboard && (
                         <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-lg font-bold px-3 gap-1.5 text-xs"
+                            className="h-9 rounded-xl font-black px-3.5 gap-1.5 text-xs bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-200"
                             onClick={() => setShowHistory(true)}
                         >
-                            <HistoryIcon className="h-3.5 w-3.5" />
+                            <HistoryIcon className="h-4 w-4 text-zinc-400" />
                             Historial
                         </Button>
                     )}
-                    {/* Dashboard button */}
                     {!showDashboard && (
                         <Button
-                            variant={showDashboard ? "default" : "ghost"}
+                            variant="ghost"
                             size="sm"
-                            className="h-8 rounded-lg font-bold px-3 gap-1.5 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                            className="h-9 rounded-xl font-black px-3.5 gap-1.5 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20"
                             onClick={() => { setShowDashboard(true); setShowHistory(false); }}
                         >
-                            <BarChart2 className="h-3.5 w-3.5" />
+                            <BarChart2 className="h-4 w-4" />
                             Stats
                         </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-zinc-400"
-                        onClick={() => { setTempThresholds({ yellow: yellowThreshold, red: redThreshold, alert: alertThreshold }); setShowSettings(true); }}>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        onClick={() => { setTempThresholds({ yellow: yellowThreshold, red: redThreshold, alert: alertThreshold }); setShowSettings(true); }} title="Configuración de tiempos">
                         <Settings className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-zinc-400"
-                        onClick={() => setSoundEnabled(!soundEnabled)}>
-                        {soundEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4 text-zinc-600" />}
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        onClick={() => setSoundEnabled(!soundEnabled)} title={soundEnabled ? "Sonido activado" : "Sonido desactivado"}>
+                        {soundEnabled ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4 text-zinc-600" />}
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-zinc-400"
-                        onClick={toggleFullscreen}>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        onClick={toggleFullscreen} title="Pantalla completa">
                         {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                     </Button>
-                    <Button variant="destructive" size="sm" className="h-8 rounded-lg font-bold px-2 gap-1"
+                    <Button variant="destructive" size="sm" className="h-9 rounded-xl font-black px-3 gap-1.5 text-xs bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-950/50"
                         onClick={handleLogout} disabled={isLoggingOut}>
-                        {isLoggingOut ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+                        {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
                     </Button>
                 </div>
             </div>
@@ -501,56 +547,67 @@ const KitchenDisplay: React.FC = () => {
             {/* ── Dashboard de Rendimiento ── */}
             {showDashboard && <KitchenPerformanceDashboard />}
 
-            {/* ── Grid de órdenes (hidden when dashboard is active) ── */}
-            {!showDashboard && <div className="flex-1 overflow-y-auto p-2">
+            {/* ── Grid de órdenes ── */}
+            {!showDashboard && <div className="flex-1 overflow-y-auto p-4 md:p-6">
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+                    <div className="flex flex-col items-center justify-center py-24 gap-3 text-zinc-500">
+                        <Loader2 className="animate-spin h-12 w-12 text-emerald-500" />
+                        <p className="font-black text-sm uppercase tracking-widest text-zinc-400">Cargando pedidos de cocina...</p>
                     </div>
-                ) : orders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center opacity-30">
-                        <UtensilsCrossed className="h-16 w-16 mb-3" />
-                        <h2 className="text-xl font-black uppercase">{showHistory ? 'Sin historial' : '¡Cocina Limpia!'}</h2>
-                        <p className="text-xs font-bold mt-1">{showHistory ? 'No hay pedidos completados' : 'No hay pedidos pendientes.'}</p>
+                ) : displayedOrders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-28 text-center bg-zinc-900/30 border border-zinc-800/60 rounded-3xl max-w-xl mx-auto my-12 p-8 shadow-2xl backdrop-blur-md">
+                        <div className="p-4 rounded-2xl bg-zinc-800/80 border border-zinc-700/80 mb-4 text-emerald-400 shadow-inner">
+                            <ChefHat className="h-14 w-14" />
+                        </div>
+                        <h2 className="text-2xl font-black uppercase text-white tracking-tight">{showHistory ? 'Sin Historial' : '¡Cocina al día!'}</h2>
+                        <p className="text-sm font-bold text-zinc-400 mt-2 max-w-md">
+                            {showHistory ? 'No hay pedidos completados recientemente.' : 'No hay pedidos pendientes en la cola. Los nuevos pedidos aparecerán automáticamente aquí.'}
+                        </p>
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '8px' }}>
-                        {orders.map((order) => (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '16px' }}>
+                        {displayedOrders.map((order) => (
                             <div
                                 key={order.id}
-                                className={`rounded-xl border-2 overflow-hidden flex flex-col transition-all duration-300 ${getTimeBg(order.created_at)}`}
+                                className={`rounded-2xl border-2 overflow-hidden flex flex-col transition-all duration-300 ${getTimeBg(order.created_at)}`}
                             >
                                 {/* Card Header */}
-                                <div className="flex justify-between items-center px-3 py-2 border-b border-black/10 dark:border-white/5 bg-black/10 dark:bg-black/30">
-                                    <div className="flex flex-col gap-0.5 min-w-0">
-                                        <div className="flex items-center gap-1 flex-wrap">
-                                            <span className="text-[9px] font-black uppercase bg-black text-white px-1.5 py-0.5 rounded shrink-0">
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/90">
+                                    <div className="flex flex-col gap-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="text-xs font-mono font-black uppercase bg-zinc-800 text-white px-2 py-0.5 rounded-lg border border-zinc-700 shrink-0">
                                                 #{order.order_number.split('-').pop()}
                                             </span>
                                             {order.notes && (order.notes.includes('[PARA LLEVAR]') || order.notes.includes('[DELIVERY]')) ? (
-                                                <span className="text-[8px] font-black text-orange-600 dark:text-orange-400 uppercase">🛍️ {order.notes.includes('[DELIVERY]') ? 'DELIVERY' : 'LLEVAR'}</span>
+                                                <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-lg uppercase">
+                                                    🛍️ {order.notes.includes('[DELIVERY]') ? 'DELIVERY' : 'LLEVAR'}
+                                                </span>
                                             ) : (
-                                                <span className="text-[8px] font-black text-blue-600 dark:text-blue-400 uppercase">{order.notes && order.notes.includes('[COMPRA AQUÍ]') ? '🏷️' : '🍽️'} {order.notes && order.notes.includes('[COMPRA AQUÍ]') ? 'COMPRA' : 'AQUÍ'}</span>
+                                                <span className="text-[10px] font-black bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-lg uppercase">
+                                                    {order.notes && order.notes.includes('[COMPRA AQUÍ]') ? '🏷️ COMPRA' : '🍽️ AQUÍ'}
+                                                </span>
                                             )}
                                             {order.notes && order.notes.includes('[ACTUALIZADO]') && (
-                                                <span className="text-[8px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded uppercase ml-1 animate-pulse shadow-sm">🔄 ACTUALIZADO</span>
+                                                <span className="text-[9px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded-lg uppercase animate-pulse shadow-md">
+                                                    🔄 ACTUALIZADO
+                                                </span>
                                             )}
-                                            {showHistory && <span className="text-[8px] font-black text-emerald-500 uppercase">✓ LISTO</span>}
+                                            {showHistory && <span className="text-[10px] font-black text-emerald-400 uppercase bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">✓ LISTO</span>}
                                         </div>
-                                        <p className="text-xs font-extrabold tracking-tight truncate max-w-[120px] leading-none">
+                                        <p className="text-sm font-black uppercase tracking-tight text-zinc-100 truncate max-w-[170px] leading-tight">
                                             {order.customer_name}
                                         </p>
                                     </div>
-                                    <div className={`flex items-center gap-1 font-mono font-black text-sm tracking-tighter shrink-0 ${getTimeStatus(order.created_at)}`}>
-                                        <Timer className="h-3.5 w-3.5" />
+                                    <div className={`px-3 py-1.5 rounded-xl border font-mono font-black text-sm flex items-center gap-1.5 shrink-0 shadow-inner ${getTimeStatus(order.created_at)}`}>
+                                        <Timer className="h-4 w-4" />
                                         {formatElapsed(order)}
                                     </div>
                                 </div>
 
-                                {/* Items */}
-                                <div className="flex-1">
+                                {/* Items Table */}
+                                <div className="flex-1 p-2 bg-zinc-950/60">
                                     <table className="w-full">
-                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                        <tbody className="divide-y divide-zinc-800/50">
                                             {order.open_order_items.map((item) => {
                                                 let displayTitle = item.product_name;
                                                 let extractedNote = item.comment;
@@ -561,29 +618,29 @@ const KitchenDisplay: React.FC = () => {
                                                 return (
                                                     <tr
                                                         key={item.id}
-                                                        className="hover:bg-emerald-500/10 cursor-pointer transition-all active:scale-[0.98] border-b border-black/5 dark:border-white/5 group"
+                                                        className="hover:bg-zinc-800/60 cursor-pointer transition-all active:scale-[0.98] group rounded-xl"
                                                         onClick={() => handleOpenRecipeModal(item.product_name, item.quantity, extractedNote, item.product_id)}
                                                         title="Haz clic para ver la receta e ingredientes"
                                                     >
-                                                        <td className="py-2 pl-3 pr-1.5 align-top w-8">
-                                                            <div className="h-6 w-6 rounded-md bg-black/10 dark:bg-white/10 group-hover:bg-emerald-500/20 group-hover:text-emerald-400 flex items-center justify-center font-black text-sm transition-colors">
+                                                        <td className="py-2.5 pl-3 pr-2 align-top w-10">
+                                                            <div className="h-8 w-8 rounded-xl bg-emerald-500/20 text-emerald-400 font-mono font-black text-base border border-emerald-500/30 flex items-center justify-center shadow-sm shrink-0">
                                                                 {item.quantity}
                                                             </div>
                                                         </td>
-                                                        <td className="py-2 pr-3">
-                                                            <div className="flex items-center justify-between gap-1">
-                                                                <div className="font-black text-xs leading-tight uppercase tracking-tight group-hover:text-emerald-300 transition-colors">
+                                                        <td className="py-2.5 pr-3">
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <div className="font-black text-sm uppercase tracking-tight text-zinc-100 group-hover:text-emerald-300 transition-colors leading-snug">
                                                                     {displayTitle}
                                                                 </div>
-                                                                <span className="text-[9px] font-bold text-zinc-400 group-hover:text-emerald-400 flex items-center gap-0.5 shrink-0 opacity-70 group-hover:opacity-100 transition-all">
-                                                                    <UtensilsCrossed className="h-2.5 w-2.5" />
+                                                                <span className="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 shrink-0 transition-all">
+                                                                    <UtensilsCrossed className="h-3 w-3" />
                                                                     Receta
                                                                 </span>
                                                             </div>
                                                             {extractedNote && (
-                                                                <div className="mt-1 flex items-start gap-1 px-2 py-1 rounded-md bg-amber-400 dark:bg-amber-500">
-                                                                    <span className="text-xs shrink-0">⚠️</span>
-                                                                    <p className="font-black text-[10px] text-amber-950 leading-tight uppercase">
+                                                                <div className="mt-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                                                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                                                                    <p className="font-black text-xs uppercase leading-tight">
                                                                         {extractedNote}
                                                                     </p>
                                                                 </div>
@@ -614,14 +671,14 @@ const KitchenDisplay: React.FC = () => {
 
                                         return (
                                             <div
-                                                className={`mx-2 mb-1.5 px-2 py-1.5 rounded-md border ${isUpdateNote ? 'bg-red-500/10 border-red-500/30 cursor-pointer hover:bg-red-500/20 active:scale-[0.98] transition-all' : 'bg-orange-500/10 border-orange-500/20'}`}
+                                                className={`mx-3 my-2 p-2.5 rounded-xl border ${isUpdateNote ? 'bg-red-500/15 border-red-500/40 cursor-pointer hover:bg-red-500/25 active:scale-[0.98] transition-all' : 'bg-orange-500/15 border-orange-500/30'}`}
                                                 onClick={isUpdateNote ? handleNoteClick : undefined}
                                             >
-                                                <p className={`text-[8px] font-black uppercase mb-0.5 flex items-center gap-0.5 ${isUpdateNote ? 'text-red-500' : 'text-orange-600'}`}>
-                                                    <AlertTriangle className="h-2.5 w-2.5" />
-                                                    {isUpdateNote ? '🔄 VER PEDIDO ORIGINAL' : 'NOTA'}
+                                                <p className={`text-[10px] font-black uppercase mb-1 flex items-center gap-1 ${isUpdateNote ? 'text-red-400' : 'text-orange-400'}`}>
+                                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                                    {isUpdateNote ? '🔄 VER PEDIDO ORIGINAL' : 'NOTA DEL PEDIDO'}
                                                 </p>
-                                                <p className={`text-[10px] font-bold whitespace-pre-line ${isUpdateNote ? 'text-red-900 dark:text-red-200' : 'text-orange-900 dark:text-orange-200'}`}>
+                                                <p className={`text-xs font-bold whitespace-pre-line ${isUpdateNote ? 'text-red-200' : 'text-orange-200'}`}>
                                                     {cleanNote}
                                                 </p>
                                             </div>
@@ -629,11 +686,11 @@ const KitchenDisplay: React.FC = () => {
                                     })()}
                                 </div>
 
-                                {/* Complete button */}
+                                {/* Complete Button */}
                                 {!showHistory && (
-                                    <div className="p-2">
+                                    <div className="p-3 bg-zinc-900/90 border-t border-zinc-800/80">
                                         <Button
-                                            className="w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-widest uppercase active:scale-95 transition-all"
+                                            className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs tracking-widest uppercase shadow-lg shadow-emerald-950/40 active:scale-[0.98] transition-all"
                                             onClick={() => updateStatusMutation.mutate({
                                                 orderId: order.id,
                                                 status: (order.notes?.includes('[PARA LLEVAR]') || order.notes?.includes('[DELIVERY]')) ? 'shipped' : 'completed'
@@ -641,8 +698,8 @@ const KitchenDisplay: React.FC = () => {
                                             disabled={updateStatusMutation.isPending}
                                         >
                                             {updateStatusMutation.isPending
-                                                ? <Loader2 className="animate-spin h-4 w-4" />
-                                                : <><Check className="h-4 w-4 mr-1" />LISTO</>
+                                                ? <Loader2 className="animate-spin h-5 w-5" />
+                                                : <><Check className="h-5 w-5 mr-1.5" />MARCAR COMO LISTO</>
                                             }
                                         </Button>
                                     </div>
