@@ -343,9 +343,9 @@ export const generateCleanInvoiceHTML = (
     <!-- Barcode & Footer Disclaimer -->
     <div style="border-top: 2px solid #09090b; padding-top: 10px; margin-top: 8px; text-align: center;">
       ${invoiceData.showBarcode && invoiceData.barcodeDataUrl && !invoiceData.isElectronic ? `
-        <div style="margin-bottom: 6px;">
-          <img src="${invoiceData.barcodeDataUrl}" alt="Código de barras" style="max-width: 90%; height: 38px; margin: 0 auto; display: block; filter: grayscale(100%);" />
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: #475569; margin-top: 2px;">${displayNCF}</div>
+        <div style="margin-bottom: 8px; text-align: center;">
+          <img src="${invoiceData.barcodeDataUrl}" alt="Código de barras" style="max-width: 95%; width: 92%; height: 60px; margin: 0 auto; display: block; filter: grayscale(100%);" />
+          <div style="font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 13px; font-weight: 900; color: #09090b; margin-top: 4px; letter-spacing: 1.5px;">${displayNCF}</div>
         </div>
       ` : ''}
 

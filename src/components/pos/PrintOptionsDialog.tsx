@@ -351,10 +351,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       const canvas = document.createElement('canvas');
       JsBarcode(canvas, text, {
         format: "CODE128",
-        width: 2,
-        height: 50,
+        width: 2.5,
+        height: 65,
         displayValue: true,
-        fontSize: 12,
+        fontSize: 14,
         margin: 5
       });
       return canvas.toDataURL();

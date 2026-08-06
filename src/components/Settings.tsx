@@ -3015,19 +3015,19 @@ const Settings = () => {
                               </div>
                             ) : (
                               <div className="bg-transparent inline-block">
-                                <svg width="200" height="50" className="mx-auto opacity-90">
+                                <svg width="240" height="75" className="mx-auto opacity-90">
                                   {/* Simulación de código de barras */}
-                                  {[...Array(24)].map((_, i) => (
+                                  {[...Array(26)].map((_, i) => (
                                     <rect
                                       key={i}
-                                      x={5 + i * 8}
+                                      x={5 + i * 9}
                                       y="0"
-                                      width={Math.random() > 0.5 ? 3 : (Math.random() > 0.5 ? 2 : 4)}
-                                      height="38"
+                                      width={Math.random() > 0.5 ? 4 : (Math.random() > 0.5 ? 2.5 : 4.5)}
+                                      height="55"
                                       fill="black"
                                     />
                                   ))}
-                                  <text x="100" y="48" fontSize="10" fontWeight="bold" fontFamily="monospace" textAnchor="middle" fill="black">B0200000001</text>
+                                  <text x="120" y="70" fontSize="13" fontWeight="900" fontFamily="monospace" textAnchor="middle" fill="black">B0200000001</text>
                                 </svg>
                               </div>
                             )}
