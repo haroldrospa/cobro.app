@@ -411,19 +411,19 @@ const KitchenDisplay: React.FC = () => {
     };
 
     const getTimeBg = (createdAt: string) => {
-        if (showHistory) return "bg-white border border-zinc-300 opacity-90 shadow-lg";
+        if (showHistory) return "bg-white border border-zinc-200 opacity-90 shadow-lg";
 
         const minutes = differenceInMinutes(now, new Date(createdAt));
-        if (minutes >= alertThreshold) return "bg-white border-2 border-red-500 shadow-[0_0_30px_rgba(220,38,38,0.25)] animate-[blink-red_0.8s_ease-in-out_infinite]";
-        if (minutes >= redThreshold) return "bg-white border-2 border-red-500 shadow-xl";
-        if (minutes >= yellowThreshold) return "bg-white border-2 border-amber-400 shadow-xl";
-        return "bg-white border border-zinc-200 shadow-2xl hover:shadow-2xl hover:border-zinc-400 transition-all";
+        if (minutes >= alertThreshold) return "bg-white border-2 border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.3)] animate-[blink-red_1.2s_ease-in-out_infinite]";
+        if (minutes >= redThreshold) return "bg-white border-2 border-red-500/80 shadow-xl shadow-red-950/20";
+        if (minutes >= yellowThreshold) return "bg-white border-2 border-amber-400 shadow-xl shadow-amber-950/20";
+        return "bg-white border border-zinc-200/80 shadow-xl hover:shadow-2xl hover:border-zinc-400 transition-all";
     };
 
     if (!userStore) return <div className="flex items-center justify-center min-h-[60vh] bg-zinc-950 text-white"><Loader2 className="animate-spin h-8 w-8 text-emerald-500" /></div>;
 
     return (
-        <div className="fixed inset-0 bg-zinc-950 flex flex-col overflow-hidden text-white font-sans selection:bg-emerald-500/30">
+        <div className="fixed inset-0 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex flex-col overflow-hidden text-white font-sans selection:bg-emerald-500/30">
             <audio ref={audioRef} src="https://assets.mixkit.com/active_storage/sfx/2568/2568-preview.mp3" preload="auto" />
             <audio ref={criticalAudioRef} src="https://assets.mixkit.com/active_storage/sfx/1003/1003-preview.mp3" preload="auto" />
 
@@ -548,7 +548,7 @@ const KitchenDisplay: React.FC = () => {
             {showDashboard && <KitchenPerformanceDashboard />}
 
             {/* ── Grid de órdenes ── */}
-            {!showDashboard && <div className="flex-1 overflow-y-auto p-5 md:p-6 bg-zinc-950">
+            {!showDashboard && <div className="flex-1 overflow-y-auto p-6 md:p-8">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-24 gap-3 text-zinc-500">
                         <Loader2 className="animate-spin h-12 w-12 text-emerald-500" />
@@ -565,7 +565,7 @@ const KitchenDisplay: React.FC = () => {
                         </p>
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 460px))', gap: '24px', justifyContent: 'start' }}>
                         {displayedOrders.map((order) => (
                             <div
                                 key={order.id}
