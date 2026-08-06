@@ -118,15 +118,11 @@ export const generateCleanInvoiceHTML = (
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
-      page-break-before: avoid !important;
-      page-break-after: avoid !important;
     }
     
     @page {
       size: 80mm auto;
-      margin: ${pageMargin};
+      margin: 0mm;
     }
     
     @media screen {
@@ -170,6 +166,8 @@ export const generateCleanInvoiceHTML = (
         padding: ${containerPadding} !important;
         width: 80mm !important;
         max-width: 80mm !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
       * {
         -webkit-print-color-adjust: exact !important;
@@ -185,6 +183,8 @@ export const generateCleanInvoiceHTML = (
       max-width: 80mm;
       margin: 0 auto;
       overflow: visible;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
   </style>
 </head>
