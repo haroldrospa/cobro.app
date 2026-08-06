@@ -40,6 +40,8 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   const [mergeSources, setMergeSources] = useState<string[]>([]);         // orders to absorb
   const [confirmMerge, setConfirmMerge] = useState(false);
 
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['pos-open-orders', userStore?.id],
     queryFn: async () => {
@@ -105,6 +107,44 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     onError: (error) => {
       toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el pedido" });
       console.error('Error deleting order:', error);
+    }
+  });
+
+  // ─── Delete All mutation ───
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!userStore?.id) return;
+      const { data: storeOrders } = await supabase
+        .from('open_orders')
+        .select('id')
+        .eq('store_id', userStore.id)
+        .eq('source', 'pos')
+        .eq('payment_status', 'pending');
+
+      if (storeOrders && storeOrders.length > 0) {
+        const ids = storeOrders.map((o: any) => o.id);
+        const { error: itemsError } = await supabase
+          .from('open_order_items')
+          .delete()
+          .in('order_id', ids);
+        if (itemsError) throw itemsError;
+
+        const { error: ordersError } = await supabase
+          .from('open_orders')
+          .delete()
+          .in('id', ids);
+        if (ordersError) throw ordersError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+      toast({ title: "Pedidos eliminados", description: "Se han eliminado todos los pedidos guardados correctamente" });
+      setConfirmDeleteAll(false);
+      setSelectedOrderId(null);
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error?.message || "No se pudieron eliminar los pedidos" });
+      console.error('Error deleting all orders:', error);
     }
   });
 
@@ -419,6 +459,18 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                 {/* Mobile Action Buttons (Right of the title on mobile) */}
                 {isMobile && (
                   <div className="flex items-center gap-1 shrink-0">
+                    {filteredOrders.length > 0 && !mergeMode && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-destructive/40 text-destructive hover:bg-destructive/10 px-2 text-xs font-bold gap-1"
+                        onClick={() => setConfirmDeleteAll(true)}
+                        title="Eliminar todos los pedidos"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="text-[10px]">Eliminar Todos</span>
+                      </Button>
+                    )}
                     {filteredOrders.length > 1 && !mergeMode && (
                       <Button
                         variant="outline"
@@ -450,6 +502,18 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                 {/* Desktop Buttons */}
                 {!isMobile && (
                   <div className="flex items-center gap-1.5">
+                    {filteredOrders.length > 0 && !mergeMode && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive font-bold"
+                        onClick={() => setConfirmDeleteAll(true)}
+                        title="Eliminar todos los pedidos"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Eliminar Todos
+                      </Button>
+                    )}
                     {filteredOrders.length > 1 && !mergeMode && (
                       <Button
                         variant="outline"
@@ -604,6 +668,30 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               onClick={() => mergeTarget && mergeOrdersMutation.mutate({ targetId: mergeTarget, sourceIds: mergeSources })}
             >
               {mergeOrdersMutation.isPending ? 'Uniendo...' : 'Unir Cuentas'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* ─── Delete ALL confirmation ─── */}
+      <AlertDialog open={confirmDeleteAll} onOpenChange={setConfirmDeleteAll}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              ¿Eliminar todos los pedidos guardados?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán permanentemente <strong>{filteredOrders.length} pedido(s)</strong> guardado(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDeleteAll(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteAllMutation.mutate()}
+              disabled={deleteAllMutation.isPending}
+            >
+              {deleteAllMutation.isPending ? 'Eliminando...' : 'Sí, eliminar todos'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -20,8 +20,19 @@ import {
     User,
     Wallet,
     CreditCard,
-    LogOut
+    LogOut,
+    Trash2
 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +60,34 @@ const Delivery: React.FC = () => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+
+    const deleteAllMutation = useMutation({
+        mutationFn: async () => {
+            if (!userStore?.id) return;
+            const { data: storeOrders } = await supabase
+                .from('open_orders')
+                .select('id')
+                .eq('store_id', userStore.id)
+                .eq('source', 'delivery');
+
+            if (storeOrders && storeOrders.length > 0) {
+                const ids = storeOrders.map(o => o.id);
+                const { error: itemsErr } = await supabase.from('open_order_items').delete().in('order_id', ids);
+                if (itemsErr) throw itemsErr;
+                const { error: ordersErr } = await supabase.from('open_orders').delete().in('id', ids);
+                if (ordersErr) throw ordersErr;
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['delivery-orders'] });
+            toast({ title: 'Pedidos eliminados', description: 'Se han eliminado todos los pedidos de entrega.' });
+            setShowDeleteAllConfirm(false);
+        },
+        onError: (err: any) => {
+            toast({ variant: 'destructive', title: 'Error', description: err.message || 'No se pudieron eliminar los pedidos' });
+        }
+    });
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -167,6 +206,18 @@ const Delivery: React.FC = () => {
                             <Badge variant="outline" className="h-8 border-primary/20 bg-primary/5 text-primary font-bold px-3">
                                 {orders.length} Pedidos
                             </Badge>
+                            {orders.length > 0 && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 rounded-lg font-bold px-2.5 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive"
+                                    onClick={() => setShowDeleteAllConfirm(true)}
+                                    title="Eliminar todos los pedidos"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Eliminar todos</span>
+                                </Button>
+                            )}
                             <Button
                                 variant="destructive"
                                 size="sm"
@@ -336,6 +387,30 @@ const Delivery: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            <AlertDialog open={showDeleteAllConfirm} onOpenChange={setShowDeleteAllConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                            <Trash2 className="h-5 w-5" />
+                            ¿Eliminar todos los pedidos de entrega?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminarán permanentemente <strong>{orders.length} pedido(s)</strong> de entrega.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowDeleteAllConfirm(false)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => deleteAllMutation.mutate()}
+                            disabled={deleteAllMutation.isPending}
+                        >
+                            {deleteAllMutation.isPending ? 'Eliminando...' : 'Sí, eliminar todos'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

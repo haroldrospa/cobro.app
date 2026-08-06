@@ -686,9 +686,31 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                 {blockingOrders.length > 0 && (
                                     <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl space-y-3">
-                                        <div className="flex items-center gap-2 text-red-500">
-                                            <Lock className="h-4 w-4 shrink-0" />
-                                            <span className="text-xs font-black uppercase tracking-widest">Ventas Pendientes Bloqueando</span>
+                                        <div className="flex items-center justify-between gap-2 text-red-500">
+                                            <div className="flex items-center gap-2">
+                                                <Lock className="h-4 w-4 shrink-0" />
+                                                <span className="text-xs font-black uppercase tracking-widest">Ventas Pendientes ({blockingOrders.length})</span>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                className="h-6 px-2 text-[10px] font-bold gap-1 rounded-lg shrink-0"
+                                                onClick={async () => {
+                                                    if (!confirm(`¿Eliminar los ${blockingOrders.length} pedidos pendientes? Esta acción no se puede deshacer.`)) return;
+                                                    try {
+                                                        const ids = blockingOrders.map(o => o.id);
+                                                        await supabase.from('open_order_items').delete().in('order_id', ids);
+                                                        await supabase.from('open_orders').delete().in('id', ids);
+                                                        setBlockingOrders([]);
+                                                        toast({ title: 'Pedidos eliminados', description: 'Se eliminaron todos los pedidos pendientes.' });
+                                                    } catch (err: any) {
+                                                        toast({ variant: 'destructive', title: 'Error', description: err.message });
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                                Cancelar Todos
+                                            </Button>
                                         </div>
                                         <p className="text-[10px] text-zinc-400 font-medium">Debes cobrar o cancelar estos pedidos antes de finalizar el día:</p>
                                         <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
