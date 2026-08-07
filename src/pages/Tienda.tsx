@@ -1549,19 +1549,14 @@ const Tienda: React.FC = () => {
           </div>
 
           <div className="bg-card/80 backdrop-blur-md px-6 py-4 border-t border-border/40">
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              {(companySettings?.phone || store?.phone) && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCheckoutWhatsApp}
-                  disabled={createOrder.isPending || !customerName.trim() || !isStoreCurrentlyOpen}
-                  className="w-full sm:flex-1 h-12 rounded-xl text-sm font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Phone className="h-4 w-4" />
-                  Pedir por WhatsApp
-                </Button>
-              )}
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowCheckout(false)}
+                className="w-full sm:w-auto h-12 rounded-xl font-semibold"
+              >
+                Cancelar
+              </Button>
               <Button
                 onClick={handleCheckout}
                 disabled={createOrder.isPending || !customerName.trim() || !isStoreCurrentlyOpen}
