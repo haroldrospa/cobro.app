@@ -107,11 +107,6 @@ const MiTienda: React.FC = () => {
         items,
       });
 
-      toast({ 
-        title: '¡Pedido recibido!', 
-        description: 'Tu pedido será procesado pronto.' 
-      });
-      
       setCart([]);
       setShowCheckout(false);
       setShowCart(false);
