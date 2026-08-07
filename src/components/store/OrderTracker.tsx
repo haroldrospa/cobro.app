@@ -125,9 +125,9 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ status, shopType }) 
                                     )}
                                 </motion.div>
 
-                                <div className="mt-2 text-center w-full min-w-0 px-0.5">
+                                <div className="mt-2 text-center w-full min-w-0 px-0">
                                     <p className={cn(
-                                        "text-[10px] leading-tight font-bold transition-colors break-words text-center",
+                                        "text-[9.5px] sm:text-[10px] leading-tight font-bold transition-colors text-center [word-break:keep-all]",
                                         isActive ? "text-primary font-black" : isCompleted ? "text-emerald-500 font-semibold" : "text-muted-foreground/60"
                                     )}>
                                         {step.label}

@@ -153,15 +153,35 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
         }
     }, [open, user, defaultView]);
 
+    /* ── Sort orders by status priority (pending on top, preparing below, completed at bottom) ── */
+    const sortedOrders = React.useMemo(() => {
+        if (!orders.length) return [];
+        const statusPriority: Record<string, number> = {
+            pending: 0,
+            confirmed: 1,
+            preparing: 2,
+            shipped: 3,
+            delivered: 4,
+            completed: 4,
+            cancelled: 5,
+        };
+        return [...orders].sort((a: any, b: any) => {
+            const pA = statusPriority[a.order_status] ?? 99;
+            const pB = statusPriority[b.order_status] ?? 99;
+            if (pA !== pB) return pA - pB;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+    }, [orders]);
+
     /* ── Auto-expand active orders ── */
     useEffect(() => {
-        if (orders.length > 0 && !expandedOrder) {
-            const active = orders.find((o: any) =>
+        if (sortedOrders.length > 0 && !expandedOrder) {
+            const active = sortedOrders.find((o: any) =>
                 !['delivered', 'cancelled', 'completed'].includes(o.order_status)
             );
             if (active) setExpandedOrder(active.id);
         }
-    }, [orders]);
+    }, [sortedOrders]);
 
     /* ─────────────────────────────────────────
        CONFETTI BURST
@@ -748,7 +768,7 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
         );
 
         const hasCart = cartItemsCount > 0;
-        const hasOrders = orders.length > 0;
+        const hasOrders = sortedOrders.length > 0;
 
         if (!hasCart && !hasOrders) {
             return (
@@ -803,10 +823,10 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
                     <div className="space-y-3">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">
-                                Historial de Pedidos ({orders.length})
+                                Historial de Pedidos ({sortedOrders.length})
                             </p>
                         </div>
-                        {orders.map((order: any) => {
+                        {sortedOrders.map((order: any) => {
                             const isExpanded = expandedOrder === order.id;
                             const isActive = !['delivered', 'cancelled', 'completed'].includes(order.order_status);
                             return (
