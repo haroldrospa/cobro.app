@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { shopperSupabase } from '@/integrations/supabase/shopperClient';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useShopperOrders = (email?: string, phone?: string) => {
     const queryClient = useQueryClient();
@@ -27,39 +28,73 @@ export const useShopperOrders = (email?: string, phone?: string) => {
 
             const { data, error } = await query;
             if (error) throw error;
-            return data;
+            return data || [];
         },
+        staleTime: 1000 * 5,
         enabled: !!email || !!phone || true,
     });
 
-    // Real-time listener
+    // Listener Realtime global (sin filtro de columna en servidor para capturar eventos DELETE)
     useEffect(() => {
-        const filter = email ? `customer_email=eq.${email}` : phone ? `customer_phone=eq.${phone}` : null;
+        const channelId = `shopper-orders-realtime-${email || phone || 'global'}`;
 
-        // If we don't have a filter yet, we might get it from session later, 
-        // but for now let's at least listen if we have one.
-        if (!filter) return;
+        const handlePayload = (payload: any) => {
+            console.log('⚡ Evento Realtime recibido en tienda cliente:', payload);
 
-        const channelId = `shopper-orders-realtime-${email || phone}`;
-        const channel = shopperSupabase
-            .channel(channelId)
+            const eventType = payload.eventType;
+
+            if (eventType === 'DELETE') {
+                const deletedId = payload.old?.id;
+                if (deletedId) {
+                    queryClient.setQueryData(['shopper-orders', email, phone], (old: any[] | undefined) => {
+                        if (!old) return [];
+                        return old.filter((o: any) => String(o.id) !== String(deletedId));
+                    });
+                }
+            } else if (eventType === 'UPDATE') {
+                const updated = payload.new as any;
+                if (updated?.id) {
+                    queryClient.setQueryData(['shopper-orders', email, phone], (old: any[] | undefined) => {
+                        if (!old) return [];
+                        return old.map((o: any) => String(o.id) === String(updated.id) ? { ...o, ...updated } : o);
+                    });
+                }
+            }
+
+            // Sincronizar inmediatamente todas las consultas relativas a pedidos del cliente
+            queryClient.invalidateQueries({ queryKey: ['shopper-orders'] });
+            queryClient.refetchQueries({ queryKey: ['shopper-orders'] });
+        };
+
+        const channelShopper = shopperSupabase
+            .channel(`${channelId}-shopper`)
             .on(
                 'postgres_changes',
                 {
-                    event: '*', // Listen to INSERT, UPDATE, DELETE
+                    event: '*',
                     schema: 'public',
                     table: 'open_orders',
-                    filter: filter
                 },
-                (payload) => {
-                    console.log('⚡ Shopper order change detected:', payload);
-                    queryClient.invalidateQueries({ queryKey: ['shopper-orders', email, phone] });
-                }
+                handlePayload
+            )
+            .subscribe();
+
+        const channelSupabase = supabase
+            .channel(`${channelId}-merchant`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'open_orders',
+                },
+                handlePayload
             )
             .subscribe();
 
         return () => {
-            shopperSupabase.removeChannel(channel);
+            shopperSupabase.removeChannel(channelShopper);
+            supabase.removeChannel(channelSupabase);
         };
     }, [email, phone, queryClient]);
 

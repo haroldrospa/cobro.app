@@ -86,6 +86,48 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     'store'
   );
 
+  // Escuchador Realtime dedicado para WebSalesDialog
+  React.useEffect(() => {
+    if (!isOpen || !userStore?.id) return;
+
+    const channel = supabase
+      .channel(`web-sales-dialog-realtime-${userStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'open_orders',
+          filter: `store_id=eq.${userStore.id}`,
+        },
+        (payload) => {
+          console.log('⚡ Evento Realtime recibido en WebSalesDialog:', payload);
+          if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              queryClient.setQueryData(['web-orders', userStore.id], (old: any[] | undefined) =>
+                (old || []).filter((o: any) => String(o.id) !== String(deletedId))
+              );
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as any;
+            if (updated?.id) {
+              queryClient.setQueryData(['web-orders', userStore.id], (old: any[] | undefined) =>
+                (old || []).map((o: any) => String(o.id) === String(updated.id) ? { ...o, ...updated } : o)
+              );
+            }
+          }
+          queryClient.invalidateQueries({ queryKey: ['web-orders'] });
+          queryClient.refetchQueries({ queryKey: ['web-orders'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, userStore?.id, queryClient]);
+
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
       const { error: itemsError } = await supabase
@@ -102,8 +144,21 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
 
       if (orderError) throw orderError;
     },
+    onMutate: async (orderId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['web-orders', userStore?.id] });
+      const previousOrders = queryClient.getQueryData(['web-orders', userStore?.id]);
+
+      queryClient.setQueryData(['web-orders', userStore?.id], (old: any[] | undefined) => {
+        if (!old) return [];
+        return old.filter((o: any) => String(o.id) !== String(orderId));
+      });
+
+      return { previousOrders };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
+      queryClient.refetchQueries({ queryKey: ['web-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['web-orders-count'] });
       toast({
         title: "Pedido eliminado",
         description: "El pedido ha sido eliminado correctamente"
@@ -111,7 +166,10 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
       setOrderToDelete(null);
       setSelectedOrderId(null);
     },
-    onError: (error) => {
+    onError: (error, _orderId, context: any) => {
+      if (context?.previousOrders) {
+        queryClient.setQueryData(['web-orders', userStore?.id], context.previousOrders);
+      }
       toast({
         variant: "destructive",
         title: "Error",
@@ -129,14 +187,29 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
         .eq('id', orderId);
       if (error) throw error;
     },
+    onMutate: async ({ orderId, status }: { orderId: string, status: string }) => {
+      await queryClient.cancelQueries({ queryKey: ['web-orders', userStore?.id] });
+      const previousOrders = queryClient.getQueryData(['web-orders', userStore?.id]);
+
+      queryClient.setQueryData(['web-orders', userStore?.id], (old: any[] | undefined) => {
+        if (!old) return [];
+        return old.map((o: any) => String(o.id) === String(orderId) ? { ...o, order_status: status } : o);
+      });
+
+      return { previousOrders };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
+      queryClient.refetchQueries({ queryKey: ['web-orders'] });
       toast({
         title: "Estado actualizado",
         description: "El estado del pedido ha sido actualizado"
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, _vars, context: any) => {
+      if (context?.previousOrders) {
+        queryClient.setQueryData(['web-orders', userStore?.id], context.previousOrders);
+      }
       toast({
         variant: "destructive",
         title: "Error",
