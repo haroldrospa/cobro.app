@@ -63,54 +63,54 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ status, shopType }) 
     }
 
     return (
-        <div className="mt-8 w-full">
+        <div className="mt-6 w-full">
             {/* Progress Bar Container */}
-            <div className="relative mb-12 px-4">
+            <div className="relative mb-8 px-2">
                 {/* Background Line */}
-                <div className="absolute top-5 left-4 right-4 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full" />
+                <div className="absolute top-4 left-6 right-6 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
 
                 {/* Animated Progress Line with Gradient */}
                 <motion.div
-                    className="absolute top-5 left-4 h-1.5 bg-gradient-to-r from-primary via-emerald-500 to-emerald-400 rounded-full z-10 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                    className="absolute top-4 left-6 h-1 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full z-10 shadow-[0_0_12px_rgba(16,185,129,0.5)]"
                     initial={{ width: '0%' }}
-                    animate={{ width: `calc(${(currentIndex / (statusSteps.length - 1)) * 100}% - 8px)` }}
-                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                    animate={{ width: `calc(${(currentIndex / (statusSteps.length - 1)) * 100}%)` }}
+                    transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
                 />
 
                 {/* Steps */}
-                <div className="relative flex justify-between">
+                <div className="relative flex justify-between items-start">
                     {statusSteps.map((step, index) => {
                         const Icon = step.icon;
                         const isCompleted = index < currentIndex;
                         const isActive = index === currentIndex;
 
                         return (
-                            <div key={step.id} className="flex flex-col items-center">
+                            <div key={step.id} className="flex flex-col items-center w-14 sm:w-16 min-w-0">
                                 <motion.div
                                     initial={false}
                                     animate={{
-                                        scale: isActive ? 1.3 : 1,
-                                        backgroundColor: isActive || isCompleted ? 'hsl(var(--primary))' : 'hsl(var(--background))',
+                                        scale: isActive ? 1.15 : 1,
+                                        backgroundColor: isActive || isCompleted ? 'hsl(var(--primary))' : 'hsl(var(--card))',
                                         borderColor: isActive || isCompleted ? 'hsl(var(--primary))' : 'hsl(var(--border))',
-                                        color: isActive || isCompleted ? '#fff' : 'hsl(var(--muted-foreground))'
+                                        color: isActive || isCompleted ? '#ffffff' : 'hsl(var(--muted-foreground))'
                                     }}
                                     className={cn(
-                                        "h-10 w-10 rounded-2xl border-2 flex items-center justify-center relative z-20 transition-all duration-500 shadow-sm",
-                                        isActive && "shadow-xl shadow-primary/30 ring-4 ring-primary/10",
+                                        "h-9 w-9 rounded-xl border-2 flex items-center justify-center relative z-20 transition-all duration-300 shadow-sm shrink-0",
+                                        isActive && "shadow-lg shadow-emerald-500/30 ring-4 ring-emerald-500/20 border-emerald-400",
                                     )}
                                 >
                                     {isActive ? (
                                         <motion.div
                                             animate={{
-                                                rotate: step.id === 'preparing' ? [0, 15, -15, 0] : 0,
-                                                y: step.id === 'shipped' ? [0, -3, 0] : 0
+                                                rotate: step.id === 'preparing' ? [0, 10, -10, 0] : 0,
+                                                y: step.id === 'shipped' ? [0, -2, 0] : 0
                                             }}
                                             transition={{ repeat: Infinity, duration: 2 }}
                                         >
-                                            <Icon className={cn("h-5 w-5", isActive && "animate-pulse")} />
+                                            <Icon className="h-4 w-4 animate-pulse text-white" />
                                         </motion.div>
                                     ) : (
-                                        <Icon className="h-5 w-5" />
+                                        <Icon className="h-4 w-4" />
                                     )}
 
                                     {/* Success checkmark Overlay */}
@@ -120,24 +120,15 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ status, shopType }) 
                                             animate={{ scale: 1 }}
                                             className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 border-2 border-background"
                                         >
-                                            <CheckCircle2 className="h-2 w-2" />
+                                            <Check className="h-2.5 w-2.5 stroke-[3]" />
                                         </motion.div>
-                                    )}
-
-                                    {/* Active Pulse Ring */}
-                                    {isActive && (
-                                        <motion.div
-                                            className="absolute inset-0 rounded-2xl bg-primary/30"
-                                            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                                            transition={{ repeat: Infinity, duration: 2 }}
-                                        />
                                     )}
                                 </motion.div>
 
-                                <div className="mt-4 text-center">
+                                <div className="mt-2 text-center w-full min-w-0 px-0.5">
                                     <p className={cn(
-                                        "text-[9px] font-black uppercase tracking-widest transition-colors duration-500",
-                                        isActive ? "text-primary" : isCompleted ? "text-emerald-600/80" : "text-muted-foreground/40"
+                                        "text-[10px] leading-tight font-bold transition-colors break-words text-center",
+                                        isActive ? "text-primary font-black" : isCompleted ? "text-emerald-500 font-semibold" : "text-muted-foreground/60"
                                     )}>
                                         {step.label}
                                     </p>
@@ -151,42 +142,39 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ status, shopType }) 
             {/* Current Status Message Display (Premium Glassmorphism) */}
             <motion.div
                 layout
-                whileHover={{ y: -2 }}
-                className="relative p-5 rounded-[2rem] overflow-hidden border border-primary/20 bg-primary/5 group"
+                className="relative p-4 rounded-2xl overflow-hidden border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/30 backdrop-blur-sm shadow-sm"
             >
-                {/* Decorative Blur */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] rounded-full -mr-16 -mt-16 group-hover:bg-primary/20 transition-colors" />
+                {/* Decorative Background Accent */}
+                <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/10 blur-2xl rounded-full -mr-10 -mt-10 pointer-events-none" />
 
-                <div className="relative flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-white dark:bg-zinc-900 shadow-lg flex items-center justify-center text-primary ring-1 ring-primary/10">
-                            {status === 'pending' && <Loader2 className="h-6 w-6 animate-spin text-amber-500" />}
-                            {status === 'confirmed' && <CheckCircle2 className="h-6 w-6 text-blue-500" />}
-                            {status === 'preparing' && (
-                                isMarket
-                                    ? <PackageCheck className="h-6 w-6 text-emerald-500 animate-bounce" />
-                                    : <Flame className="h-6 w-6 text-orange-500 animate-bounce" />
-                            )}
-                            {status === 'shipped' && <Bike className="h-6 w-6 text-indigo-500" />}
-                            {status === 'delivered' && <CheckCircle2 className="h-6 w-6 text-emerald-500" />}
-                            {(!['pending', 'confirmed', 'preparing', 'shipped', 'delivered'].includes(status)) && <Clock className="h-6 w-6" />}
-                        </div>
-                        <div>
-                            <h4 className="font-black text-sm text-foreground uppercase tracking-tight leading-none mb-1">
-                                {status === 'pending' ? 'Pedido Recibido' :
-                                    status === 'confirmed' ? '¡Orden Confirmada!' :
-                                        status === 'preparing' ? (isMarket ? 'Preparando tu Pedido' : 'En el Fogon') :
-                                            status === 'shipped' ? '¡Va en camino!' :
-                                                status === 'delivered' ? 'Entregado' : 'Estado Actualizado'}
-                            </h4>
-                            <p className="text-[11px] text-muted-foreground font-bold opacity-70">
-                                {status === 'pending' ? 'La tienda está por confirmar tu pedido.' :
-                                    status === 'confirmed' ? '¡Genial! Tu pedido ha sido aceptado.' :
-                                        status === 'preparing' ? (isMarket ? 'Tu pedido está siendo preparado con cuidado.' : 'Nuestros cocineros están manos a la obra.') :
-                                            status === 'shipped' ? 'El repartidor ya tiene tu pedido.' :
-                                                status === 'delivered' ? '¡Muchas gracias por pedir con nosotros!' : 'Sincronizando actualizaciones en tiempo real.'}
-                            </p>
-                        </div>
+                <div className="relative flex items-center gap-3.5">
+                    <div className="h-11 w-11 rounded-xl bg-background shadow-md border border-emerald-500/20 flex items-center justify-center text-primary shrink-0">
+                        {status === 'pending' && <Loader2 className="h-5 w-5 animate-spin text-amber-500" />}
+                        {status === 'confirmed' && <CheckCircle2 className="h-5 w-5 text-blue-500" />}
+                        {status === 'preparing' && (
+                            isMarket
+                                ? <PackageCheck className="h-5 w-5 text-emerald-500 animate-bounce" />
+                                : <Flame className="h-5 w-5 text-orange-500 animate-bounce" />
+                        )}
+                        {status === 'shipped' && <Bike className="h-5 w-5 text-indigo-500" />}
+                        {status === 'delivered' && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                        {(!['pending', 'confirmed', 'preparing', 'shipped', 'delivered'].includes(status)) && <Clock className="h-5 w-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-xs sm:text-sm text-foreground tracking-tight leading-tight mb-0.5">
+                            {status === 'pending' ? 'Pedido Recibido' :
+                                status === 'confirmed' ? '¡Orden Confirmada!' :
+                                    status === 'preparing' ? (isMarket ? 'Preparando tu Pedido' : 'En el Fogón') :
+                                        status === 'shipped' ? '¡Va en camino!' :
+                                            status === 'delivered' ? 'Entregado' : 'Estado Actualizado'}
+                        </h4>
+                        <p className="text-[11px] text-muted-foreground font-medium leading-snug">
+                            {status === 'pending' ? 'La tienda está por confirmar tu pedido.' :
+                                status === 'confirmed' ? '¡Genial! Tu pedido ha sido aceptado.' :
+                                    status === 'preparing' ? (isMarket ? 'Tu pedido está siendo preparado con cuidado.' : 'Nuestros cocineros están manos a la obra.') :
+                                        status === 'shipped' ? 'El repartidor ya tiene tu pedido.' :
+                                            status === 'delivered' ? '¡Muchas gracias por pedir con nosotros!' : 'Sincronizando actualizaciones en tiempo real.'}
+                        </p>
                     </div>
                 </div>
             </motion.div>

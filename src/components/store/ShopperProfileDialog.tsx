@@ -11,7 +11,7 @@ import {
     MapPin, Save, User, Loader2, ShoppingBag, LogIn, UserPlus, LogOut,
     ClipboardList, Settings, Navigation, CheckCircle2, CreditCard,
     Eye, EyeOff, Package, ChevronRight, ChevronLeft, Phone, ArrowRight,
-    Sparkles, MessageCircle, Mail, Lock
+    Sparkles, MessageCircle, Mail, Lock, ChevronDown, ChevronUp
 } from 'lucide-react';
 import OrderChatPanel from '../pos/OrderChatPanel';
 import { useToast } from '@/hooks/use-toast';
@@ -296,17 +296,17 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     ───────────────────────────────────────── */
     const getStatusBadge = (status: string) => {
         const map: Record<string, { label: string; color: string }> = {
-            pending: { label: 'Pendiente', color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' },
-            confirmed: { label: 'Confirmado', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-            preparing: { label: 'Preparando', color: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' },
-            shipped: { label: 'En camino', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
-            delivered: { label: 'Entregado', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-            completed: { label: 'Completado', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-            cancelled: { label: 'Cancelado', color: 'bg-red-500/10 text-red-600 border-red-500/20' },
+            pending: { label: 'Pendiente', color: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' },
+            confirmed: { label: 'Confirmado', color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30' },
+            preparing: { label: 'Preparando', color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30' },
+            shipped: { label: 'En camino', color: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30' },
+            delivered: { label: 'Entregado', color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' },
+            completed: { label: 'Completado', color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' },
+            cancelled: { label: 'Cancelado', color: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30' },
         };
-        const s = map[status] || { label: status, color: 'bg-slate-500/10 text-slate-600 border-slate-500/20' };
+        const s = map[status] || { label: status, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30' };
         return (
-            <Badge variant="outline" className={cn('px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-tight', s.color)}>
+            <Badge variant="outline" className={cn('px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider shadow-sm', s.color)}>
                 {s.label}
             </Badge>
         );
@@ -801,9 +801,11 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
                 {/* Orders Section */}
                 {hasOrders ? (
                     <div className="space-y-3">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
-                            Historial de Pedidos ({orders.length})
-                        </p>
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                                Historial de Pedidos ({orders.length})
+                            </p>
+                        </div>
                         {orders.map((order: any) => {
                             const isExpanded = expandedOrder === order.id;
                             const isActive = !['delivered', 'cancelled', 'completed'].includes(order.order_status);
@@ -812,40 +814,63 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
                                     key={order.id}
                                     layout
                                     className={cn(
-                                        'rounded-2xl border cursor-pointer transition-all',
-                                        isExpanded ? 'border-primary/30 bg-primary/5 shadow-sm' : 'border-border/60 bg-card hover:border-primary/20'
+                                        'rounded-2xl border transition-all overflow-hidden',
+                                        isExpanded 
+                                            ? 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 shadow-md ring-1 ring-emerald-500/20' 
+                                            : 'border-border/60 bg-card hover:border-emerald-500/30 hover:bg-accent/40'
                                     )}
-                                    onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
                                 >
-                                    <div className="flex items-center gap-3 p-4">
-                                        <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0',
-                                            isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
+                                    <div 
+                                        className="flex items-center gap-3 p-4 cursor-pointer select-none"
+                                        onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                                    >
+                                        <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors',
+                                            isActive 
+                                                ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' 
+                                                : 'bg-muted text-muted-foreground')}>
                                             <ShoppingBag className="h-5 w-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">#{order.order_number}</p>
-                                            <p className="text-sm font-bold truncate">{format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}</p>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[11px] font-black text-muted-foreground uppercase tracking-wider">#{order.order_number}</span>
+                                                {isActive && (
+                                                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                )}
+                                            </div>
+                                            <p className="text-xs font-semibold text-foreground/80 truncate">
+                                                {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}
+                                            </p>
                                         </div>
-                                        <div className="flex flex-col items-end gap-1.5">
-                                            {getStatusBadge(order.order_status)}
-                                            <span className="text-base font-black text-primary">${order.total.toFixed(2)}</span>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <div className="flex flex-col items-end gap-1">
+                                                {getStatusBadge(order.order_status)}
+                                                <span className="text-sm sm:text-base font-black text-emerald-500 dark:text-emerald-400">${order.total.toFixed(2)}</span>
+                                            </div>
+                                            <div className="text-muted-foreground ml-0.5">
+                                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                            </div>
                                         </div>
                                     </div>
                                     <AnimatePresence>
                                         {isExpanded && (
                                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                                <div className="border-t mx-4 pt-3 pb-4">
+                                                <div className="border-t border-emerald-500/10 px-4 pt-2 pb-4 bg-background/40">
                                                     <OrderTracker status={order.order_status} shopType={shopType} />
-                                                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-dashed">
-                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                                            {order.payment_method?.toUpperCase()} • {order.source?.toUpperCase()}
-                                                        </span>
+                                                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-border/40">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase tracking-wider">
+                                                                {order.payment_method?.toUpperCase()}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground uppercase tracking-wider">
+                                                                {order.source?.toUpperCase()}
+                                                            </span>
+                                                        </div>
                                                         {(storeId && storeName) && (
                                                             <Button 
                                                                 variant="outline" 
                                                                 size="sm" 
-                                                                className="h-8 gap-2 rounded-xl text-xs font-bold border-primary/20 hover:bg-primary/5 relative"
+                                                                className="h-8 gap-1.5 rounded-xl text-xs font-bold border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 relative"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setActiveChatOrderId(order.id);
@@ -1010,28 +1035,33 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     const renderLoggedIn = () => (
         <div className="flex flex-col h-full">
             {/* User header */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-black text-lg flex-shrink-0 shadow">
+            <div className="flex items-center gap-3 px-5 py-4 border-b bg-card/60 backdrop-blur-sm">
+                <div className="h-10 w-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-base shrink-0 shadow-md ring-2 ring-emerald-500/20">
                     {(user?.user_metadata?.full_name || currentProfile?.name || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm truncate">
+                    <p className="font-bold text-sm text-foreground truncate leading-tight">
                         {user?.user_metadata?.full_name || currentProfile?.name || 'Mi Cuenta'}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    <p className="text-xs text-muted-foreground truncate leading-tight mt-0.5">{user?.email}</p>
                 </div>
-                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-destructive gap-1.5 flex-shrink-0" onClick={handleSignOut}>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs font-semibold rounded-xl text-muted-foreground hover:text-destructive hover:border-destructive/30 gap-1.5 shrink-0 px-3" 
+                    onClick={handleSignOut}
+                >
                     <LogOut className="h-3.5 w-3.5" /> Salir
                 </Button>
             </div>
 
             {/* Tab content */}
-            <ScrollArea className="flex-1 max-h-[calc(90dvh-170px)] sm:max-h-[460px]">
-                <div className="p-5">
+            <ScrollArea className="flex-1 max-h-[calc(90dvh-170px)] sm:max-h-[480px]">
+                <div className="p-4 sm:p-5">
                     <AnimatePresence mode="wait">
                         {activeView === 'orders' && (
-                            <motion.div key="orders" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.15 }}>
+                            <motion.div key="orders" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
                                 {renderOrders()}
                             </motion.div>
                         )}
