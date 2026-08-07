@@ -94,9 +94,9 @@ const App = () => {
 
   // Global listener for Merchant (App) session
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log(`🔑 Auth event: ${event}`);
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' && !session) {
         console.log(`🚪 Clearing React Query cache due to auth event: ${event}`);
         queryClient.clear();
         

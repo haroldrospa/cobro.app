@@ -112,7 +112,7 @@ export const useStoreSettings = () => {
   const queryClient = useQueryClient();
 
   const fetchSettings = async () => {
-    if (!storeId || storeId === 'undefined' || storeId === 'null') return null;
+    if (!storeId || storeId === 'undefined' || storeId === 'null' || storeId === '00000000-0000-0000-0000-000000000000') return null;
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;

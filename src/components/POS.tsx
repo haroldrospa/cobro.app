@@ -230,7 +230,7 @@ const POSContent: React.FC = () => {
     is_active: true,
   };
 
-  const storeId = profile?.store_id;
+  const storeId = (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000') ? profile.store_id : undefined;
 
   const { products: allProducts, customers = [], refreshMasterData, isLoading: isMasterDataLoading } = useMasterData();
   const updateCustomerMutation = useUpdateCustomer();
@@ -1537,10 +1537,14 @@ const POSContent: React.FC = () => {
     />
   ), [profile?.full_name, cart.length, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
 
-  // Treat as loading ONLY if data is not available in local cache yet
-  const storeLoading = (isPendingStore || isLoadingStore) && !rawStore;
-  const profileLoading = (isPendingProfile || isLoadingProfile) && !rawProfile;
-  const settingsLoading = loadingSettings && !rawStoreSettings;
+  // Treat as loading if profile/store data is still missing or dummy
+  const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
+  const hasValidStore = !!(rawStore && rawStore.id && rawStore.id !== '00000000-0000-0000-0000-000000000000');
+  const hasValidSettings = !!rawStoreSettings;
+
+  const profileLoading = (isPendingProfile || isLoadingProfile) || !hasValidProfile;
+  const storeLoading = (isPendingStore || isLoadingStore) || !hasValidStore;
+  const settingsLoading = loadingSettings && !hasValidSettings;
 
   if (loadingProducts || settingsLoading || storeLoading || profileLoading) {
     let loadingText = 'Cargando sistema...';
