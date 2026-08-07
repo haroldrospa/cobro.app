@@ -118,7 +118,6 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
             }
           }
           queryClient.invalidateQueries({ queryKey: ['web-orders'] });
-          queryClient.refetchQueries({ queryKey: ['web-orders'] });
         }
       )
       .subscribe();
