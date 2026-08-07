@@ -75,11 +75,6 @@ export const useShopperAuth = () => {
             });
 
             if (error) throw error;
-
-            toast({
-                title: "Bienvenido",
-                description: "Has iniciado sesión correctamente.",
-            });
             return data;
         } catch (error: any) {
             toast({
@@ -99,10 +94,6 @@ export const useShopperAuth = () => {
             const { error } = await shopperSupabase.auth.signOut();
             if (error) throw error;
             setUser(null);
-            toast({
-                title: "Sesión cerrada",
-                description: "Vuelve pronto.",
-            });
         } catch (error: any) {
             toast({
                 title: "Error",
