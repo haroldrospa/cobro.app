@@ -74,6 +74,24 @@ const App = () => {
     },
   }), []);
 
+  // Precarga silenciosa en tiempo inactivo de módulos pesados para transición instantánea
+  useEffect(() => {
+    const preloadModules = () => {
+      import("./components/Layout");
+      import("./components/POS");
+      import("./components/Dashboard");
+      import("./components/Products");
+    };
+
+    if (typeof window !== 'undefined') {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(preloadModules);
+      } else {
+        setTimeout(preloadModules, 800);
+      }
+    }
+  }, []);
+
   // Global listener for Merchant (App) session
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {

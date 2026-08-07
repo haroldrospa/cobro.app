@@ -1537,22 +1537,21 @@ const POSContent: React.FC = () => {
     />
   ), [profile?.full_name, cart.length, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
 
-  // Treat as loading if pending (no data yet) or actively loading for the first time
-  const storeLoading = isPendingStore || isLoadingStore;
-  const profileLoading = isPendingProfile || isLoadingProfile;
+  // Treat as loading ONLY if data is not available in local cache yet
+  const storeLoading = (isPendingStore || isLoadingStore) && !rawStore;
+  const profileLoading = (isPendingProfile || isLoadingProfile) && !rawProfile;
+  const settingsLoading = loadingSettings && !rawStoreSettings;
 
-  if (loadingProducts || loadingSettings || storeLoading || profileLoading) {
+  if (loadingProducts || settingsLoading || storeLoading || profileLoading) {
     let loadingText = 'Cargando sistema...';
     if (profileLoading) loadingText = 'Verificando perfil...';
     else if (storeLoading) loadingText = 'Conectando con tienda...';
-    else if (loadingSettings) loadingText = 'Cargando configuraciones...';
+    else if (settingsLoading) loadingText = 'Cargando configuraciones...';
     else if (loadingProducts) loadingText = 'Sincronizando productos...';
 
     return (
       <div className="flex h-screen items-center justify-center flex-col gap-6 bg-background">
         <LoadingLogo text={loadingText} size="md" />
-
-
       </div>
     );
   }
