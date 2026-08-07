@@ -689,6 +689,31 @@ const Tienda: React.FC = () => {
     }
   };
 
+  const handleCheckoutWhatsApp = async () => {
+    const phone = companySettings?.phone || store?.phone || '';
+    
+    // Save order in database first
+    await handleCheckout();
+
+    if (phone) {
+      const cleanPhone = phone.replace(/\D/g, '');
+      let text = `*¡Nuevo Pedido en ${storeName}!*\n\n`;
+      text += `👤 *Cliente:* ${customerName || 'Cliente'}\n`;
+      if (customerPhone) text += `📞 *Teléfono:* ${customerPhone}\n`;
+      if (orderType === 'delivery') text += `🛵 *Entrega:* ${customerAddress || 'No especificada'}\n`;
+      else text += `🛍️ *Modalidad:* ${orderType === 'pickup' ? 'Para Recoger' : 'Comer en Local'}\n`;
+      text += `💳 *Pago:* ${paymentMethod.toUpperCase()} ${paymentMethod === 'cash' && needsChange ? `(Cambio de $${amountPayingWith})` : ''}\n\n`;
+      text += `*Productos:*\n`;
+      cart.forEach(item => {
+        text += `• ${item.quantity}x ${item.product.name} - $${(getDiscountedPrice(item.product) * item.quantity).toFixed(2)}\n`;
+      });
+      text += `\n*TOTAL: $${cartTotal.toFixed(2)}*`;
+
+      const url = `https://wa.me/${cleanPhone.startsWith('1') ? cleanPhone : '1' + cleanPhone}?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+  };
+
   if (storeLoading || productsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -819,45 +844,112 @@ const Tienda: React.FC = () => {
           {filteredProducts.length === 0 ? (
             <div className="text-center py-12 text-slate-400 dark:text-muted-foreground/80">No hay productos disponibles</div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
               {filteredProducts.slice(0, visibleCount).map((product) => {
                 const hasDiscount = isDiscountActive(product);
                 const discountedPrice = getDiscountedPrice(product);
+                const cartItem = cart.find(item => item.product.id === product.id);
+                const itemQty = cartItem ? cartItem.quantity : 0;
                 
                 return (
                   <div 
                     key={product.id} 
-                    className="bg-white dark:bg-card rounded-[24px] p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] hover:shadow-md transition-shadow cursor-pointer flex flex-col h-full relative border border-slate-100 dark:border-border"
-                    onClick={(e) => handleAddToCartAnim(e, product)}
+                    className="bg-white dark:bg-card rounded-[24px] p-3.5 sm:p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.08)] hover:shadow-lg transition-all duration-300 flex flex-col h-full relative border border-slate-100 dark:border-border group"
                   >
-                    <button className="absolute top-4 left-4 z-10 text-slate-300 hover:text-rose-400 transition-colors" onClick={(e) => e.stopPropagation()}>
-                      <Heart className="h-5 w-5" />
+                    {/* Heart / Favorite */}
+                    <button 
+                      className="absolute top-3.5 left-3.5 z-10 text-slate-300 hover:text-rose-500 transition-colors p-1" 
+                      onClick={(e) => { e.stopPropagation(); }}
+                    >
+                      <Heart className="h-4.5 w-4.5" />
                     </button>
+
+                    {/* Discount Badge if active */}
+                    {hasDiscount && (
+                      <span className="absolute top-3.5 right-3.5 z-10 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
+                        -{product.discount_percentage}%
+                      </span>
+                    )}
                     
-                    <div className="aspect-square w-full relative mb-3 overflow-hidden">
+                    {/* Product Image */}
+                    <div 
+                      className="aspect-square w-full relative mb-2.5 overflow-hidden rounded-2xl bg-slate-50/80 dark:bg-zinc-800/50 p-2 flex items-center justify-center cursor-pointer"
+                      onClick={(e) => handleAddToCartAnim(e, product)}
+                    >
                       {product.image_url ? (
                         <img 
                           src={product.image_url} 
                           alt={product.name}
-                          className="absolute inset-0 w-full h-full object-contain drop-shadow-md p-2"
+                          className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="absolute inset-0 w-full h-full bg-slate-50 rounded-2xl flex items-center justify-center">
-                          <Package className="h-8 w-8 text-slate-300" />
-                        </div>
+                        <Package className="h-8 w-8 text-slate-300 dark:text-zinc-600" />
                       )}
                     </div>
                     
-                    <div className="flex-1 flex flex-col justify-end mt-auto">
-                      <h3 className="font-bold text-[13px] text-slate-800 dark:text-foreground/90 line-clamp-2 min-h-[2.5rem] mb-2">{product.name}</h3>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-[15px] text-slate-900 dark:text-foreground tracking-tight">
-                          $ {(hasDiscount ? discountedPrice : product.price).toFixed(2)}
-                        </span>
-                        <div className="flex items-center gap-1 text-slate-500 dark:text-muted-foreground">
-                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                          <span className="text-[11px] font-medium">4.8</span>
+                    {/* Product Info */}
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-bold text-[13px] sm:text-sm text-slate-800 dark:text-foreground/90 line-clamp-2 min-h-[2.4rem] leading-tight mb-1">
+                          {product.name}
+                        </h3>
+                      </div>
+
+                      <div className="mt-2 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col">
+                            {hasDiscount && (
+                              <span className="text-[10px] text-slate-400 line-through">
+                                ${product.price.toFixed(2)}
+                              </span>
+                            )}
+                            <span className="font-extrabold text-[15px] sm:text-base text-slate-900 dark:text-foreground tracking-tight font-mono">
+                              ${discountedPrice.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-slate-400 dark:text-muted-foreground">
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                            <span className="text-[11px] font-bold">4.8</span>
+                          </div>
                         </div>
+
+                        {/* Quick Order Actions (+ / -) */}
+                        {itemQty === 0 ? (
+                          <Button
+                            size="sm"
+                            className="w-full h-9 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 text-white font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                            onClick={(e) => handleAddToCartAnim(e, product)}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Agregar
+                          </Button>
+                        ) : (
+                          <div className="flex items-center justify-between bg-slate-100 dark:bg-zinc-800/80 rounded-xl p-1 border border-slate-200 dark:border-zinc-700/60 shadow-inner">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(product.id, -1);
+                              }}
+                              className="h-7 w-7 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-slate-700 dark:text-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/30 transition-colors shadow-xs active:scale-90"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="font-extrabold text-xs text-slate-800 dark:text-foreground px-2 font-mono">
+                              {itemQty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCartAnim(e, product);
+                              }}
+                              className="h-7 w-7 rounded-lg bg-slate-900 dark:bg-primary flex items-center justify-center text-white hover:bg-slate-800 dark:hover:bg-primary/90 transition-colors shadow-xs active:scale-90"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -987,6 +1079,34 @@ const Tienda: React.FC = () => {
     </div>
   </footer>
 
+  {/* Sticky Floating Cart Bar */}
+  {cartItemCount > 0 && (
+    <div className="fixed bottom-20 md:bottom-6 left-4 right-4 max-w-md mx-auto z-40 animate-in slide-in-from-bottom-5 duration-300">
+      <div 
+        onClick={() => setShowCart(true)}
+        className="bg-slate-900/95 dark:bg-zinc-900/95 backdrop-blur-xl text-white p-3.5 pl-4 rounded-2xl shadow-[0_15px_35px_-5px_rgba(0,0,0,0.4)] border border-white/10 flex items-center justify-between cursor-pointer hover:bg-slate-900 dark:hover:bg-zinc-900 transition-all group active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="relative h-11 w-11 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/30 group-hover:scale-105 transition-transform">
+            <ShoppingBag className="h-5.5 w-5.5 text-white" />
+            <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white font-black text-[10px] h-5 w-5 rounded-full flex items-center justify-center border-2 border-slate-900">
+              {cartItemCount}
+            </span>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-400">Ver tu pedido</p>
+            <p className="text-lg font-black tracking-tight text-white font-mono">${cartTotal.toFixed(2)}</p>
+          </div>
+        </div>
+
+        <Button className="h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs px-4 shadow-md flex items-center gap-1.5 group-hover:translate-x-0.5 transition-all">
+          Ver Carrito
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )}
+
   {/* Mobile Spotlight Dock */}
   <MobileDock
     activeTab={activeMobileTab}
@@ -1089,54 +1209,36 @@ const Tienda: React.FC = () => {
               <span className="text-2xl font-black text-primary font-mono">${cartTotal.toFixed(2)}</span>
             </div>
 
-            <div className="w-full space-y-3">
-              {!user ? (
-                <>
-                  <Button
-                    size="lg"
-                    className="w-full h-16 rounded-full font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all bg-primary hover:bg-primary/90 text-primary-foreground text-base md:text-[17px] border-0"
-                    onClick={() => { setShowCart(false); setProfileDialogView('orders'); setShowProfileDialog(true); }}
-                  >
-                    <LogIn className="h-5 w-5 mr-2" />
-                    Iniciar Sesión / Registrarme
-                  </Button>
-                </>
-              ) : isProfileComplete(profile) ? (
-                <Button
-                  size="lg"
-                  className={`w-full h-16 rounded-full font-bold transition-all duration-300 scale-100 hover:scale-[1.02] active:scale-[0.98] text-base md:text-[17px] border-0 ${
-                    !isStoreCurrentlyOpen 
-                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none' 
-                      : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20'
-                  }`}
-                  onClick={() => { setShowCart(false); setShowCheckout(true); }}
-                  disabled={!isStoreCurrentlyOpen}
-                >
-                  {isStoreCurrentlyOpen ? (
-                    <div className="flex items-center justify-center w-full">
-                      Proceder al Pago
-                      <ChevronRight className="h-5 w-5 ml-2" />
-                    </div>
-                  ) : (
-                    "Negocio Cerrado"
-                  )}
-                </Button>
-              ) : (
-                <div className="w-full space-y-3">
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-500 mb-3">
-                    <UserPlus className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs font-semibold leading-relaxed">
-                      Necesitas completar tu perfil (cédula y ubicación) para poder enviar el pedido.
-                    </p>
+            <div className="w-full space-y-2.5">
+              <Button
+                size="lg"
+                className={`w-full h-14 rounded-2xl font-bold transition-all text-base border-0 ${
+                  !isStoreCurrentlyOpen 
+                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none' 
+                    : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 active:scale-[0.98]'
+                }`}
+                onClick={() => { setShowCart(false); setShowCheckout(true); }}
+                disabled={!isStoreCurrentlyOpen}
+              >
+                {isStoreCurrentlyOpen ? (
+                  <div className="flex items-center justify-center w-full gap-2">
+                    <span>Hacer Pedido / Checkout</span>
+                    <ChevronRight className="h-5 w-5" />
                   </div>
-                  <Button
-                    size="lg"
-                    className="w-full h-16 rounded-full font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all text-base md:text-[17px] border-0"
-                    onClick={() => { setShowCart(false); setProfileDialogView('settings'); setShowProfileDialog(true); }}
+                ) : (
+                  "Negocio Cerrado"
+                )}
+              </Button>
+
+              {!user && (
+                <div className="text-center pt-1">
+                  <button 
+                    onClick={() => { setShowCart(false); setProfileDialogView('orders'); setShowProfileDialog(true); }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium hover:underline inline-flex items-center gap-1"
                   >
-                    <UserPlus className="h-5 w-5 mr-2" />
-                    Completar mi Perfil
-                  </Button>
+                    <LogIn className="h-3.5 w-3.5" />
+                    ¿Ya tienes cuenta? Inicia sesión aquí
+                  </button>
                 </div>
               )}
             </div>
@@ -1447,14 +1549,19 @@ const Tienda: React.FC = () => {
           </div>
 
           <div className="bg-card/80 backdrop-blur-md px-6 py-4 border-t border-border/40">
-            <div className="flex flex-col-reverse sm:flex-row gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowCheckout(false)}
-                className="w-full sm:w-auto h-12 rounded-xl font-semibold"
-              >
-                Cancelar
-              </Button>
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              {(companySettings?.phone || store?.phone) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCheckoutWhatsApp}
+                  disabled={createOrder.isPending || !customerName.trim() || !isStoreCurrentlyOpen}
+                  className="w-full sm:flex-1 h-12 rounded-xl text-sm font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Phone className="h-4 w-4" />
+                  Pedir por WhatsApp
+                </Button>
+              )}
               <Button
                 onClick={handleCheckout}
                 disabled={createOrder.isPending || !customerName.trim() || !isStoreCurrentlyOpen}
