@@ -11,7 +11,7 @@ import {
     MapPin, Save, User, Loader2, ShoppingBag, LogIn, UserPlus, LogOut,
     ClipboardList, Settings, Navigation, CheckCircle2, CreditCard,
     Eye, EyeOff, Package, ChevronRight, ChevronLeft, Phone, ArrowRight,
-    Sparkles, MessageCircle
+    Sparkles, MessageCircle, Mail, Lock
 } from 'lucide-react';
 import OrderChatPanel from '../pos/OrderChatPanel';
 import { useToast } from '@/hooks/use-toast';
@@ -320,106 +320,127 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
 
     /* ── LOGIN ── */
     const renderLogin = () => (
-        <div className="flex flex-col px-2">
-            <div className="flex flex-col items-center pt-8 pb-5 px-4 text-center">
+        <div className="flex flex-col px-4 sm:px-6 pb-6 pt-4 space-y-5">
+            {/* Header / Brand Card */}
+            <div className="flex flex-col items-center text-center space-y-2 pt-2">
                 {logoUrl ? (
-                    <div className="relative mb-4">
-                        <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full" />
+                    <div className="relative mb-1 group">
+                        <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full transition-all group-hover:bg-primary/30" />
                         <img 
                             src={logoUrl} 
                             alt={storeName || 'Logo'} 
-                            className="h-20 w-20 object-contain rounded-2xl bg-white p-2 border border-border shadow-md relative" 
+                            className="h-16 w-16 object-contain rounded-2xl bg-white p-2 border border-border shadow-lg relative" 
                         />
                     </div>
                 ) : (
-                    <div className="relative mb-4">
+                    <div className="relative mb-1">
                         <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-                        <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-lg relative border border-white/10">
-                            <ShoppingBag className="h-7 w-7 text-white" />
+                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center shadow-lg relative border border-white/10">
+                            <ShoppingBag className="h-6 w-6 text-white" />
                         </div>
                     </div>
                 )}
-                <h2 className="text-xl font-extrabold tracking-tight text-foreground">
-                    {storeName ? `Bienvenido a ${storeName}` : 'Bienvenido de vuelta'}
-                </h2>
                 
-                {companyDescription ? (
-                    <p className="text-xs text-muted-foreground mt-2 max-w-[280px] leading-relaxed italic">
-                        "{companyDescription}"
-                    </p>
-                ) : (
-                    <p className="text-[13px] text-muted-foreground mt-1.5 max-w-[240px] leading-relaxed">
-                        Ingresa para ver tus pedidos y disfrutar de una experiencia rápida.
-                    </p>
-                )}
+                <div>
+                    <h2 className="text-xl font-extrabold tracking-tight text-foreground">
+                        {storeName ? `Bienvenido a ${storeName}` : 'Bienvenido de vuelta'}
+                    </h2>
+                    {companyDescription && (
+                        <p className="text-xs text-muted-foreground mt-1 max-w-[280px] line-clamp-2 italic">
+                            "{companyDescription}"
+                        </p>
+                    )}
+                </div>
 
                 {(companyPhone || companyAddress) && (
-                    <div className="flex flex-col gap-1 items-center mt-3 pt-3 border-t border-border/40 w-full max-w-[280px] text-[11px] text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2 flex-wrap text-[11px] text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-full border border-border/50 max-w-[320px]">
                         {companyAddress && (
-                            <div className="flex items-center gap-1.5 text-center justify-center">
-                                <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-                                <span className="line-clamp-1">{companyAddress}</span>
-                            </div>
+                            <span className="flex items-center gap-1 truncate max-w-[160px]">
+                                <MapPin className="h-3 w-3 text-primary shrink-0" />
+                                <span className="truncate">{companyAddress}</span>
+                            </span>
                         )}
+                        {companyAddress && companyPhone && <span className="text-muted-foreground/40">•</span>}
                         {companyPhone && (
-                            <div className="flex items-center gap-1.5 justify-center">
-                                <Phone className="h-3 w-3 shrink-0 text-primary" />
+                            <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3 text-primary shrink-0" />
                                 <span>{companyPhone}</span>
-                            </div>
+                            </span>
                         )}
                     </div>
                 )}
             </div>
 
-            <form onSubmit={handleLoginSubmit} className="px-4 space-y-3">
+            {/* Form */}
+            <form onSubmit={handleLoginSubmit} className="space-y-4 pt-1">
                 <div className="space-y-1.5">
-                    <Label htmlFor="login-email" className="text-xs font-semibold text-muted-foreground ml-1">Correo electrónico</Label>
+                    <Label htmlFor="login-email" className="text-xs font-bold text-foreground/80 ml-1">
+                        Correo electrónico
+                    </Label>
                     <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-sm font-bold">@</span>
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             id="login-email"
                             type="email"
                             value={loginEmail}
                             onChange={e => setLoginEmail(e.target.value)}
                             placeholder="tu@correo.com"
-                            className="h-12 pl-10 rounded-xl bg-secondary/50 border-transparent hover:bg-secondary/70 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 transition-all text-sm font-medium"
+                            className="h-12 pl-10 rounded-xl bg-muted/40 border-border/60 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 text-sm font-medium transition-all"
                             required
                         />
                     </div>
                 </div>
                 
-                <div className="space-y-1.5 pt-1">
-                    <Label htmlFor="login-pass" className="text-xs font-semibold text-muted-foreground ml-1">Contraseña</Label>
+                <div className="space-y-1.5">
+                    <Label htmlFor="login-pass" className="text-xs font-bold text-foreground/80 ml-1">
+                        Contraseña
+                    </Label>
                     <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             id="login-pass"
                             type={showPassword ? 'text' : 'password'}
                             value={loginPassword}
                             onChange={e => setLoginPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="h-12 px-4 rounded-xl bg-secondary/50 border-transparent hover:bg-secondary/70 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 transition-all text-sm font-medium"
+                            className="h-12 pl-10 pr-10 rounded-xl bg-muted/40 border-border/60 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 text-sm font-medium transition-all"
                             required
                         />
-                        <button type="button" onClick={() => setShowPassword(p => !p)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                        <button 
+                            type="button" 
+                            onClick={() => setShowPassword(p => !p)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                        >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                     </div>
                 </div>
 
-                <div className="pt-4">
-                    <Button type="submit" className="w-full h-12 rounded-full font-bold text-[15px] shadow-md shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all" disabled={authLoading}>
-                        {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Entrar a mi cuenta'}
-                    </Button>
-                </div>
+                <Button 
+                    type="submit" 
+                    className="w-full h-12 rounded-xl font-bold text-sm shadow-md shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all bg-primary hover:bg-primary/90 text-primary-foreground mt-2" 
+                    disabled={authLoading}
+                >
+                    {authLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <div className="flex items-center justify-center gap-2">
+                            <span>Iniciar Sesión</span>
+                            <ArrowRight className="h-4 w-4" />
+                        </div>
+                    )}
+                </Button>
             </form>
 
-            <div className="px-4 py-8 text-center mt-2">
-                <p className="text-[13px] text-muted-foreground">
-                    ¿No tienes cuenta?{' '}
-                    <button onClick={() => { setAuthMode('register'); setRegStep(1); setRegDone(false); }}
-                        className="text-primary font-bold hover:underline transition-all">
-                        Regístrate ahora
+            {/* Footer / Switch mode */}
+            <div className="pt-2 border-t border-border/40 text-center">
+                <p className="text-xs text-muted-foreground">
+                    ¿No tienes cuenta aún?{' '}
+                    <button 
+                        onClick={() => { setAuthMode('register'); setRegStep(1); setRegDone(false); }}
+                        className="text-primary font-bold hover:underline transition-all ml-1"
+                    >
+                        Regístrate aquí
                     </button>
                 </p>
             </div>
@@ -1049,7 +1070,7 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
             <DialogContent 
                 centerOnMobile={false} 
                 hideCloseButton={true} 
-                className="max-w-md p-0 sm:overflow-hidden max-sm:overflow-y-auto max-sm:overflow-x-hidden gap-0 sm:rounded-[2rem] rounded-t-[2.5rem] bg-card border-border shadow-2xl"
+                className="max-w-md w-full p-0 max-h-[90vh] flex flex-col overflow-y-auto max-sm:overflow-x-hidden gap-0 sm:rounded-[2rem] rounded-t-[2.5rem] bg-card border-border shadow-2xl"
             >
                 <DialogTitle className="sr-only">Perfil de Comprador</DialogTitle>
                 <DialogDescription className="sr-only">
