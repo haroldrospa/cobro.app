@@ -258,6 +258,7 @@ const Tienda: React.FC = () => {
     ? store?.store_settings?.[0]
     : store?.store_settings;
   const shopType = (storeSettings as any)?.shop_type || 'default';
+  const isRestaurant = shopType === 'restaurant' || shopType === 'restaurante';
 
   // Calculate if store is currently open based on business hours
   const isStoreCurrentlyOpen = useMemo(() => {
@@ -785,10 +786,57 @@ const Tienda: React.FC = () => {
           )}
         </div>
 
+        {/* Restaurant Special Hero Banner (Only shown if shopType is restaurant) */}
+        {isRestaurant && (
+          <section className="bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-transparent dark:from-amber-950/20 dark:via-rose-950/10 rounded-[32px] p-6 border border-amber-500/20 shadow-sm relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+              <div className="flex items-center gap-4">
+                {companySettings?.logo_url ? (
+                  <img src={companySettings.logo_url} alt={storeName} className="h-16 w-16 object-cover rounded-2xl border-2 border-white dark:border-zinc-800 shadow-md" />
+                ) : (
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                    <Utensils className="h-8 w-8" />
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-foreground tracking-tight">{storeName}</h1>
+                    <Badge variant="outline" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Utensils className="h-3 w-3" /> Restaurante
+                    </Badge>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-muted-foreground mt-1 line-clamp-1">
+                    {companySettings?.slogan || companySettings?.meta_description || "¡Sabores deliciosos preparados al instante para ti!"}
+                  </p>
+                  <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
+                    <span className="flex items-center gap-1 font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> 4.8 (120+)
+                    </span>
+                    <span className="flex items-center gap-1 font-semibold text-slate-600 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                      🛵 25-35 min
+                    </span>
+                    {isStoreCurrentlyOpen ? (
+                      <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Abierto ahora
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full">
+                        <span className="h-2 w-2 rounded-full bg-rose-500" /> Cerrado ahora
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Title & Categories */}
         <section>
           <div className="flex items-end justify-between mb-4">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground tracking-tight">Populares</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground tracking-tight">
+              {isRestaurant ? "Menú de Platos" : "Populares"}
+            </h1>
             <button className="text-xs text-slate-400 dark:text-muted-foreground/80 font-medium hover:text-slate-600 dark:text-muted-foreground transition-colors" onClick={() => setSelectedCategory(null)}>
               ver todo
             </button>
@@ -798,20 +846,24 @@ const Tienda: React.FC = () => {
             <div className="flex w-max space-x-3">
               <button 
                 onClick={() => setSelectedCategory(null)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm ${!selectedCategory ? 'bg-red-700 text-white' : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm ${!selectedCategory ? (isRestaurant ? 'bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-rose-500/20' : 'bg-red-700 text-white') : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
               >
                 🥘 Todos
               </button>
-              {categories.map((cat, idx) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm ${selectedCategory === cat.id ? 'bg-red-700 text-white' : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
-                >
-                  <span className="text-base">{['🍜', '🍣', '🍱', '🍙', '🥟', '🍤', '🍚'][idx % 7]}</span>
-                  {cat.name}
-                </button>
-              ))}
+              {categories.map((cat, idx) => {
+                const foodEmojis = ['🍔', '🍕', '🍟', '🥤', '🍰', '🍱', '🥗', '🌮', '🍣', '🍦', '🥩'];
+                const emoji = foodEmojis[idx % foodEmojis.length];
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm ${selectedCategory === cat.id ? (isRestaurant ? 'bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-rose-500/20' : 'bg-red-700 text-white') : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
+                  >
+                    <span className="text-base">{isRestaurant ? emoji : ['🍜', '🍣', '🍱', '🍙', '🥟', '🍤', '🍚'][idx % 7]}</span>
+                    {cat.name}
+                  </button>
+                );
+              })}
             </div>
           </ScrollArea>
         </section>
@@ -849,36 +901,45 @@ const Tienda: React.FC = () => {
                 return (
                   <div 
                     key={product.id} 
-                    className="bg-white dark:bg-card rounded-[24px] p-3.5 sm:p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.08)] hover:shadow-lg transition-all duration-300 flex flex-col h-full relative border border-slate-100 dark:border-border group"
+                    className={`bg-white dark:bg-card rounded-[24px] p-3.5 sm:p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.08)] hover:shadow-xl transition-all duration-300 flex flex-col h-full relative border border-slate-100 dark:border-border group ${isRestaurant ? 'hover:-translate-y-1' : ''}`}
                   >
                     {/* Heart / Favorite */}
                     <button 
-                      className="absolute top-3.5 left-3.5 z-10 text-slate-300 hover:text-rose-500 transition-colors p-1" 
+                      className="absolute top-3.5 left-3.5 z-10 text-slate-300 hover:text-rose-500 transition-colors p-1 rounded-full bg-white/70 dark:bg-zinc-800/70 backdrop-blur-sm" 
                       onClick={(e) => { e.stopPropagation(); }}
                     >
-                      <Heart className="h-4.5 w-4.5" />
+                      <Heart className="h-4 w-4" />
                     </button>
 
-                    {/* Discount Badge if active */}
-                    {hasDiscount && (
-                      <span className="absolute top-3.5 right-3.5 z-10 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
-                        -{product.discount_percentage}%
-                      </span>
-                    )}
+                    {/* Badges */}
+                    <div className="absolute top-3.5 right-3.5 z-10 flex flex-col items-end gap-1">
+                      {hasDiscount && (
+                        <span className="bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
+                          -{product.discount_percentage}%
+                        </span>
+                      )}
+                      {isRestaurant && product.is_featured && (
+                        <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center gap-0.5">
+                          🔥 Top
+                        </span>
+                      )}
+                    </div>
                     
                     {/* Product Image */}
                     <div 
-                      className="aspect-square w-full relative mb-2.5 overflow-hidden rounded-2xl bg-slate-50/80 dark:bg-zinc-800/50 p-2 flex items-center justify-center cursor-pointer"
+                      className={`aspect-square w-full relative mb-2.5 overflow-hidden rounded-2xl ${isRestaurant ? 'bg-amber-500/5 dark:bg-zinc-800/80 p-1.5' : 'bg-slate-50/80 dark:bg-zinc-800/50 p-2'} flex items-center justify-center cursor-pointer group-hover:bg-amber-500/10 transition-colors`}
                       onClick={(e) => handleAddToCartAnim(e, product)}
                     >
                       {product.image_url ? (
                         <img 
                           src={product.image_url} 
                           alt={product.name}
-                          className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover rounded-xl drop-shadow-md group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <Package className="h-8 w-8 text-slate-300 dark:text-zinc-600" />
+                        <div className="flex flex-col items-center gap-1 text-slate-300 dark:text-zinc-600">
+                          {isRestaurant ? <Utensils className="h-8 w-8 text-amber-500/40" /> : <Package className="h-8 w-8" />}
+                        </div>
                       )}
                     </div>
                     
@@ -888,6 +949,11 @@ const Tienda: React.FC = () => {
                         <h3 className="font-bold text-[13px] sm:text-sm text-slate-800 dark:text-foreground/90 line-clamp-2 min-h-[2.4rem] leading-tight mb-1">
                           {product.name}
                         </h3>
+                        {product.category?.name && (
+                          <span className="text-[10px] text-slate-400 dark:text-muted-foreground font-medium block">
+                            {product.category.name}
+                          </span>
+                        )}
                       </div>
 
                       <div className="mt-2 space-y-2.5">
@@ -898,7 +964,7 @@ const Tienda: React.FC = () => {
                                 ${product.price.toFixed(2)}
                               </span>
                             )}
-                            <span className="font-extrabold text-[15px] sm:text-base text-slate-900 dark:text-foreground tracking-tight font-mono">
+                            <span className={`font-extrabold text-[15px] sm:text-base tracking-tight font-mono ${isRestaurant ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-foreground'}`}>
                               ${discountedPrice.toFixed(2)}
                             </span>
                           </div>
@@ -912,7 +978,7 @@ const Tienda: React.FC = () => {
                         {itemQty === 0 ? (
                           <Button
                             size="sm"
-                            className="w-full h-9 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 text-white font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                            className={`w-full h-9 rounded-xl font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center justify-center gap-1.5 ${isRestaurant ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white' : 'bg-slate-900 hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 text-white'}`}
                             onClick={(e) => handleAddToCartAnim(e, product)}
                           >
                             <Plus className="h-3.5 w-3.5" />
@@ -939,7 +1005,7 @@ const Tienda: React.FC = () => {
                                 e.stopPropagation();
                                 handleAddToCartAnim(e, product);
                               }}
-                              className="h-7 w-7 rounded-lg bg-slate-900 dark:bg-primary flex items-center justify-center text-white hover:bg-slate-800 dark:hover:bg-primary/90 transition-colors shadow-xs active:scale-90"
+                              className={`h-7 w-7 rounded-lg flex items-center justify-center text-white transition-colors shadow-xs active:scale-90 ${isRestaurant ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-900 dark:bg-primary hover:bg-slate-800 dark:hover:bg-primary/90'}`}
                             >
                               <Plus className="h-3 w-3" />
                             </button>
@@ -1076,7 +1142,7 @@ const Tienda: React.FC = () => {
 
   {/* Sticky Floating Cart Bar */}
   {cartItemCount > 0 && (
-    <div className="fixed bottom-20 md:bottom-6 left-4 right-4 max-w-md mx-auto z-40 animate-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-24 md:bottom-6 left-4 right-4 max-w-md mx-auto z-40 animate-in slide-in-from-bottom-5 duration-300">
       <div 
         onClick={() => setShowCart(true)}
         className="bg-slate-900/95 dark:bg-zinc-900/95 backdrop-blur-xl text-white p-3.5 pl-4 rounded-2xl shadow-[0_15px_35px_-5px_rgba(0,0,0,0.4)] border border-white/10 flex items-center justify-between cursor-pointer hover:bg-slate-900 dark:hover:bg-zinc-900 transition-all group active:scale-[0.99]"
