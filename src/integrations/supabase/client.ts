@@ -5,6 +5,32 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 
+// Custom fetch to automatically handle 401 Unauthorized errors caused by expired/invalid user JWTs.
+const customFetch: typeof fetch = async (url, options) => {
+  const response = await fetch(url, options);
+
+  if (response.status === 401 && options?.headers) {
+    const headers = new Headers(options.headers);
+    const authHeader = headers.get('Authorization');
+    const anonBearer = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+
+    if (authHeader && authHeader !== anonBearer) {
+      console.warn('⚠️ [Supabase Client] 401 Unauthorized detected due to expired user session. Clearing stale auth token...');
+      
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      headers.set('Authorization', anonBearer);
+      return fetch(url, { ...options, headers });
+    }
+  }
+
+  return response;
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -16,10 +42,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     detectSessionInUrl: true,
     flowType: 'pkce',
   },
-  // NOTA: No se define Content-Type global aquí.
-  // El cliente de Supabase lo maneja automáticamente por request:
-  // - 'application/json' para las llamadas a la base de datos
-  // - 'multipart/form-data' para los uploads de storage (imágenes, archivos)
+  global: {
+    fetch: customFetch,
+  },
   db: {
     schema: 'public'
   }
