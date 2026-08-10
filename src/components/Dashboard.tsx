@@ -809,7 +809,8 @@ const Dashboard: React.FC = () => {
       change: `${overdueCount} Clientes con Mora`,
       icon: AlertCircle,
       color: 'text-red-500',
-      bgColor: 'bg-red-500/10'
+      bgColor: 'bg-red-500/10',
+      link: '/customers?filter=overdue'
     },
     {
       title: 'Alertas de Stock',
@@ -885,8 +886,8 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
-          return (
-            <Card key={stat.title} className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+          const cardContent = (
+            <Card key={stat.title} className={cn("relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105", stat.link && "cursor-pointer")}>
               <div className={`absolute inset-0 ${stat.bgColor} opacity-50`} />
               <CardContent className="relative p-6">
                 <div className="flex items-center justify-between">
@@ -907,6 +908,16 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           );
+
+          if (stat.link) {
+            return (
+              <Link key={stat.title} to={stat.link}>
+                {cardContent}
+              </Link>
+            );
+          }
+
+          return cardContent;
         })}
       </div>
 

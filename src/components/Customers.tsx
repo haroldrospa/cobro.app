@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Users, Plus, Search, Edit, CreditCard, Phone, Loader2, Trash2, Star, Copy, DollarSign, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Users, Plus, Search, Edit, CreditCard, Phone, Loader2, Trash2, Star, Copy, DollarSign, AlertCircle, TrendingUp, TrendingDown, Filter } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 
 import { usePlanFeatures } from '@/hooks/usePlanFeatures';
 
-// ... imports
-
 const Customers: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialFilter = (searchParams.get('filter') as 'all' | 'debt' | 'overdue') || 'all';
+  const [filterType, setFilterType] = useState<'all' | 'debt' | 'overdue'>(initialFilter);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -29,6 +31,13 @@ const Customers: React.FC = () => {
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
+
+  useEffect(() => {
+    const f = searchParams.get('filter');
+    if (f === 'overdue' || f === 'debt' || f === 'all') {
+      setFilterType(f as 'all' | 'debt' | 'overdue');
+    }
+  }, [searchParams]);
 
   // Feature Limits
   const { hasReachedLimit } = usePlanFeatures();
@@ -43,12 +52,24 @@ const Customers: React.FC = () => {
   const { toast } = useToast();
 
   const filteredCustomers = useMemo(() => {
-    return customers.filter(customer =>
-      (customer.name && customer.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (customer.rnc && customer.rnc.includes(searchTerm)) ||
-      (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [customers, searchTerm]);
+    return customers.filter(customer => {
+      const matchesSearch =
+        (customer.name && customer.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (customer.rnc && customer.rnc.includes(searchTerm)) ||
+        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      if (!matchesSearch) return false;
+
+      if (filterType === 'overdue') {
+        return overdueSet.has(customer.id);
+      }
+      if (filterType === 'debt') {
+        return (balances[customer.id] || 0) > 0;
+      }
+
+      return true;
+    });
+  }, [customers, searchTerm, filterType, overdueSet, balances]);
 
   const stats = useMemo(() => {
     const totalCustomers = customers.length;
@@ -175,9 +196,18 @@ const Customers: React.FC = () => {
         </Button>
       </div>
 
-      {/* Impact Stats Grid */}
+      {/* Impact Stats Grid - Clickable Filters */}
       <div className="max-w-5xl mx-auto w-full px-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-muted/5 border-border/30 overflow-hidden relative group hover:bg-muted/10 transition-all rounded-3xl">
+        <Card
+          onClick={() => {
+            setFilterType('all');
+            setSearchParams({});
+          }}
+          className={cn(
+            "bg-muted/5 border-border/30 overflow-hidden relative group hover:bg-muted/10 transition-all rounded-3xl cursor-pointer select-none",
+            filterType === 'all' && "border-emerald-500/50 bg-emerald-500/10 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10"
+          )}
+        >
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center gap-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Total Clientes</span>
@@ -185,11 +215,24 @@ const Customers: React.FC = () => {
               <div className="mt-2 p-1.5 bg-emerald-500/10 rounded-full">
                 <Users className="h-3.5 w-3.5 text-emerald-500" />
               </div>
+              <span className="text-[10px] text-muted-foreground mt-1 font-semibold">
+                {filterType === 'all' ? '✓ Viendo todos' : 'Clic para ver todos'}
+              </span>
             </div>
           </CardContent>
         </Card>
-        
-        <Card className="bg-muted/5 border-border/30 overflow-hidden relative group hover:bg-muted/10 transition-all rounded-3xl">
+
+        <Card
+          onClick={() => {
+            const next = filterType === 'debt' ? 'all' : 'debt';
+            setFilterType(next);
+            setSearchParams(next === 'all' ? {} : { filter: next });
+          }}
+          className={cn(
+            "bg-muted/5 border-border/30 overflow-hidden relative group hover:bg-muted/10 transition-all rounded-3xl cursor-pointer select-none",
+            filterType === 'debt' && "border-amber-500/50 bg-amber-500/10 ring-2 ring-amber-500/40 shadow-lg shadow-amber-500/10"
+          )}
+        >
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center gap-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Deuda Total</span>
@@ -197,11 +240,24 @@ const Customers: React.FC = () => {
               <div className="mt-2 p-1.5 bg-amber-500/10 rounded-full">
                 <DollarSign className="h-3.5 w-3.5 text-amber-500" />
               </div>
+              <span className="text-[10px] text-amber-500/90 mt-1 font-semibold">
+                {filterType === 'debt' ? '✓ Filtrando con deuda' : 'Clic para filtrar por deuda'}
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/5 border-border/30 overflow-hidden relative group hover:bg-muted/10 transition-all rounded-3xl">
+        <Card
+          onClick={() => {
+            const next = filterType === 'overdue' ? 'all' : 'overdue';
+            setFilterType(next);
+            setSearchParams(next === 'all' ? {} : { filter: next });
+          }}
+          className={cn(
+            "bg-muted/5 border-border/30 overflow-hidden relative group hover:bg-muted/10 transition-all rounded-3xl cursor-pointer select-none",
+            filterType === 'overdue' && "border-red-500/50 bg-red-500/10 ring-2 ring-red-500/40 shadow-lg shadow-red-500/10"
+          )}
+        >
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center gap-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Clientes con Mora</span>
@@ -209,13 +265,16 @@ const Customers: React.FC = () => {
               <div className="mt-2 p-1.5 bg-red-500/10 rounded-full">
                 <AlertCircle className="h-3.5 w-3.5 text-red-500" />
               </div>
+              <span className="text-[10px] text-red-500/90 mt-1 font-semibold">
+                {filterType === 'overdue' ? '✓ Filtrando con mora' : 'Clic para filtrar por mora'}
+              </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Centered Search */}
-      <div className="max-w-2xl mx-auto w-full px-4">
+      {/* Centered Search & Quick Filter Pills */}
+      <div className="max-w-2xl mx-auto w-full px-4 space-y-3">
         <div className="relative group">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40 group-focus-within:text-primary transition-colors" />
           <Input
@@ -224,6 +283,59 @@ const Customers: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-14 h-14 bg-muted/20 border-border/50 rounded-2xl focus:ring-primary/20 text-sm font-medium transition-all"
           />
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant={filterType === 'all' ? 'default' : 'outline'}
+            onClick={() => {
+              setFilterType('all');
+              setSearchParams({});
+            }}
+            className="rounded-full text-xs px-4"
+          >
+            Todos ({customers.length})
+          </Button>
+          <Button
+            size="sm"
+            variant={filterType === 'debt' ? 'default' : 'outline'}
+            onClick={() => {
+              const next = filterType === 'debt' ? 'all' : 'debt';
+              setFilterType(next);
+              setSearchParams(next === 'all' ? {} : { filter: next });
+            }}
+            className={cn("rounded-full text-xs px-4", filterType === 'debt' && "bg-amber-600 hover:bg-amber-500 text-white")}
+          >
+            Con Deuda ({customers.filter(c => (balances[c.id] || 0) > 0).length})
+          </Button>
+          <Button
+            size="sm"
+            variant={filterType === 'overdue' ? 'destructive' : 'outline'}
+            onClick={() => {
+              const next = filterType === 'overdue' ? 'all' : 'overdue';
+              setFilterType(next);
+              setSearchParams(next === 'all' ? {} : { filter: next });
+            }}
+            className="rounded-full text-xs px-4"
+          >
+            Con Mora ({stats.totalOverdue})
+          </Button>
+
+          {filterType !== 'all' && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setFilterType('all');
+                setSearchParams({});
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Limpiar filtro ✕
+            </Button>
+          )}
         </div>
       </div>
 
