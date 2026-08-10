@@ -60,6 +60,7 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
 }) => {
   const { data: customersList } = useCustomers();
   const customer = customersList?.find(c => c.id === initialCustomer?.id) || initialCustomer;
+  const { settings: storeSettings, updateSettings } = useStoreSettings();
 
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [paymentAmount, setPaymentAmount] = useState<string>('');

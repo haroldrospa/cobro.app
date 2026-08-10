@@ -55,9 +55,9 @@ export async function sendSmsApiMessage(
       const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone : `+${cleanPhone}`;
       
       // Credenciales Basic Auth (Username:APIKey) o Token
-      let authHeader = apiKey;
-      if (!apiKey.startsWith('Basic ') && !apiKey.startsWith('Bearer ')) {
-        authHeader = `Basic ${btoa(apiKey)}`;
+      let authHeader = apiKey.trim();
+      if (!authHeader.startsWith('Basic ') && !authHeader.startsWith('Bearer ')) {
+        authHeader = `Basic ${btoa(authHeader)}`;
       }
 
       const clickSendPayload = {
