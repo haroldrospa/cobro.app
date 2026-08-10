@@ -522,7 +522,6 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
   const createCashMovement = useCreateCashMovement();
   const queryClient = useQueryClient();
   const { userStore } = useUserStore();
-  const { settings: storeSettings } = useStoreSettings();
   const { printSettings, companyInfo } = usePrintSettings();
   
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
