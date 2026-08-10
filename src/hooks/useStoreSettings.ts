@@ -96,6 +96,12 @@ export type StoreSettings = {
   pos_view_mode?: 'grid' | 'list';
   pos_layout_mode?: 'classic' | 'catalog';
 
+  // SMS API Settings (Proveedor SMS Local)
+  sms_enabled?: boolean;
+  sms_api_url?: string;
+  sms_api_key?: string;
+  sms_sender_id?: string;
+
   // Kitchen Display Settings
   kitchen_yellow_threshold?: number;
   kitchen_red_threshold?: number;

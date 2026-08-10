@@ -32,6 +32,7 @@ import { useCreateCashMovement } from '@/hooks/useCashMovements';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
+import { sendSmsApiMessage } from '@/utils/smsApi';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '@/hooks/useUserStore';
@@ -317,10 +318,24 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     }
 
     const message = `${companyInfo?.name || 'Cobro App'}: Recibo de pago No. ${paymentReceipt.receiptNumber} para ${paymentReceipt.customerName}. Total pagado: $${paymentReceipt.totalPaid.toLocaleString('en-US')}. Balance pendiente: $${paymentReceipt.remainingDebt.toLocaleString('en-US')}. Gracias por su pago.`;
-    
-    const encodedMessage = encodeURIComponent(message);
-    window.location.href = `sms:${phone}?body=${encodedMessage}`;
-    toast.success('Abriendo app de mensajes SMS...');
+
+    if (storeSettings?.sms_enabled && storeSettings?.sms_api_url && storeSettings?.sms_api_key) {
+      toast('Enviando recibo por SMS...', { description: 'Procesando mensaje vía API de SMS...' });
+      sendSmsApiMessage(phone, message, {
+        url: storeSettings.sms_api_url,
+        apiKey: storeSettings.sms_api_key,
+        senderId: storeSettings.sms_sender_id
+      }).then(() => {
+        toast.success('Recibo enviado por SMS correctamente');
+      }).catch((err: any) => {
+        toast.error('Error al enviar SMS por API', { description: err.message || 'Abriendo app nativa de SMS como respaldo...' });
+        window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
+      });
+    } else {
+      const encodedMessage = encodeURIComponent(message);
+      window.location.href = `sms:${phone}?body=${encodedMessage}`;
+      toast.success('Abriendo app de mensajes SMS...');
+    }
   };
 
   const handleSendStatementEmail = async () => {
@@ -606,9 +621,23 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
 
     const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoicesList}). Favor realizar su pago. Gracias.`;
     
-    const encodedMessage = encodeURIComponent(message);
-    window.location.href = `sms:${phone}?body=${encodedMessage}`;
-    toast.success('Abriendo app de mensajes SMS...');
+    if (storeSettings?.sms_enabled && storeSettings?.sms_api_url && storeSettings?.sms_api_key) {
+      toast('Enviando comunicado por SMS...', { description: 'Procesando mensaje vía API de SMS...' });
+      sendSmsApiMessage(phone, message, {
+        url: storeSettings.sms_api_url,
+        apiKey: storeSettings.sms_api_key,
+        senderId: storeSettings.sms_sender_id
+      }).then(() => {
+        toast.success('Comunicado enviado por SMS correctamente');
+      }).catch((err: any) => {
+        toast.error('Error al enviar SMS por API', { description: err.message || 'Abriendo app nativa de SMS como respaldo...' });
+        window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
+      });
+    } else {
+      const encodedMessage = encodeURIComponent(message);
+      window.location.href = `sms:${phone}?body=${encodedMessage}`;
+      toast.success('Abriendo app de mensajes SMS...');
+    }
   };
 
   const selectedTotal = pendingSales
