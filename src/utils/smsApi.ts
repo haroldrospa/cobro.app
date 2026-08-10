@@ -88,6 +88,7 @@ export async function sendSmsApiMessage(
       }
 
       const data = await response.json().catch(() => ({}));
+      console.log('ClickSend API Full Response:', data);
       const firstMsg = data?.data?.messages?.[0];
       if (firstMsg && firstMsg.status && firstMsg.status !== 'SUCCESS') {
         throw new Error(`ClickSend Error: ${firstMsg.status} - ${firstMsg.status_text || 'No se pudo entregar el mensaje'}`);
