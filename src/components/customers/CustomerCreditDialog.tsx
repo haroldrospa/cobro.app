@@ -32,6 +32,7 @@ import { useCreateCashMovement } from '@/hooks/useCashMovements';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
+import { sendWhatsAppApiMessage } from '@/utils/whatsappOfficialApi';
 import { sendSmsApiMessage } from '@/utils/smsApi';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -525,6 +526,11 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
   const { printSettings, companyInfo } = usePrintSettings();
   
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [isMetaConfigOpen, setIsMetaConfigOpen] = useState(false);
+  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState('');
+  const [metaAccessToken, setMetaAccessToken] = useState('');
+  const [isSavingMetaSettings, setIsSavingMetaSettings] = useState(false);
+
   const { data: userData } = useUserStore();
 
   if (!customer) return null;
@@ -559,18 +565,35 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
 
     const message = `Estimado/a ${customer.name},\n\n` +
       `Esperamos que se encuentre muy bien.\n\n` +
-      `Le contactamos de manera cordial de parte de *${companyInfo?.name || 'nuestra empresa'}* para comunicarle que su balance total pendiente es de *$${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })}*.\n\n` +
+      `Le contactamos de parte de *${companyInfo?.name || 'nuestra empresa'}* para comunicarle que su balance total pendiente es de *$${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })}*.\n\n` +
       `A continuación, le detallamos las facturas correspondientes:\n` +
       `${invoicesList}\n` +
-      `Le agradecemos profundamente su pronta atención a este estado de cuenta. Si ya realizó el pago, por favor omita este mensaje.\n\n` +
+      `Le agradecemos su atención a este estado de cuenta.\n\n` +
       `¡Que tenga un excelente día!\n\n` +
-      `Atentamente,\n*${companyInfo?.name || 'La Gerencia'}*\n\n` +
-      `*(Este es un mensaje automático de Cobro App)*`;
+      `Atentamente,\n*${companyInfo?.name || 'La Gerencia'}*`;
     
     const encodedMessage = encodeURIComponent(message);
 
     if (method === 'api') {
-      if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+      const phoneId = storeSettings?.meta_whatsapp_phone_number_id || metaPhoneNumberId;
+      const token = storeSettings?.meta_whatsapp_access_token || metaAccessToken;
+
+      if (phoneId && token) {
+        setIsSendingWhatsApp(true);
+        toast('Enviando comunicado por Meta WhatsApp API...', { description: 'Procesando mensaje en segundo plano...' });
+        
+        sendWhatsAppApiMessage(phone, message, {
+          provider: 'meta',
+          phoneNumberId: phoneId,
+          token: token
+        }).then(() => {
+          toast.success('✓ Estado de cuenta enviado por Meta WhatsApp API');
+        }).catch((err: any) => {
+          toast.error('Error al enviar WhatsApp vía Meta API', { description: err.message });
+        }).finally(() => {
+          setIsSendingWhatsApp(false);
+        });
+      } else if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
         setIsSendingWhatsApp(true);
         toast('Enviando estado de cuenta por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano.' });
         
@@ -581,12 +604,14 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
         }).then(() => {
           toast.success('Estado de cuenta enviado por WhatsApp');
         }).catch((err: any) => {
-          toast.error('Error al enviar WhatsApp automático', { description: err.message || 'Verifica la conexión con Evolution API.' });
+          toast.error('Error al enviar WhatsApp automático', { description: err.message || 'Verifica la conexión.' });
         }).finally(() => {
           setIsSendingWhatsApp(false);
         });
       } else {
-        toast.error('WhatsApp Automático (API) no configurado', { description: 'Debes configurar Evolution API en los Ajustes del sistema.' });
+        setMetaPhoneNumberId(storeSettings?.meta_whatsapp_phone_number_id || '');
+        setMetaAccessToken(storeSettings?.meta_whatsapp_access_token || '');
+        setIsMetaConfigOpen(true);
       }
     } else if (method === 'web') {
       const whatsappUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
@@ -597,6 +622,57 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       const desktopUrl = `whatsapp://send?phone=${phone}&text=${encodedMessage}`;
       window.open(desktopUrl, '_self');
       toast.info("Abriendo WhatsApp en la PC...");
+    }
+  };
+
+  const handleSaveMetaConfigAndSend = async () => {
+    if (!metaPhoneNumberId.trim() || !metaAccessToken.trim()) {
+      toast.error('Ingresa el Phone Number ID y el Access Token de Meta');
+      return;
+    }
+
+    setIsSavingMetaSettings(true);
+    try {
+      try {
+        if (typeof updateSettings === 'function') {
+          await updateSettings({
+            meta_whatsapp_enabled: true,
+            meta_whatsapp_phone_number_id: metaPhoneNumberId.trim(),
+            meta_whatsapp_access_token: metaAccessToken.trim()
+          });
+        }
+      } catch (e) {
+        console.warn("Could not save settings:", e);
+      }
+
+      toast.success('Configuración de Meta WhatsApp lista');
+      setIsMetaConfigOpen(false);
+
+      if (!customer?.phone) return;
+      let phone = customer.phone.replace(/\D/g, '');
+      if (phone.length === 10) phone = `1${phone}`;
+
+      let invoicesList = '';
+      pendingSales.forEach(sale => {
+        invoicesList += `• Factura *${sale.invoice_number}*: *$${sale.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}*\n`;
+      });
+
+      const message = `Estimado/a ${customer.name},\n\n` +
+        `Le contactamos de *${companyInfo?.name || 'nuestra empresa'}* para comunicarle que su balance total pendiente es de *$${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })}*.\n\n` +
+        `${invoicesList}\n` +
+        `Favor realizar su pago. ¡Gracias!`;
+
+      toast('Enviando WhatsApp vía Meta Cloud API...', { description: 'Procesando mensaje en segundo plano...' });
+      await sendWhatsAppApiMessage(phone, message, {
+        provider: 'meta',
+        phoneNumberId: metaPhoneNumberId.trim(),
+        token: metaAccessToken.trim()
+      });
+      toast.success('✓ WhatsApp enviado vía Meta Official API');
+    } catch (err: any) {
+      toast.error('Error al enviar por Meta WhatsApp API', { description: err.message });
+    } finally {
+      setIsSavingMetaSettings(false);
     }
   };
 
@@ -1955,6 +2031,79 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
           saleId={viewingSaleId}
         />
       )}
+
+      {/* Diálogo de Configuración de Meta WhatsApp Cloud API */}
+      <Dialog open={isMetaConfigOpen} onOpenChange={setIsMetaConfigOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-600">
+              <Zap className="h-5 w-5" />
+              Configurar Meta WhatsApp Official API
+            </DialogTitle>
+            <DialogDescription>
+              Conecta tu API Oficial de Meta (Cloud API) para enviar comunicados automáticamente en segundo plano.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg text-xs space-y-1">
+              <p className="font-semibold flex items-center gap-1">
+                📌 ¿Dónde obtengo estas llaves?
+              </p>
+              <p>
+                1. Entra a <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer" className="underline font-medium text-emerald-700">developers.facebook.com</a>
+              </p>
+              <p>2. En tu app de WhatsApp, copia el <strong>Phone Number ID</strong> y el <strong>Access Token</strong>.</p>
+              <p className="text-[11px] text-emerald-700">💡 ¡Meta te regala 1,000 conversaciones gratis cada mes!</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meta_phone_id" className="text-xs font-semibold">
+                Phone Number ID (ID del Número de Teléfono) *
+              </Label>
+              <Input
+                id="meta_phone_id"
+                placeholder="Ej: 10594839201948"
+                value={metaPhoneNumberId}
+                onChange={(e) => setMetaPhoneNumberId(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meta_access_token" className="text-xs font-semibold">
+                Access Token (Bearer Token de Meta) *
+              </Label>
+              <Input
+                id="meta_access_token"
+                type="password"
+                placeholder="Ej: EAAG..."
+                value={metaAccessToken}
+                onChange={(e) => setMetaAccessToken(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsMetaConfigOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveMetaConfigAndSend} 
+              disabled={isSavingMetaSettings}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isSavingMetaSettings ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar y Enviar WhatsApp'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog >
   );
 };

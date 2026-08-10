@@ -102,6 +102,11 @@ export type StoreSettings = {
   sms_api_key?: string;
   sms_sender_id?: string;
 
+  // Meta WhatsApp Official API Settings
+  meta_whatsapp_enabled?: boolean;
+  meta_whatsapp_phone_number_id?: string;
+  meta_whatsapp_access_token?: string;
+
   // Kitchen Display Settings
   kitchen_yellow_threshold?: number;
   kitchen_red_threshold?: number;
@@ -322,7 +327,8 @@ export const useStoreSettings = () => {
       'pos_view_mode', 'pos_layout_mode', 'pos_layout_grid_cols',
       'invoice_font_size', 'show_barcode', 'logo_width', 'business_hours',
       'use_delivery', 'use_kitchen', 'shop_type',
-      'sms_enabled', 'sms_api_url', 'sms_api_key', 'sms_sender_id'
+      'sms_enabled', 'sms_api_url', 'sms_api_key', 'sms_sender_id',
+      'meta_whatsapp_enabled', 'meta_whatsapp_phone_number_id', 'meta_whatsapp_access_token'
     ];
     
     try {
@@ -391,6 +397,9 @@ export const useStoreSettings = () => {
         sms_api_url,
         sms_api_key,
         sms_sender_id,
+        meta_whatsapp_enabled,
+        meta_whatsapp_phone_number_id,
+        meta_whatsapp_access_token,
         ...dbPayload
       } = newSettings as any;
 
