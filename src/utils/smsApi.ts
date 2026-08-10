@@ -49,6 +49,45 @@ export async function sendSmsApiMessage(
   };
 
   try {
+    // Si la URL es de ClickSend (ClickSend API v3)
+    if (apiUrl.includes('clicksend.com')) {
+      // Normalizar número E.164 (+1809...)
+      const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone : `+${cleanPhone}`;
+      
+      // Credenciales Basic Auth (Username:APIKey) o Token
+      let authHeader = apiKey;
+      if (!apiKey.startsWith('Basic ') && !apiKey.startsWith('Bearer ')) {
+        authHeader = `Basic ${btoa(apiKey)}`;
+      }
+
+      const clickSendPayload = {
+        messages: [
+          {
+            to: formattedPhone,
+            body: message,
+            from: config.senderId || 'CobroApp'
+          }
+        ]
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+        },
+        body: JSON.stringify(clickSendPayload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`ClickSend Error (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json().catch(() => ({}));
+      return { success: true, data };
+    }
+
     // Si la URL contiene marcadores de posición ej. {phone} y {message}
     let finalUrl = apiUrl;
     if (finalUrl.includes('{phone}') || finalUrl.includes('{message}')) {
