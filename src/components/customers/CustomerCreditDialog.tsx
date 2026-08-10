@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CreditCard, Receipt, AlertTriangle, CheckCircle, DollarSign, Calendar, Loader2, Printer, X, Pencil, Check, Mail, Download, MessageCircle, Laptop, Globe, Zap } from 'lucide-react';
+import { CreditCard, Receipt, AlertTriangle, CheckCircle, DollarSign, Calendar, Loader2, Printer, X, Pencil, Check, Mail, Download, MessageCircle, Laptop, Globe, Zap, MessageSquare } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -303,6 +303,26 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     }
   };
 
+  const handleSMSReceipt = () => {
+    if (!paymentReceipt) return;
+    
+    if (!customer?.phone) {
+      toast.error('El cliente no tiene un número de teléfono registrado');
+      return;
+    }
+
+    let phone = customer.phone.replace(/\D/g, ''); 
+    if (phone.length === 10) {
+      phone = `1${phone}`;
+    }
+
+    const message = `${companyInfo?.name || 'Cobro App'}: Recibo de pago No. ${paymentReceipt.receiptNumber} para ${paymentReceipt.customerName}. Total pagado: $${paymentReceipt.totalPaid.toLocaleString('en-US')}. Balance pendiente: $${paymentReceipt.remainingDebt.toLocaleString('en-US')}. Gracias por su pago.`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    window.location.href = `sms:${phone}?body=${encodedMessage}`;
+    toast.success('Abriendo app de mensajes SMS...');
+  };
+
   const handleSendStatementEmail = async () => {
     if (!statementEmail || !statementEmail.includes('@')) {
       toast.error('Correo inválido');
@@ -556,6 +576,39 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       window.open(desktopUrl, '_self');
       toast.info("Abriendo WhatsApp en la PC...");
     }
+  };
+
+  const handleSendSMS = () => {
+    if (!customer?.phone) {
+      toast.error('El cliente no tiene un número de teléfono registrado');
+      return;
+    }
+
+    if (!pendingSales || pendingSales.length === 0) {
+      toast.error('No hay facturas pendientes para enviar');
+      return;
+    }
+
+    let phone = customer.phone.replace(/\D/g, '');
+    if (phone.length === 0) {
+      toast.error('El número de teléfono no es válido.');
+      return;
+    }
+
+    if (phone.length === 10) {
+      phone = `1${phone}`;
+    }
+
+    let invoicesList = '';
+    pendingSales.forEach(sale => {
+      invoicesList += `Fac ${sale.invoice_number}: $${sale.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}; `;
+    });
+
+    const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoicesList}). Favor realizar su pago. Gracias.`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    window.location.href = `sms:${phone}?body=${encodedMessage}`;
+    toast.success('Abriendo app de mensajes SMS...');
   };
 
   const selectedTotal = pendingSales
@@ -1078,6 +1131,10 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button onClick={handleSMSReceipt} variant="outline" className="w-full text-blue-600 border-blue-600 hover:bg-blue-50" size="sm">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              SMS
+            </Button>
             <Button onClick={() => setIsEmailDialogOpen(true)} variant="outline" className="w-full" size="sm">
               <Mail className="h-4 w-4 mr-2" />
               Correo
@@ -1243,6 +1300,10 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button size="sm" variant="outline" onClick={handleSendSMS} className="h-9 sm:h-8 shadow-sm gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="hidden xs:inline">SMS</span>
+                </Button>
               </div>
             </DialogTitle>
           </DialogHeader>
