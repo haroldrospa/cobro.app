@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     legacy({
-      targets: ["defaults", "not IE 11", "chrome >= 49", "firefox >= 45", "safari >= 10", "edge >= 15"],
+      targets: ["defaults", "not IE 11"],
     }),
     viteCompression({
       algorithm: 'brotliCompress',
@@ -107,7 +107,6 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   build: {
     sourcemap: false,          // ✅ No source maps in prod = ~35% smaller bundle
-    target: ['es2015', 'chrome58', 'firefox57', 'safari11', 'edge16'],          // ✅ Modern browsers only = smaller, faster output
     cssCodeSplit: true,        // ✅ Only load CSS for current route
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
