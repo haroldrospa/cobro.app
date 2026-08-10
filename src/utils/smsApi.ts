@@ -60,14 +60,17 @@ export async function sendSmsApiMessage(
         authHeader = `Basic ${btoa(authHeader)}`;
       }
 
+      const messageItem: any = {
+        to: formattedPhone,
+        body: message,
+      };
+
+      if (config.senderId && config.senderId.trim().length > 0) {
+        messageItem.from = config.senderId.trim();
+      }
+
       const clickSendPayload = {
-        messages: [
-          {
-            to: formattedPhone,
-            body: message,
-            from: config.senderId || 'CobroApp'
-          }
-        ]
+        messages: [messageItem]
       };
 
       const response = await fetch(apiUrl, {

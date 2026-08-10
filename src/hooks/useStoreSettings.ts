@@ -321,7 +321,8 @@ export const useStoreSettings = () => {
     const uiKeys = [
       'pos_view_mode', 'pos_layout_mode', 'pos_layout_grid_cols',
       'invoice_font_size', 'show_barcode', 'logo_width', 'business_hours',
-      'use_delivery', 'use_kitchen', 'shop_type'
+      'use_delivery', 'use_kitchen', 'shop_type',
+      'sms_enabled', 'sms_api_url', 'sms_api_key', 'sms_sender_id'
     ];
     
     try {
@@ -386,6 +387,10 @@ export const useStoreSettings = () => {
         pos_view_mode, // We filter these out from store-wide update if they are just UI choices
         pos_layout_mode,
         pos_layout_grid_cols, // Filter out layout grid cols too as it's a per-user UI preference
+        sms_enabled,
+        sms_api_url,
+        sms_api_key,
+        sms_sender_id,
         ...dbPayload
       } = newSettings as any;
 
