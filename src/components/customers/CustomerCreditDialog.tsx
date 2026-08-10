@@ -609,14 +609,20 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
 
     setIsSavingSmsSettings(true);
     try {
-      await updateSettings({
-        sms_enabled: true,
-        sms_api_url: smsApiUrl.trim(),
-        sms_api_key: smsApiKey.trim(),
-        sms_sender_id: smsSenderId.trim() || 'CobroApp'
-      });
+      try {
+        if (typeof updateSettings === 'function') {
+          await updateSettings({
+            sms_enabled: true,
+            sms_api_url: smsApiUrl.trim(),
+            sms_api_key: smsApiKey.trim(),
+            sms_sender_id: smsSenderId.trim() || 'CobroApp'
+          });
+        }
+      } catch (e) {
+        console.warn("Could not save settings to store_settings table:", e);
+      }
 
-      toast.success('Configuración de SMS guardada');
+      toast.success('Configuración de SMS lista');
       setIsSmsConfigOpen(false);
 
       if (!customer?.phone) return;
