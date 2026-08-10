@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CreditCard, Receipt, AlertTriangle, CheckCircle, DollarSign, Calendar, Loader2, Printer, X, Pencil, Check, Mail, Download, MessageCircle } from 'lucide-react';
+import { CreditCard, Receipt, AlertTriangle, CheckCircle, DollarSign, Calendar, Loader2, Printer, X, Pencil, Check, Mail, Download, MessageCircle, Laptop, Globe, Zap } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -10,6 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -250,7 +258,7 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     setEmailAddress('');
   };
 
-  const handleWhatsAppReceipt = () => {
+  const handleWhatsAppReceipt = (method: 'app' | 'web' | 'api' = 'app') => {
     if (!paymentReceipt) return;
     
     if (!customer?.phone) {
@@ -265,23 +273,33 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       phone = `1${phone}`;
     }
     
-    if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
-      toast('Enviando recibo por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano vía API.' });
-      
-      sendEvolutionWhatsAppMessage(phone, message, {
-        url: storeSettings.evolution_api_url,
-        instanceName: storeSettings.evolution_instance_name,
-        apiKey: storeSettings.evolution_api_key
-      }).then(() => {
-        toast.success('Recibo enviado por WhatsApp');
-      }).catch((err: any) => {
-        toast.error('Error al enviar WhatsApp', { description: err.message || 'Verifica la conexión con Evolution API.' });
-      });
-    } else {
-      const encodedMessage = encodeURIComponent(message);
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+    const encodedMessage = encodeURIComponent(message);
+
+    if (method === 'api') {
+      if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+        toast('Enviando recibo por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano vía API.' });
+        
+        sendEvolutionWhatsAppMessage(phone, message, {
+          url: storeSettings.evolution_api_url,
+          instanceName: storeSettings.evolution_instance_name,
+          apiKey: storeSettings.evolution_api_key
+        }).then(() => {
+          toast.success('Recibo enviado por WhatsApp');
+        }).catch((err: any) => {
+          toast.error('Error al enviar WhatsApp', { description: err.message || 'Verifica la conexión con Evolution API.' });
+        });
+      } else {
+        toast.error('WhatsApp Automático (API) no configurado');
+      }
+    } else if (method === 'web') {
+      const whatsappUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
       window.open(whatsappUrl, '_blank');
-      toast.info("API no configurada, abriendo WhatsApp Web.");
+      toast.info("Abriendo WhatsApp Web...");
+    } else {
+      // 'app' - Abre la app de escritorio de WhatsApp en la PC
+      const desktopUrl = `whatsapp://send?phone=${phone}&text=${encodedMessage}`;
+      window.open(desktopUrl, '_self');
+      toast.info("Abriendo WhatsApp en la PC...");
     }
   };
 
@@ -471,7 +489,7 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
 
   const { totalDebt, pendingSales } = balanceData || { totalDebt: 0, pendingSales: [] };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = (method: 'app' | 'web' | 'api' = 'app') => {
     if (!customer?.phone) {
       toast.error('El cliente no tiene un número de teléfono registrado');
       return;
@@ -483,11 +501,6 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     }
 
     let phone = customer.phone.replace(/\D/g, '');
-    if (phone.length < 10 && phone.length > 0) {
-      // It's possible it's a local number without area code, but WhatsApp requires full international format.
-      // We will try to send it, but let's warn if it's completely empty.
-    }
-    
     if (phone.length === 0) {
       toast.error('El número de teléfono no es válido (solo contiene letras o está vacío).');
       return;
@@ -512,23 +525,36 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       `Atentamente,\n*${companyInfo?.name || 'La Gerencia'}*\n\n` +
       `*(Este es un mensaje automático de Cobro App)*`;
     
-    if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
-      setIsSendingWhatsApp(true);
-      toast('Enviando estado de cuenta por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano.' });
-      
-      sendEvolutionWhatsAppMessage(phone, message, {
-        url: storeSettings.evolution_api_url,
-        instanceName: storeSettings.evolution_instance_name,
-        apiKey: storeSettings.evolution_api_key
-      }).then(() => {
-        toast.success('Estado de cuenta enviado por WhatsApp');
-      }).catch((err: any) => {
-        toast.error('Error al enviar WhatsApp automático', { description: err.message || 'Verifica la conexión con Evolution API.' });
-      }).finally(() => {
-        setIsSendingWhatsApp(false);
-      });
+    const encodedMessage = encodeURIComponent(message);
+
+    if (method === 'api') {
+      if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+        setIsSendingWhatsApp(true);
+        toast('Enviando estado de cuenta por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano.' });
+        
+        sendEvolutionWhatsAppMessage(phone, message, {
+          url: storeSettings.evolution_api_url,
+          instanceName: storeSettings.evolution_instance_name,
+          apiKey: storeSettings.evolution_api_key
+        }).then(() => {
+          toast.success('Estado de cuenta enviado por WhatsApp');
+        }).catch((err: any) => {
+          toast.error('Error al enviar WhatsApp automático', { description: err.message || 'Verifica la conexión con Evolution API.' });
+        }).finally(() => {
+          setIsSendingWhatsApp(false);
+        });
+      } else {
+        toast.error('WhatsApp Automático (API) no configurado', { description: 'Debes configurar Evolution API en los Ajustes del sistema.' });
+      }
+    } else if (method === 'web') {
+      const whatsappUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
+      window.open(whatsappUrl, '_blank');
+      toast.info("Abriendo WhatsApp Web...");
     } else {
-      toast.error('WhatsApp Automático no configurado', { description: 'Debes configurar Evolution API en los Ajustes del sistema.' });
+      // 'app' - Abre la app de escritorio de WhatsApp en la PC
+      const desktopUrl = `whatsapp://send?phone=${phone}&text=${encodedMessage}`;
+      window.open(desktopUrl, '_self');
+      toast.info("Abriendo WhatsApp en la PC...");
     }
   };
 
@@ -1017,10 +1043,41 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
               <Download className="h-4 w-4 mr-2" />
               PDF
             </Button>
-            <Button onClick={handleWhatsAppReceipt} variant="outline" className="w-full text-green-600 border-green-600 hover:bg-green-50" size="sm">
-              <MessageCircle className="h-4 w-4 mr-2" />
-              WhatsApp
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full text-green-600 border-green-600 hover:bg-green-50" size="sm">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  WhatsApp
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Enviar Recibo por WhatsApp</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleWhatsAppReceipt('app')} className="cursor-pointer py-2">
+                  <Laptop className="h-4 w-4 mr-2 text-green-600 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs">WhatsApp en PC (App)</span>
+                    <span className="text-[10px] text-muted-foreground">Abre la app de la computadora</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleWhatsAppReceipt('web')} className="cursor-pointer py-2">
+                  <Globe className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs">WhatsApp Web</span>
+                    <span className="text-[10px] text-muted-foreground">Abre en el navegador web</span>
+                  </div>
+                </DropdownMenuItem>
+                {storeSettings?.evolution_enabled && (
+                  <DropdownMenuItem onClick={() => handleWhatsAppReceipt('api')} className="cursor-pointer py-2">
+                    <Zap className="h-4 w-4 mr-2 text-amber-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs">Envío Automático (API)</span>
+                      <span className="text-[10px] text-muted-foreground">Envía directamente en segundo plano</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={() => setIsEmailDialogOpen(true)} variant="outline" className="w-full" size="sm">
               <Mail className="h-4 w-4 mr-2" />
               Correo
@@ -1151,10 +1208,41 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
                   <Mail className="h-4 w-4" />
                   <span className="hidden xs:inline">Enviar</span>
                 </Button>
-                <Button size="sm" variant="outline" onClick={handleSendWhatsApp} className="h-9 sm:h-8 shadow-sm gap-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 px-3">
-                  <MessageCircle className="h-4 w-4" />
-                  <span className="hidden xs:inline">WhatsApp</span>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-9 sm:h-8 shadow-sm gap-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 px-3">
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="hidden xs:inline">WhatsApp</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel>Enviar Estado de Cuenta</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleSendWhatsApp('app')} className="cursor-pointer py-2">
+                      <Laptop className="h-4 w-4 mr-2 text-green-600 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-xs">WhatsApp en PC (App)</span>
+                        <span className="text-[10px] text-muted-foreground">Abre la app de la computadora</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSendWhatsApp('web')} className="cursor-pointer py-2">
+                      <Globe className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-xs">WhatsApp Web</span>
+                        <span className="text-[10px] text-muted-foreground">Abre en el navegador web</span>
+                      </div>
+                    </DropdownMenuItem>
+                    {storeSettings?.evolution_enabled && (
+                      <DropdownMenuItem onClick={() => handleSendWhatsApp('api')} className="cursor-pointer py-2">
+                        <Zap className="h-4 w-4 mr-2 text-amber-500 shrink-0" />
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-xs">Envío Automático (API)</span>
+                          <span className="text-[10px] text-muted-foreground">Envía directamente en segundo plano</span>
+                        </div>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </DialogTitle>
           </DialogHeader>

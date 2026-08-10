@@ -210,7 +210,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
   const invoiceNumber = saleData?.encf || saleData?.invoice_number || saleData?.invoiceNumber || '000001';
 
-  const handleSendWhatsApp = async (customPhone?: string, isAutomatic: boolean = false) => {
+  const handleSendWhatsApp = async (customPhone?: string, isAutomatic: boolean = false, method: 'app' | 'web' | 'api' = 'app') => {
     const targetPhone = customPhone || saleData?.customer?.phone;
     if (!targetPhone) {
       toast({
@@ -261,31 +261,36 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       `_(Mensaje automático enviado vía Cobroapp)_`
     );
 
-    if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
-      setIsSendingWhatsApp(true);
-      toast({ title: 'Enviando WhatsApp...', description: 'El mensaje se está enviando en segundo plano.' });
-      
-      try {
-        await sendEvolutionWhatsAppMessage(phone, decodeURIComponent(message), {
-          url: storeSettings.evolution_api_url,
-          instanceName: storeSettings.evolution_instance_name,
-          apiKey: storeSettings.evolution_api_key
-        });
-        toast({ title: 'WhatsApp Enviado', description: 'El mensaje fue entregado correctamente.', variant: 'default' });
-      } catch (err: any) {
-        if (!isAutomatic) {
-          toast({ title: 'Error al enviar WhatsApp', description: err.message || 'Se abrirá la ventana manual como respaldo.', variant: 'destructive' });
-          window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-        } else {
-          toast({ title: 'Error al enviar WhatsApp automático', description: err.message || 'Verifica la conexión a la API.', variant: 'destructive' });
+    if (method === 'api' || (isAutomatic && storeSettings?.evolution_enabled)) {
+      if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
+        setIsSendingWhatsApp(true);
+        toast({ title: 'Enviando WhatsApp...', description: 'El mensaje se está enviando en segundo plano.' });
+        
+        try {
+          await sendEvolutionWhatsAppMessage(phone, decodeURIComponent(message), {
+            url: storeSettings.evolution_api_url,
+            instanceName: storeSettings.evolution_instance_name,
+            apiKey: storeSettings.evolution_api_key
+          });
+          toast({ title: 'WhatsApp Enviado', description: 'El mensaje fue entregado correctamente.', variant: 'default' });
+        } catch (err: any) {
+          if (!isAutomatic) {
+            toast({ title: 'Error al enviar WhatsApp API', description: 'Abriendo WhatsApp en la PC como respaldo...', variant: 'destructive' });
+            window.open(`whatsapp://send?phone=${phone}&text=${message}`, '_self');
+          } else {
+            toast({ title: 'Error al enviar WhatsApp automático', description: err.message || 'Verifica la conexión a la API.', variant: 'destructive' });
+          }
+        } finally {
+          setIsSendingWhatsApp(false);
         }
-      } finally {
-        setIsSendingWhatsApp(false);
+      } else {
+        window.open(`whatsapp://send?phone=${phone}&text=${message}`, '_self');
       }
+    } else if (method === 'web') {
+      window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${message}`, '_blank');
     } else {
-      if (!isAutomatic) {
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-      }
+      // Default: 'app' - Abre WhatsApp Desktop en la PC
+      window.open(`whatsapp://send?phone=${phone}&text=${message}`, '_self');
     }
   };
 
