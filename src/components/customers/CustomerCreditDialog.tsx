@@ -628,18 +628,18 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       let phone = customer.phone.replace(/\D/g, '');
       if (phone.length === 10) phone = `1${phone}`;
 
-      let invoicesList = '';
-      pendingSales.forEach(sale => {
-        invoicesList += `Fac ${sale.invoice_number}: $${sale.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}; `;
-      });
+      const invoicesCount = pendingSales.length;
+      const invoiceSummary = invoicesCount === 1 
+        ? `Factura ${pendingSales[0].invoice_number}`
+        : `${invoicesCount} facturas pendientes`;
 
-      const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoicesList}). Favor realizar su pago. Gracias.`;
+      const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoiceSummary}). Favor realizar su pago. Gracias.`;
 
       toast('Enviando comunicado por SMS...', { description: 'Procesando mensaje vía API de SMS...' });
       await sendSmsApiMessage(phone, message, {
         url: smsApiUrl.trim(),
         apiKey: smsApiKey.trim(),
-        senderId: smsSenderId.trim() || 'CobroApp'
+        senderId: smsSenderId.trim()
       });
       toast.success('✓ Comunicado enviado por SMS correctamente');
     } catch (err: any) {
@@ -670,12 +670,12 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       phone = `1${phone}`;
     }
 
-    let invoicesList = '';
-    pendingSales.forEach(sale => {
-      invoicesList += `Fac ${sale.invoice_number}: $${sale.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}; `;
-    });
+    const invoicesCount = pendingSales.length;
+    const invoiceSummary = invoicesCount === 1 
+      ? `Factura ${pendingSales[0].invoice_number}`
+      : `${invoicesCount} facturas pendientes`;
 
-    const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoicesList}). Favor realizar su pago. Gracias.`;
+    const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoiceSummary}). Favor realizar su pago. Gracias.`;
     
     if (method === 'native') {
       const encodedMessage = encodeURIComponent(message);
