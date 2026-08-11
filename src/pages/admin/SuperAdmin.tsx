@@ -603,7 +603,7 @@ const SuperAdmin = () => {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl animate-fade-in text-foreground">
+        <div className="container mx-auto p-6 max-w-7xl animate-fade-in text-foreground pb-24 min-h-screen">
             {/* Header Limpio y Profesional con Bar de Seguridad */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 border-b pb-4 gap-4">
                 <div>
