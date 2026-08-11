@@ -1240,7 +1240,8 @@ const SuperAdmin = () => {
                                                                         store.plan_name === 'enterprise' ? 'Corporativo' :
                                                                             store.plan_name}
                                                             </Badge>
-                                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 shadow-none font-medium">Sin Plan</Badge>
+                                                        ) : (
+                                                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 shadow-none font-medium">Sin Plan</Badge>
                                                         )}
                                                     </TableCell>
                                                     <TableCell 
