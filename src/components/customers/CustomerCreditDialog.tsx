@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CreditCard, Receipt, AlertTriangle, CheckCircle, DollarSign, Calendar, Loader2, Printer, X, Pencil, Check, Mail, Download, MessageCircle, Laptop, Globe, Zap, MessageSquare } from 'lucide-react';
+import { CreditCard, Receipt, AlertTriangle, CheckCircle, DollarSign, Calendar, Loader2, Printer, X, Pencil, Check, Mail, Download, MessageCircle, Laptop, Globe, Zap, MessageSquare, Settings } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -593,21 +593,6 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
           toast.success('✓ Estado de cuenta enviado por Meta WhatsApp API');
         }).catch((err: any) => {
           toast.error('Error al enviar WhatsApp vía Meta API', { description: err.message });
-        }).finally(() => {
-          setIsSendingWhatsApp(false);
-        });
-      } else if (storeSettings?.evolution_enabled && storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key) {
-        setIsSendingWhatsApp(true);
-        toast('Enviando estado de cuenta por WhatsApp...', { description: 'El mensaje se está enviando en segundo plano.' });
-        
-        sendEvolutionWhatsAppMessage(phone, message, {
-          url: storeSettings.evolution_api_url,
-          instanceName: storeSettings.evolution_instance_name,
-          apiKey: storeSettings.evolution_api_key
-        }).then(() => {
-          toast.success('Estado de cuenta enviado por WhatsApp');
-        }).catch((err: any) => {
-          toast.error('Error al enviar WhatsApp automático', { description: err.message || 'Verifica la conexión.' });
         }).finally(() => {
           setIsSendingWhatsApp(false);
         });
@@ -1532,15 +1517,24 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
                         <span className="text-[10px] text-muted-foreground">Abre en el navegador web</span>
                       </div>
                     </DropdownMenuItem>
-                    {storeSettings?.evolution_enabled && (
-                      <DropdownMenuItem onClick={() => handleSendWhatsApp('api')} className="cursor-pointer py-2">
-                        <Zap className="h-4 w-4 mr-2 text-amber-500 shrink-0" />
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-xs">Envío Automático (API)</span>
-                          <span className="text-[10px] text-muted-foreground">Envía directamente en segundo plano</span>
-                        </div>
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem onClick={() => handleSendWhatsApp('api')} className="cursor-pointer py-2">
+                      <Zap className="h-4 w-4 mr-2 text-emerald-500 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-xs text-emerald-600">Envío Automático (Meta API)</span>
+                        <span className="text-[10px] text-muted-foreground">Envía vía API oficial en segundo plano</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setMetaPhoneNumberId(storeSettings?.meta_whatsapp_phone_number_id || '');
+                      setMetaAccessToken(storeSettings?.meta_whatsapp_access_token || '');
+                      setIsMetaConfigOpen(true);
+                    }} className="cursor-pointer py-2">
+                      <Settings className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-xs">Configurar Meta API</span>
+                        <span className="text-[10px] text-muted-foreground">Ingresar Phone ID y Access Token</span>
+                      </div>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DropdownMenu>
