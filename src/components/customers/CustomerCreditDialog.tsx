@@ -36,7 +36,6 @@ import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 import { sendWhatsAppApiMessage } from '@/utils/whatsappOfficialApi';
-import { sendSmsApiMessage } from '@/utils/smsApi';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '@/hooks/useUserStore';
@@ -83,13 +82,6 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
 
   // Invoice Details state
   const [viewingSaleId, setViewingSaleId] = useState<string | null>(null);
-
-  // SMS API Config State
-  const [isSmsConfigOpen, setIsSmsConfigOpen] = useState(false);
-  const [smsApiUrl, setSmsApiUrl] = useState('');
-  const [smsApiKey, setSmsApiKey] = useState('');
-  const [smsSenderId, setSmsSenderId] = useState('');
-  const [isSavingSmsSettings, setIsSavingSmsSettings] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
 
@@ -316,39 +308,7 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     }
   };
 
-  const handleSMSReceipt = () => {
-    if (!paymentReceipt) return;
-    
-    if (!customer?.phone) {
-      toast.error('El cliente no tiene un número de teléfono registrado');
-      return;
-    }
 
-    let phone = customer.phone.replace(/\D/g, ''); 
-    if (phone.length === 10) {
-      phone = `1${phone}`;
-    }
-
-    const message = `${companyInfo?.name || 'Cobro App'}: Recibo de pago No. ${paymentReceipt.receiptNumber} para ${paymentReceipt.customerName}. Total pagado: $${paymentReceipt.totalPaid.toLocaleString('en-US')}. Balance pendiente: $${paymentReceipt.remainingDebt.toLocaleString('en-US')}. Gracias por su pago.`;
-
-    if (storeSettings?.sms_enabled && storeSettings?.sms_api_url && storeSettings?.sms_api_key) {
-      toast('Enviando recibo por SMS...', { description: 'Procesando mensaje vía API de SMS...' });
-      sendSmsApiMessage(phone, message, {
-        url: storeSettings.sms_api_url,
-        apiKey: storeSettings.sms_api_key,
-        senderId: storeSettings.sms_sender_id
-      }).then(() => {
-        toast.success('Recibo enviado por SMS correctamente');
-      }).catch((err: any) => {
-        toast.error('Error al enviar SMS por API', { description: err.message || 'Abriendo app nativa de SMS como respaldo...' });
-        window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
-      });
-    } else {
-      const encodedMessage = encodeURIComponent(message);
-      window.location.href = `sms:${phone}?body=${encodedMessage}`;
-      toast.success('Abriendo app de mensajes SMS...');
-    }
-  };
 
   const handleSendStatementEmail = async () => {
     if (!statementEmail || !statementEmail.includes('@')) {
@@ -664,109 +624,7 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     }
   };
 
-  const handleSaveSmsConfigAndSend = async () => {
-    if (!smsApiUrl || !smsApiKey) {
-      toast.error('Ingresa la URL del proveedor y la API Key');
-      return;
-    }
 
-    setIsSavingSmsSettings(true);
-    try {
-      try {
-        if (typeof updateSettings === 'function') {
-          await updateSettings({
-            sms_enabled: true,
-            sms_api_url: smsApiUrl.trim(),
-            sms_api_key: smsApiKey.trim(),
-            sms_sender_id: smsSenderId.trim() || 'CobroApp'
-          });
-        }
-      } catch (e) {
-        console.warn("Could not save settings to store_settings table:", e);
-      }
-
-      toast.success('Configuración de SMS lista');
-      setIsSmsConfigOpen(false);
-
-      if (!customer?.phone) return;
-      let phone = customer.phone.replace(/\D/g, '');
-      if (phone.length === 10) phone = `1${phone}`;
-
-      const invoicesCount = pendingSales.length;
-      const invoiceSummary = invoicesCount === 1 
-        ? `Factura ${pendingSales[0].invoice_number}`
-        : `${invoicesCount} facturas pendientes`;
-
-      const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoiceSummary}). Favor realizar su pago. Gracias.`;
-
-      toast('Enviando comunicado por SMS...', { description: 'Procesando mensaje vía API de SMS...' });
-      await sendSmsApiMessage(phone, message, {
-        url: smsApiUrl.trim(),
-        apiKey: smsApiKey.trim(),
-        senderId: smsSenderId.trim()
-      });
-      toast.success('✓ Comunicado enviado por SMS correctamente');
-    } catch (err: any) {
-      toast.error('Error al enviar SMS por API', { description: err.message });
-    } finally {
-      setIsSavingSmsSettings(false);
-    }
-  };
-
-  const handleSendSMS = (method: 'api' | 'native' = 'api') => {
-    if (!customer?.phone) {
-      toast.error('El cliente no tiene un número de teléfono registrado');
-      return;
-    }
-
-    if (!pendingSales || pendingSales.length === 0) {
-      toast.error('No hay facturas pendientes para enviar');
-      return;
-    }
-
-    let phone = customer.phone.replace(/\D/g, '');
-    if (phone.length === 0) {
-      toast.error('El número de teléfono no es válido.');
-      return;
-    }
-
-    if (phone.length === 10) {
-      phone = `1${phone}`;
-    }
-
-    const invoicesCount = pendingSales.length;
-    const invoiceSummary = invoicesCount === 1 
-      ? `Factura ${pendingSales[0].invoice_number}`
-      : `${invoicesCount} facturas pendientes`;
-
-    const message = `${companyInfo?.name || 'Cobro App'}: Estimado/a ${customer.name}, su deuda pendiente es de $${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${invoiceSummary}). Favor realizar su pago. Gracias.`;
-    
-    if (method === 'native') {
-      const encodedMessage = encodeURIComponent(message);
-      window.location.href = `sms:${phone}?body=${encodedMessage}`;
-      toast.info('Abriendo app de mensajes SMS...');
-      return;
-    }
-
-    if (storeSettings?.sms_enabled && storeSettings?.sms_api_url && storeSettings?.sms_api_key) {
-      toast('Enviando comunicado por SMS...', { description: 'Procesando mensaje vía API en segundo plano...' });
-      sendSmsApiMessage(phone, message, {
-        url: storeSettings.sms_api_url,
-        apiKey: storeSettings.sms_api_key,
-        senderId: storeSettings.sms_sender_id
-      }).then(() => {
-        toast.success('✓ Comunicado enviado por SMS automáticamente');
-      }).catch((err: any) => {
-        toast.error('Error al enviar SMS por API', { description: err.message || 'Verifica las credenciales en la configuración de SMS.' });
-      });
-    } else {
-      // Abre modal para configurar la API de SMS inmediatamente
-      setSmsApiUrl(storeSettings?.sms_api_url || '');
-      setSmsApiKey(storeSettings?.sms_api_key || '');
-      setSmsSenderId(storeSettings?.sms_sender_id || 'CobroApp');
-      setIsSmsConfigOpen(true);
-    }
-  };
 
   const selectedTotal = pendingSales
     .filter(sale => selectedInvoices.includes(sale.id))
@@ -1288,10 +1146,6 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={handleSMSReceipt} variant="outline" className="w-full text-blue-600 border-blue-600 hover:bg-blue-50" size="sm">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              SMS
-            </Button>
             <Button onClick={() => setIsEmailDialogOpen(true)} variant="outline" className="w-full" size="sm">
               <Mail className="h-4 w-4 mr-2" />
               Correo
@@ -1393,77 +1247,6 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
     );
   }
 
-  // SMS Config Dialog Modal
-  if (isSmsConfigOpen) {
-    return (
-      <Dialog open={isSmsConfigOpen} onOpenChange={setIsSmsConfigOpen}>
-        <DialogContent className="max-w-md p-6 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-              <MessageSquare className="h-5 w-5 text-blue-500" />
-              Configurar Envío Automático de SMS
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 text-left">
-            <p className="text-xs text-muted-foreground">
-              Ingresa los datos de tu proveedor de SMS local para enviar los mensajes automáticamente en segundo plano.
-            </p>
-            
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">URL del Servidor API (Endpoint)</label>
-              <Input
-                placeholder="Ej: https://api.misms.do/send"
-                value={smsApiUrl}
-                onChange={e => setSmsApiUrl(e.target.value)}
-                className="h-10 text-xs font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Clave API (API Key)</label>
-              <Input
-                type="password"
-                placeholder="Tu Token / API Key"
-                value={smsApiKey}
-                onChange={e => setSmsApiKey(e.target.value)}
-                className="h-10 text-xs font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Remitente / Sender ID (Opcional)</label>
-              <Input
-                placeholder="CobroApp"
-                value={smsSenderId}
-                onChange={e => setSmsSenderId(e.target.value)}
-                className="h-10 text-xs"
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setIsSmsConfigOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveSmsConfigAndSend}
-                disabled={isSavingSmsSettings || !smsApiUrl || !smsApiKey}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold gap-2"
-                size="sm"
-              >
-                {isSavingSmsSettings ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Zap className="h-4 w-4" />
-                )}
-                Guardar y Enviar SMS
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
 
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1533,45 +1316,6 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
                       <div className="flex flex-col">
                         <span className="font-semibold text-xs">Configurar Meta API</span>
                         <span className="text-[10px] text-muted-foreground">Ingresar Phone ID y Access Token</span>
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="h-9 sm:h-8 shadow-sm gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="hidden xs:inline">SMS</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    <DropdownMenuLabel>Enviar por SMS</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleSendSMS('api')} className="cursor-pointer py-2">
-                      <Zap className="h-4 w-4 mr-2 text-blue-600 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-xs">Envío Automático (API)</span>
-                        <span className="text-[10px] text-muted-foreground">Envía en segundo plano directamente</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
-                      setSmsApiUrl(storeSettings?.sms_api_url || '');
-                      setSmsApiKey(storeSettings?.sms_api_key || '');
-                      setSmsSenderId(storeSettings?.sms_sender_id || 'CobroApp');
-                      setIsSmsConfigOpen(true);
-                    }} className="cursor-pointer py-2">
-                      <Pencil className="h-4 w-4 mr-2 text-amber-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-xs">Configurar API de SMS</span>
-                        <span className="text-[10px] text-muted-foreground">Ingresar credenciales de proveedor</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleSendSMS('native')} className="cursor-pointer py-2">
-                      <Laptop className="h-4 w-4 mr-2 text-zinc-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-xs">App Mensajes Nativa</span>
-                        <span className="text-[10px] text-muted-foreground">Abrir en celular / PC</span>
                       </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>

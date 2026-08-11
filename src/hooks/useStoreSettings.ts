@@ -96,12 +96,6 @@ export type StoreSettings = {
   pos_view_mode?: 'grid' | 'list';
   pos_layout_mode?: 'classic' | 'catalog';
 
-  // SMS API Settings (Proveedor SMS Local)
-  sms_enabled?: boolean;
-  sms_api_url?: string;
-  sms_api_key?: string;
-  sms_sender_id?: string;
-
   // Meta WhatsApp Official API Settings
   meta_whatsapp_enabled?: boolean;
   meta_whatsapp_phone_number_id?: string;
@@ -327,7 +321,6 @@ export const useStoreSettings = () => {
       'pos_view_mode', 'pos_layout_mode', 'pos_layout_grid_cols',
       'invoice_font_size', 'show_barcode', 'logo_width', 'business_hours',
       'use_delivery', 'use_kitchen', 'shop_type',
-      'sms_enabled', 'sms_api_url', 'sms_api_key', 'sms_sender_id',
       'meta_whatsapp_enabled', 'meta_whatsapp_phone_number_id', 'meta_whatsapp_access_token'
     ];
     
@@ -393,10 +386,6 @@ export const useStoreSettings = () => {
         pos_view_mode, // We filter these out from store-wide update if they are just UI choices
         pos_layout_mode,
         pos_layout_grid_cols, // Filter out layout grid cols too as it's a per-user UI preference
-        sms_enabled,
-        sms_api_url,
-        sms_api_key,
-        sms_sender_id,
         meta_whatsapp_enabled,
         meta_whatsapp_phone_number_id,
         meta_whatsapp_access_token,
