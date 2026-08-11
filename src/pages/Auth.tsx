@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
-import { z } from 'zod';
+import cobroLogo from '@/assets/cobro-logo-dark.png';
 import { fetchClientSecurityInfo, sendSecurityNotificationEmail } from '@/utils/masterSecurity';
 
 const loginSchema = z.object({
