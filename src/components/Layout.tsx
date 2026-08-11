@@ -44,8 +44,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { hasKitchenDisplay, hasDelivery } = useBusinessType();
   const { settings } = useCompanySettings();
 
+  const isMasterAuth = sessionStorage.getItem('cobroapp_master_auth') === 'true' || location.pathname.startsWith('/admin');
+
   const isFullScreenApp = location.pathname === '/' ||
     location.pathname === '/pos' ||
+    location.pathname.startsWith('/admin') ||
+    isMasterAuth ||
     profile?.role === 'kitchen' ||
     profile?.role === 'delivery';
 

@@ -44,11 +44,12 @@ export const MobileBottomNav: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // No mostrar en rutas de pantalla completa
-  const hiddenRoutes = ['/', '/pos', '/kitchen', '/delivery', '/auth'];
+  // No mostrar en rutas de pantalla completa o panel maestro
+  const isMasterAuth = sessionStorage.getItem('cobroapp_master_auth') === 'true';
+  const hiddenRoutes = ['/', '/pos', '/kitchen', '/delivery', '/auth', '/admin'];
   const isHiddenRoute = hiddenRoutes.some(r =>
     r === '/' ? location.pathname === '/' : location.pathname.startsWith(r)
-  );
+  ) || isMasterAuth;
 
   // Para kitchen/delivery, mostrar su única opción
   const isKitchen = profile?.role === 'kitchen';
