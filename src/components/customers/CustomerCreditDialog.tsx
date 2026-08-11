@@ -545,10 +545,16 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
         setIsSendingWhatsApp(true);
         toast('Enviando comunicado por Meta WhatsApp API...', { description: 'Procesando mensaje en segundo plano...' });
         
+        const companyName = companyInfo?.name || storeSettings?.store_name || 'Mamajuana SuperMarket';
+        const formattedDebt = totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
         sendWhatsAppApiMessage(phone, message, {
           provider: 'meta',
           phoneNumberId: phoneId,
-          token: token
+          token: token,
+          templateName: 'estado_cuenta',
+          templateLanguage: 'es',
+          templateParams: [customer.name, companyName, formattedDebt]
         }).then(() => {
           toast.success('✓ Estado de cuenta enviado por Meta WhatsApp API');
         }).catch((err: any) => {
@@ -610,11 +616,17 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
         `${invoicesList}\n` +
         `Favor realizar su pago. ¡Gracias!`;
 
+      const companyName = companyInfo?.name || storeSettings?.store_name || 'Mamajuana SuperMarket';
+      const formattedDebt = totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
       toast('Enviando WhatsApp vía Meta Cloud API...', { description: 'Procesando mensaje en segundo plano...' });
       await sendWhatsAppApiMessage(phone, message, {
         provider: 'meta',
         phoneNumberId: metaPhoneNumberId.trim(),
-        token: metaAccessToken.trim()
+        token: metaAccessToken.trim(),
+        templateName: 'estado_cuenta',
+        templateLanguage: 'es',
+        templateParams: [customer.name, companyName, formattedDebt]
       });
       toast.success('✓ WhatsApp enviado vía Meta Official API');
     } catch (err: any) {
