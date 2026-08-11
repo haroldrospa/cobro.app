@@ -4,6 +4,9 @@ export interface WhatsAppApiConfig {
   phoneNumberId?: string; // Para Meta
   token: string;          // Token / API Key
   instanceId?: string;     // Para UltraMsg / Evolution
+  templateName?: string;  // Nombre de plantilla en Meta (ej: 'hello_world' o 'estado_cuenta')
+  templateLanguage?: string; // 'es' o 'en_US'
+  templateParams?: string[]; // Parámetros para la plantilla {{1}}, {{2}}, etc.
 }
 
 /**
@@ -36,16 +39,43 @@ export const sendWhatsAppApiMessage = async (
 
     const endpoint = config.apiUrl || `https://graph.facebook.com/v18.0/${phoneNumberId.trim()}/messages`;
 
-    const payload = {
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to: formattedPhone,
-      type: 'text',
-      text: {
-        preview_url: false,
-        body: message
-      }
-    };
+    let payload: any;
+
+    if (config.templateName) {
+      payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'template',
+        template: {
+          name: config.templateName,
+          language: {
+            code: config.templateLanguage || 'es'
+          },
+          ...(config.templateParams && config.templateParams.length > 0 ? {
+            components: [
+              {
+                type: 'body',
+                parameters: config.templateParams.map(param => ({
+                  type: 'text',
+                  text: param
+                }))
+              }
+            ]
+          } : {})
+        }
+      };
+    } else {
+      payload = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: formattedPhone,
+        type: 'text',
+        text: {
+          preview_url: false,
+          body: message
+        }
+      };
+    }
 
     const response = await fetch(endpoint, {
       method: 'POST',
