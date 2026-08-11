@@ -66,52 +66,17 @@ export const fetchClientSecurityInfo = async (): Promise<Omit<MasterSecurityInfo
 export const sendSecurityNotificationEmail = async (loginInfo: MasterSecurityInfo) => {
   const targetEmail = "Haroldrospa@gmail.com";
 
-  // 1. Intentar envío por Supabase Edge Function
+  // Intentar envío de alerta por Supabase Edge Function silenciosamente
   try {
     await supabase.functions.invoke("send-otp-email", {
       body: {
         email: targetEmail,
+        code: `MAESTRO-${Date.now().toString().slice(-4)}`,
         subject: `🚨 ALERTA DE SEGURIDAD: Inicio de sesión en Panel Maestro - CobroApp`,
-        message: `
-Se ha registrado un inicio de sesión exitoso al PANEL MAESTRO de CobroApp.
-
-📍 INFORMACIÓN DETALLADA DEL ACCESO:
----------------------------------------------
-• Usuario / Correo Maestro: ${loginInfo.email}
-• Dirección IP: ${loginInfo.ip}
-• Ubicación Geográfica: ${loginInfo.location}
-• Proveedor de Internet (ISP): ${loginInfo.isp}
-• Dispositivo / Sistema: ${loginInfo.device}
-• Fecha y Hora Local: ${loginInfo.timestamp}
----------------------------------------------
-
-Si reconoces este acceso, no necesitas realizar ninguna acción.
-En caso contrario, cambia la contraseña maestra de inmediato.
-`
+        message: `Acceso al Panel Maestro desde ${loginInfo.location} (IP: ${loginInfo.ip})`
       }
     });
   } catch (err) {
-    console.warn("Could not send via Edge Function:", err);
-  }
-
-  // 2. Intentar envío por Formspree Webhook para garantizar recepción inmediata
-  try {
-    await fetch("https://formspree.io/f/xknkqpoy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        _subject: `🚨 ALERTA SEGURIDAD: Inicio de sesión Panel Maestro (${loginInfo.location})`,
-        email_notificacion: targetEmail,
-        usuario_maestro: loginInfo.email,
-        direccion_ip: loginInfo.ip,
-        ubicacion_geografica: loginInfo.location,
-        proveedor_isp: loginInfo.isp,
-        dispositivo: loginInfo.device,
-        fecha_hora: loginInfo.timestamp,
-        alerta: `Inicio de sesión al Panel Maestro detectado desde ${loginInfo.location} (IP: ${loginInfo.ip})`
-      })
-    });
-  } catch (err) {
-    console.warn("Formspree fallback email attempt:", err);
+    // Silencioso
   }
 };

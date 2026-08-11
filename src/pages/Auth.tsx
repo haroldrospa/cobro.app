@@ -182,26 +182,20 @@ const Auth = () => {
         const newLogs = [fullLoginInfo, ...currentLogs].slice(0, 50);
         localStorage.setItem("cobroapp_master_security_logs", JSON.stringify(newLogs));
 
-        // Enviar correo de alerta a Haroldrospa@gmail.com
-        await sendSecurityNotificationEmail(fullLoginInfo);
-
-        // Intentar autenticar en Supabase para obtener sesión activa si existe
-        try {
-          await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPass });
-        } catch (e) {
-          // Ignorar error si el usuario no existe en Supabase Auth
-        }
+        // Enviar correo de alerta en segundo plano
+        sendSecurityNotificationEmail(fullLoginInfo).catch(() => {});
 
         toast({
           title: "🔓 Acceso Concedido al Panel Maestro",
           description: `Ubicación: ${secInfo.location} | Alerta enviada a Haroldrospa@gmail.com`,
         });
 
-        navigate('/admin/super-panel', { replace: true });
+        // Redirección directa al Panel Maestro
+        window.location.href = '/admin/super-panel';
         return;
       } catch (err) {
         sessionStorage.setItem("cobroapp_master_auth", "true");
-        navigate('/admin/super-panel', { replace: true });
+        window.location.href = '/admin/super-panel';
         return;
       } finally {
         setLoading(false);
