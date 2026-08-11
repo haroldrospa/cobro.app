@@ -62,7 +62,11 @@ import {
     LogOut,
     Radio,
     UserCheck,
-    User
+    User,
+    Pencil,
+    Edit3,
+    Clock,
+    Plus
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -404,7 +408,7 @@ const SuperAdmin = () => {
         },
     });
 
-    // 5. Edición Manual de Suscripción
+    // 5. Edición Manual de Suscripción (Meses)
     const updateSubscriptionMutation = useMutation({
         mutationFn: async ({ companyId, planId, months }: { companyId: string, planId: string, months: number }) => {
             // Calculamos la fecha de fin: hoy + meses
@@ -431,6 +435,77 @@ const SuperAdmin = () => {
             toast.error("Error al actualizar: " + err.message);
         }
     });
+
+    // 5.1 Estado y Mutation para edición rápida por DÍAS
+    const [editingStoreSub, setEditingStoreSub] = useState<{
+        id: string;
+        store_name: string;
+        currentDays: number;
+        plan_name?: string;
+        plan_end_date?: string;
+    } | null>(null);
+
+    const [customDaysInput, setCustomDaysInput] = useState<number>(30);
+    const [customDateInput, setCustomDateInput] = useState<string>("");
+    const [editMode, setEditMode] = useState<"days" | "date">("days");
+
+    const updateStoreDaysMutation = useMutation({
+        mutationFn: async ({ companyId, newEndDate, planId }: { companyId: string; newEndDate: string; planId?: string }) => {
+            const finalPlanId = planId || 'basic';
+            const endDateTime = new Date(newEndDate).getTime();
+            const nowTime = Date.now();
+            const status = endDateTime > nowTime ? 'active' : 'expired';
+
+            const { error } = await supabase
+                .from("company_subscriptions")
+                .upsert({
+                    company_id: companyId,
+                    plan_id: finalPlanId,
+                    status: status,
+                    end_date: newEndDate,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'company_id' });
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            toast.success("Días de suscripción actualizados con éxito");
+            queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
+            setEditingStoreSub(null);
+        },
+        onError: (err: any) => {
+            toast.error("Error al actualizar días: " + err.message);
+        }
+    });
+
+    const handleSaveStoreDays = () => {
+        if (!editingStoreSub) return;
+
+        let targetEndDate: string;
+
+        if (editMode === "days") {
+            const daysToAdd = Number(customDaysInput);
+            const d = new Date();
+            d.setDate(d.getDate() + daysToAdd);
+            if (daysToAdd <= 0) {
+                d.setHours(0, 0, 0, 0);
+            }
+            targetEndDate = d.toISOString();
+        } else {
+            if (!customDateInput) {
+                toast.error("Por favor selecciona una fecha válida");
+                return;
+            }
+            const d = new Date(customDateInput + "T23:59:59");
+            targetEndDate = d.toISOString();
+        }
+
+        updateStoreDaysMutation.mutate({
+            companyId: editingStoreSub.id,
+            newEndDate: targetEndDate,
+            planId: editingStoreSub.plan_name
+        });
+    };
 
     // 6. Eliminar tienda y usuario dueño
     const deleteStoreMutation = useMutation({
@@ -1165,23 +1240,48 @@ const SuperAdmin = () => {
                                                                         store.plan_name === 'enterprise' ? 'Corporativo' :
                                                                             store.plan_name}
                                                             </Badge>
-                                                        ) : (
-                                                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 shadow-none font-medium">Sin Plan</Badge>
+                                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 shadow-none font-medium">Sin Plan</Badge>
                                                         )}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        {hasPlan ? (
+                                                    <TableCell 
+                                                        className="cursor-pointer hover:bg-emerald-500/10 transition-all rounded-lg py-2 px-3 group/editcell"
+                                                        title="Haz clic para modificar los días de suscripción"
+                                                        onClick={() => {
+                                                            const days = store.plan_end_date ? getDaysRemaining(store.plan_end_date) : 0;
+                                                            setEditingStoreSub({
+                                                                id: store.id,
+                                                                store_name: store.store_name || "Tienda",
+                                                                currentDays: days,
+                                                                plan_name: store.plan_name || "basic",
+                                                                plan_end_date: store.plan_end_date
+                                                            });
+                                                            setCustomDaysInput(days > 0 ? days : 30);
+                                                            if (store.plan_end_date) {
+                                                                try {
+                                                                    setCustomDateInput(new Date(store.plan_end_date).toISOString().split('T')[0]);
+                                                                } catch (e) {
+                                                                    setCustomDateInput(new Date().toISOString().split('T')[0]);
+                                                                }
+                                                            } else {
+                                                                const d = new Date();
+                                                                d.setDate(d.getDate() + 30);
+                                                                setCustomDateInput(d.toISOString().split('T')[0]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
                                                             <div className="flex flex-col">
-                                                                <span className={`text-sm font-bold ${daysRemaining < 7 ? 'text-red-500' : 'text-green-600'}`}>
+                                                                <span className={`text-sm font-bold ${daysRemaining < 7 ? 'text-red-500' : 'text-emerald-500'}`}>
                                                                     {daysRemaining} días
                                                                 </span>
-                                                                <span className="text-[10px] text-muted-foreground">
-                                                                    {new Date(store.plan_end_date).toLocaleDateString()}
+                                                                <span className="text-[10px] text-muted-foreground font-mono">
+                                                                    {store.plan_end_date ? new Date(store.plan_end_date).toLocaleDateString() : 'Sin fecha'}
                                                                 </span>
                                                             </div>
-                                                        ) : (
-                                                            "-"
-                                                        )}
+                                                            <div className="p-1 rounded-md bg-muted/50 text-muted-foreground group-hover/editcell:bg-emerald-500 group-hover/editcell:text-white transition-all shadow-sm">
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </div>
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell className="text-right py-4">
                                                         <div className="flex justify-end items-center gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
@@ -1261,6 +1361,152 @@ const SuperAdmin = () => {
                                 className="max-h-[70vh] object-contain rounded shadow-lg"
                             />
                         )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* DIÁLOGO MODIFICAR DÍAS DE SUSCRIPCIÓN */}
+            <Dialog open={!!editingStoreSub} onOpenChange={(open) => !open && setEditingStoreSub(null)}>
+                <DialogContent className="max-w-md bg-slate-900 border-slate-800 text-white rounded-2xl p-6">
+                    <DialogHeader className="space-y-2 text-left">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+                                <Clock className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg font-bold text-white">
+                                    Modificar Días de Suscripción
+                                </DialogTitle>
+                                <DialogDescription className="text-xs text-slate-400">
+                                    Tienda: <strong className="text-white">{editingStoreSub?.store_name}</strong>
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-2">
+                        {/* Selector de modo */}
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditMode("days")}
+                                className={`h-8 text-xs font-semibold rounded-lg transition-all ${editMode === "days" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}
+                            >
+                                Por Días Restantes
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditMode("date")}
+                                className={`h-8 text-xs font-semibold rounded-lg transition-all ${editMode === "date" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}
+                            >
+                                Por Fecha Exacta
+                            </Button>
+                        </div>
+
+                        {editMode === "days" ? (
+                            <div className="space-y-3">
+                                <div className="space-y-1.5 text-left">
+                                    <Label className="text-xs text-slate-300 font-semibold">
+                                        Días de Acceso a Otorgar:
+                                    </Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            max="3650"
+                                            value={customDaysInput}
+                                            onChange={(e) => setCustomDaysInput(parseInt(e.target.value) || 0)}
+                                            className="h-10 bg-slate-950 border-slate-800 text-white font-mono text-base font-bold focus:border-emerald-500"
+                                        />
+                                        <span className="text-sm font-bold text-slate-300">Días</span>
+                                    </div>
+                                </div>
+
+                                {/* Botones de acceso rápido */}
+                                <div className="space-y-1.5 text-left">
+                                    <span className="text-[11px] font-semibold text-slate-400">Accesos Rápidos:</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {[
+                                            { label: "+7 días", days: 7 },
+                                            { label: "+15 días", days: 15 },
+                                            { label: "+30 días (1 mes)", days: 30 },
+                                            { label: "+90 días (3 meses)", days: 90 },
+                                            { label: "+365 días (1 año)", days: 365 },
+                                            { label: "0 días (Vencer)", days: 0 }
+                                        ].map((preset) => (
+                                            <Button
+                                                key={preset.days}
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCustomDaysInput(preset.days)}
+                                                className="h-7 text-[11px] px-2.5 bg-slate-950/80 border-slate-800 text-slate-300 hover:border-emerald-500 hover:text-emerald-400"
+                                            >
+                                                {preset.label}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-1.5 text-left">
+                                <Label className="text-xs text-slate-300 font-semibold">
+                                    Fecha Exacta de Vencimiento:
+                                </Label>
+                                <Input
+                                    type="date"
+                                    value={customDateInput}
+                                    onChange={(e) => setCustomDateInput(e.target.value)}
+                                    className="h-10 bg-slate-950 border-slate-800 text-white font-mono text-sm focus:border-emerald-500"
+                                />
+                            </div>
+                        )}
+
+                        {/* Previsualización del cálculo */}
+                        <div className="p-3.5 bg-slate-950/90 border border-slate-800 rounded-xl text-left space-y-1">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                                Previsualización del Vencimiento
+                            </span>
+                            <p className="text-xs font-semibold text-emerald-400 leading-relaxed">
+                                {editMode === "days" ? (
+                                    <>
+                                        Vencerá el: <strong>{new Date(Date.now() + Number(customDaysInput) * 86400000).toLocaleDateString()}</strong> ({customDaysInput} días de acceso)
+                                    </>
+                                ) : (
+                                    <>
+                                        Fecha fija: <strong>{customDateInput ? new Date(customDateInput + "T23:59:59").toLocaleDateString() : 'N/A'}</strong>
+                                    </>
+                                )}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setEditingStoreSub(null)}
+                                className="h-9 text-xs text-slate-400 hover:text-white hover:bg-slate-800"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={updateStoreDaysMutation.isPending}
+                                onClick={handleSaveStoreDays}
+                                className="h-9 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-4 gap-1.5 shadow-lg shadow-emerald-600/20"
+                            >
+                                {updateStoreDaysMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <CheckCircle className="h-4 w-4" />
+                                )}
+                                Guardar Días
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
