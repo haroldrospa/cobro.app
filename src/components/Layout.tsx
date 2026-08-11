@@ -140,7 +140,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
       { name: 'Usuario', href: '/subscription', icon: User },
       { name: 'Configuración', href: '/settings', icon: Settings },
-      ...(profile?.email?.toLowerCase() === 'haroldrospa@gmail.com' ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }] : []),
+      ...( ['haroldrospa@gmail.com', 'cobroapp@cobroapp.com'].includes(profile?.email?.toLowerCase() || '') || profile?.role === 'admin' || profile?.role === 'owner' ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }] : []),
     ];
   }, [profile, hasKitchenDisplay, hasDelivery]);
 

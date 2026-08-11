@@ -104,7 +104,7 @@ export const MobileBottomNav: React.FC = () => {
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
       { name: 'Mi Cuenta', href: '/subscription', icon: User },
       { name: 'Configuración', href: '/settings', icon: Settings },
-      ...(profile?.email?.toLowerCase() === 'haroldrospa@gmail.com'
+      ...(['haroldrospa@gmail.com', 'cobroapp@cobroapp.com'].includes(profile?.email?.toLowerCase() || '') || profile?.role === 'admin' || profile?.role === 'owner'
         ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }]
         : []),
     ];
