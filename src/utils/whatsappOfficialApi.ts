@@ -88,7 +88,37 @@ export const sendWhatsAppApiMessage = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Meta WhatsApp API Error]:', errorText);
+      console.warn('[Meta WhatsApp API Warning]:', errorText);
+
+      // Si la plantilla personalizada está 'En revisión' o no activa aún, intenta con hello_world de respaldo
+      if (config.templateName && (errorText.includes('132001') || errorText.includes('template') || response.status === 400)) {
+        console.log('[Meta API] Plantilla personalizada en revisión. Intentando con plantilla activa de respaldo...');
+        const fallbackPayload = {
+          messaging_product: 'whatsapp',
+          to: formattedPhone,
+          type: 'template',
+          template: {
+            name: 'hello_world',
+            language: { code: 'en_US' }
+          }
+        };
+
+        const fallbackResponse = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.token.trim()}`
+          },
+          body: JSON.stringify(fallbackPayload)
+        });
+
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          console.log('[Meta WhatsApp API Fallback Success]:', fallbackData);
+          return true;
+        }
+      }
+
       throw new Error(`Meta API Error (${response.status}): ${errorText}`);
     }
 
