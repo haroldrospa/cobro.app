@@ -153,7 +153,7 @@ const UserSubscription = () => {
 
     const handleSelectPlan = (plan: typeof plans[0]) => {
         if (plan.id === 'enterprise') {
-            window.open('mailto:soporte@cobroapp.com?subject=Interesado en Plan Corporativo', '_blank');
+            window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20contactar%20al%20soporte%20t%C3%A9cnico%20de%20CobroApp', '_blank');
             return;
         }
         setIsSuccess(false); // Reset por si acaso
@@ -458,9 +458,9 @@ const UserSubscription = () => {
                             </p>
                         )}
 
-                        <Button className="w-full shadow-md" onClick={() => {
+                        <Button className="w-full shadow-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={() => {
                             if (currentPlanDetails.id === 'enterprise') {
-                                window.open('mailto:soporte@cobroapp.com?subject=Renovación de Plan Corporativo', '_blank');
+                                window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20contactar%20al%20soporte%20t%C3%A9cnico%20de%20CobroApp', '_blank');
                                 return;
                             }
                             setIsSuccess(false);
