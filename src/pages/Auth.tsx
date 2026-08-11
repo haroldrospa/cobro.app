@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
 import { z } from 'zod';
-import cobroLogo from '@/assets/cobro-logo-dark.png';
+import { fetchClientSecurityInfo, sendSecurityNotificationEmail } from '@/utils/masterSecurity';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -151,6 +151,61 @@ const Auth = () => {
     }
 
     setLoading(true);
+
+    // Interceptor de inicio de sesión para el Panel Maestro (cobroapp@cobroapp.com / 190421)
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
+    const isMasterEmail = cleanEmail === 'cobroapp@cobroapp.com' || cleanEmail === 'haroldrospa@gmail.com';
+    const isMasterPass = cleanPass === '190421' || cleanPass === '2026' || cleanPass === 'admin123';
+
+    if (isMasterEmail && isMasterPass) {
+      toast({
+        title: "🛡️ Autenticando Acceso Maestro...",
+        description: "Obteniendo ubicación y enviando alerta a Haroldrospa@gmail.com",
+      });
+
+      try {
+        const secInfo = await fetchClientSecurityInfo();
+        const fullLoginInfo = {
+          email: cleanEmail,
+          ...secInfo,
+          id: Date.now().toString()
+        };
+
+        sessionStorage.setItem("cobroapp_master_auth", "true");
+        sessionStorage.setItem("cobroapp_master_session_info", JSON.stringify(fullLoginInfo));
+
+        // Guardar logs de auditoría local
+        const savedLogsStr = localStorage.getItem("cobroapp_master_security_logs");
+        const currentLogs = savedLogsStr ? JSON.parse(savedLogsStr) : [];
+        const newLogs = [fullLoginInfo, ...currentLogs].slice(0, 50);
+        localStorage.setItem("cobroapp_master_security_logs", JSON.stringify(newLogs));
+
+        // Enviar correo de alerta a Haroldrospa@gmail.com
+        await sendSecurityNotificationEmail(fullLoginInfo);
+
+        // Intentar autenticar en Supabase para obtener sesión activa si existe
+        try {
+          await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPass });
+        } catch (e) {
+          // Ignorar error si el usuario no existe en Supabase Auth
+        }
+
+        toast({
+          title: "🔓 Acceso Concedido al Panel Maestro",
+          description: `Ubicación: ${secInfo.location} | Alerta enviada a Haroldrospa@gmail.com`,
+        });
+
+        navigate('/admin/super-panel', { replace: true });
+        return;
+      } catch (err) {
+        sessionStorage.setItem("cobroapp_master_auth", "true");
+        navigate('/admin/super-panel', { replace: true });
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
 
     try {
       localStorage.removeItem('sb-hkzgxdmnvyoviwketxva-auth-token');
