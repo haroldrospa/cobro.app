@@ -408,59 +408,58 @@ const SuperAdmin = () => {
         },
     });
 
-    // Helper para guardar suscripciones evitando bloqueos RLS
+    // Helper para guardar suscripciones evitando bloqueos RLS y violaciones de Check Constraints
     const saveCompanySubscriptionAdmin = async (companyId: string, planId: string, endDateIso: string) => {
         const endDateTime = new Date(endDateIso).getTime();
         const nowTime = Date.now();
+        const status = endDateTime > nowTime ? 'active' : 'expired';
         const finalPlanId = planId || 'basic';
 
-        // Calcular la duración en días exactos entre hoy y la fecha seleccionada
-        const diffMs = endDateTime - nowTime;
-        let daysDuration = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-        if (daysDuration < 0) daysDuration = 0;
-
-        // 1. Invocar RPC 'admin_update_subscription' (SECURITY DEFINER en PostgreSQL)
-        // Esta función actualiza p_store_id con p_days_duration exactos sin ningún bloqueo de RLS
-        // @ts-ignore - Supabase RPC type definition
-        const { data: rpcData, error: rpcError } = await supabase.rpc("admin_update_subscription", {
-            p_store_id: companyId,
-            p_plan_id: finalPlanId,
-            p_days_duration: daysDuration
-        });
-
-        if (!rpcError && rpcData) {
-            return rpcData;
-        }
-
-        if (rpcError) {
-            console.warn("RPC admin_update_subscription warning, trying fallback...", rpcError);
-        }
-
-        // 2. Fallback: Intentar con submit_payment_and_activate si la función previa no existiera
-        // @ts-ignore
-        const { error: fallbackRpcError } = await supabase.rpc("submit_payment_and_activate", {
-            p_company_id: companyId,
-            p_target_plan_id: finalPlanId,
-            p_amount: 0,
-            p_bank_name: "Admin Manual Override",
-            p_proof_url: "admin_override",
-            p_currency: "DOP"
-        });
-
-        // 3. Si se requirió fallback, forzar la fecha exacta (end_date)
-        const status = endDateTime > nowTime ? 'active' : 'expired';
-        await supabase
+        // 1. Intentar UPDATE directo con payment_method: 'other' (válido en el CHECK constraint company_subscriptions_payment_method_check)
+        const { data: updatedRows, error: updateError } = await supabase
             .from("company_subscriptions")
             .update({
                 plan_id: finalPlanId,
                 status: status,
                 end_date: endDateIso,
+                payment_method: 'other',
+                updated_at: new Date().toISOString()
+            })
+            .eq("company_id", companyId)
+            .select();
+
+        if (!updateError && updatedRows && updatedRows.length > 0) {
+            return updatedRows;
+        }
+
+        // 2. Si la tienda no poseía una fila previa en company_subscriptions, realizar UPSERT con payment_method: 'other'
+        const { error: upsertError } = await supabase
+            .from("company_subscriptions")
+            .upsert({
+                company_id: companyId,
+                plan_id: finalPlanId,
+                status: status,
+                end_date: endDateIso,
+                payment_method: 'other',
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'company_id' });
+
+        if (!upsertError) return;
+
+        // 3. Reintento final de UPDATE si no retornó filas en select previo
+        const { error: finalUpdateError } = await supabase
+            .from("company_subscriptions")
+            .update({
+                plan_id: finalPlanId,
+                status: status,
+                end_date: endDateIso,
+                payment_method: 'other',
                 updated_at: new Date().toISOString()
             })
             .eq("company_id", companyId);
 
-        if (rpcError && fallbackRpcError) {
-            throw rpcError || fallbackRpcError;
+        if (finalUpdateError && upsertError) {
+            throw upsertError || finalUpdateError;
         }
     };
 
