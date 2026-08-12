@@ -412,27 +412,31 @@ const SuperAdmin = () => {
     const saveCompanySubscriptionAdmin = async (companyId: string, planId: string, endDateIso: string) => {
         const endDateTime = new Date(endDateIso).getTime();
         const nowTime = Date.now();
-        const status = endDateTime > nowTime ? 'active' : 'expired';
         const finalPlanId = planId || 'basic';
 
-        // 1. Intentar UPDATE directo con payment_method: 'other' (válido en el CHECK constraint company_subscriptions_payment_method_check)
-        const { data: updatedRows, error: updateError } = await supabase
-            .from("company_subscriptions")
-            .update({
-                plan_id: finalPlanId,
-                status: status,
-                end_date: endDateIso,
-                payment_method: 'other',
-                updated_at: new Date().toISOString()
-            })
-            .eq("company_id", companyId)
-            .select();
+        // Calcular la duración en días exactos entre hoy y la fecha seleccionada
+        const diffMs = endDateTime - nowTime;
+        let daysDuration = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (daysDuration < 0) daysDuration = 0;
 
-        if (!updateError && updatedRows && updatedRows.length > 0) {
-            return updatedRows;
+        // 1. Invocar RPC 'admin_update_subscription' (SECURITY DEFINER en PostgreSQL)
+        // @ts-ignore - Supabase RPC type definition
+        const { data: rpcData, error: rpcError } = await supabase.rpc("admin_update_subscription", {
+            p_store_id: companyId,
+            p_plan_id: finalPlanId,
+            p_days_duration: daysDuration
+        });
+
+        if (!rpcError && rpcData) {
+            return rpcData;
         }
 
-        // 2. Si la tienda no poseía una fila previa en company_subscriptions, realizar UPSERT con payment_method: 'other'
+        if (rpcError) {
+            console.warn("RPC admin_update_subscription warning:", rpcError);
+        }
+
+        // 2. Fallback si el RPC no ha sido aplicado aún en el SQL Editor de Supabase
+        const status = endDateTime > nowTime ? 'active' : 'expired';
         const { error: upsertError } = await supabase
             .from("company_subscriptions")
             .upsert({
@@ -444,22 +448,8 @@ const SuperAdmin = () => {
                 updated_at: new Date().toISOString()
             }, { onConflict: 'company_id' });
 
-        if (!upsertError) return;
-
-        // 3. Reintento final de UPDATE si no retornó filas en select previo
-        const { error: finalUpdateError } = await supabase
-            .from("company_subscriptions")
-            .update({
-                plan_id: finalPlanId,
-                status: status,
-                end_date: endDateIso,
-                payment_method: 'other',
-                updated_at: new Date().toISOString()
-            })
-            .eq("company_id", companyId);
-
-        if (finalUpdateError && upsertError) {
-            throw upsertError || finalUpdateError;
+        if (upsertError && rpcError) {
+            throw rpcError || upsertError;
         }
     };
 
