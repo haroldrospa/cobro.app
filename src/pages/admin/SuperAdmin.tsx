@@ -415,36 +415,8 @@ const SuperAdmin = () => {
         const status = endDateTime > nowTime ? 'active' : 'expired';
         const finalPlanId = planId || 'basic';
 
-        // 1. Intentar UPDATE directo sobre la fila existente (evita RLS INSERT check)
-        const { data: updatedRows, error: updateError } = await supabase
-            .from("company_subscriptions")
-            .update({
-                plan_id: finalPlanId,
-                status: status,
-                end_date: endDateIso,
-                updated_at: new Date().toISOString()
-            })
-            .eq("company_id", companyId)
-            .select();
-
-        if (!updateError && updatedRows && updatedRows.length > 0) {
-            return updatedRows;
-        }
-
-        // 2. Si la tienda no tenía suscripción previa creada, intentar UPSERT
-        const { error: upsertError } = await supabase
-            .from("company_subscriptions")
-            .upsert({
-                company_id: companyId,
-                plan_id: finalPlanId,
-                status: status,
-                end_date: endDateIso,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'company_id' });
-
-        if (!upsertError) return;
-
-        // 3. Fallback: Usar RPC de activación si el INSERT es bloqueado por RLS
+        // 1. Ejecutar primero el RPC 'submit_payment_and_activate' (SECURITY DEFINER en PostgreSQL)
+        // Esto crea o activa la suscripción de forma 100% segura omitiendo bloqueos de RLS
         const { error: rpcError } = await supabase.rpc("submit_payment_and_activate", {
             p_company_id: companyId,
             p_target_plan_id: finalPlanId,
@@ -455,7 +427,22 @@ const SuperAdmin = () => {
         });
 
         if (rpcError) {
-            throw updateError || upsertError || rpcError;
+            console.warn("RPC submit_payment_and_activate warning:", rpcError);
+        }
+
+        // 2. Ajustar la fecha exacta (end_date) y estado solicitado por el administrador
+        const { error: updateError } = await supabase
+            .from("company_subscriptions")
+            .update({
+                plan_id: finalPlanId,
+                status: status,
+                end_date: endDateIso,
+                updated_at: new Date().toISOString()
+            })
+            .eq("company_id", companyId);
+
+        if (updateError && rpcError) {
+            throw updateError || rpcError;
         }
     };
 
