@@ -69,6 +69,13 @@ const UserSubscription = () => {
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
     const [paymentAmount, setPaymentAmount] = useState('');
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('pay') === 'true') {
+            setIsPaymentOpen(true);
+        }
+    }, []);
+
     const plans = [
         {
             id: 'basic',
@@ -362,6 +369,65 @@ const UserSubscription = () => {
 
     return (
         <div className="container mx-auto p-4 md:p-8 max-w-7xl animate-fade-in space-y-8">
+
+            {/* Banner Destacado de Fecha de Pago y Días Restantes */}
+            {subscription?.end_date && (() => {
+                const end = new Date(subscription.end_date);
+                const now = new Date();
+                const diffMs = end.getTime() - now.getTime();
+                const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                const isExpired = daysLeft <= 0 || subscription.status === 'expired';
+
+                return (
+                    <div className={`w-full p-4 md:p-5 rounded-2xl border shadow-lg flex flex-col md:flex-row items-center justify-between gap-4 transition-all ${
+                        isExpired
+                            ? "bg-gradient-to-r from-red-950/90 via-red-900/80 to-rose-950/90 border-red-500/50 text-red-100 shadow-red-900/20"
+                            : daysLeft <= 7
+                                ? "bg-gradient-to-r from-amber-950/90 via-orange-900/80 to-amber-950/90 border-amber-500/50 text-amber-100 shadow-amber-900/20"
+                                : "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-emerald-500/40 text-white shadow-emerald-900/10"
+                    }`}>
+                        <div className="flex items-center gap-3.5">
+                            <div className={`p-3 rounded-xl ${isExpired ? "bg-red-500/20 border border-red-500/30 text-red-400" : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"}`}>
+                                <CreditCard className="h-7 w-7" />
+                            </div>
+                            <div className="space-y-0.5 text-left">
+                                <span className="text-[11px] uppercase font-extrabold tracking-wider text-slate-400">
+                                    Vencimiento y Estado de Pago
+                                </span>
+                                <h2 className="text-lg md:text-xl font-bold flex flex-wrap items-center gap-2">
+                                    {isExpired ? (
+                                        <span className="text-red-400">¡Suscripción Vencida!</span>
+                                    ) : (
+                                        <span>Fecha Límite de Pago: <strong className="text-emerald-400 font-mono">{end.toLocaleDateString()}</strong></span>
+                                    )}
+                                    <Badge className={`${isExpired ? "bg-red-600 text-white" : daysLeft <= 7 ? "bg-amber-600 text-white" : "bg-emerald-600 text-white"}`}>
+                                        {isExpired ? "0 Días Restantes" : `${daysLeft} Días Restantes`}
+                                    </Badge>
+                                </h2>
+                                <p className="text-xs text-slate-300">
+                                    {isExpired
+                                        ? "Tu suscripción ha vencido. Por favor realiza tu pago para continuar disfrutando del servicio."
+                                        : `Tu plan estará activo hasta el ${end.toLocaleDateString()}. Puedes realizar tu pago o renovación ahora.`}
+                                </p>
+                            </div>
+                        </div>
+
+                        <Button
+                            size="lg"
+                            onClick={() => {
+                                setIsSuccess(false);
+                                setTargetPlan(null);
+                                setPaymentAmount(currentPlanDetails.price.toString());
+                                setIsPaymentOpen(true);
+                            }}
+                            className="w-full md:w-auto h-12 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 shrink-0 border border-emerald-400/30 transition-transform hover:scale-105 active:scale-95"
+                        >
+                            <Wallet className="h-5 w-5" />
+                            💳 Pagar Suscripción Ahora
+                        </Button>
+                    </div>
+                );
+            })()}
 
             {/* Header / Perfil */}
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center bg-card p-6 rounded-xl border border-border shadow-sm">

@@ -1,64 +1,75 @@
 import { useSubscription } from "@/hooks/useSubscription";
-import { AlertCircle, ArrowRight } from "lucide-react";
+import { AlertTriangle, CreditCard, Clock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { getDaysRemaining } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 export function SubscriptionWarningBanner() {
   const { data: subscription, isLoading } = useSubscription();
   const navigate = useNavigate();
-  const [isOwner, setIsOwner] = useState(false);
-
-  useEffect(() => {
-    const checkRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        if (profile) {
-          setIsOwner(profile.role === "owner");
-        }
-      }
-    };
-    checkRole();
-  }, []);
 
   if (isLoading || !subscription) return null;
 
-  // Si no hay end_date, asumimos que no vence (plan lifetime, o plan básico sin límite, etc.)
+  // Si no hay end_date (ej. plan ilimitado/custom), no se muestra banner
   if (!subscription.end_date) return null;
 
   const daysRemaining = getDaysRemaining(subscription.end_date);
+  const formattedEndDate = new Date(subscription.end_date).toLocaleDateString('es-DO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
 
-  // Solo mostramos el banner si quedan 5 días o menos, pero más de 0 días.
-  // Si quedan 0 días, ProtectedRoute debería interceptarlo, pero por si acaso.
-  if (daysRemaining > 5 || daysRemaining <= 0) return null;
+  const isExpired = daysRemaining <= 0 || subscription.status === 'expired';
+
+  // Mostrar el banner si le quedan 15 días o menos, o si ya venció
+  if (daysRemaining > 15 && !isExpired) return null;
 
   return (
-    <div className="w-full bg-orange-500 text-white px-4 py-2.5 shadow-md flex items-center justify-between z-50 animate-in slide-in-from-top-4 fade-in duration-500">
-      <div className="flex items-center gap-2 max-w-[1920px] mx-auto w-full">
-        <AlertCircle className="w-5 h-5 shrink-0" />
-        <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-2 text-sm">
-          <span className="font-semibold">¡Atención! Tu suscripción vence en {daysRemaining} {daysRemaining === 1 ? 'día' : 'días'}.</span>
-          <span className="text-orange-100 hidden sm:inline">Para evitar interrupciones, renueva tu plan pronto.</span>
+    <div
+      className={`w-full text-white px-4 py-2.5 shadow-lg flex items-center justify-between z-50 transition-all ${
+        isExpired
+          ? "bg-gradient-to-r from-red-600 via-rose-600 to-red-700 border-b border-red-500/40"
+          : "bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 border-b border-amber-500/40"
+      }`}
+    >
+      <div className="flex items-center gap-3 max-w-[1920px] mx-auto w-full">
+        <div className={`p-1.5 rounded-lg shrink-0 ${isExpired ? "bg-red-800/60" : "bg-amber-800/60"}`}>
+          {isExpired ? (
+            <AlertTriangle className="w-5 h-5 text-red-200 animate-bounce" />
+          ) : (
+            <Clock className="w-5 h-5 text-amber-200" />
+          )}
         </div>
-        
-        {isOwner && (
-          <Button 
-            size="sm" 
-            variant="secondary"
-            onClick={() => navigate('/subscription')}
-            className="h-8 bg-white text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-medium whitespace-nowrap ml-2 shadow-sm border-0"
-          >
-            Renovar ahora
-            <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-          </Button>
-        )}
+
+        <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-3 text-sm">
+          {isExpired ? (
+            <span className="font-bold tracking-wide text-white">
+              🚨 Suscripción Vencida: La fecha límite de pago fue el <span className="underline font-mono">{formattedEndDate}</span>.
+            </span>
+          ) : (
+            <span className="font-bold tracking-wide text-white">
+              ⏰ Próximo Vencimiento: Te quedan <span className="px-2 py-0.5 rounded bg-black/20 font-mono text-amber-200 font-extrabold">{daysRemaining} {daysRemaining === 1 ? 'día' : 'días'} restantes</span>. Fecha de pago: <span className="underline font-mono">{formattedEndDate}</span>.
+            </span>
+          )}
+          <span className="text-white/80 hidden lg:inline text-xs">
+            {isExpired ? "Realiza tu pago para evitar la interrupción del servicio." : "Mantén tus pagos al día para evitar cortes."}
+          </span>
+        </div>
+
+        <Button
+          size="sm"
+          onClick={() => navigate('/subscription?pay=true')}
+          className={`h-9 font-bold px-4 rounded-xl shadow-md transition-transform hover:scale-105 active:scale-95 shrink-0 ${
+            isExpired
+              ? "bg-white text-red-700 hover:bg-red-50 hover:text-red-800"
+              : "bg-white text-amber-800 hover:bg-amber-50 hover:text-amber-900"
+          }`}
+        >
+          <CreditCard className="w-4 h-4 mr-1.5" />
+          {isExpired ? "Pagar Suscripción Ahora" : "Pagar Suscripción"}
+          <ArrowRight className="w-3.5 h-3.5 ml-1" />
+        </Button>
       </div>
     </div>
   );
