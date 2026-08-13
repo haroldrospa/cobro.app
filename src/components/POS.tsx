@@ -1912,7 +1912,7 @@ const POSContent: React.FC = () => {
   return (
     <SimpleErrorBoundary>
       <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background">
-        <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0 overflow-y-auto lg:overflow-hidden pb-32 md:pb-3">
+        <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0 overflow-hidden pb-3 md:pb-3">
 
           {isClassicLayout ? (
             /* --- CLASSIC LAYOUT (Search top-left, Cart bottom-left, Payment right) --- */
