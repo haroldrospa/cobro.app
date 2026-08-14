@@ -69,13 +69,6 @@ const UserSubscription = () => {
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
     const [paymentAmount, setPaymentAmount] = useState('');
 
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('pay') === 'true') {
-            setIsPaymentOpen(true);
-        }
-    }, []);
-
     const plans = [
         {
             id: 'basic',
@@ -157,15 +150,34 @@ const UserSubscription = () => {
 
     const currentPlanDetails = plans.find(p => p.id === activePlan) || plans[0];
     const targetPlanDetails = plans.find(p => p.id === targetPlan);
+    const effectivePlanId = targetPlan || (activePlan === 'enterprise' ? 'basic' : (activePlan || 'basic'));
+    const effectivePlanDetails = plans.find(p => p.id === effectivePlanId) || plans[0];
+
+    const parsedAmount = parseFloat(paymentAmount);
+    const displayAmount = !isNaN(parsedAmount) && parsedAmount > 0 
+        ? parsedAmount 
+        : (isAnnual ? effectivePlanDetails.annualPrice : effectivePlanDetails.price) || 17;
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('pay') === 'true') {
+            const initialPlanId = activePlan === 'enterprise' ? 'basic' : (activePlan || 'basic');
+            const initialPlan = plans.find(p => p.id === initialPlanId) || plans[0];
+            setTargetPlan(initialPlan.id);
+            setPaymentAmount((isAnnual ? initialPlan.annualPrice : initialPlan.price).toString());
+            setIsPaymentOpen(true);
+        }
+    }, [activePlan, isAnnual]);
 
     const handleSelectPlan = (plan: typeof plans[0]) => {
         if (plan.id === 'enterprise') {
-            window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20contactar%20al%20soporte%20t%C3%A9cnico%20de%20CobroApp', '_blank');
+            window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20cotizar%20el%20Plan%20Corporativo%20de%20CobroApp', '_blank');
             return;
         }
-        setIsSuccess(false); // Reset por si acaso
+        setIsSuccess(false);
         setTargetPlan(plan.id);
-        setPaymentAmount(isAnnual ? plan.annualPrice.toString() : plan.price.toString());
+        const amt = isAnnual ? plan.annualPrice : plan.price;
+        setPaymentAmount(amt.toString());
         setIsPaymentOpen(true);
     };
 
@@ -279,22 +291,26 @@ const UserSubscription = () => {
     const handlePaddleCheckout = () => {
         if (!store?.id) return;
 
-        // IDs de precios de prueba de Paddle (Sandbox)
-        // El usuario debe reemplazarlos en Supabase o en el .env, pero por ahora los dejamos como variables o hardcoded 
-        // para que puedan probar en cuanto pongan sus IDs.
-        const paddlePriceIds: Record<string, string> = {
+        const selectedPlanId = targetPlan || (activePlan === 'enterprise' ? 'basic' : activePlan);
+
+        if (selectedPlanId === 'enterprise') {
+            window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20cotizar%20el%20Plan%20Corporativo%20de%20CobroApp', '_blank');
+            return;
+        }
+
+        const paddlePriceIds: Record<string, string | undefined> = {
             'basic': isAnnual ? import.meta.env.VITE_PADDLE_BASIC_ANNUAL_PRICE_ID : import.meta.env.VITE_PADDLE_BASIC_PRICE_ID,
             'pro': isAnnual ? import.meta.env.VITE_PADDLE_PRO_ANNUAL_PRICE_ID : import.meta.env.VITE_PADDLE_PRO_PRICE_ID,
             'enterprise': import.meta.env.VITE_PADDLE_ENTERPRISE_PRICE_ID
         };
 
-        const planId = targetPlan || activePlan;
-        const priceId = paddlePriceIds[planId];
+        const rawPriceId = paddlePriceIds[selectedPlanId];
+        const priceId = (rawPriceId || '').replace(/['"]/g, '').trim();
 
         if (!priceId || priceId.includes('...')) {
             toast({
-                title: "Configuración Pendiente",
-                description: `Por favor configura el Price ID de Paddle para el plan ${planId} en tu archivo .env.`,
+                title: "Pasarela Directa en Configuración",
+                description: `El pago con tarjeta para el plan ${effectivePlanDetails.name} se encuentra en mantenimiento. Puedes pagar por PayPal o Transferencia Bancaria.`,
                 variant: 'destructive'
             });
             return;
@@ -302,24 +318,43 @@ const UserSubscription = () => {
 
         // @ts-ignore
         if (window.Paddle) {
-            // @ts-ignore
-            window.Paddle.Checkout.open({
-                items: [{ priceId: priceId, quantity: 1 }],
-                customData: {
-                    company_id: store.id,
-                    target_plan_id: planId
-                },
-                settings: {
-                    displayMode: "overlay",
-                    theme: "light",
-                    locale: "es",
-                }
-            });
-            setIsPaymentOpen(false); // Cierra el modal local
+            try {
+                // @ts-ignore
+                window.Paddle.Checkout.open({
+                    items: [{ priceId: priceId, quantity: 1 }],
+                    customData: {
+                        company_id: store.id,
+                        target_plan_id: selectedPlanId
+                    },
+                    settings: {
+                        displayMode: "overlay",
+                        theme: "light",
+                        locale: "es",
+                    },
+                    eventCallback: (event: any) => {
+                        console.log("💳 Paddle Event:", event);
+                        if (event?.name === 'checkout.error' || event?.type === 'checkout.error') {
+                            toast({
+                                title: "Error en Pasarela Paddle",
+                                description: "Verifica que el 'Default Payment Link' esté configurado en tu Dashboard de Paddle.",
+                                variant: "destructive"
+                            });
+                        }
+                    }
+                });
+                setIsPaymentOpen(false);
+            } catch (err: any) {
+                console.error("❌ Error al abrir Paddle:", err);
+                toast({
+                    title: "Error al abrir pasarela",
+                    description: "Usa la pestaña de PayPal o Transferencia Bancaria para activar tu suscripción.",
+                    variant: "destructive"
+                });
+            }
         } else {
             toast({
-                title: "Error",
-                description: "La pasarela de pago no está cargada. Intente recargar la página.",
+                title: "Pasarela no disponible",
+                description: "La pasarela de tarjeta no está disponible. Puedes utilizar PayPal o Transferencia Bancaria.",
                 variant: 'destructive'
             });
         }
@@ -370,64 +405,6 @@ const UserSubscription = () => {
     return (
         <div className="container mx-auto p-4 md:p-8 max-w-7xl animate-fade-in space-y-8">
 
-            {/* Banner Destacado de Fecha de Pago y Días Restantes */}
-            {subscription?.end_date && (() => {
-                const end = new Date(subscription.end_date);
-                const now = new Date();
-                const diffMs = end.getTime() - now.getTime();
-                const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                const isExpired = daysLeft <= 0 || subscription.status === 'expired';
-
-                return (
-                    <div className={`w-full p-4 md:p-5 rounded-2xl border shadow-lg flex flex-col md:flex-row items-center justify-between gap-4 transition-all ${
-                        isExpired
-                            ? "bg-gradient-to-r from-red-950/90 via-red-900/80 to-rose-950/90 border-red-500/50 text-red-100 shadow-red-900/20"
-                            : daysLeft <= 7
-                                ? "bg-gradient-to-r from-amber-950/90 via-orange-900/80 to-amber-950/90 border-amber-500/50 text-amber-100 shadow-amber-900/20"
-                                : "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-emerald-500/40 text-white shadow-emerald-900/10"
-                    }`}>
-                        <div className="flex items-center gap-3.5">
-                            <div className={`p-3 rounded-xl ${isExpired ? "bg-red-500/20 border border-red-500/30 text-red-400" : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"}`}>
-                                <CreditCard className="h-7 w-7" />
-                            </div>
-                            <div className="space-y-0.5 text-left">
-                                <span className="text-[11px] uppercase font-extrabold tracking-wider text-slate-400">
-                                    Vencimiento y Estado de Pago
-                                </span>
-                                <h2 className="text-lg md:text-xl font-bold flex flex-wrap items-center gap-2">
-                                    {isExpired ? (
-                                        <span className="text-red-400">¡Suscripción Vencida!</span>
-                                    ) : (
-                                        <span>Fecha Límite de Pago: <strong className="text-emerald-400 font-mono">{end.toLocaleDateString()}</strong></span>
-                                    )}
-                                    <Badge className={`${isExpired ? "bg-red-600 text-white" : daysLeft <= 7 ? "bg-amber-600 text-white" : "bg-emerald-600 text-white"}`}>
-                                        {isExpired ? "0 Días Restantes" : `${daysLeft} Días Restantes`}
-                                    </Badge>
-                                </h2>
-                                <p className="text-xs text-slate-300">
-                                    {isExpired
-                                        ? "Tu suscripción ha vencido. Por favor realiza tu pago para continuar disfrutando del servicio."
-                                        : `Tu plan estará activo hasta el ${end.toLocaleDateString()}. Puedes realizar tu pago o renovación ahora.`}
-                                </p>
-                            </div>
-                        </div>
-
-                        <Button
-                            size="lg"
-                            onClick={() => {
-                                setIsSuccess(false);
-                                setTargetPlan(null);
-                                setPaymentAmount(currentPlanDetails.price.toString());
-                                setIsPaymentOpen(true);
-                            }}
-                            className="w-full md:w-auto h-12 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 shrink-0 border border-emerald-400/30 transition-transform hover:scale-105 active:scale-95"
-                        >
-                            <Wallet className="h-5 w-5" />
-                            💳 Pagar Suscripción Ahora
-                        </Button>
-                    </div>
-                );
-            })()}
 
             {/* Header / Perfil */}
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center bg-card p-6 rounded-xl border border-border shadow-sm">
@@ -629,7 +606,7 @@ const UserSubscription = () => {
                                             <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col items-center mb-6">
                                                 <span className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase mb-1">Total a Pagar</span>
                                                 <span className="text-3xl font-black text-white tracking-tighter">
-                                                    RD${parseFloat(paymentAmount).toLocaleString()}
+                                                    ${displayAmount.toLocaleString()} {effectivePlanDetails.currency || 'USD'}
                                                 </span>
                                             </div>
 
@@ -667,7 +644,7 @@ const UserSubscription = () => {
                                         </div>
 
                                         <div className="bg-white/80 p-3 rounded-lg border border-orange-200/50 flex flex-col items-center">
-                                            <span className="text-2xl font-black text-orange-900">RD${parseFloat(paymentAmount).toLocaleString()}</span>
+                                            <span className="text-2xl font-black text-orange-900">${displayAmount.toLocaleString()} {effectivePlanDetails.currency || 'USD'}</span>
                                             <span className="text-[10px] text-muted-foreground font-medium">TOTAL A PAGAR</span>
                                         </div>
 

@@ -257,7 +257,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             Sin conexión - Trabajando offline
           </div>
         )}
-        {children}
+        <div className="flex-1 overflow-y-auto w-full">
+          {children}
+        </div>
       </div>
     );
   }
@@ -267,16 +269,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const shouldAddMargin = showOfflineBanner || showSyncBanner;
 
   return (
-    <div className="min-h-screen bg-background">
-      <SubscriptionWarningBanner />
+    <div className="min-h-screen flex flex-col bg-background">
       {showOfflineBanner && (
-        <div className="bg-destructive text-destructive-foreground text-center text-xs py-1 px-4 font-medium fixed top-0 w-full z-50">
+        <div className="bg-destructive text-destructive-foreground text-center text-xs py-1 px-4 font-medium sticky top-0 w-full z-50">
           Sin conexión a internet. Trabajando en modo offline.
         </div>
       )}
 
       {showSyncBanner && (
-        <div className="bg-blue-600 text-white text-center text-xs py-1 px-4 font-medium fixed top-0 w-full z-50 flex items-center justify-center animate-in slide-in-from-top duration-300">
+        <div className="bg-blue-600 text-white text-center text-xs py-1 px-4 font-medium sticky top-0 w-full z-50 flex items-center justify-center animate-in slide-in-from-top duration-300">
           <div className="flex items-center gap-2">
             <CloudUpload className="w-3 h-3 animate-bounce" />
             <span>Sincronizando {pendingCount} operación{pendingCount !== 1 ? 'es' : ''}...</span>
@@ -291,68 +292,74 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       )}
 
-      <div className={`flex items-center justify-between p-3 border-b border-border bg-card fixed w-full z-40 shadow-md transition-all duration-300 ${shouldAddMargin ? 'top-6' : 'top-0'}`}>
-        <div className="flex items-center gap-3">
-          {/* Mobile view: simple page title */}
-          <span className="font-semibold text-lg px-3 md:hidden text-foreground">{getCurrentPageName()}</span>
+      {/* Header pegado arriba con menú principal y banner de vencimiento adosado debajo */}
+      <header className="sticky top-0 w-full z-40 shadow-md bg-card border-b border-border flex flex-col">
+        <div className="flex items-center justify-between p-3">
+          <div className="flex items-center gap-3">
+            {/* Mobile view: simple page title */}
+            <span className="font-semibold text-lg px-3 md:hidden text-foreground">{getCurrentPageName()}</span>
 
-          {/* Desktop view: Dropdown Navigation Menu */}
-          <div className="hidden md:block">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 px-3 h-10">
-                  <Menu className="h-5 w-5" />
-                  <span className="font-semibold">{getCurrentPageName()}</span>
-                  <ChevronDown className="h-4 w-4 opacity-60" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto">
-                {navigation.map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <DropdownMenuItem key={item.name} asChild>
-                      <Link
-                        to={item.href}
-                        onMouseEnter={() => handlePrefetch(item.href)}
-                        className={`flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-accent text-accent-foreground' : ''
-                          }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span>{item.name}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  );
-                })}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={handleLogout}
-                  className="flex items-center gap-2 px-2 py-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Cerrar Sesión</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Desktop view: Dropdown Navigation Menu */}
+            <div className="hidden md:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 px-3 h-10">
+                    <Menu className="h-5 w-5" />
+                    <span className="font-semibold">{getCurrentPageName()}</span>
+                    <ChevronDown className="h-4 w-4 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto">
+                  {navigation.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <DropdownMenuItem key={item.name} asChild>
+                        <Link
+                          to={item.href}
+                          onMouseEnter={() => handlePrefetch(item.href)}
+                          className={`flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-accent text-accent-foreground' : ''
+                            }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{item.name}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={handleLogout}
+                    className="flex items-center gap-2 px-2 py-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Cerrar Sesión</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4">
+            {profile && (
+              <div className="flex items-center gap-1.5 sm:gap-2 text-sm">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="font-medium max-w-[80px] sm:max-w-[150px] truncate">{profile.full_name || profile.email}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">
+                  ({settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : profile.user_number})
+                </span>
+              </div>
+            )}
+            <PlanBadge />
+            <div className="text-xs text-muted-foreground hidden lg:block">Desarrollado por Harold Rosado</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
-          {profile && (
-            <div className="flex items-center gap-1.5 sm:gap-2 text-sm">
-              <User className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="font-medium max-w-[80px] sm:max-w-[150px] truncate">{profile.full_name || profile.email}</span>
-              <span className="text-[10px] sm:text-xs text-muted-foreground">
-                ({settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : profile.user_number})
-              </span>
-            </div>
-          )}
-          <PlanBadge />
-          <div className="text-xs text-muted-foreground hidden lg:block">Desarrollado por Harold Rosado</div>
-        </div>
-      </div>
+        {/* Banner de vencimiento adosado debajo de la barra del menú */}
+        <SubscriptionWarningBanner />
+      </header>
 
-      {/* Contenido principal - padding bottom en mobile para no quedar detrás del bottom nav */}
-      <main className={`p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto pb-20 md:pb-6 lg:pb-8 ${shouldAddMargin ? 'pt-28' : 'pt-20'}`}>
+      {/* Contenido principal - flujo natural sin tapar nada */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto pb-20 md:pb-6 lg:pb-8">
         {children}
       </main>
 

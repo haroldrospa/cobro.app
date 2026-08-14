@@ -150,13 +150,23 @@ const App = () => {
 
   // Initialize Paddle globally
   useEffect(() => {
+    const rawToken = import.meta.env.VITE_PADDLE_CLIENT_TOKEN || '';
+    const cleanToken = rawToken.replace(/['"]/g, '').trim();
+
+    if (!cleanToken || cleanToken === 'test_token') {
+      console.warn("⚠️ Paddle Client Token no configurado en .env");
+      return;
+    }
+
+    const env = cleanToken.startsWith('test_') || cleanToken.startsWith('sandbox_') ? 'sandbox' : 'production';
+
     initializePaddle({
-      environment: 'production',
-      token: import.meta.env.VITE_PADDLE_CLIENT_TOKEN || 'test_token',
+      environment: env as 'sandbox' | 'production',
+      token: cleanToken,
     }).then(
       (paddleInstance) => {
         if (paddleInstance) {
-          console.log("✅ Paddle initialized successfully");
+          console.log(`✅ Paddle initialized successfully (${env})`);
         }
       }
     ).catch(err => console.error("❌ Failed to initialize Paddle", err));

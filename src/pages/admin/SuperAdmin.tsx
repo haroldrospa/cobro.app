@@ -1213,14 +1213,15 @@ const SuperAdmin = () => {
                                     <p>No se encontraron tiendas con estos filtros.</p>
                                 </div>
                             ) : (
-                                <Table className="border-collapse">
+                                <Table className="border-collapse w-full">
                                     <TableHeader>
                                         <TableRow className="border-b border-border/40 hover:bg-transparent">
-                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Nombre Tienda</TableHead>
-                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Dueño (Email)</TableHead>
-                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Plan</TableHead>
-                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4">Vence</TableHead>
-                                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-4 text-right">Estado</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Nombre Tienda</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Dueño (Email)</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Plan</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Vence</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Cambiar Plan / Renovar</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 text-right">Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -1230,41 +1231,54 @@ const SuperAdmin = () => {
 
                                             return (
                                                 <TableRow key={store.id} className="hover:bg-muted/30 transition-colors border-b border-border/20 group">
-                                                    <TableCell className="font-medium">
-                                                        <div className="flex flex-col">
-                                                            <div className="flex items-center gap-2">
-                                                                <span>{store.store_name || "Sin Nombre"}</span>
-                                                                {reports?.some(r => r.company_id === store.id && r.status === "pending") && (
-                                                                    <Badge className="bg-orange-500 text-white animate-pulse text-[10px] h-4 py-0">
-                                                                        PENDIENTE
-                                                                    </Badge>
-                                                                )}
+                                                    <TableCell className="py-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+                                                                {(store.store_name || 'T')[0].toUpperCase()}
                                                             </div>
-                                                            <span className="text-xs text-muted-foreground font-mono">{store.store_code || "N/A"}</span>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-semibold text-sm text-foreground truncate max-w-[170px]">
+                                                                        {store.store_name || "Sin Nombre"}
+                                                                    </span>
+                                                                    {reports?.some(r => r.company_id === store.id && r.status === "pending") && (
+                                                                        <Badge className="bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[10px] h-5 px-1.5 shrink-0 animate-pulse">
+                                                                            PENDIENTE
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[11px] text-muted-foreground font-mono">
+                                                                    {store.store_code || "N/A"}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground">
-                                                        {store.owner_email || "Desconocido"}
+                                                    <TableCell className="py-3">
+                                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                            <Mail className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                                            <span className="truncate max-w-[170px]" title={store.owner_email}>
+                                                                {store.owner_email || "Desconocido"}
+                                                            </span>
+                                                        </div>
                                                     </TableCell>
-                                                    <TableCell className="py-4">
+                                                    <TableCell className="py-3">
                                                         {hasPlan ? (
-                                                            <Badge variant="secondary" className={`border-0 shadow-none font-medium ${
-                                                                store.plan_name === 'basic' ? 'bg-emerald-500/10 text-emerald-500' :
-                                                                store.plan_name === 'pro' ? 'bg-blue-500/10 text-blue-500' :
-                                                                store.plan_name === 'enterprise' ? 'bg-violet-500/10 text-violet-500' : ''
+                                                            <Badge variant="outline" className={`font-semibold text-xs py-0.5 px-2.5 rounded-full border ${
+                                                                store.plan_name === 'basic' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' :
+                                                                store.plan_name === 'pro' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
+                                                                store.plan_name === 'enterprise' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-muted text-muted-foreground'
                                                             }`}>
                                                                 {store.plan_name === 'basic' ? 'Emprendedor' :
-                                                                    store.plan_name === 'pro' ? 'Negocio' :
-                                                                        store.plan_name === 'enterprise' ? 'Corporativo' :
-                                                                            store.plan_name}
+                                                                 store.plan_name === 'pro' ? 'Negocio' :
+                                                                 store.plan_name === 'enterprise' ? 'Corporativo' : store.plan_name}
                                                             </Badge>
                                                         ) : (
-                                                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 shadow-none font-medium">Sin Plan</Badge>
+                                                            <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 text-xs">Sin Plan</Badge>
                                                         )}
                                                     </TableCell>
                                                     <TableCell 
-                                                        className="cursor-pointer hover:bg-emerald-500/10 transition-all rounded-lg py-2 px-3 group/editcell"
-                                                        title="Haz clic para modificar los días de suscripción"
+                                                        className="py-3 cursor-pointer group/editcell"
+                                                        title="Haz clic para modificar la fecha de vencimiento"
                                                         onClick={() => {
                                                             const days = store.plan_end_date ? getDaysRemaining(store.plan_end_date) : 0;
                                                             setEditingStoreSub({
@@ -1288,31 +1302,30 @@ const SuperAdmin = () => {
                                                             }
                                                         }}
                                                     >
-                                                        <div className="flex items-center justify-between gap-2">
+                                                        <div className="inline-flex items-center gap-2 p-1.5 px-2.5 rounded-lg border border-border/40 bg-background/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all">
                                                             <div className="flex flex-col">
-                                                                <span className={`text-sm font-bold ${daysRemaining < 7 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                                                <span className={`text-xs font-bold flex items-center gap-1 ${daysRemaining <= 7 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                                                    {daysRemaining <= 7 ? <Clock className="h-3 w-3 animate-pulse" /> : null}
                                                                     {daysRemaining} días
                                                                 </span>
                                                                 <span className="text-[10px] text-muted-foreground font-mono">
-                                                                    {store.plan_end_date ? new Date(store.plan_end_date).toLocaleDateString() : 'Sin fecha'}
+                                                                    {store.plan_end_date ? new Date(store.plan_end_date).toLocaleDateString('es-DO') : 'Sin fecha'}
                                                                 </span>
                                                             </div>
-                                                            <div className="p-1 rounded-md bg-muted/50 text-muted-foreground group-hover/editcell:bg-emerald-500 group-hover/editcell:text-white transition-all shadow-sm">
-                                                                <Pencil className="h-3.5 w-3.5" />
-                                                            </div>
+                                                            <Pencil className="h-3 w-3 text-muted-foreground group-hover/editcell:text-emerald-500 transition-colors shrink-0" />
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="text-right py-4">
-                                                        <div className="flex justify-end items-center gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
+                                                    <TableCell className="py-3">
+                                                        <div className="flex items-center gap-2">
                                                             <Select 
                                                                 defaultValue={store.plan_name || "basic"}
                                                                 onValueChange={(newPlan) => updateSubscriptionMutation.mutate({ 
                                                                     companyId: store.id, 
                                                                     planId: newPlan,
-                                                                    months: 1 // Por defecto renovamos 1 mes al cambiar
+                                                                    months: 1
                                                                 })}
                                                             >
-                                                                <SelectTrigger className="w-[120px] h-8 text-[11px]">
+                                                                <SelectTrigger className="w-[125px] h-8 text-xs bg-background/60 border-border/60">
                                                                     <SelectValue />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
@@ -1324,29 +1337,37 @@ const SuperAdmin = () => {
 
                                                             <Button 
                                                                 size="sm" 
-                                                                variant="ghost" 
-                                                                className="h-8 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                                variant="outline" 
+                                                                className="h-8 text-xs border-emerald-500/30 text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 font-medium px-2.5 gap-1 shrink-0"
                                                                 onClick={() => updateSubscriptionMutation.mutate({
                                                                     companyId: store.id,
                                                                     planId: store.plan_name || 'basic',
                                                                     months: 1
                                                                 })}
+                                                                title="Extender 30 días adicionales"
                                                             >
+                                                                <Plus className="h-3 w-3" />
                                                                 +30d
                                                             </Button>
-
-                                                            <Switch
-                                                                checked={store.is_active}
-                                                                onCheckedChange={() => toggleStoreMutation.mutate({ id: store.id, currentState: store.is_active })}
-                                                                disabled={toggleStoreMutation.isPending}
-                                                            />
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-3">
+                                                            <div className="flex items-center gap-1.5" title={store.is_active ? "Tienda Activa" : "Tienda Inactiva"}>
+                                                                <Switch
+                                                                    checked={store.is_active}
+                                                                    onCheckedChange={() => toggleStoreMutation.mutate({ id: store.id, currentState: store.is_active })}
+                                                                    disabled={toggleStoreMutation.isPending}
+                                                                />
+                                                            </div>
 
                                                             <Button 
                                                                 size="icon" 
                                                                 variant="ghost" 
-                                                                className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-full"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg shrink-0"
                                                                 disabled={deleteStoreMutation.isPending}
                                                                 onClick={() => handleDeleteStore(store.id, store.store_name)}
+                                                                title="Eliminar Tienda"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
