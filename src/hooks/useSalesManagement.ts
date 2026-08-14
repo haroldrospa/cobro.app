@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { offlineDB, OfflineStore } from '@/lib/offlineDB';
+import { useUserStore } from './useUserStore';
 
 export interface Sale {
   id: string;
@@ -67,8 +68,10 @@ export interface SalesFilters {
 }
 
 export const useSales = (filters: SalesFilters = {}) => {
+  const { data: userStore } = useUserStore();
+
   return useQuery({
-    queryKey: ['sales', filters],
+    queryKey: ['sales', userStore?.id, filters],
     queryFn: async () => {
       // Get current user's store_id
       const { data: { user } } = await supabase.auth.getUser();
@@ -79,6 +82,8 @@ export const useSales = (filters: SalesFilters = {}) => {
         .select('store_id')
         .eq('id', user.id)
         .maybeSingle();
+
+      const activeStoreId = userStore?.id || profile?.store_id;
 
       let selectFields = `
         *,
@@ -111,8 +116,8 @@ export const useSales = (filters: SalesFilters = {}) => {
         .order('created_at', { ascending: false });
 
       // Filter by store_id
-      if (profile?.store_id) {
-        query = query.eq('store_id', profile.store_id);
+      if (activeStoreId) {
+        query = query.eq('store_id', activeStoreId);
       }
 
       // Filtro de búsqueda por texto
@@ -120,42 +125,49 @@ export const useSales = (filters: SalesFilters = {}) => {
 
       if (filters.searchTerm) {
         const term = filters.searchTerm.trim();
-        // Check if search term looks like an invoice (starts with B)
-        isInvoiceSearch = /^[bB][0-9-]+/.test(term);
+        const cleanTerm = term.replace(/[^a-zA-Z0-9]/g, '');
 
-        if (isInvoiceSearch) {
-          const cleanTerm = term.replace(/[^a-zA-Z0-9]/g, '');
-          const hyphenWildcardTerm = term.replace(/-/g, '%');
+        // Detect if searching for invoice/NCF (starts with B, E, INV or contains digits)
+        isInvoiceSearch = Boolean(term && (
+          /^[bBeE][0-9-]+/i.test(term) ||
+          term.toUpperCase().startsWith('INV') ||
+          /^[bBeE]?[0-9]{2,}/i.test(cleanTerm)
+        ));
 
-          // Construct a term that inserts a wildcard after the 3-character prefix (e.g. B02)
-          // This handles cases where user types "B020000192" but DB has "B02-0000192"
-          let formattedWildcardTerm = cleanTerm;
-          if (cleanTerm.length > 3) {
-            formattedWildcardTerm = cleanTerm.slice(0, 3) + '%' + cleanTerm.slice(3);
-          }
+        const hyphenWildcardTerm = term.replace(/-/g, '%');
 
-          // Invoice specific search - only look at invoice_number column
-          query = query.or(`invoice_number.ilike.%${term}%,invoice_number.ilike.%${cleanTerm}%,invoice_number.ilike.%${hyphenWildcardTerm}%,invoice_number.ilike.%${formattedWildcardTerm}%`);
-        } else {
-          // Standard search: PostgREST does NOT support filtering related-table columns
-          // inside or(). Pre-fetch matching customer IDs, then build a sales-only or filter.
-          const { data: matchingCustomers } = await supabase
-            .from('customers')
-            .select('id')
-            .ilike('name', `%${term}%`)
-            .limit(100);
-
-          const customerIds = matchingCustomers?.map(c => c.id) ?? [];
-
-          if (customerIds.length > 0) {
-            // Build or with invoice_number + matched customer_ids
-            const customerIdFilters = customerIds.map(id => `customer_id.eq.${id}`).join(',');
-            query = query.or(`invoice_number.ilike.%${term}%,${customerIdFilters}`);
-          } else {
-            // No matching customers — only filter by invoice_number
-            query = query.ilike('invoice_number', `%${term}%`);
-          }
+        let formattedWildcardTerm = cleanTerm;
+        if (cleanTerm.length > 3) {
+          formattedWildcardTerm = cleanTerm.slice(0, 3) + '%' + cleanTerm.slice(3);
         }
+
+        let numericOnlyTerm = cleanTerm.replace(/^[a-zA-Z]+/, '');
+
+        // Match customers by name, rnc or phone
+        const { data: matchingCustomers } = await supabase
+          .from('customers')
+          .select('id')
+          .or(`name.ilike.%${term}%,rnc.ilike.%${term}%,phone.ilike.%${term}%`)
+          .limit(100);
+
+        const customerIds = matchingCustomers?.map(c => c.id) ?? [];
+
+        const conditions: string[] = [
+          `invoice_number.ilike.%${term}%`,
+          `invoice_number.ilike.%${cleanTerm}%`,
+          `invoice_number.ilike.%${hyphenWildcardTerm}%`,
+          `invoice_number.ilike.%${formattedWildcardTerm}%`
+        ];
+
+        if (numericOnlyTerm && numericOnlyTerm.length > 2) {
+          conditions.push(`invoice_number.ilike.%${numericOnlyTerm}%`);
+        }
+
+        if (customerIds.length > 0) {
+          customerIds.forEach(id => conditions.push(`customer_id.eq.${id}`));
+        }
+
+        query = query.or(conditions.join(','));
       }
 
       // Filtro por estado
@@ -182,9 +194,22 @@ export const useSales = (filters: SalesFilters = {}) => {
         query = query.eq('profile_id', filters.userId);
       }
 
-      // Filtro por tipo de factura
+      // Filtro por tipo de factura (Mapea códigos B01, B02, B14, etc. a su UUID correspondiente)
       if (filters.invoiceTypeId && filters.invoiceTypeId !== 'all') {
-        query = query.eq('invoice_type_id', filters.invoiceTypeId);
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(filters.invoiceTypeId);
+        if (isUUID) {
+          query = query.eq('invoice_type_id', filters.invoiceTypeId);
+        } else {
+          const { data: invType } = await supabase
+            .from('invoice_types')
+            .select('id')
+            .eq('code', filters.invoiceTypeId.toUpperCase())
+            .maybeSingle();
+
+          if (invType?.id) {
+            query = query.eq('invoice_type_id', invType.id);
+          }
+        }
       }
 
       // Filtro por fecha desde (Only if NOT searching for a specific invoice)

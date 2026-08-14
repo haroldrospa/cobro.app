@@ -9,6 +9,11 @@ export interface Supplier {
     name: string;
     rnc: string | null;
     contact: string | null;
+    phone?: string | null;
+    payment_method?: 'cash' | 'transfer' | string | null;
+    bank_name?: string | null;
+    bank_account_number?: string | null;
+    bank_account_type?: 'ahorros' | 'corriente' | string | null;
     created_at: string;
 }
 
@@ -48,7 +53,12 @@ export const useSuppliers = () => {
                     store_id: userStore.id,
                     name: newSupplier.name,
                     rnc: newSupplier.rnc,
-                    contact: newSupplier.contact
+                    contact: newSupplier.contact,
+                    phone: newSupplier.phone || null,
+                    payment_method: newSupplier.payment_method || 'transfer',
+                    bank_name: newSupplier.bank_name || null,
+                    bank_account_number: newSupplier.bank_account_number || null,
+                    bank_account_type: newSupplier.bank_account_type || null,
                 })
                 .select()
                 .single();
@@ -67,6 +77,44 @@ export const useSuppliers = () => {
             toast({
                 title: "Error",
                 description: error.message || "No se pudo guardar el proveedor.",
+                variant: "destructive",
+            });
+        },
+    });
+
+    const updateSupplierMutation = useMutation({
+        mutationFn: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
+            const { data, error } = await supabase
+                .from('suppliers')
+                .update({
+                    name: updates.name,
+                    rnc: updates.rnc,
+                    contact: updates.contact,
+                    phone: updates.phone,
+                    payment_method: updates.payment_method,
+                    bank_name: updates.bank_name,
+                    bank_account_number: updates.bank_account_number,
+                    bank_account_type: updates.bank_account_type,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+            toast({
+                title: "Proveedor actualizado",
+                description: "Los datos del proveedor se han actualizado correctamente.",
+            });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Error al actualizar",
+                description: error.message || "No se pudo actualizar la información del proveedor.",
                 variant: "destructive",
             });
         },
@@ -115,7 +163,9 @@ export const useSuppliers = () => {
         suppliers,
         isLoading,
         createSupplier: createSupplierMutation.mutateAsync,
+        updateSupplier: updateSupplierMutation.mutateAsync,
         deleteSupplier: deleteSupplierMutation.mutateAsync,
         isCreating: createSupplierMutation.isPending,
+        isUpdating: updateSupplierMutation.isPending,
     };
 };

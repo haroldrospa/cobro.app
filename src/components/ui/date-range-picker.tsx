@@ -173,12 +173,20 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
         const targetYear = month.getFullYear();
         const targetDate = new Date(targetYear, monthIndex, 1);
         setMonth(targetDate);
+        onDateRangeChange({
+            from: startOfMonth(targetDate),
+            to: endOfMonth(targetDate),
+        });
     };
 
     const handleQuickYearSelect = (year: number) => {
         const targetMonth = month.getMonth();
         const targetDate = new Date(year, targetMonth, 1);
         setMonth(targetDate);
+        onDateRangeChange({
+            from: startOfMonth(targetDate),
+            to: endOfMonth(targetDate),
+        });
     };
 
     const selectEntireCurrentMonth = () => {
@@ -311,6 +319,7 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
                                 selected={dateRange}
                                 month={month}
                                 onMonthChange={setMonth}
+                                showOutsideDays={false}
                                 onSelect={(range) => {
                                     if (range) {
                                         onDateRangeChange({

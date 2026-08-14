@@ -267,6 +267,7 @@ export const generateCleanInvoiceHTML = (
 
       <div style="border-top: 1.5px solid #000000; margin-top: 5px; padding-top: 5px; font-size: 9px; line-height: 1.4;">
         <div><span style="color: #000000; font-weight: 900; font-size: 8.5px; text-transform: uppercase;">CLIENTE:</span> <strong style="color: #000000; font-weight: 900;">${(invoiceData.customerName || 'CONSUMIDOR FINAL').toUpperCase()}</strong></div>
+        ${invoiceData.customerRnc ? `<div><span style="color: #000000; font-weight: 900; font-size: 8.5px; text-transform: uppercase;">RNC CLIENTE:</span> <strong style="color: #000000; font-weight: 900;">${invoiceData.customerRnc}</strong></div>` : ''}
         ${invoiceData.cashierName ? `<div><span style="color: #000000; font-weight: 900; font-size: 8.5px; text-transform: uppercase;">CAJERO:</span> <strong style="color: #000000; font-weight: 900;">${invoiceData.cashierName.toUpperCase()}</strong></div>` : ''}
       </div>
     </div>

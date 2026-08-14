@@ -80,7 +80,13 @@ const InvoiceSearch: React.FC<InvoiceSearchProps> = ({
           <Input
             placeholder="Buscar por NCF, referencia o nombre..."
             value={tempSearchTerm}
-            onChange={(e) => setTempSearchTerm(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setTempSearchTerm(val);
+              if (!val.trim()) {
+                onSearchChange('');
+              }
+            }}
             onKeyDown={handleKeyDown}
             className="pl-12 h-12 text-base shadow-sm border-muted-foreground/20"
           />

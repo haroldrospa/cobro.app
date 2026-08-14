@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw, Pencil, Wallet, ArrowUpRight, ArrowDownRight, Layers, CreditCard } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw, Pencil, Wallet, ArrowUpRight, ArrowDownRight, Layers, CreditCard, Phone, Landmark, Copy } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -85,7 +85,7 @@ function AccountingContent() {
 
     const { data: sales = [], isLoading: loadingSales } = useSales({ dateFrom, dateTo });
     const { expenses, createExpense, updateExpense, deleteExpense, isLoading: loadingExpenses, isCreating, isUpdating: isUpdatingExpense } = useExpenses();
-    const { suppliers, createSupplier, deleteSupplier, isLoading: loadingSuppliers } = useSuppliers();
+    const { suppliers, createSupplier, updateSupplier, deleteSupplier, isLoading: loadingSuppliers } = useSuppliers();
     const { settings: storeSettings, updateSettings } = useStoreSettings();
     const { data: dailyClosings = [], isLoading: loadingClosings } = useDailyClosings();
     const { data: cashMovements = [], isLoading: loadingMovements } = useCashMovements();
@@ -545,7 +545,8 @@ function AccountingContent() {
     const editFileInputRef = useRef<HTMLInputElement>(null);
 
     const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
-    const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({});
+    const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+    const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({ payment_method: 'transfer' });
     const [isLookingUpSupplierRnc, setIsLookingUpSupplierRnc] = useState(false);
 
     const handleLookupSupplierRnc = async () => {
@@ -1247,19 +1248,76 @@ function AccountingContent() {
     };
 
     const handleAddSupplier = async () => {
-        if (!newSupplier.name) return;
+        if (!newSupplier.name?.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Campo requerido",
+                description: "Por favor ingresa el nombre del proveedor.",
+            });
+            return;
+        }
 
         try {
-            await createSupplier({
-                name: newSupplier.name,
-                rnc: newSupplier.rnc || null,
-                contact: newSupplier.contact || null
-            });
+            if (editingSupplier) {
+                await updateSupplier({
+                    id: editingSupplier.id,
+                    name: newSupplier.name.trim(),
+                    rnc: newSupplier.rnc?.trim() || null,
+                    contact: newSupplier.contact?.trim() || null,
+                    phone: newSupplier.phone?.trim() || null,
+                    payment_method: newSupplier.payment_method || 'transfer',
+                    bank_name: newSupplier.bank_name?.trim() || null,
+                    bank_account_number: newSupplier.bank_account_number?.trim() || null,
+                    bank_account_type: newSupplier.bank_account_type || null,
+                });
+            } else {
+                await createSupplier({
+                    name: newSupplier.name.trim(),
+                    rnc: newSupplier.rnc?.trim() || null,
+                    contact: newSupplier.contact?.trim() || null,
+                    phone: newSupplier.phone?.trim() || null,
+                    payment_method: newSupplier.payment_method || 'transfer',
+                    bank_name: newSupplier.bank_name?.trim() || null,
+                    bank_account_number: newSupplier.bank_account_number?.trim() || null,
+                    bank_account_type: newSupplier.bank_account_type || null,
+                });
+            }
             setIsAddSupplierOpen(false);
-            setNewSupplier({});
+            setEditingSupplier(null);
+            setNewSupplier({ payment_method: 'transfer' });
         } catch (error) {
             console.error(error);
         }
+    };
+
+    const handleOpenEditSupplier = (supplier: Supplier) => {
+        setEditingSupplier(supplier);
+        setNewSupplier({
+            name: supplier.name,
+            rnc: supplier.rnc || '',
+            contact: supplier.contact || '',
+            phone: supplier.phone || '',
+            payment_method: supplier.payment_method || 'transfer',
+            bank_name: supplier.bank_name || '',
+            bank_account_number: supplier.bank_account_number || '',
+            bank_account_type: supplier.bank_account_type || '',
+        });
+        setIsAddSupplierOpen(true);
+    };
+
+    const handleOpenCreateSupplier = () => {
+        setEditingSupplier(null);
+        setNewSupplier({ payment_method: 'transfer' });
+        setIsAddSupplierOpen(true);
+    };
+
+    const handleCopyAccount = (accountNumber: string) => {
+        if (!accountNumber) return;
+        navigator.clipboard.writeText(accountNumber);
+        toast({
+            title: "¡Cuenta bancaria copiada!",
+            description: `Número ${accountNumber} copiado al portapapeles.`,
+        });
     };
 
     const preprocessImage = async (file: File): Promise<string> => {
@@ -2300,7 +2358,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         <Button
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2 h-9 px-4 rounded-xl shadow-sm"
-                            onClick={() => setIsAddSupplierOpen(true)}
+                            onClick={handleOpenCreateSupplier}
                         >
                             <Plus className="h-4 w-4" />
                             Nuevo Proveedor
@@ -2334,7 +2392,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Buscar proveedor por nombre, RNC o contacto..."
+                                placeholder="Buscar por nombre, RNC, banco, cuenta o teléfono..."
                                 value={supplierSearch}
                                 onChange={(e) => setSupplierSearch(e.target.value)}
                                 className="pl-9 h-9 bg-muted/20 border-border/40 rounded-xl text-sm"
@@ -2369,7 +2427,10 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 const matchSearch = !term ||
                                     s.name?.toLowerCase().includes(term) ||
                                     (s.rnc || '').toLowerCase().includes(term) ||
-                                    (s.contact || '').toLowerCase().includes(term);
+                                    (s.contact || '').toLowerCase().includes(term) ||
+                                    (s.phone || '').toLowerCase().includes(term) ||
+                                    (s.bank_name || '').toLowerCase().includes(term) ||
+                                    (s.bank_account_number || '').toLowerCase().includes(term);
                                 const debt = getSupplierOutstandingDebt(s.id);
                                 const matchFilter =
                                     supplierDebtFilter === 'all' ||
@@ -2378,7 +2439,6 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 return matchSearch && matchFilter;
                             })
                             .sort((a, b) => {
-                                // Sort by debt amount descending (debtors first)
                                 return getSupplierOutstandingDebt(b.id) - getSupplierOutstandingDebt(a.id);
                             });
 
@@ -2410,7 +2470,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         <TableRow className="border-b border-border/40 hover:bg-transparent">
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3 pl-5">Proveedor</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3">RNC</TableHead>
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3">Contacto</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3">Contacto / Teléfono</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3 text-right">Deuda Pendiente</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 py-3 text-center pr-5">Acciones</TableHead>
                                         </TableRow>
@@ -2419,23 +2479,64 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         {filtered.map((supplier) => {
                                             const outstanding = getSupplierOutstandingDebt(supplier.id);
                                             const hasDebt = outstanding > 0;
+                                            const isTransfer = (supplier.payment_method || 'transfer') === 'transfer';
+
                                             return (
-                                                <TableRow key={supplier.id} className="hover:bg-muted/20 transition-colors border-b border-border/20 group">
+                                                <TableRow
+                                                    key={supplier.id}
+                                                    className="hover:bg-muted/30 transition-colors border-b border-border/20 group cursor-pointer"
+                                                    onClick={() => {
+                                                        setSelectedSupplierForView(supplier);
+                                                        setIsViewDebtsOpen(true);
+                                                    }}
+                                                >
                                                     <TableCell className="py-4 pl-5">
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black ${
+                                                            <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black ${
                                                                 hasDebt ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'
                                                             }`}>
                                                                 {supplier.name?.charAt(0).toUpperCase()}
                                                             </div>
-                                                            <span className="font-semibold text-sm">{supplier.name}</span>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                                                                    {supplier.name}
+                                                                    {isTransfer ? (
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                                                                            Transferencia
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                                                            Efectivo
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                                {(supplier.bank_name || supplier.bank_account_number) && (
+                                                                    <span className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
+                                                                        <Landmark className="h-3 w-3 text-muted-foreground/70" />
+                                                                        {supplier.bank_name || 'Banco'} {supplier.bank_account_number ? `• ${supplier.bank_account_number}` : ''}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="py-4 text-sm text-muted-foreground font-mono">
                                                         {supplier.rnc || <span className="text-border">—</span>}
                                                     </TableCell>
                                                     <TableCell className="py-4 text-sm text-muted-foreground">
-                                                        {supplier.contact || <span className="text-border">—</span>}
+                                                        <div className="flex flex-col gap-0.5">
+                                                            {supplier.phone && (
+                                                                <span className="font-semibold text-foreground flex items-center gap-1 text-xs">
+                                                                    <Phone className="h-3 w-3 text-primary" />
+                                                                    {supplier.phone}
+                                                                </span>
+                                                            )}
+                                                            {supplier.contact && (
+                                                                <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                                                    {supplier.contact}
+                                                                </span>
+                                                            )}
+                                                            {!supplier.phone && !supplier.contact && <span className="text-border">—</span>}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell className="py-4 text-right">
                                                         {hasDebt ? (
@@ -2448,36 +2549,56 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                                             </span>
                                                         )}
                                                     </TableCell>
-                                                    <TableCell className="py-4 pr-5">
-                                                        <div className="flex items-center justify-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                                                    <TableCell className="py-4 pr-5" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex items-center justify-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                className="h-8 px-3 rounded-xl text-xs font-bold gap-1.5 text-primary hover:bg-primary/10"
-                                                                onClick={() => {
+                                                                className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-primary hover:bg-primary/10"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     setSelectedSupplierForDebt(supplier);
                                                                     setDebtForm({ amount: '', description: '', category: 'Inventario', due_date: '' });
                                                                     setIsAddDebtOpen(true);
                                                                 }}
+                                                                title="Agregar Deuda"
                                                             >
                                                                 <Plus className="h-3.5 w-3.5" /> Deuda
                                                             </Button>
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                className="h-8 px-3 rounded-xl text-xs font-bold gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                                                onClick={() => {
+                                                                className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     setSelectedSupplierForView(supplier);
                                                                     setIsViewDebtsOpen(true);
                                                                 }}
+                                                                title="Ver Ficha Completa"
                                                             >
                                                                 <Eye className="h-3.5 w-3.5" /> Ver
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-amber-500 hover:bg-amber-500/10"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleOpenEditSupplier(supplier);
+                                                                }}
+                                                                title="Editar Proveedor"
+                                                            >
+                                                                <Pencil className="h-3.5 w-3.5" /> Editar
                                                             </Button>
                                                             <Button
                                                                 size="icon"
                                                                 variant="ghost"
                                                                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
-                                                                onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteSupplier(supplier.id, supplier.name);
+                                                                }}
+                                                                title="Eliminar Proveedor"
                                                             >
                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                             </Button>
@@ -3682,23 +3803,32 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Add Supplier */}
-            <Dialog open={isAddSupplierOpen} onOpenChange={setIsAddSupplierOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+            {/* Dialog: Add / Edit Supplier */}
+            <Dialog open={isAddSupplierOpen} onOpenChange={(open) => {
+                setIsAddSupplierOpen(open);
+                if (!open) setEditingSupplier(null);
+            }}>
+                <DialogContent className="sm:max-w-[500px] rounded-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Registrar Nuevo Proveedor</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                            <Building2 className="h-5 w-5 text-primary" />
+                            {editingSupplier ? 'Editar Proveedor' : 'Registrar Nuevo Proveedor'}
+                        </DialogTitle>
                         <DialogDescription>
-                            Agrega un nuevo proveedor a tu directorio.
+                            {editingSupplier
+                                ? 'Actualiza los datos de contacto, pagos y cuenta bancaria del proveedor.'
+                                : 'Agrega un nuevo proveedor con sus datos de contacto y cuenta para transferencias.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="sup-rnc" className="text-right">RNC</Label>
+                    <div className="grid gap-4 py-2">
+                        {/* RNC con búsqueda DGII */}
+                        <div className="grid grid-cols-4 items-center gap-3">
+                            <Label htmlFor="sup-rnc" className="text-right text-xs font-bold">RNC / Cédula</Label>
                             <div className="col-span-3 relative flex items-center">
                                 <Input
                                     id="sup-rnc"
                                     placeholder="000-00000-0"
-                                    className="pr-12 w-full"
+                                    className="pr-10 h-9 rounded-xl text-sm"
                                     value={newSupplier.rnc || ''}
                                     onChange={(e) => setNewSupplier({ ...newSupplier, rnc: e.target.value })}
                                 />
@@ -3706,38 +3836,134 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="absolute right-1 w-8 h-8 text-zinc-400 hover:text-white"
+                                    className="absolute right-1 w-7 h-7 text-muted-foreground hover:text-foreground"
                                     onClick={handleLookupSupplierRnc}
                                     disabled={isLookingUpSupplierRnc || !newSupplier.rnc}
-                                    title="Buscar en DGII"
+                                    title="Buscar RNC en DGII"
                                 >
-                                    {isLookingUpSupplierRnc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                    {isLookingUpSupplierRnc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
                                 </Button>
                             </div>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="sup-name" className="text-right">Nombre</Label>
+
+                        {/* Nombre */}
+                        <div className="grid grid-cols-4 items-center gap-3">
+                            <Label htmlFor="sup-name" className="text-right text-xs font-bold">Nombre *</Label>
                             <Input
                                 id="sup-name"
-                                placeholder="Ej. Distribuidora ABC"
-                                className="col-span-3"
+                                placeholder="Ej. Distribuidora Banileja"
+                                className="col-span-3 h-9 rounded-xl text-sm"
                                 value={newSupplier.name || ''}
                                 onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="sup-contact" className="text-right">Contacto</Label>
+
+                        {/* Teléfono & Contacto */}
+                        <div className="grid grid-cols-4 items-center gap-3">
+                            <Label htmlFor="sup-phone" className="text-right text-xs font-bold">Teléfono</Label>
+                            <Input
+                                id="sup-phone"
+                                placeholder="Ej. 809-555-0199"
+                                className="col-span-3 h-9 rounded-xl text-sm"
+                                value={newSupplier.phone || ''}
+                                onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-3">
+                            <Label htmlFor="sup-contact" className="text-right text-xs font-bold">Contacto / Email</Label>
                             <Input
                                 id="sup-contact"
-                                placeholder="Teléfono o Email"
-                                className="col-span-3"
+                                placeholder="Persona de contacto o Email"
+                                className="col-span-3 h-9 rounded-xl text-sm"
                                 value={newSupplier.contact || ''}
                                 onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })}
                             />
                         </div>
+
+                        <div className="my-1 border-t border-border/40" />
+
+                        {/* Método de Pago Preferido */}
+                        <div className="grid grid-cols-4 items-center gap-3">
+                            <Label className="text-right text-xs font-bold">Pago Preferido</Label>
+                            <div className="col-span-3 flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant={newSupplier.payment_method === 'transfer' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className="flex-1 h-9 text-xs font-bold rounded-xl gap-1.5"
+                                    onClick={() => setNewSupplier({ ...newSupplier, payment_method: 'transfer' })}
+                                >
+                                    <Landmark className="h-3.5 w-3.5" /> Transferencia
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={newSupplier.payment_method === 'cash' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className="flex-1 h-9 text-xs font-bold rounded-xl gap-1.5"
+                                    onClick={() => setNewSupplier({ ...newSupplier, payment_method: 'cash' })}
+                                >
+                                    <DollarSign className="h-3.5 w-3.5" /> Efectivo
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Campos Bancarios */}
+                        <div className="space-y-3 bg-muted/20 p-3 rounded-xl border border-border/40">
+                            <p className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <Landmark className="h-3.5 w-3.5 text-primary" /> Datos Bancarios para Transferencia
+                            </p>
+
+                            <div className="grid grid-cols-3 items-center gap-2">
+                                <Label className="text-xs font-medium">Banco</Label>
+                                <div className="col-span-2">
+                                    <Input
+                                        placeholder="Ej. Banco Popular, Banreservas, BHD"
+                                        className="h-8 rounded-lg text-xs"
+                                        value={newSupplier.bank_name || ''}
+                                        onChange={(e) => setNewSupplier({ ...newSupplier, bank_name: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 items-center gap-2">
+                                <Label className="text-xs font-medium">Número Cuenta</Label>
+                                <div className="col-span-2">
+                                    <Input
+                                        placeholder="Ej. 123456789"
+                                        className="h-8 rounded-lg text-xs font-mono"
+                                        value={newSupplier.bank_account_number || ''}
+                                        onChange={(e) => setNewSupplier({ ...newSupplier, bank_account_number: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 items-center gap-2">
+                                <Label className="text-xs font-medium">Tipo de Cuenta</Label>
+                                <div className="col-span-2">
+                                    <Select
+                                        value={newSupplier.bank_account_type || 'ahorros'}
+                                        onValueChange={(val) => setNewSupplier({ ...newSupplier, bank_account_type: val })}
+                                    >
+                                        <SelectTrigger className="h-8 text-xs rounded-lg bg-background">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            <SelectItem value="ahorros" className="text-xs">Cuenta de Ahorros</SelectItem>
+                                            <SelectItem value="corriente" className="text-xs">Cuenta Corriente</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <DialogFooter>
-                        <Button onClick={handleAddSupplier} type="submit">Guardar Proveedor</Button>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setIsAddSupplierOpen(false)} className="rounded-xl h-9 text-xs font-bold">
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleAddSupplier} className="rounded-xl h-9 text-xs font-bold bg-primary text-primary-foreground">
+                            {editingSupplier ? 'Guardar Cambios' : 'Registrar Proveedor'}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -4255,112 +4481,231 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Ver Deudas de Proveedor */}
+            {/* Dialog: Ficha Completa y Detalles del Proveedor */}
             <Dialog open={isViewDebtsOpen} onOpenChange={setIsViewDebtsOpen}>
-                <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto rounded-2xl border border-border/50">
-                    <DialogHeader>
-                        <DialogTitle className="text-left flex items-center gap-2">
-                            <Building2 className="h-5 w-5 text-primary" />
-                            Historial de Deudas: {selectedSupplierForView?.name}
-                        </DialogTitle>
-                        <DialogDescription className="text-left">
-                            Consulta el estado de las cuentas por pagar y registra abonos o liquidaciones.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        {(() => {
-                            const list = supplierDebts.filter(d => d.supplier_id === selectedSupplierForView?.id);
-                            if (list.length === 0) {
-                                return (
-                                    <div className="text-center py-8 text-muted-foreground text-sm flex flex-col items-center justify-center gap-2">
-                                        <Check className="h-10 w-10 text-emerald-500 bg-emerald-500/10 p-2 rounded-full" />
-                                        <span>No tienes ninguna deuda registrada con este proveedor.</span>
+                <DialogContent className="sm:max-w-[750px] max-h-[85vh] overflow-y-auto rounded-3xl border border-border/50 p-0 overflow-hidden bg-background">
+                    {selectedSupplierForView && (() => {
+                        const supplier = selectedSupplierForView;
+                        const outstanding = getSupplierOutstandingDebt(supplier.id);
+                        const hasDebt = outstanding > 0;
+                        const debts = supplierDebts.filter(d => d.supplier_id === supplier.id);
+                        const isTransfer = (supplier.payment_method || 'transfer') === 'transfer';
+
+                        return (
+                            <div className="flex flex-col">
+                                {/* Header Ficha */}
+                                <div className="p-6 bg-muted/30 border-b border-border/40">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-lg font-black shrink-0 ${
+                                                hasDebt ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                            }`}>
+                                                {supplier.name?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h2 className="text-xl font-black text-foreground">{supplier.name}</h2>
+                                                    {isTransfer ? (
+                                                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                                                            💳 Transferencia
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                                            💵 Efectivo
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
+                                                    <span>RNC / Cédula: <strong className="font-mono text-foreground">{supplier.rnc || 'N/A'}</strong></span>
+                                                    <span>•</span>
+                                                    <span>Estado: {hasDebt ? <span className="text-red-500 font-bold">Deuda de ${outstanding.toLocaleString()}</span> : <span className="text-emerald-500 font-bold">Sin deuda</span>}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-9 px-3 text-xs font-bold rounded-xl gap-1.5"
+                                                onClick={() => {
+                                                    setIsViewDebtsOpen(false);
+                                                    handleOpenEditSupplier(supplier);
+                                                }}
+                                            >
+                                                <Pencil className="h-3.5 w-3.5 text-amber-500" />
+                                                Editar
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                className="h-9 px-4 text-xs font-bold rounded-xl bg-primary text-primary-foreground gap-1.5"
+                                                onClick={() => {
+                                                    setSelectedSupplierForDebt(supplier);
+                                                    setDebtForm({ amount: '', description: '', category: 'Inventario', due_date: '' });
+                                                    setIsAddDebtOpen(true);
+                                                }}
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                                + Deuda
+                                            </Button>
+                                        </div>
                                     </div>
-                                );
-                            }
-                            return (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Concepto</TableHead>
-                                            <TableHead className="text-right">Total</TableHead>
-                                            <TableHead className="text-right">Pagado</TableHead>
-                                            <TableHead className="text-right">Pendiente</TableHead>
-                                            <TableHead>Vencimiento</TableHead>
-                                            <TableHead className="text-center">Estado</TableHead>
-                                            <TableHead className="text-right">Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {list.map((debt) => {
-                                            const remaining = Number(debt.amount) - Number(debt.amount_paid);
-                                            return (
-                                                <TableRow key={debt.id}>
-                                                    <TableCell className="font-medium">
-                                                        <div>{debt.description}</div>
-                                                        <div className="text-xs text-muted-foreground">{debt.category}</div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-semibold">${Number(debt.amount).toLocaleString()}</TableCell>
-                                                    <TableCell className="text-right text-emerald-500">${Number(debt.amount_paid).toLocaleString()}</TableCell>
-                                                    <TableCell className="text-right text-red-500 font-bold">${remaining.toLocaleString()}</TableCell>
-                                                    <TableCell className="text-xs">
-                                                        {debt.due_date ? format(new Date(debt.due_date + 'T12:00:00'), 'dd MMM yyyy', { locale: es }) : 'N/A'}
-                                                    </TableCell>
-                                                    <TableCell className="text-center text-xs">
-                                                        {debt.status === 'paid' && (
-                                                            <span className="px-2 py-0.5 rounded-full font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Pagado</span>
-                                                        )}
-                                                        {debt.status === 'partial' && (
-                                                            <span className="px-2 py-0.5 rounded-full font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">Parcial</span>
-                                                        )}
-                                                        {debt.status === 'pending' && (
-                                                            <span className="px-2 py-0.5 rounded-full font-black bg-red-500/10 text-red-500 border border-red-500/20">Pendiente</span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="flex justify-end items-center gap-1">
-                                                            {debt.status !== 'paid' && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="h-8 rounded-lg text-xs"
-                                                                    onClick={() => {
-                                                                        setSelectedDebtForPayment(debt);
-                                                                        setPayDebtForm({
-                                                                            amountToPay: remaining.toString(),
-                                                                            category: debt.category,
-                                                                            description: `Abono Deuda: ${debt.description}`
-                                                                        });
-                                                                        setIsPayDebtOpen(true);
-                                                                    }}
-                                                                >
-                                                                    Abonar
-                                                                </Button>
-                                                            )}
-                                                            <Button
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                                onClick={() => handleDeleteDebt(debt.id, debt.description)}
-                                                                disabled={isDeletingSupplierDebt}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            );
-                        })()}
-                    </div>
-                    <DialogFooter>
-                        <Button className="rounded-xl px-5" onClick={() => setIsViewDebtsOpen(false)}>
-                            Cerrar
-                        </Button>
-                    </DialogFooter>
+                                </div>
+
+                                {/* Secciones de Información */}
+                                <div className="p-6 space-y-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* Tarjeta: Contacto */}
+                                        <div className="p-4 rounded-2xl bg-muted/20 border border-border/40 space-y-3">
+                                            <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                                <Phone className="h-3.5 w-3.5 text-primary" /> Contacto Directo
+                                            </h4>
+                                            <div className="space-y-2 text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground font-medium">Teléfono:</span>
+                                                    {supplier.phone ? (
+                                                        <a href={`tel:${supplier.phone}`} className="font-bold text-primary hover:underline flex items-center gap-1 font-mono">
+                                                            {supplier.phone}
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">No registrado</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground font-medium">Persona / Email:</span>
+                                                    <span className="font-semibold text-foreground">{supplier.contact || 'No registrado'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Tarjeta: Datos Bancarios */}
+                                        <div className="p-4 rounded-2xl bg-muted/20 border border-border/40 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                                    <Landmark className="h-3.5 w-3.5 text-primary" /> Cuenta Bancaria
+                                                </h4>
+                                                {supplier.bank_account_number && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-6 px-2 text-[10px] font-bold text-primary hover:bg-primary/10 rounded-md gap-1"
+                                                        onClick={() => handleCopyAccount(supplier.bank_account_number!)}
+                                                    >
+                                                        <Copy className="h-3 w-3" />
+                                                        Copiar Cuenta
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2 text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground font-medium">Banco:</span>
+                                                    <span className="font-bold text-foreground">{supplier.bank_name || 'No especificado'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground font-medium">Número de Cuenta:</span>
+                                                    <span className="font-mono font-bold text-foreground text-xs bg-background px-2 py-0.5 rounded-md border border-border/40">
+                                                        {supplier.bank_account_number || 'No especificado'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground font-medium">Tipo de Cuenta:</span>
+                                                    <span className="font-semibold text-foreground capitalize">
+                                                        {supplier.bank_account_type ? `Cuenta de ${supplier.bank_account_type}` : 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Cuentas por Pagar / Historial */}
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                            <Receipt className="h-3.5 w-3.5 text-primary" /> Historial de Cuentas por Pagar ({debts.length})
+                                        </h4>
+
+                                        {debts.length === 0 ? (
+                                            <div className="text-center py-6 text-muted-foreground text-xs bg-muted/10 rounded-2xl border border-border/30">
+                                                No hay deudas registradas con este proveedor.
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-2xl border border-border/40 overflow-hidden bg-card">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow className="bg-muted/20">
+                                                            <TableHead className="text-xs font-bold">Concepto</TableHead>
+                                                            <TableHead className="text-right text-xs font-bold">Total</TableHead>
+                                                            <TableHead className="text-right text-xs font-bold">Pagado</TableHead>
+                                                            <TableHead className="text-right text-xs font-bold">Pendiente</TableHead>
+                                                            <TableHead className="text-center text-xs font-bold">Estado</TableHead>
+                                                            <TableHead className="text-right text-xs font-bold">Acción</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {debts.map((debt) => {
+                                                            const remaining = Number(debt.amount) - Number(debt.amount_paid);
+                                                            return (
+                                                                <TableRow key={debt.id}>
+                                                                    <TableCell className="font-medium text-xs">
+                                                                        <div>{debt.description}</div>
+                                                                        <div className="text-[10px] text-muted-foreground">{debt.category}</div>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right text-xs font-semibold">${Number(debt.amount).toLocaleString()}</TableCell>
+                                                                    <TableCell className="text-right text-xs text-emerald-500">${Number(debt.amount_paid).toLocaleString()}</TableCell>
+                                                                    <TableCell className="text-right text-xs text-red-500 font-bold">${remaining.toLocaleString()}</TableCell>
+                                                                    <TableCell className="text-center text-xs">
+                                                                        {debt.status === 'paid' && (
+                                                                            <span className="px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-500">Pagado</span>
+                                                                        )}
+                                                                        {debt.status === 'partial' && (
+                                                                            <span className="px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-500">Parcial</span>
+                                                                        )}
+                                                                        {debt.status === 'pending' && (
+                                                                            <span className="px-2 py-0.5 rounded-full font-bold bg-red-500/10 text-red-500">Pendiente</span>
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        <div className="flex justify-end items-center gap-1">
+                                                                            {debt.status !== 'paid' && (
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    className="h-7 px-2 text-[11px] font-bold rounded-lg"
+                                                                                    onClick={() => {
+                                                                                        setSelectedDebtForPayment(debt);
+                                                                                        setPayDebtForm({
+                                                                                            amountToPay: remaining.toString(),
+                                                                                            category: debt.category,
+                                                                                            description: `Abono Deuda: ${debt.description}`
+                                                                                        });
+                                                                                        setIsPayDebtOpen(true);
+                                                                                    }}
+                                                                                >
+                                                                                    Abonar
+                                                                                </Button>
+                                                                            )}
+                                                                            <Button
+                                                                                size="icon"
+                                                                                variant="ghost"
+                                                                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                                                onClick={() => handleDeleteDebt(debt.id, debt.description)}
+                                                                                disabled={isDeletingSupplierDebt}
+                                                                            >
+                                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        })}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </DialogContent>
             </Dialog>
 

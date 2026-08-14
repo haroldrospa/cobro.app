@@ -2194,17 +2194,17 @@ const Reports = () => {
         </div>
 
         {/* --- DESKTOP HEADER --- */}
-        <div className="hidden md:block border-b bg-background/80 backdrop-blur-xl sticky top-0 z-30 px-6 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="hidden md:block border-b bg-background/95 backdrop-blur-xl sticky top-0 z-30 px-4 lg:px-6 py-3.5 shadow-2xs w-full max-w-full overflow-hidden">
+          <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3 max-w-full">
             
             {/* Title & Description */}
-            <div className="space-y-1">
+            <div className="space-y-0.5 shrink-0">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-black tracking-tight">
+                <h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground">
                   {REPORT_TYPES.find(r => r.id === activeReport)?.label}
                 </h1>
                 {isFetchingSales && (
-                  <span className="flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full animate-pulse">
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full animate-pulse border border-primary/20">
                     <RefreshCw className="h-3 w-3 animate-spin" />
                     Actualizando
                   </span>
@@ -2216,15 +2216,17 @@ const Reports = () => {
             </div>
 
             {/* Actions & Filters Row */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5 max-w-full min-w-0">
+              {/* Date Range Picker */}
               <DateRangePicker
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
               />
 
-              <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border/40">
+              {/* Filters Group */}
+              <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/50">
                 <Select value={filterCustomer} onValueChange={setFilterCustomer}>
-                  <SelectTrigger className="h-9 text-xs font-bold bg-transparent border-none w-36">
+                  <SelectTrigger className="h-8 text-xs font-semibold bg-transparent border-none focus:ring-0 w-[130px] rounded-lg">
                     <SelectValue placeholder="Cliente" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
@@ -2235,10 +2237,10 @@ const Reports = () => {
                   </SelectContent>
                 </Select>
 
-                <div className="w-px h-5 bg-border/50" />
+                <div className="w-px h-4 bg-border/60" />
 
                 <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
-                  <SelectTrigger className="h-9 text-xs font-bold bg-transparent border-none w-32">
+                  <SelectTrigger className="h-8 text-xs font-semibold bg-transparent border-none focus:ring-0 w-[115px] rounded-lg">
                     <SelectValue placeholder="Método Pago" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
@@ -2250,24 +2252,25 @@ const Reports = () => {
                 </Select>
 
                 {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all') && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2 text-[11px] font-bold text-destructive hover:bg-destructive/10">
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 px-2 text-[10px] font-bold text-destructive hover:bg-destructive/10 rounded-md">
                     Limpiar
                   </Button>
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/40">
-                <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg gap-1.5" onClick={() => generatePDF()} title="Descargar PDF">
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden xl:inline">PDF</span>
+              {/* Export Action Buttons */}
+              <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50">
+                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg gap-1.5 transition-all" onClick={() => generatePDF()} title="Descargar PDF">
+                  <FileText className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                  <span>PDF</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 rounded-lg gap-1.5" onClick={() => generateExcel()} title="Descargar Excel">
-                  <FileSpreadsheet className="h-4 w-4" />
-                  <span className="hidden xl:inline">Excel</span>
+                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg gap-1.5 transition-all" onClick={() => generateExcel()} title="Descargar Excel">
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <span>Excel</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-bold text-blue-600 hover:bg-blue-500/10 rounded-lg gap-1.5" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
-                  <Mail className="h-4 w-4" />
-                  <span className="hidden xl:inline">Email</span>
+                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg gap-1.5 transition-all" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
+                  <Mail className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                  <span>Email</span>
                 </Button>
               </div>
             </div>

@@ -1001,24 +1001,6 @@ const Settings = () => {
     }
   };
 
-  const handleRawBTTestPrint = async () => {
-    try {
-      const { printTestReceiptViaRawBT } = await import('@/utils/rawbtPrinter');
-      toast({
-        title: "Enviando a RawBT...",
-        description: "Abriendo la aplicación RawBT con la factura de prueba...",
-      });
-      const paperWidth = printSettings.paperSize === '58mm' ? '58mm' : '80mm';
-      printTestReceiptViaRawBT(companyInfo.name || 'Mi Negocio', paperWidth);
-    } catch (error: any) {
-      toast({
-        title: "Error RawBT",
-        description: error.message || "Error al enviar la prueba a RawBT",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Create store function
   const handleCreateStore = async () => {
     if (!storeName.trim()) {
@@ -1790,10 +1772,6 @@ const Settings = () => {
           <Button onClick={handleSavePrintSettings} disabled={loading || isUpdatingStoreSettings} className="flex-1">
             <Save className="mr-2 h-4 w-4" />
             Guardar
-          </Button>
-          <Button onClick={handleRawBTTestPrint} variant="outline" title="Probar con RawBT en Móvil" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-bold text-xs">
-            <Smartphone className="mr-1 h-3.5 w-3.5 text-emerald-400" />
-            RawBT
           </Button>
           <Button onClick={handleTestPrint} variant="outline" title="Prueba por Navegador">
             <Printer className="h-4 w-4" />

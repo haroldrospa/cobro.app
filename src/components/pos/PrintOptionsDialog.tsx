@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Printer, FileText, Mail, Loader2, CheckCircle2, Smartphone } from 'lucide-react';
+import { Printer, FileText, Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -563,7 +563,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             </div>
             
             <div style="margin-bottom: 12px; font-size: 11px;">
-              ${saleData.customer ? `<div><strong>CLIENTE:</strong> ${saleData.customer.name}</div>` : ''}
+              ${saleData.customer ? `
+                <div><strong>CLIENTE:</strong> ${saleData.customer.name}</div>
+                ${saleData.customer.rnc ? `<div><strong>RNC/CÉDULA:</strong> ${saleData.customer.rnc}</div>` : ''}
+              ` : ''}
               <div><strong>MÉTODO DE PAGO:</strong> ${saleData.paymentMethod.toUpperCase()}</div>
               ${saleData.customerDebt ? `
                 <div style="margin-top: 8px; padding: 5px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 3px;">
@@ -1422,70 +1425,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     }
   };
 
-  const handleRawBTPrint = async () => {
-    try {
-      const { printInvoiceViaRawBT } = await import('@/utils/rawbtPrinter');
-      const companyInfo = {
-        name: dbCompanyInfo.name,
-        rnc: dbCompanyInfo.rnc,
-        phone: dbCompanyInfo.phone,
-        address: dbCompanyInfo.address,
-        invoice_footer_text: dbCompanyInfo.invoice_footer_text,
-      };
-
-      const calculatedSubtotal = saleData.items.reduce((sum: number, item: any) => {
-        const itemPrice = item.price || 0;
-        const itemQty = item.quantity || 0;
-        return sum + (itemPrice * itemQty);
-      }, 0);
-
-      const calculatedTax = saleData.items.reduce((sum: number, item: any) => {
-        const itemTax = item.tax_amount || 0;
-        const itemQty = item.quantity || 0;
-        return sum + (itemTax * itemQty);
-      }, 0);
-
-      const thermalPrintSettings = JSON.parse(localStorage.getItem('print-settings') || '{"paperSize":"80mm"}');
-      const printerWidth = (thermalPrintSettings.paperSize === '58mm' ? '58mm' : '80mm') as '80mm' | '58mm';
-
-      const invoiceData = {
-        companyInfo,
-        invoiceNumber,
-        items: saleData.items.map((item: any) => ({
-          name: item.name || 'Producto',
-          quantity: item.quantity || 1,
-          price: item.price || 0,
-          total: item.total || (item.price * item.quantity)
-        })),
-        subtotal: calculatedSubtotal,
-        tax: calculatedTax,
-        total: saleData.total,
-        customer: saleData.customer,
-        paymentMethod: saleData.paymentMethod,
-        change: saleData.change,
-        isElectronic: isElectronic,
-        encf: saleData.encf,
-        securityCode: securityCode,
-        signatureDate: signatureDate,
-        qrcodeUrl: saleData.qrcode_url,
-      };
-
-      printInvoiceViaRawBT(invoiceData, printerWidth);
-
-      toast({
-        title: "Enviado a RawBT",
-        description: "Se ha abierto el comando de impresión en RawBT",
-      });
-      onClose();
-    } catch (error: any) {
-      toast({
-        title: "Error RawBT",
-        description: error.message || "Error al enviar la orden a RawBT",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -1570,63 +1509,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               </Card>
             )}
 
-            {/* Paper Size Info */}
-            <Card className="bg-muted/30 p-2">
-              <div className="flex items-center gap-2">
-                <Printer className="h-4 w-4 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium">Tamaño de papel: <span className="font-bold text-primary">
-                    {(() => {
-                      const printSettings = JSON.parse(localStorage.getItem('print-settings') || '{"paperSize":"80mm"}');
-                      const paperSize = printSettings.paperSize || '80mm';
-                      const sizes: Record<string, string> = {
-                        '80mm': '80mm',
-                        '58mm': '58mm',
-                        'A4': 'A4',
-                        'carta': 'Carta'
-                      };
-                      return sizes[paperSize] || '80mm';
-                    })()}
-                  </span></p>
-                  <p className="text-xs text-muted-foreground">
-                    Para cambiar, ve a Settings → Impresión
-                  </p>
-                </div>
-              </div>
-            </Card>
+
 
             {/* Print Options */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
                 Seleccione cómo desea imprimir la factura:
               </p>
-
-              {/* RawBT Mobile Thermal Printer Option */}
-              <Card className="group hover:shadow-sm transition-all duration-200 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 cursor-pointer">
-                <Button
-                  onClick={isElectronic && !saleData.qrcode_url ? () => {
-                    toast({
-                      title: "Firma digital pendiente",
-                      description: "Por favor espere a que se genere el código QR fiscal antes de imprimir.",
-                      variant: "destructive"
-                    });
-                  } : handleRawBTPrint}
-                  className="w-full justify-start h-auto py-2.5 px-3 hover:bg-transparent"
-                  variant="ghost"
-                  disabled={isElectronic && !saleData.qrcode_url}
-                >
-                  <div className="p-1.5 rounded-md bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors shrink-0">
-                    <Smartphone className="h-4 w-4 text-emerald-400" />
-                  </div>
-                  <div className="ml-2 flex flex-col text-left">
-                    <span className="font-bold text-sm text-emerald-400 flex items-center gap-1.5">
-                      Imprimir con RawBT (Android / Móvil)
-                      <span className="text-[9px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black px-1.5 py-0.5 rounded">ESC/POS</span>
-                    </span>
-                    <span className="text-[10px] text-zinc-400 font-medium">Impresión directa por Bluetooth/USB a través de la app RawBT</span>
-                  </div>
-                </Button>
-              </Card>
 
               <Card className="group hover:shadow-sm transition-all duration-200 hover:border-primary/50 cursor-pointer">
                 <Button

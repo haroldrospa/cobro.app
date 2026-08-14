@@ -78,6 +78,11 @@ export type Database = {
           name: string
           rnc: string | null
           contact: string | null
+          phone: string | null
+          payment_method: string | null
+          bank_name: string | null
+          bank_account_number: string | null
+          bank_account_type: string | null
           created_at: string
           updated_at: string
         }
@@ -87,6 +92,11 @@ export type Database = {
           name: string
           rnc?: string | null
           contact?: string | null
+          phone?: string | null
+          payment_method?: string | null
+          bank_name?: string | null
+          bank_account_number?: string | null
+          bank_account_type?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -96,6 +106,11 @@ export type Database = {
           name?: string
           rnc?: string | null
           contact?: string | null
+          phone?: string | null
+          payment_method?: string | null
+          bank_name?: string | null
+          bank_account_number?: string | null
+          bank_account_type?: string | null
           created_at?: string
           updated_at?: string
         }
