@@ -593,10 +593,7 @@ const UserSubscription = () => {
                                             
                                             <div className="space-y-1.5 mb-6">
                                                 <h3 className="text-lg font-bold text-white tracking-tight flex items-center justify-center gap-2">
-                                                    Pago Seguro 
-                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20">
-                                                        Paddle
-                                                    </span>
+                                                    Pago Seguro
                                                 </h3>
                                                 <p className="text-[12px] text-zinc-400 max-w-[240px] mx-auto leading-relaxed">
                                                     Cifrado de grado bancario. Tu suscripción se activará al instante.
