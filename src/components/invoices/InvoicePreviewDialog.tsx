@@ -48,6 +48,8 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
     const invoiceNum = (saleData as any).encf || saleData.invoice_number || '';
     const isElec = invoiceNum.startsWith('E') || (saleData as any).is_electronic || !!(saleData as any).encf;
 
+    const activePaper = storeSettings?.paper_size || printSettings?.paperSize || '80mm';
+
     return generateCleanInvoiceHTML(
       {
         name: companyInfo?.name || 'Mi Empresa',
@@ -58,6 +60,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
         address: companyInfo?.address,
         fontSize: printSettings?.fontSize,
         containerPadding: '8px',
+        paperSize: activePaper,
       },
       {
         invoiceNumber: saleData.invoice_number || '',
@@ -254,28 +257,36 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                   <Loader2 className="h-8 w-8 animate-spin" />
                   <p className="text-sm">Cargando vista previa...</p>
                 </div>
-              ) : (
-                <div
-                  className="bg-white shadow-2xl rounded-xl overflow-hidden h-fit"
-                  style={{
-                    width: '80mm',
-                    boxShadow: '0 25px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  <iframe
-                    ref={iframeRef}
-                    title="Vista previa de factura"
-                    srcDoc={invoiceHTML}
+              ) : (() => {
+                const activePaper = storeSettings?.paper_size || printSettings?.paperSize || '80mm';
+                const isFullPage = activePaper === 'A4' || activePaper === 'carta' || activePaper === 'letter';
+                const is58mm = activePaper === '58mm';
+                const containerWidth = isFullPage ? '100%' : is58mm ? '58mm' : '80mm';
+                const containerMaxWidth = isFullPage ? '760px' : containerWidth;
+
+                return (
+                  <div
+                    className="bg-white shadow-2xl rounded-xl overflow-hidden h-fit transition-all duration-300"
                     style={{
-                      width: '80mm',
-                      minHeight: '300px',
-                      height: 'auto',
-                      border: 'none',
-                      display: 'block',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
+                      width: containerWidth,
+                      maxWidth: containerMaxWidth,
+                      boxShadow: '0 25px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)',
                     }}
-                    scrolling="no"
+                  >
+                    <iframe
+                      ref={iframeRef}
+                      title="Vista previa de factura"
+                      srcDoc={invoiceHTML}
+                      style={{
+                        width: '100%',
+                        minHeight: '300px',
+                        height: 'auto',
+                        border: 'none',
+                        display: 'block',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                      }}
+                      scrolling="no"
                     onLoad={(e) => {
                       const iframe = e.currentTarget;
                       try {
@@ -334,7 +345,8 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                     }}
                   />
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>

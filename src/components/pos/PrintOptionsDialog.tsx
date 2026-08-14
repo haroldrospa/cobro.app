@@ -657,6 +657,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         containerPadding: printSettings.containerPadding || '4px',
         logoMarginBottom: printSettings.logoMarginBottom || '6px',
         fontSize: printSettings.fontSize,
+        paperSize: printSettings.paperSize || '80mm',
       },
       {
         invoiceNumber: invoiceNumber,

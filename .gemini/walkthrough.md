@@ -1,16 +1,21 @@
 # Resumen de Cambios Recientes
 
-## 1. Diagnóstico del Error 400 Bad Request de Paddle (`checkout-service.paddle.com/transaction-checkout`)
-- **Causa del Error de Paddle:** El registro de la consola muestra `checkout-service.paddle.com/transaction-checkout 400 (Bad Request)`. Este error ocurre en la plataforma de Paddle cuando:
-  1. No has configurado el **Default Payment Link** en tu Dashboard de Paddle (`Checkout` -> `Checkout settings`).
-  2. El dominio de desarrollo local (`http://localhost:8080` o `localhost:8080`) no ha sido añadido a la lista de **Approved Domains** en tu panel de Paddle.
-- **Captura y Notificación en Aplicación (`UserSubscription.tsx`):** Se añadió un controlador de eventos `eventCallback` a la pasarela de Paddle para capturar cualquier fallo de autorización e informar al usuario en pantalla con instrucciones claras.
-- **Alternativas Activas Instantáneas:** Las pestañas de **PayPal** y **Transferencia Bancaria** se mantienen 100% operativas.
+## 1. Control de Versiones (GitHub Sync)
+- **Commit y Push a `main`:** Todos los cambios recientes han sido confirmados y subidos exitosamente a la rama `main` en GitHub (`haroldrospa/cobro.app`).
+
+## 2. Rediseño y Reorganización de la Tabla de Tiendas en Panel Maestro (`SuperAdmin.tsx`)
+- **6 Columnas Estructuradas:** Separación clara con encabezados definidos (Nombre Tienda, Dueño Email, Plan, Vence, Cambiar Plan / Renovar, Estado).
+
+## 3. Banner de Vencimiento a 5 Días y Flujo Adhesivo (`Layout.tsx` & `SubscriptionWarningBanner.tsx`)
+- **Aviso Adosado sin Solapamientos:** Colocado en la cabecera adhesiva (`sticky top-0`) directamente debajo de la barra del menú, con botón de descarte (`X`) e inicio dinámico del contenido del sistema sin tapar nada.
+
+## 4. Corrección de Pasarela de Pago (`UserSubscription.tsx`)
+- **Cálculo de Monto Seguro (`displayAmount`):** Eliminación completa del error `RD$NaN`.
+- **Manejo de Errores Paddle:** Captura de eventos y orientación para configuración de dominios/URL por defecto en el Dashboard de Paddle.
 
 ---
 
 ## 📑 Verificación
 - **TypeScript Check:** `npx tsc --noEmit` completado exitosamente con **0 errores**.
 - **Build de Producción:** `npm run build` generado exitosamente.
-- **Servidor Dev Activo:** Listo en [http://localhost:8080/](http://localhost:8080/).
-- **Regla Git Push:** No se han subido cambios a GitHub (cumpliendo la indicación expresa del usuario).
+- **Git Push:** Subido a GitHub (`main -> main`).

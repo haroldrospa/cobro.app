@@ -942,6 +942,7 @@ const Settings = () => {
           containerPadding: printSettings.containerPadding,
           logoMarginBottom: printSettings.logoMarginBottom,
           fontSize: printSettings.fontSize, // Added font size
+          paperSize: printSettings.paperSize,
         },
         {
           invoiceNumber: localBillingMode === 'e-ncf' ? 'E310000000001' : 'B0200000001',
