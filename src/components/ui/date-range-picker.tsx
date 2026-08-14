@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar as CalendarIcon, Check, RotateCcw } from 'lucide-react';
 import {
     format,
     subDays,
@@ -26,6 +27,24 @@ interface DateRangePickerProps {
     className?: string;
 }
 
+const MONTHS = [
+    { value: 0, label: 'Enero' },
+    { value: 1, label: 'Febrero' },
+    { value: 2, label: 'Marzo' },
+    { value: 3, label: 'Abril' },
+    { value: 4, label: 'Mayo' },
+    { value: 5, label: 'Junio' },
+    { value: 6, label: 'Julio' },
+    { value: 7, label: 'Agosto' },
+    { value: 8, label: 'Septiembre' },
+    { value: 9, label: 'Octubre' },
+    { value: 10, label: 'Noviembre' },
+    { value: 11, label: 'Diciembre' },
+];
+
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 7 }, (_, i) => currentYear - 4 + i);
+
 const DATE_PRESETS = [
     {
         label: 'Hoy',
@@ -47,8 +66,8 @@ const DATE_PRESETS = [
     {
         label: 'Esta semana',
         getValue: () => ({
-            from: startOfWeek(new Date(), { weekStartsOn: 1 }), // Lunes
-            to: endOfWeek(new Date(), { weekStartsOn: 1 }), // Domingo
+            from: startOfWeek(new Date(), { weekStartsOn: 1 }),
+            to: endOfWeek(new Date(), { weekStartsOn: 1 }),
         }),
     },
     {
@@ -107,9 +126,19 @@ const DATE_PRESETS = [
 
 export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: DateRangePickerProps) => {
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [month, setMonth] = useState<Date>(() => dateRange?.from || new Date());
+
+    // Sincronizar el mes visible cuando cambia el rango desde fuera o al abrir
+    useEffect(() => {
+        if (dateRange?.from) {
+            setMonth(dateRange.from);
+        }
+    }, [dateRange?.from?.getTime()]);
 
     const handlePresetClick = (preset: typeof DATE_PRESETS[0]) => {
-        onDateRangeChange(preset.getValue());
+        const range = preset.getValue();
+        onDateRangeChange(range);
+        if (range.from) setMonth(range.from);
         setIsCalendarOpen(false);
     };
 
@@ -134,7 +163,41 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
                 to: endOfDay(dateRange.from)
             });
         }
+        if (open && dateRange?.from) {
+            setMonth(dateRange.from);
+        }
         setIsCalendarOpen(open);
+    };
+
+    const handleQuickMonthSelect = (monthIndex: number) => {
+        const targetYear = month.getFullYear();
+        const targetDate = new Date(targetYear, monthIndex, 1);
+        setMonth(targetDate);
+    };
+
+    const handleQuickYearSelect = (year: number) => {
+        const targetMonth = month.getMonth();
+        const targetDate = new Date(year, targetMonth, 1);
+        setMonth(targetDate);
+    };
+
+    const selectEntireCurrentMonth = () => {
+        const from = startOfMonth(month);
+        const to = endOfMonth(month);
+        onDateRangeChange({ from, to });
+    };
+
+    const isSameDay = (d1?: Date, d2?: Date) => {
+        if (!d1 || !d2) return false;
+        return d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
+    };
+
+    const isPresetActive = (preset: typeof DATE_PRESETS[0]) => {
+        if (!dateRange?.from || !dateRange?.to) return false;
+        const p = preset.getValue();
+        return isSameDay(dateRange.from, p.from) && isSameDay(dateRange.to, p.to);
     };
 
     return (
@@ -146,46 +209,108 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
                         variant="outline"
                         size="sm"
                         className={cn(
-                            'h-9 justify-start text-left font-normal w-[260px]',
+                            'h-9 justify-start text-left font-semibold w-[260px] rounded-xl border-border/60 shadow-xs hover:border-primary/50 transition-all',
                             !dateRange && 'text-muted-foreground'
                         )}
                     >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formatDateRange()}
+                        <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                        <span className="truncate">{formatDateRange()}</span>
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                    <div className="flex flex-col sm:flex-row max-h-[500px] overflow-auto sm:overflow-visible">
+                <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border-border/60 bg-background overflow-hidden" align="end">
+                    {/* Header bar con selección rápida de Mes y Año */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/30 border-b border-border/40">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ir a Mes:</span>
+                            <Select value={month.getMonth().toString()} onValueChange={(val) => handleQuickMonthSelect(parseInt(val))}>
+                                <SelectTrigger className="h-8 text-xs font-bold w-[120px] bg-background rounded-lg border-border/50">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {MONTHS.map(m => (
+                                        <SelectItem key={m.value} value={m.value.toString()} className="text-xs font-medium">
+                                            {m.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select value={month.getFullYear().toString()} onValueChange={(val) => handleQuickYearSelect(parseInt(val))}>
+                                <SelectTrigger className="h-8 text-xs font-bold w-[85px] bg-background rounded-lg border-border/50">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {YEARS.map(y => (
+                                        <SelectItem key={y} value={y.toString()} className="text-xs font-medium">
+                                            {y}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={selectEntireCurrentMonth}
+                                className="h-8 text-xs font-semibold rounded-lg px-2.5 hover:bg-primary/10 hover:text-primary border-border/50"
+                                title="Seleccionar este mes completo"
+                            >
+                                Todo el Mes
+                            </Button>
+                        </div>
+
+                        {dateRange?.from && (
+                            <div className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-md">
+                                {formatDateRange()}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row max-h-[550px] overflow-auto sm:overflow-visible">
                         {/* Sidebar Presets */}
-                        <div className="flex flex-col gap-1 p-2 border-r sm:w-40 bg-muted/10">
-                            {DATE_PRESETS.map((preset) => (
-                                <Button
-                                    key={preset.label}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="justify-start font-normal text-xs h-8"
-                                    onClick={() => handlePresetClick(preset)}
-                                >
-                                    {preset.label}
-                                </Button>
-                            ))}
-                            <div className="my-1 border-t" />
+                        <div className="flex flex-col gap-1 p-2 border-r border-border/40 sm:w-44 bg-muted/15">
+                            <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground px-2 py-1">
+                                Accesos Rápidos
+                            </div>
+                            {DATE_PRESETS.map((preset) => {
+                                const active = isPresetActive(preset);
+                                return (
+                                    <Button
+                                        key={preset.label}
+                                        variant={active ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className={cn(
+                                            'justify-between font-medium text-xs h-8 rounded-lg transition-all',
+                                            active
+                                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                                : 'hover:bg-accent hover:text-accent-foreground'
+                                        )}
+                                        onClick={() => handlePresetClick(preset)}
+                                    >
+                                        <span>{preset.label}</span>
+                                        {active && <Check className="h-3.5 w-3.5 ml-1 shrink-0" />}
+                                    </Button>
+                                );
+                            })}
+                            <div className="my-1 border-t border-border/40" />
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="justify-start font-normal text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                className="justify-start font-medium text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
                                 onClick={clearDates}
                             >
+                                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                                 Limpiar filtro
                             </Button>
                         </div>
 
                         {/* Calendar */}
-                        <div className="p-2">
+                        <div className="p-3">
                             <Calendar
-                                key={`${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}`}
                                 mode="range"
                                 selected={dateRange}
+                                month={month}
+                                onMonthChange={setMonth}
                                 onSelect={(range) => {
                                     if (range) {
                                         onDateRangeChange({
@@ -200,9 +325,12 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
                                 numberOfMonths={2}
                                 initialFocus
                             />
-                            {/* Close helper for mobile/when done */}
-                            <div className="flex justify-end p-2 border-t mt-2">
-                                <Button size="sm" className="h-7 text-xs" onClick={() => handleOpenChange(false)}>
+                            {/* Actions bar */}
+                            <div className="flex items-center justify-between p-2 border-t border-border/40 mt-3">
+                                <span className="text-xs text-muted-foreground font-medium">
+                                    {dateRange?.from && !dateRange.to ? 'Seleccione la fecha final...' : ''}
+                                </span>
+                                <Button size="sm" className="h-8 px-5 text-xs font-bold rounded-lg shadow-sm" onClick={() => handleOpenChange(false)}>
                                     Listo
                                 </Button>
                             </div>
@@ -213,3 +341,4 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
         </div>
     );
 };
+

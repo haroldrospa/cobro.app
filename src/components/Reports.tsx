@@ -139,14 +139,27 @@ const Reports = () => {
 
   // --- FILTERING HELPERS ---
   const isDateInRange = (dateStr: string) => {
+    if (!dateStr) return false;
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return false;
     if (!dateRange) return true;
-    if (dateRange.from && date < dateRange.from) return false;
-    if (dateRange.to) {
-      const endOfDay = new Date(dateRange.to);
-      endOfDay.setHours(23, 59, 59, 999);
-      if (date > endOfDay) return false;
+
+    if (dateRange.from) {
+      const startOfDayFrom = new Date(dateRange.from);
+      startOfDayFrom.setHours(0, 0, 0, 0);
+      if (date < startOfDayFrom) return false;
     }
+
+    if (dateRange.to) {
+      const endOfDayTo = new Date(dateRange.to);
+      endOfDayTo.setHours(23, 59, 59, 999);
+      if (date > endOfDayTo) return false;
+    } else if (dateRange.from) {
+      const endOfDayFrom = new Date(dateRange.from);
+      endOfDayFrom.setHours(23, 59, 59, 999);
+      if (date > endOfDayFrom) return false;
+    }
+
     return true;
   };
 
@@ -211,12 +224,22 @@ const Reports = () => {
     });
   }, [sales, dateRange, filterCustomer, filterPaymentMethod, filterUser, filterCategory, productsMap]);
 
-  const salesB01 = useMemo(() => filteredSales.filter(s => s.invoice_type?.code === '01' || (s.invoice_number || '').startsWith('B01') || (s.invoice_number || '').startsWith('E31')), [filteredSales]);
-  const salesB02 = useMemo(() => filteredSales.filter(s => s.invoice_type?.code === '02' || (s.invoice_number || '').startsWith('B02') || (s.invoice_number || '').startsWith('E32')), [filteredSales]);
-  const allInvoices = useMemo(() => filteredSales.filter(s =>
-    s.invoice_type?.code === '01' || (s.invoice_number || '').startsWith('B01') || (s.invoice_number || '').startsWith('E31') ||
-    s.invoice_type?.code === '02' || (s.invoice_number || '').startsWith('B02') || (s.invoice_number || '').startsWith('E32')
-  ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()), [filteredSales]);
+  const isB01Invoice = (s: Sale) => {
+    const code = s.invoice_type?.code?.toUpperCase();
+    const invNum = (s.invoice_number || '').toUpperCase();
+    return code === 'B01' || code === '01' || invNum.startsWith('B01') || invNum.startsWith('E31');
+  };
+
+  const isB02Invoice = (s: Sale) => {
+    const code = s.invoice_type?.code?.toUpperCase();
+    const invNum = (s.invoice_number || '').toUpperCase();
+    return code === 'B02' || code === '02' || invNum.startsWith('B02') || invNum.startsWith('E32');
+  };
+
+  const salesB01 = useMemo(() => filteredSales.filter(isB01Invoice), [filteredSales]);
+  const salesB02 = useMemo(() => filteredSales.filter(isB02Invoice), [filteredSales]);
+  const allInvoices = useMemo(() => filteredSales.filter(s => isB01Invoice(s) || isB02Invoice(s))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()), [filteredSales]);
 
   // New: Daily Sales Aggregation
   const dailySalesData = useMemo(() => {

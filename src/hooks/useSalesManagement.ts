@@ -196,10 +196,10 @@ export const useSales = (filters: SalesFilters = {}) => {
 
       // Filtro por fecha hasta (Only if NOT searching for a specific invoice)
       if (filters.dateTo instanceof Date && !isNaN(filters.dateTo.getTime()) && !isInvoiceSearch) {
-        // Add 1 day to include the end date fully
         const dateToAdjusted = new Date(filters.dateTo);
-        dateToAdjusted.setDate(dateToAdjusted.getDate() + 1);
-        query = query.lt('created_at', dateToAdjusted.toISOString());
+        dateToAdjusted.setHours(23, 59, 59, 999);
+        dateToAdjusted.setHours(dateToAdjusted.getHours() + 12); // Buffer para zona horaria local vs server
+        query = query.lte('created_at', dateToAdjusted.toISOString());
       }
 
       // Filtro por monto mínimo
