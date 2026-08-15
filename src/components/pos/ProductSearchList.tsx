@@ -321,10 +321,15 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
   const [focusedIndex, setFocusedIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchTermRef = useRef(searchTerm);
+  // Flag: true when the useEffect barcode auto-add already fired for the current term,
+  // so the Enter keydown handler knows NOT to add again (preventing quantity doubling).
+  const barcodeAutoAddedRef = useRef(false);
 
   // Keep ref in sync
   useEffect(() => {
     searchTermRef.current = searchTerm;
+    // Reset the flag whenever the search term changes so a new scan can trigger auto-add
+    barcodeAutoAddedRef.current = false;
   }, [searchTerm]);
 
   // Exponer método de foco al padre
@@ -541,6 +546,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
   }, [debouncedSearchTerm, filteredProducts.length]);
 
   // Instant Auto-select on exact Barcode scan without waiting for debounce
+  // NOTE: sets barcodeAutoAddedRef so the Enter keydown handler won't double-add.
   useEffect(() => {
     const search = searchTerm.trim();
     if (!search) return;
@@ -563,6 +569,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
         }
       }
 
+      barcodeAutoAddedRef.current = true;
       onAddToCart(product, qty, finalPrice);
       setSearchTerm('');
       if (searchInputRef.current) searchInputRef.current.value = '';
@@ -661,6 +668,12 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       const directMatch = barcodeMap.get(normSearch);
 
       if (directMatch) {
+        // If the useEffect already auto-added this barcode, skip to avoid quantity doubling
+        if (barcodeAutoAddedRef.current) {
+          barcodeAutoAddedRef.current = false;
+          return;
+        }
+
         const { product, bundle } = directMatch;
         const qty = bundle ? (Number(bundle.quantity) || 1) : 1;
         const discount = bundle ? (Number(bundle.discount_value) || 0) : 0;
