@@ -5,30 +5,57 @@
 
 ---
 
-## 🤖 Android APK
+## 🤖 Android
 
-### Paso 1: Instalar Android Studio
-- Descarga: https://developer.android.com/studio
-- Sigue el instalador (incluye todo lo necesario)
+Verificado en esta máquina (Windows + Git Bash):
+- **JDK 17** (Temurin) — coincide con lo que pide `android/app/build.gradle`.
+  No hace falta JDK 21.
+- **Android SDK** instalado en `C:\Users\Harold\AppData\Local\Android\Sdk`.
+- `android/local.properties` ya apunta Gradle a ese SDK (archivo **local**,
+  ignorado por git — si compilas desde otra máquina, hay que recrearlo con
+  `sdk.dir=<ruta-a-tu-Android-Sdk>`).
 
-### Paso 2: Configurar Variables
+Si compilas desde una máquina nueva sin el SDK instalado, la forma más simple
+es instalar **Android Studio** (https://developer.android.com/studio), que
+trae el SDK incluido.
+
+### Build de prueba (debug, sin firmar)
+
+Para instalar en tu propio dispositivo y probar cambios rápido:
+
 ```bash
-# Agrega a ~/.zshrc
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
-
-# Recarga
-source ~/.zshrc
+npm run build
+npx cap sync android
+cd android
+./gradlew assembleDebug
 ```
 
-### Paso 3: Compilar
-```bash
-cd "/Users/haroldrosado/Documents/Cobro App/cobro-main"
-./build-android.sh
-```
-
-### Resultado
 📦 APK en: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+```bash
+adb install android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Build de release (firmado, para Play Store)
+
+Requiere el keystore de release: `android/keystore.properties` +
+`android/app/cobroapp-release.jks` (ambos **locales, ignorados por git**).
+Si trabajas desde otra máquina, restáuralos desde tu respaldo — **nunca
+generes un keystore nuevo**, eso invalida la firma de todas las
+actualizaciones futuras publicadas en Play Store con la app actual.
+
+```bash
+npm run build
+npx cap sync android
+cd android
+./gradlew bundleRelease
+```
+
+📦 AAB (formato que exige Play Store) en:
+`android/app/build/outputs/bundle/release/app-release.aab`
+
+Contenido de la ficha de la tienda listo en
+[`docs/PLAY_STORE_LISTING.md`](docs/PLAY_STORE_LISTING.md).
 
 ---
 
@@ -58,6 +85,8 @@ cd "/Users/haroldrosado/Documents/Cobro App/cobro-main"
 cd android
 ./gradlew clean
 ./gradlew assembleDebug --stacktrace
+# o, para el release firmado:
+./gradlew bundleRelease --stacktrace
 ```
 
 **Windows:**
@@ -72,12 +101,18 @@ npm run electron:build
 
 ## ✅ Checklist Final
 
-- [ ] Android Studio instalado
-- [ ] ANDROID_HOME configurado
+**Android**
+- [ ] JDK 17 y Android SDK disponibles (ver sección de arriba)
+- [ ] `android/local.properties` con el `sdk.dir` correcto
+- [ ] Para release: `android/keystore.properties` y el `.jks` restaurados
+      desde el respaldo
+- [ ] `./gradlew bundleRelease` ejecutado sin errores
+- [ ] AAB probado (pista de prueba interna en Play Console, o instalando vía
+      `bundletool`)
+
+**Windows (Electron)**
 - [ ] Icono .ico generado
-- [ ] `./build-android.sh` ejecutado
 - [ ] `./build-windows.sh` ejecutado
-- [ ] APK probado en dispositivo
 - [ ] EXE probado en Windows
 
 ---
