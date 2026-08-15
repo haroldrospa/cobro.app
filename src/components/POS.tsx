@@ -823,58 +823,42 @@ const POSContent: React.FC = () => {
       const capturedPosOrderType = posOrderType;
       const capturedCurrentWebOrderId = currentWebOrderId;
       const capturedCurrentOrderSource = currentOrderSource;
+      const capturedCustomerName = selectedCustomerData?.name || 'Venta Directa';
 
       // Background: Handle kitchen order and order status updates
       (async () => {
         try {
           if (capturedCurrentWebOrderId) {
-            if (capturedCurrentOrderSource === 'pos') {
-              // FOR POS ORDERS: Complete cleanup (Delete) to avoid duplicates/confusion
-              // The sale is already permanently recorded in the 'sales' table.
-              await supabase
-                .from('open_order_items')
-                .delete()
-                .eq('order_id', capturedCurrentWebOrderId);
+            // Read current kitchen status BEFORE updating — never regress a completed order
+            const { data: existingOrder } = await supabase
+              .from('open_orders')
+              .select('order_status')
+              .eq('id', capturedCurrentWebOrderId)
+              .maybeSingle();
 
-              await supabase
-                .from('open_orders')
-                .delete()
-                .eq('id', capturedCurrentWebOrderId);
+            // Only mark as 'preparing' if it hasn't been completed yet by the kitchen
+            const kitchenAlreadyDone = existingOrder?.order_status === 'completed'
+              || existingOrder?.order_status === 'delivered'
+              || existingOrder?.order_status === 'shipped';
 
-              console.log('🗑️ Pedido guardado del POS eliminado correctamente tras el cobro.');
-            } else {
-              // FOR WEB ORDERS: Mark as paid but keep history
-              // Read current kitchen status BEFORE updating — never regress a completed order
-              const { data: existingOrder } = await supabase
-                .from('open_orders')
-                .select('order_status')
-                .eq('id', capturedCurrentWebOrderId)
-                .maybeSingle();
-
-              // Only mark as 'preparing' if it hasn't been completed yet by the kitchen
-              const kitchenAlreadyDone = existingOrder?.order_status === 'completed'
-                || existingOrder?.order_status === 'delivered'
-                || existingOrder?.order_status === 'shipped';
-
-              // Determination of the new status:
-              // For companies without kitchen (stores/supermarkets), we mark it as delivered/closed.
-              // For restaurants, we ensure it enters/remains in the kitchen cycle.
-              let nextStatus = existingOrder?.order_status || 'preparing';
-              if (skipKitchenStep) {
-                nextStatus = 'delivered';
-              } else if (!kitchenAlreadyDone) {
-                nextStatus = 'preparing';
-              }
-
-              await supabase
-                .from('open_orders')
-                .update({
-                  payment_status: 'paid',
-                  order_status: nextStatus,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', capturedCurrentWebOrderId);
+            // Determination of the new status:
+            // For companies without kitchen (stores/supermarkets), we mark it as delivered/closed.
+            // For restaurants, we ensure it enters/remains in the kitchen cycle.
+            let nextStatus = existingOrder?.order_status || 'preparing';
+            if (skipKitchenStep) {
+              nextStatus = 'delivered';
+            } else if (!kitchenAlreadyDone) {
+              nextStatus = 'preparing';
             }
+
+            await supabase
+              .from('open_orders')
+              .update({
+                payment_status: capturedPaymentMethod === 'credit' ? 'pending' : 'paid',
+                order_status: nextStatus,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', capturedCurrentWebOrderId);
           } else if (!skipKitchenStep) {
             // For direct sales, create a temporary "preparing" order for the kitchen
             const { data: orderNumber } = await supabase.rpc('generate_order_number', { order_source: 'pos' });
@@ -883,8 +867,8 @@ const POSContent: React.FC = () => {
             await supabase.from('open_orders').insert({
               id: orderId,
               order_number: orderNumber,
-              customer_name: selectedCustomerData?.name || 'Venta Directa',
-              payment_status: 'paid',
+              customer_name: capturedCustomerName,
+              payment_status: capturedPaymentMethod === 'credit' ? 'pending' : 'paid',
               payment_method: capturedPaymentMethod,
               order_status: 'preparing',
               subtotal: parseFloat(currentTotals.subtotal) + surchargeAmount,
