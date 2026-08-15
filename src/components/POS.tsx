@@ -883,7 +883,7 @@ const POSContent: React.FC = () => {
             const { error: updateError } = await supabase
               .from('open_orders')
               .update({
-                payment_status: capturedPaymentMethod === 'credit' ? 'pending' : 'paid',
+                payment_status: 'paid',
                 order_status: nextStatus,
                 updated_at: new Date().toISOString()
               })
@@ -892,8 +892,20 @@ const POSContent: React.FC = () => {
             if (updateError) {
               console.error('❌ Error actualizando open_orders tras el cobro:', updateError);
             } else {
-              console.log(`✅ Orden ${targetOrderId} marcada como ${capturedPaymentMethod === 'credit' ? 'pending' : 'paid'}`);
+              console.log(`✅ Orden ${targetOrderId} marcada como pagada en open_orders`);
             }
+
+            // Immediately purge from query cache so it disappears from OpenAccountsDialog
+            if (storeId) {
+              queryClient.setQueryData(['pos-open-orders', storeId], (old: any[] | undefined) => {
+                if (!old) return [];
+                return old.filter((o: any) => String(o.id) !== String(targetOrderId) && String(o.order_number) !== String(capturedOrderNumber));
+              });
+            }
+            queryClient.setQueryData(['pos-open-orders'], (old: any[] | undefined) => {
+              if (!old) return [];
+              return old.filter((o: any) => String(o.id) !== String(targetOrderId) && String(o.order_number) !== String(capturedOrderNumber));
+            });
           } else if (!skipKitchenStep) {
             // For direct sales, create a temporary "preparing" order for the kitchen
             const { data: orderNumber } = await supabase.rpc('generate_order_number', { order_source: 'pos' });
