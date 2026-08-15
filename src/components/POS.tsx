@@ -832,6 +832,9 @@ const POSContent: React.FC = () => {
       const capturedCustomerName = selectedCustomerData?.name || 'Venta Directa';
       const capturedOrderNumber = currentOrderInfo?.orderNumber;
 
+      // Declare storeId BEFORE the async block so the cache purge can access it
+      const capturedStoreId = store?.id;
+
       // Background: Handle kitchen order and order status updates
       (async () => {
         try {
@@ -844,12 +847,12 @@ const POSContent: React.FC = () => {
           let targetOrderId: string | null = isUuid(capturedCurrentWebOrderId) ? capturedCurrentWebOrderId!.trim() : null;
 
           // Fallback: If currentWebOrderId was invalid/corrupted or missing, find order ID by order_number
-          if (!targetOrderId && capturedOrderNumber && store?.id) {
+          if (!targetOrderId && capturedOrderNumber && capturedStoreId) {
             const { data: foundOrder } = await supabase
               .from('open_orders')
               .select('id')
               .eq('order_number', capturedOrderNumber)
-              .eq('store_id', store.id)
+              .eq('store_id', capturedStoreId)
               .maybeSingle();
 
             if (foundOrder?.id) {
@@ -865,17 +868,17 @@ const POSContent: React.FC = () => {
               .eq('id', targetOrderId)
               .maybeSingle();
 
-            // Only mark as 'preparing' if it hasn't been completed yet by the kitchen
+            // Valid order_status values: 'pending','confirmed','preparing','shipped','completed','paid','ready'
+            // 'delivered' is NOT a valid DB value — use 'completed' instead for non-kitchen stores
             const kitchenAlreadyDone = existingOrder?.order_status === 'completed'
-              || existingOrder?.order_status === 'delivered'
-              || existingOrder?.order_status === 'shipped';
+              || existingOrder?.order_status === 'shipped'
+              || existingOrder?.order_status === 'paid'
+              || existingOrder?.order_status === 'ready';
 
-            // Determination of the new status:
-            // For companies without kitchen (stores/supermarkets), we mark it as delivered/closed.
-            // For restaurants, we ensure it enters/remains in the kitchen cycle.
             let nextStatus = existingOrder?.order_status || 'preparing';
             if (skipKitchenStep) {
-              nextStatus = 'delivered';
+              // For stores/supermarkets without a kitchen, mark the order as completed
+              nextStatus = 'completed';
             } else if (!kitchenAlreadyDone) {
               nextStatus = 'preparing';
             }
@@ -892,22 +895,23 @@ const POSContent: React.FC = () => {
             if (updateError) {
               console.error('❌ Error actualizando open_orders tras el cobro:', updateError);
             } else {
-              console.log(`✅ Orden ${targetOrderId} marcada como pagada en open_orders`);
+              console.log(`✅ Orden ${targetOrderId} marcada como pagada / estado: ${nextStatus}`);
             }
 
             // Immediately purge from query cache so it disappears from OpenAccountsDialog
-            if (storeId) {
-              queryClient.setQueryData(['pos-open-orders', storeId], (old: any[] | undefined) => {
-                if (!old) return [];
-                return old.filter((o: any) => String(o.id) !== String(targetOrderId) && String(o.order_number) !== String(capturedOrderNumber));
-              });
-            }
-            queryClient.setQueryData(['pos-open-orders'], (old: any[] | undefined) => {
+            const removeBilled = (old: any[] | undefined) => {
               if (!old) return [];
-              return old.filter((o: any) => String(o.id) !== String(targetOrderId) && String(o.order_number) !== String(capturedOrderNumber));
-            });
+              return old.filter((o: any) =>
+                String(o.id) !== String(targetOrderId) &&
+                String(o.order_number) !== String(capturedOrderNumber)
+              );
+            };
+            if (capturedStoreId) {
+              queryClient.setQueryData(['pos-open-orders', capturedStoreId], removeBilled);
+            }
+            queryClient.setQueryData(['pos-open-orders'], removeBilled);
           } else if (!skipKitchenStep) {
-            // For direct sales, create a temporary "preparing" order for the kitchen
+            // For direct sales (no saved order), create a temporary "preparing" order for the kitchen
             const { data: orderNumber } = await supabase.rpc('generate_order_number', { order_source: 'pos' });
             const orderId = crypto.randomUUID();
 
@@ -923,7 +927,7 @@ const POSContent: React.FC = () => {
               total: finalTotal,
               source: 'pos',
               notes: orderTypeTags[capturedPosOrderType],
-              store_id: store?.id,
+              store_id: capturedStoreId,
               profile_id: profile?.id
             });
 
@@ -960,17 +964,14 @@ const POSContent: React.FC = () => {
           }
 
           // Invalidate relevant queries globally
-          const storeId = store?.id;
-
-          // Invalidate specific store queries
-          if (storeId) {
-            queryClient.invalidateQueries({ queryKey: ['web-orders', storeId] });
-            queryClient.invalidateQueries({ queryKey: ['pos-open-orders', storeId] });
-            queryClient.invalidateQueries({ queryKey: ['kitchen-orders', storeId] });
-            queryClient.invalidateQueries({ queryKey: ['web-orders-count', storeId] });
+          if (capturedStoreId) {
+            queryClient.invalidateQueries({ queryKey: ['web-orders', capturedStoreId] });
+            queryClient.invalidateQueries({ queryKey: ['pos-open-orders', capturedStoreId] });
+            queryClient.invalidateQueries({ queryKey: ['kitchen-orders', capturedStoreId] });
+            queryClient.invalidateQueries({ queryKey: ['web-orders-count', capturedStoreId] });
           }
 
-          // Force global invalidation as fallback to ensure the UI refreshes
+          // Force global invalidation as fallback
           queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
           queryClient.invalidateQueries({ queryKey: ['web-orders'] });
         } catch (err) {
