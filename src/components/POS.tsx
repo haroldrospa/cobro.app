@@ -497,21 +497,13 @@ const POSContent: React.FC = () => {
         }
 
         setCartLoaded(true);
-
-        const hasOrder = savedCartData.orderMetadata;
-        toast({
-          title: hasOrder ? "Orden restaurada" : "Carrito restaurado",
-          description: hasOrder
-            ? `${savedCartData.orderMetadata!.orderNumber} - ${savedCartData.items.length} productos`
-            : `Se cargaron ${savedCartData.items.length} productos del carrito guardado.`,
-        });
       } else {
         setCartLoaded(true);
       }
     } else if (!isLoadingSavedCart && !cartLoaded) {
       setCartLoaded(true);
     }
-  }, [savedCartData, cartLoaded, isLoadingSavedCart, toast]);
+  }, [savedCartData, cartLoaded, isLoadingSavedCart]);
 
   // Automatically clear active order reference if the cart becomes empty
   useEffect(() => {
@@ -1000,11 +992,6 @@ const POSContent: React.FC = () => {
         setCurrentOrderInfo({ orderNumber, customerName, notes });
       }
       setCurrentOrderSource(source || 'pos');
-
-      toast({
-        title: "Pedido cargado",
-        description: `${orderNumber || 'Pedido'} - ${customerName || 'Cliente'} (${items.length} productos)`,
-      });
       return;
     }
 
@@ -1030,11 +1017,6 @@ const POSContent: React.FC = () => {
     if (order.customer_id) {
       setSelectedCustomer(order.customer_id);
     }
-
-    toast({
-      title: "Pedido cargado",
-      description: `${order.order_number || 'Pedido'} - ${order.customer_name || 'Cliente'}`,
-    });
   };
 
   // Save existing order directly without dialog
