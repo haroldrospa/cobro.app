@@ -392,14 +392,28 @@ const POSContent: React.FC = () => {
 
   const isInvoiceLimitReached = hasReachedLimit('invoices', monthlySalesCount);
 
+  // Map de ofertas por producto O(1) para evitar filtrado O(N) en cada render del carrito
+  const offersByProductId = React.useMemo(() => {
+    const map = new Map<string, typeof activeOffers>();
+    for (let i = 0; i < activeOffers.length; i++) {
+      const o = activeOffers[i];
+      if (!o.product_id) continue;
+      const existing = map.get(o.product_id) || [];
+      existing.push(o);
+      map.set(o.product_id, existing);
+    }
+    return map;
+  }, [activeOffers]);
+
   // Calcular ofertas automáticamente
   const cartWithOffers = React.useMemo(() => {
+    if (!cart.length) return [];
     return cart.map(item => {
-      // Buscar ofertas para este producto
-      const productOffers = activeOffers.filter(o => o.product_id === item.id);
+      // Buscar ofertas para este producto en O(1)
+      const productOffers = offersByProductId.get(item.id);
 
       // Si hay ofertas, calcular el mejor precio
-      if (productOffers.length > 0) {
+      if (productOffers && productOffers.length > 0) {
         // Usamos item.originalPrice si existe (para no aplicar oferta sobre oferta), o item.price
         const basePrice = item.originalPrice || item.price;
         const { appliedOffer, finalPrice, pricePerUnit, savings } = calculateBestOffer(item.quantity, basePrice, productOffers);
@@ -431,7 +445,7 @@ const POSContent: React.FC = () => {
       }
       return item;
     });
-  }, [cart, activeOffers]);
+  }, [cart, offersByProductId]);
 
   const totals = React.useMemo(() => calculateTotals(cartWithOffers, globalDiscount), [cartWithOffers, globalDiscount]);
 

@@ -78,15 +78,21 @@ export const useCreateSaleOffline = () => {
             await offlineDB.put(OfflineStore.SALES, completeSale);
             console.log('💾 Venta guardada localmente:', localInvoiceNumber);
 
-            // Actualizar stock local en paralelo (Optimizado con putBulk) y registrar movimientos
+            // Actualizar stock local en paralelo (Optimizado con Promise.all + putBulk) y registrar movimientos
             const validItems = saleData.items.filter(item => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id));
             if (validItems.length > 0) {
+                const fetchedProducts = await Promise.all(
+                    validItems.map(item => offlineDB.get<any>(OfflineStore.PRODUCTS, item.id))
+                );
+
                 const productsToUpdate: any[] = [];
                 const movementsToInsert: any[] = [];
+                const syncQueuePromises: Promise<any>[] = [];
                 const userName = 'Sistema';
 
-                for (const item of validItems) {
-                    const product = await offlineDB.get<any>(OfflineStore.PRODUCTS, item.id);
+                for (let i = 0; i < validItems.length; i++) {
+                    const item = validItems[i];
+                    const product = fetchedProducts[i];
                     if (product) {
                         const previousStock = product.stock || 0;
                         const newStock = Math.max(0, previousStock - item.quantity);
@@ -109,20 +115,21 @@ export const useCreateSaleOffline = () => {
                         };
                         movementsToInsert.push(newMovement);
 
-                        // Añadir a la cola de sincronización para Supabase
-                        await offlineDB.addToSyncQueue({
-                            store: OfflineStore.INVENTORY_MOVEMENTS,
-                            operation: 'CREATE',
-                            data: newMovement,
-                        });
+                        syncQueuePromises.push(
+                            offlineDB.addToSyncQueue({
+                                store: OfflineStore.INVENTORY_MOVEMENTS,
+                                operation: 'CREATE',
+                                data: newMovement,
+                            })
+                        );
                     }
                 }
-                if (productsToUpdate.length > 0) {
-                    await offlineDB.putBulk(OfflineStore.PRODUCTS, productsToUpdate);
-                }
-                if (movementsToInsert.length > 0) {
-                    await offlineDB.putBulk(OfflineStore.INVENTORY_MOVEMENTS, movementsToInsert);
-                }
+
+                await Promise.all([
+                    productsToUpdate.length > 0 ? offlineDB.putBulk(OfflineStore.PRODUCTS, productsToUpdate) : Promise.resolve(),
+                    movementsToInsert.length > 0 ? offlineDB.putBulk(OfflineStore.INVENTORY_MOVEMENTS, movementsToInsert) : Promise.resolve(),
+                    ...syncQueuePromises
+                ]);
             }
 
             if (isOnline) {
