@@ -838,16 +838,39 @@ const POSContent: React.FC = () => {
       const capturedCurrentWebOrderId = currentWebOrderId;
       const capturedCurrentOrderSource = currentOrderSource;
       const capturedCustomerName = selectedCustomerData?.name || 'Venta Directa';
+      const capturedOrderNumber = currentOrderInfo?.orderNumber;
 
       // Background: Handle kitchen order and order status updates
       (async () => {
         try {
-          if (capturedCurrentWebOrderId) {
+          // UUID validator helper
+          const isUuid = (str: string | null | undefined): boolean => {
+            if (!str) return false;
+            return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+          };
+
+          let targetOrderId: string | null = isUuid(capturedCurrentWebOrderId) ? capturedCurrentWebOrderId!.trim() : null;
+
+          // Fallback: If currentWebOrderId was invalid/corrupted or missing, find order ID by order_number
+          if (!targetOrderId && capturedOrderNumber && store?.id) {
+            const { data: foundOrder } = await supabase
+              .from('open_orders')
+              .select('id')
+              .eq('order_number', capturedOrderNumber)
+              .eq('store_id', store.id)
+              .maybeSingle();
+
+            if (foundOrder?.id) {
+              targetOrderId = foundOrder.id;
+            }
+          }
+
+          if (targetOrderId) {
             // Read current kitchen status BEFORE updating — never regress a completed order
             const { data: existingOrder } = await supabase
               .from('open_orders')
               .select('order_status')
-              .eq('id', capturedCurrentWebOrderId)
+              .eq('id', targetOrderId)
               .maybeSingle();
 
             // Only mark as 'preparing' if it hasn't been completed yet by the kitchen
@@ -865,14 +888,20 @@ const POSContent: React.FC = () => {
               nextStatus = 'preparing';
             }
 
-            await supabase
+            const { error: updateError } = await supabase
               .from('open_orders')
               .update({
                 payment_status: capturedPaymentMethod === 'credit' ? 'pending' : 'paid',
                 order_status: nextStatus,
                 updated_at: new Date().toISOString()
               })
-              .eq('id', capturedCurrentWebOrderId);
+              .eq('id', targetOrderId);
+
+            if (updateError) {
+              console.error('❌ Error actualizando open_orders tras el cobro:', updateError);
+            } else {
+              console.log(`✅ Orden ${targetOrderId} marcada como ${capturedPaymentMethod === 'credit' ? 'pending' : 'paid'}`);
+            }
           } else if (!skipKitchenStep) {
             // For direct sales, create a temporary "preparing" order for the kitchen
             const { data: orderNumber } = await supabase.rpc('generate_order_number', { order_source: 'pos' });
