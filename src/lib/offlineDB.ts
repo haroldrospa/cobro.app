@@ -35,6 +35,16 @@ export interface SyncQueueItem {
 
 class OfflineDatabase {
     private db: IDBDatabase | null = null;
+    private isClosing = false;
+
+    /** Ensures the DB connection is open, re-opening it if it was closed. */
+    private async ensureOpen(): Promise<void> {
+        if (!this.db || this.isClosing) {
+            this.db = null;
+            this.isClosing = false;
+            await this.init();
+        }
+    }
 
     async init(): Promise<void> {
         return new Promise((resolve, reject) => {
@@ -43,6 +53,23 @@ class OfflineDatabase {
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 this.db = request.result;
+                this.isClosing = false;
+
+                // If another tab upgrades the DB, close gracefully so we can re-open
+                this.db.onversionchange = () => {
+                    this.isClosing = true;
+                    this.db?.close();
+                    this.db = null;
+                    console.warn('[OfflineDB] Version change detected — connection closed for upgrade.');
+                };
+
+                // Handle unexpected close
+                this.db.onclose = () => {
+                    console.warn('[OfflineDB] Connection closed unexpectedly.');
+                    this.db = null;
+                    this.isClosing = false;
+                };
+
                 resolve();
             };
 
@@ -126,7 +153,7 @@ class OfflineDatabase {
 
     // Métodos CRUD genéricos
     async add<T>(storeName: OfflineStore, data: T): Promise<T> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         // Guard: re-init if the store is missing (stale schema)
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
@@ -144,7 +171,7 @@ class OfflineDatabase {
     }
 
     async put<T>(storeName: OfflineStore, data: T): Promise<T> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
         return new Promise((resolve, reject) => {
@@ -165,7 +192,7 @@ class OfflineDatabase {
      */
     async putBulk<T>(storeName: OfflineStore, items: T[]): Promise<void> {
         if (!items.length) return;
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
         return new Promise((resolve, reject) => {
@@ -190,7 +217,7 @@ class OfflineDatabase {
      */
     async deleteBulk(storeName: OfflineStore, keys: (string | number)[]): Promise<void> {
         if (!keys.length) return;
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
         return new Promise((resolve, reject) => {
@@ -211,7 +238,7 @@ class OfflineDatabase {
     }
 
     async get<T>(storeName: OfflineStore, key: string | number): Promise<T | null> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
         return new Promise((resolve, reject) => {
@@ -228,7 +255,7 @@ class OfflineDatabase {
     }
 
     async getAll<T>(storeName: OfflineStore): Promise<T[]> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
         return new Promise((resolve, reject) => {
@@ -245,7 +272,7 @@ class OfflineDatabase {
     }
 
     async delete(storeName: OfflineStore, key: string | number): Promise<void> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
         return new Promise((resolve, reject) => {
@@ -262,7 +289,7 @@ class OfflineDatabase {
     }
 
     async clear(storeName: OfflineStore): Promise<void> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
         if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
 
         return new Promise((resolve, reject) => {
@@ -284,7 +311,7 @@ class OfflineDatabase {
         indexName: string,
         value: any
     ): Promise<T[]> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
 
         return new Promise((resolve, reject) => {
             const transaction = this.db!.transaction([storeName], 'readonly');
@@ -311,9 +338,10 @@ class OfflineDatabase {
     async getPendingSyncItems(): Promise<SyncQueueItem[]> {
         // Fallback to getAll and filter manually to avoid "DataError: The parameter is not a valid key"
         // when querying boolean indices on some browsers, and to handle legacy 'false' vs new '0' values.
-        if (!this.db) await this.init();
+        await this.ensureOpen();
 
         return new Promise((resolve, reject) => {
+            try {
             const transaction = this.db!.transaction([OfflineStore.SYNC_QUEUE], 'readonly');
             const store = transaction.objectStore(OfflineStore.SYNC_QUEUE);
             // We get ALL items and filter in memory. The queue should be relatively small.
@@ -332,6 +360,9 @@ class OfflineDatabase {
                 resolve(pending);
             };
             request.onerror = () => reject(request.error);
+            } catch (e) {
+                reject(e);
+            }
         });
     }
 
@@ -367,7 +398,7 @@ class OfflineDatabase {
 
     // Limpiar items sincronizados antiguos (más de 7 días) o fallidos
     async cleanOldSyncedItems(): Promise<void> {
-        if (!this.db) await this.init();
+        await this.ensureOpen();
 
         const allItems = await this.getAll<SyncQueueItem>(OfflineStore.SYNC_QUEUE);
         const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);

@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 export interface EvolutionApiConfig {
   url: string;
   instanceName: string;
@@ -5,23 +7,10 @@ export interface EvolutionApiConfig {
 }
 
 /**
- * Formats a phone number for Evolution API (needs to end with @s.whatsapp.net)
- * Examples:
- * +1 809 123 4567 -> 18091234567@s.whatsapp.net
- * 809-123-4567 -> 18091234567@s.whatsapp.net (Assumes Dominican Republic +1 if not provided)
+ * Formats a phone number for Evolution API.
+ * This is kept for local reference only — the actual formatting
+ * now happens server-side inside the send-whatsapp Edge Function.
  */
-const formatPhoneNumber = (phone: string): string => {
-  // Remove all non-numeric characters
-  let cleaned = phone.replace(/\D/g, '');
-  
-  // If the number is 10 digits (e.g. 8091234567), assume DR and prepend 1
-  if (cleaned.length === 10) {
-    cleaned = `1${cleaned}`;
-  }
-  
-  return cleaned;
-};
-
 export const sendEvolutionWhatsAppMessage = async (
   phone: string,
   message: string,
@@ -32,55 +21,30 @@ export const sendEvolutionWhatsAppMessage = async (
     throw new Error('Configuración de Evolution API incompleta.');
   }
 
-  let formattedPhone = formatPhoneNumber(phone);
-  if (formatOverride === 'format2') {
-    formattedPhone = `${formattedPhone}@s.whatsapp.net`;
-  } else if (formatOverride === 'format3') {
-    // Return original phone cleaned without prepending 1
-    formattedPhone = phone.replace(/\D/g, '');
+  // Use Supabase Edge Function as proxy to avoid CORS restrictions when
+  // calling the Evolution API (Railway) directly from the browser.
+  const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+    body: {
+      phone,
+      message,
+      evolutionUrl: config.url,
+      instanceName: config.instanceName,
+      apiKey: config.apiKey,
+      formatOverride,
+    },
+  });
+
+  if (error) {
+    console.error('[Evolution API] Edge Function error:', error);
+    throw new Error(error.message || 'Error enviando mensaje de WhatsApp');
   }
-  
-  // Clean URL (remove trailing slash and ensure protocol)
-  let baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
-  if (!/^https?:\/\//i.test(baseUrl)) {
-    baseUrl = `https://${baseUrl}`;
+
+  if (!data?.success) {
+    const errMsg = data?.error || 'Respuesta inesperada del servidor';
+    console.error('[Evolution API] Server error:', errMsg);
+    throw new Error(errMsg);
   }
-  const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
 
-  try {
-    // Formato estricto para Evolution API v1.8.2
-    // NO usamos "text" en la raíz para evitar que Baileys genere un mensaje protobuf malformado
-    // que los servidores de WhatsApp puedan descartar silenciosamente.
-    const payload = {
-      number: formattedPhone,
-      textMessage: {
-        text: message
-      }
-    };
-
-    console.log(`[Evolution API] Sending to ${endpoint}:`, JSON.stringify(payload, null, 2));
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.apiKey
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[Evolution API] Response failed with status ${response.status}. Raw body:`, errorText);
-      throw new Error(`Evolution API (${response.status}): ${errorText.slice(0, 100)}`);
-    }
-
-    const responseBody = await response.text();
-    console.log(`[Evolution API] Success Response Body:`, responseBody);
-
-    return true;
-  } catch (error: any) {
-    console.error('[Evolution API] General Error:', error);
-    throw error;
-  }
+  console.log('[Evolution API] Message sent successfully via Edge Function');
+  return true;
 };

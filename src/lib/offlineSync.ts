@@ -523,11 +523,31 @@ class OfflineSyncManager {
             } catch (error: any) {
                 if (!navigator.onLine || error?.message?.includes('Failed to fetch')) {
                     console.warn('Network error pushing item (offline/unstable):', error?.message);
+                    if (item.id) {
+                        await offlineDB.markAsError(item.id, error.message || 'Network error');
+                    }
+                } else if (error?.code === 'PGRST301' || error?.status === 403 || error?.message?.includes('403') || error?.message?.includes('permission denied')) {
+                    // 403 = RLS policy blocked — no point retrying, mark as permanent failure
+                    console.error(`⛔️ Sync item ${item.id} falló por permisos (403). Se descartará.`, error);
+                    if (item.id) {
+                        // Mark with enough retries to trigger permanent failure immediately
+                        for (let i = 0; i < 5; i++) {
+                            await offlineDB.markAsError(item.id, `Permission denied (403): ${error.message}`);
+                        }
+                    }
+                } else if (error?.status === 404) {
+                    // 404 = record no longer exists — discard silently
+                    console.warn(`⚠️ Sync item ${item.id} descartado (registro no encontrado 404).`);
+                    if (item.id) {
+                        for (let i = 0; i < 5; i++) {
+                            await offlineDB.markAsError(item.id, `Not found (404): ${error.message}`);
+                        }
+                    }
                 } else {
                     console.error('Error procesando item de sincronización:', error);
-                }
-                if (item.id) {
-                    await offlineDB.markAsError(item.id, error.message || 'Error desconocido');
+                    if (item.id) {
+                        await offlineDB.markAsError(item.id, error.message || 'Error desconocido');
+                    }
                 }
             }
         }
