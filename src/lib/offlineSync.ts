@@ -78,8 +78,12 @@ class OfflineSyncManager {
         console.log('✅ Conexión restaurada - sincronización en 3s...');
         // Wait 3s before syncing on reconnect to avoid competing with UI recovery
         setTimeout(async () => {
-            await this.reconcileSequences();
-            if (!this.isSyncing) this.sync();
+            try {
+                await this.reconcileSequences();
+                if (!this.isSyncing) this.sync();
+            } catch (err) {
+                console.warn('[OfflineSync] handleOnline sync error:', err);
+            }
         }, 3000);
     }
 
@@ -117,7 +121,7 @@ class OfflineSyncManager {
                 window.dispatchEvent(new CustomEvent('cobro:sync-completed'));
             }
         } catch (error: any) {
-            if (error?.name === 'AbortError') {
+            if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
                 console.log('⏹️ Sincronización abortada');
             } else {
                 console.error('❌ Error en sincronización:', error);
@@ -494,6 +498,10 @@ class OfflineSyncManager {
             }
 
         } catch (error: any) {
+            if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+                console.log('⏹️ syncFromSupabase abortado');
+                return;
+            }
             if (!navigator.onLine || error?.message?.includes('Failed to fetch')) {
                 console.warn('Network error syncing from Supabase (offline/unstable):', error?.message);
             } else {
@@ -521,6 +529,10 @@ class OfflineSyncManager {
                     await offlineDB.markAsSynced(item.id);
                 }
             } catch (error: any) {
+                if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+                    console.log('⏹️ syncToSupabase item abortado');
+                    return;
+                }
                 if (!navigator.onLine || error?.message?.includes('Failed to fetch')) {
                     console.warn('Network error pushing item (offline/unstable):', error?.message);
                     if (item.id) {

@@ -95,14 +95,23 @@ export const useProductsOffline = () => {
                     clearTimeout(timer);
                     chunk = result.data;
                     chunkError = result.error;
-                } catch (e) {
+                } catch (e: any) {
                     clearTimeout(timer);
-                    console.log('📦 Background sync: timeout o error en página', from, e);
+                    if (e?.name === 'AbortError' || e?.message?.includes('aborted')) {
+                        console.log('📦 Background sync abortado');
+                    } else {
+                        console.log('📦 Background sync: timeout o error en página', from, e);
+                    }
                     break;
                 }
 
-                if (chunkError) throw chunkError;
-                if (!chunk) throw new Error('No chunk data');
+                if (chunkError) {
+                    if (chunkError?.name === 'AbortError' || chunkError?.message?.includes('aborted')) {
+                        break;
+                    }
+                    throw chunkError;
+                }
+                if (!chunk) break;
 
                 allData = [...allData, ...chunk];
                 from += step;

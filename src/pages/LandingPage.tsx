@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { getSessionSafe } from '@/lib/authSession';
 import cobroLogo from '@/assets/cobro-logo-dark.png';
 import { useState } from 'react';
 
@@ -33,10 +34,12 @@ const LandingPage = () => {
     useEffect(() => {
         // Check if user is already logged in, redirect to POS if so
         const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                navigate('/pos');
-            }
+            try {
+                const session = await getSessionSafe();
+                if (session) {
+                    navigate('/pos');
+                }
+            } catch {}
         };
         checkSession();
     }, [navigate]);

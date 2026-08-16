@@ -92,6 +92,10 @@ export const OfflineIndicator: React.FC = () => {
     }, [webOrdersCount, previousCount, storeSettings, toast]);
 
     useEffect(() => {
+        if (isPublicPage) {
+            return;
+        }
+
         // Inicializar el sistema offline al montar (async, no bloquear render)
         const initOffline = async () => {
             await offlineDB.init();
@@ -114,7 +118,7 @@ export const OfflineIndicator: React.FC = () => {
             clearInterval(interval);
             offlineSyncManager.stop();
         };
-    }, []);
+    }, [isPublicPage]);
 
     // Intentar sincronizar manualmente
     const handleSync = async () => {
