@@ -9,7 +9,10 @@ export interface Sale {
   user_id?: string;
   profile_id?: string;
   profile?: {
-    full_name: string;
+    full_name?: string;
+    email?: string;
+    role?: string;
+    user_number?: string;
   };
   customer_id?: string;
   customer?: {
@@ -88,7 +91,7 @@ export const useSales = (filters: SalesFilters = {}) => {
       let selectFields = `
         *,
         customer:customers(name, rnc, phone, email),
-        profile:profiles(full_name),
+        profile:profiles(full_name, email, role, user_number),
         invoice_type:invoice_types(name, code)
       `;
 
@@ -320,6 +323,9 @@ async function mapLocalSaleToSale(localSale: any): Promise<Sale> {
     updated_at: localSale.updated_at || localSale.created_at,
     sale_items: mappedItems,
     customer: localSale.customer || undefined,
+    profile: localSale.profile || undefined,
+    profile_id: localSale.profile_id,
+    user_id: localSale.user_id,
     invoice_type: localSale.invoice_type || undefined,
   };
 }
@@ -334,6 +340,7 @@ export const useSaleDetails = (saleId: string) => {
           .select(`
             *,
             customer:customers(name, rnc, phone, email),
+            profile:profiles(full_name, email, role, user_number),
             invoice_type:invoice_types(name, code),
             sale_items:sale_items(
               id,
@@ -371,6 +378,23 @@ export const useSaleDetails = (saleId: string) => {
             });
           }
           throw error;
+        }
+
+        // Fallback if profile not joined directly (e.g. legacy sales referencing user_id or without foreign key match)
+        if (data && !data.profile && (data.profile_id || (data as any).user_id)) {
+          const fallbackProfileId = data.profile_id || (data as any).user_id;
+          try {
+            const { data: profData } = await supabase
+              .from('profiles')
+              .select('full_name, email, role, user_number')
+              .eq('id', fallbackProfileId)
+              .maybeSingle();
+            if (profData) {
+              data.profile = profData;
+            }
+          } catch (e) {
+            console.warn('Fallback profile fetch error:', e);
+          }
         }
 
         return data as Sale;
