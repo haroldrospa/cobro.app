@@ -1196,55 +1196,59 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
   };
 
   // filteredProducts memoizado — solo recalcula cuando cambian los filtros (búsqueda con debounce)
-  const filteredProducts = useMemo(() => products.filter(product => {
-    // Filtro por stock bajo
-    if (showLowStockOnly && !((product.stock || 0) <= (product.min_stock || 0))) {
-      return false;
-    }
-
-    // Filtro por categoría
-    if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
-      return false;
-    }
-
-    // Si no hay término de búsqueda, mostrar todos (con filtro de categoría aplicado)
-    if (!debouncedSearchTerm.trim()) {
-      return true;
-    }
-
-    // Filtro según tipo de búsqueda
-    const searchLower = debouncedSearchTerm.toLowerCase().trim();
-
-    switch (searchType) {
-      case 'all': {
-        const nameMatch = product.name && product.name.toLowerCase().includes(searchLower);
-        const idMatch = product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
-        const categoryMatch = product.category?.name && product.category.name.toLowerCase().includes(searchLower);
-        const allBarcodes = [
-          product.barcode?.toLowerCase(),
-          ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
-        ].filter(Boolean) as string[];
-        const barcodeMatch = allBarcodes.some(b => b.includes(searchLower));
-        
-        return nameMatch || idMatch || categoryMatch || barcodeMatch;
+  const filteredProducts = useMemo(() => {
+    const list = products.filter(product => {
+      // Filtro por stock bajo
+      if (showLowStockOnly && !((product.stock || 0) <= (product.min_stock || 0))) {
+        return false;
       }
-      case 'name':
-        return product.name && product.name.toLowerCase().includes(searchLower);
-      case 'id':
-        return product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
-      case 'barcode': {
-        const allBarcodes = [
-          product.barcode?.toLowerCase(),
-          ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
-        ].filter(Boolean) as string[];
-        return allBarcodes.some(b => b.includes(searchLower));
+
+      // Filtro por categoría
+      if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
+        return false;
       }
-      case 'category':
-        return product.category?.name && product.category.name.toLowerCase().includes(searchLower);
-      default:
+
+      // Si no hay término de búsqueda, mostrar todos (con filtro de categoría aplicado)
+      if (!debouncedSearchTerm.trim()) {
         return true;
-    }
-  }), [products, showLowStockOnly, selectedCategory, debouncedSearchTerm, searchType]);
+      }
+
+      // Filtro según tipo de búsqueda
+      const searchLower = debouncedSearchTerm.toLowerCase().trim();
+
+      switch (searchType) {
+        case 'all': {
+          const nameMatch = product.name && product.name.toLowerCase().includes(searchLower);
+          const idMatch = product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
+          const categoryMatch = product.category?.name && product.category.name.toLowerCase().includes(searchLower);
+          const allBarcodes = [
+            product.barcode?.toLowerCase(),
+            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
+          ].filter(Boolean) as string[];
+          const barcodeMatch = allBarcodes.some(b => b.includes(searchLower));
+          
+          return nameMatch || idMatch || categoryMatch || barcodeMatch;
+        }
+        case 'name':
+          return product.name && product.name.toLowerCase().includes(searchLower);
+        case 'id':
+          return product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
+        case 'barcode': {
+          const allBarcodes = [
+            product.barcode?.toLowerCase(),
+            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
+          ].filter(Boolean) as string[];
+          return allBarcodes.some(b => b.includes(searchLower));
+        }
+        case 'category':
+          return product.category?.name && product.category.name.toLowerCase().includes(searchLower);
+        default:
+          return true;
+      }
+    });
+
+    return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+  }, [products, showLowStockOnly, selectedCategory, debouncedSearchTerm, searchType]);
 
   // Reset pagination when filters change (usar debouncedSearchTerm para consistencia con el filtro)
   useEffect(() => {
