@@ -1488,25 +1488,25 @@ const Reports = () => {
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Ventas Totales */}
-              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ventas Totales</span>
-                  <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                    <DollarSign className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <DollarSign className="h-4 w-4" />
                   </div>
                 </div>
                 {isFetchingSales && filteredSales.length === 0 ? (
                   <div className="space-y-2 mt-3">
-                    <div className="h-8 w-36 bg-emerald-500/20 rounded-xl animate-pulse" />
-                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
                       ${totalSalesSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
                       <span>{filteredSales.length} transacciones</span>
                     </div>
                   </div>
@@ -1514,21 +1514,21 @@ const Reports = () => {
               </div>
 
               {/* Ticket Promedio */}
-              <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ticket Promedio</span>
-                  <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
-                    <ShoppingCart className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <ShoppingCart className="h-4 w-4" />
                   </div>
                 </div>
                 {isFetchingSales && filteredSales.length === 0 ? (
                   <div className="space-y-2 mt-3">
-                    <div className="h-8 w-36 bg-blue-500/20 rounded-xl animate-pulse" />
-                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-blue-600 dark:text-blue-400 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
                       ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground font-medium">
@@ -1539,39 +1539,53 @@ const Reports = () => {
               </div>
 
               {/* Crédito Pendiente */}
-              <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-orange-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Crédito Pendiente</span>
-                  <div className="p-2.5 rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/20 group-hover:scale-110 transition-transform">
-                    <Users className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <Users className="h-4 w-4" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-orange-600 dark:text-orange-400 font-mono">
-                    ${totalReceivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground font-medium">
-                    Cuentas por cobrar activas
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${totalReceivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Cuentas por cobrar activas
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Utilidad Estimada */}
-              <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-purple-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Utilidad Estimada</span>
-                  <div className="p-2.5 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
-                    <TrendingUp className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <TrendingUp className="h-4 w-4" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-purple-600 dark:text-purple-400 font-mono">
-                    ${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground font-medium">
-                    {profitData.margin.toFixed(1)}% Margen de ganancia
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      {profitData.margin.toFixed(1)}% Margen de ganancia
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -1920,25 +1934,25 @@ const Reports = () => {
             {/* KPI Summary Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Card 1: Total Facturado */}
-              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Facturado</span>
-                  <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                    <BadgeDollarSign className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <BadgeDollarSign className="h-4 w-4" />
                   </div>
                 </div>
                 {isFetchingSales && allInvoices.length === 0 ? (
                   <div className="space-y-2 mt-3">
-                    <div className="h-8 w-36 bg-emerald-500/20 rounded-xl animate-pulse" />
-                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
                       ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
                       <span>{allInvoices.length} {allInvoices.length === 1 ? 'factura emitida' : 'facturas emitidas'}</span>
                     </div>
                   </div>
@@ -1946,21 +1960,21 @@ const Reports = () => {
               </div>
 
               {/* Card 2: ITBIS Liquidado */}
-              <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-cyan-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total ITBIS (18%)</span>
-                  <div className="p-2.5 rounded-xl bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 group-hover:scale-110 transition-transform">
-                    <Tag className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <Tag className="h-4 w-4" />
                   </div>
                 </div>
                 {isFetchingSales && allInvoices.length === 0 ? (
                   <div className="space-y-2 mt-3">
-                    <div className="h-8 w-36 bg-cyan-500/20 rounded-xl animate-pulse" />
-                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-cyan-600 dark:text-cyan-400 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
                       ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground font-medium">
@@ -1971,17 +1985,17 @@ const Reports = () => {
               </div>
 
               {/* Card 3: Subtotal Neto */}
-              <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-indigo-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Subtotal Neto</span>
-                  <div className="p-2.5 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">
-                    <FileText className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <FileText className="h-4 w-4" />
                   </div>
                 </div>
                 {isFetchingSales && allInvoices.length === 0 ? (
                   <div className="space-y-2 mt-3">
-                    <div className="h-8 w-36 bg-indigo-500/20 rounded-xl animate-pulse" />
-                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
                 ) : (
                   <div className="mt-3">
@@ -1996,21 +2010,21 @@ const Reports = () => {
               </div>
 
               {/* Card 4: Ticket Promedio */}
-              <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all group">
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Promedio / Factura</span>
-                  <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 group-hover:scale-110 transition-transform">
-                    <TrendingUp className="h-5 w-5" />
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <TrendingUp className="h-4 w-4" />
                   </div>
                 </div>
                 {isFetchingSales && allInvoices.length === 0 ? (
                   <div className="space-y-2 mt-3">
-                    <div className="h-8 w-36 bg-amber-500/20 rounded-xl animate-pulse" />
-                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
                       ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground font-medium">
@@ -2529,18 +2543,18 @@ const Reports = () => {
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="p-5 border border-border/60 rounded-2xl bg-muted/20">
+                <div className="p-5 border border-border/60 rounded-2xl bg-card/80 shadow-2xs">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Ingresos por Ventas</p>
-                  <p className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">${profitData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-black text-foreground font-mono">${profitData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="p-5 border border-border/60 rounded-2xl bg-muted/20">
+                <div className="p-5 border border-border/60 rounded-2xl bg-card/80 shadow-2xs">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Costo de Mercancía</p>
-                  <p className="text-2xl font-black text-rose-500 font-mono">${profitData.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-black text-foreground font-mono">${profitData.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="p-5 border border-emerald-500/30 rounded-2xl bg-emerald-500/10">
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Utilidad Bruta</p>
-                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                  <p className="text-xs font-bold text-emerald-600/80 mt-1">{profitData.margin.toFixed(2)}% Margen de ganancia</p>
+                <div className="p-5 border border-border/60 rounded-2xl bg-card/80 shadow-2xs">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Utilidad Bruta</p>
+                  <p className="text-2xl font-black text-foreground font-mono">${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-xs font-bold text-primary mt-1">{profitData.margin.toFixed(2)}% Margen de ganancia</p>
                 </div>
               </div>
               <div className="h-[300px] w-full">
@@ -2561,7 +2575,7 @@ const Reports = () => {
                           return (
                             <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3 rounded-xl shadow-2xl space-y-1 min-w-[150px]">
                               <p className="text-xs font-bold text-foreground">{d.payload.name}</p>
-                              <p className="text-base font-black font-mono text-emerald-500">${Number(d.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                              <p className="text-base font-black font-mono text-primary">${Number(d.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
                           );
                         }
@@ -2569,8 +2583,8 @@ const Reports = () => {
                       }}
                     />
                     <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={44}>
-                      <Cell fill="#3b82f6" />
-                      <Cell fill="#f43f5e" />
+                      <Cell fill="#64748b" />
+                      <Cell fill="#94a3b8" />
                       <Cell fill="#10b981" />
                     </Bar>
                   </BarChart>
@@ -2876,14 +2890,14 @@ const Reports = () => {
             </div>
 
             {/* Compact Action Buttons */}
-            <div className="flex items-center gap-1 shrink-0 bg-card/60 p-1 rounded-xl border border-border/60">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:bg-rose-500/10 rounded-lg" onClick={() => generatePDF()} title="Descargar PDF">
+            <div className="flex items-center gap-0.5 shrink-0 bg-muted/40 p-0.5 rounded-xl border border-border/50">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg" onClick={() => generatePDF()} title="Descargar PDF">
                 <FileText className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-600 hover:bg-emerald-500/10 rounded-lg" onClick={() => generateExcel()} title="Descargar Excel">
-                <FileSpreadsheet className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg" onClick={() => generateExcel()} title="Descargar Excel">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-blue-600 hover:bg-blue-500/10 rounded-lg" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
                 <Mail className="h-4 w-4" />
               </Button>
             </div>
@@ -3114,11 +3128,11 @@ const Reports = () => {
               </div>
 
               {/* Export Action Buttons */}
-              <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-md p-1 rounded-xl border border-border/70 shadow-xs">
+              <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-xl border border-border/50">
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm" 
-                  className="h-8 px-3 text-xs font-bold text-rose-500 bg-rose-500/10 border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-lg gap-1.5 transition-all shadow-xs" 
+                  className="h-8 px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg gap-1.5 transition-all" 
                   onClick={() => generatePDF()} 
                   title="Descargar Reporte PDF"
                 >
@@ -3126,19 +3140,19 @@ const Reports = () => {
                   <span>PDF</span>
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm" 
-                  className="h-8 px-3 text-xs font-bold text-emerald-600 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-600 hover:text-white rounded-lg gap-1.5 transition-all shadow-xs" 
+                  className="h-8 px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg gap-1.5 transition-all" 
                   onClick={() => generateExcel()} 
                   title="Descargar Reporte Excel"
                 >
-                  <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
+                  <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                   <span>Excel</span>
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm" 
-                  className="h-8 px-3 text-xs font-bold text-blue-600 bg-blue-500/10 border-blue-500/20 hover:bg-blue-600 hover:text-white rounded-lg gap-1.5 transition-all shadow-xs" 
+                  className="h-8 px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg gap-1.5 transition-all" 
                   onClick={() => setIsEmailDialogOpen(true)} 
                   title="Enviar Reporte por Email"
                 >
