@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -24,7 +24,6 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { getSessionSafe } from '@/lib/authSession';
 import cobroLogo from '@/assets/cobro-logo-dark.png';
-import { useState } from 'react';
 
 const LandingPage = () => {
     const navigate = useNavigate();
