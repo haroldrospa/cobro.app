@@ -1204,7 +1204,11 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
       }
 
       // Filtro por categoría
-      if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
+      if (selectedCategory === 'uncategorized') {
+        if (product.category_id) {
+          return false;
+        }
+      } else if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
         return false;
       }
 
@@ -1741,6 +1745,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las categorías</SelectItem>
+                  <SelectItem value="uncategorized">Sin categoría</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
