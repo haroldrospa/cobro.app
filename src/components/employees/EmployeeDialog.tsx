@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 import {
     Dialog,
@@ -53,6 +53,7 @@ interface EmployeeDialogProps {
 export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogProps) {
     const { mutate: manageEmployee, isPending } = useManageEmployee();
     const { data: customers = [] } = useCustomers();
+    const [showPassword, setShowPassword] = useState(false);
 
     const form = useForm<z.infer<typeof employeeSchema>>({
         resolver: zodResolver(employeeSchema),
@@ -68,6 +69,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
     });
 
     useEffect(() => {
+        setShowPassword(false);
         if (employee) {
             form.reset({
                 full_name: employee.full_name,
@@ -234,7 +236,27 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                                     <FormItem>
                                         <FormLabel>{employee ? 'Nueva Contraseña (Opcional)' : 'Contraseña'}</FormLabel>
                                         <FormControl>
-                                            <Input type="password" placeholder="******" {...field} />
+                                            <div className="relative">
+                                                <Input 
+                                                    type={showPassword ? 'text' : 'password'} 
+                                                    placeholder="******" 
+                                                    className="pr-10 font-mono" 
+                                                    {...field} 
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors rounded-md focus:outline-none"
+                                                    tabIndex={-1}
+                                                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                                                >
+                                                    {showPassword ? (
+                                                        <EyeOff className="h-4 w-4" />
+                                                    ) : (
+                                                        <Eye className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </FormControl>
                                         {employee && <FormDescription>Dejar en blanco para mantener la actual</FormDescription>}
                                         <FormMessage />
