@@ -38,7 +38,7 @@ const employeeSchema = z.object({
     full_name: z.string().min(2, 'El nombre es muy corto'),
     email: z.string().email('Correo inválido'),
     password: z.string().optional(),
-    role: z.enum(['admin', 'manager', 'cashier', 'kitchen', 'delivery']),
+    role: z.enum(['admin', 'manager', 'cashier', 'kitchen', 'delivery', 'accountant']),
     is_active: z.boolean().default(true),
     credit_limit: z.coerce.number().min(0).optional(),
     cedula: z.string().optional(),
@@ -72,7 +72,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             form.reset({
                 full_name: employee.full_name,
                 email: employee.email,
-                role: (['staff', 'cashier'].includes(employee.role)) ? 'cashier' : (['kitchen', 'delivery'].includes(employee.role) ? employee.role as any : employee.role),
+                role: (['staff', 'cashier'].includes(employee.role)) ? 'cashier' : (['kitchen', 'delivery', 'accountant'].includes(employee.role) ? employee.role as any : employee.role),
                 is_active: employee.is_active,
                 password: '',
                 credit_limit: employee.credit_limit || 0,
@@ -200,6 +200,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                                             <SelectContent>
                                                 <SelectItem value="manager">Gerente (Acceso Total)</SelectItem>
                                                 <SelectItem value="cashier">Cajero (Solo POS y Clientes)</SelectItem>
+                                                <SelectItem value="accountant">Contador (Solo Contabilidad, Reportes y Facturas)</SelectItem>
                                                 <SelectItem value="kitchen">Cocinero (Solo Pantalla Cocina)</SelectItem>
                                                 <SelectItem value="delivery">Delivery (Solo Pedidos Delivery)</SelectItem>
                                                 <SelectItem value="admin">Administrador</SelectItem>

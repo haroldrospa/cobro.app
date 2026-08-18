@@ -1408,6 +1408,14 @@ const POSContent: React.FC = () => {
       ];
     }
 
+    if (profile?.role === 'accountant') {
+      return [
+        { name: 'Contabilidad', href: '/accounting', icon: FileText },
+        { name: 'Reportes', href: '/reports', icon: BarChart },
+        { name: 'Facturas', href: '/invoices', icon: FileText },
+      ];
+    }
+
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
       return [
         { name: 'Clientes', href: '/customers', icon: Users },

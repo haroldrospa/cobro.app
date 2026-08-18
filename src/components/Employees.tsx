@@ -113,6 +113,8 @@ const Employees: React.FC = () => {
             case 'cashier':
             case 'staff':
                 return <Badge variant="default" className="bg-green-500">Cajero</Badge>;
+            case 'accountant':
+                return <Badge variant="default" className="bg-emerald-600 dark:bg-emerald-500">Contador</Badge>;
             case 'kitchen':
                 return <Badge variant="default" className="bg-orange-500">Cocinero</Badge>;
             case 'delivery':

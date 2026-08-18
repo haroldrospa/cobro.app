@@ -118,6 +118,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       ];
     }
 
+    // Contador: Solo Contabilidad, Reportes y Facturas
+    if (profile?.role === 'accountant') {
+      return [
+        { name: 'Contabilidad', href: '/accounting', icon: FileText },
+        { name: 'Reportes', href: '/reports', icon: BarChart },
+        { name: 'Facturas', href: '/invoices', icon: FileText },
+      ];
+    }
+
     // Cajero/Staff: POS, Delivery (si activo), Cocina (solo restaurante), Clientes
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
       const items = [
@@ -181,6 +190,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (profile?.role === 'delivery') {
       if (location.pathname !== '/delivery') {
         navigate('/delivery');
+      }
+      return;
+    }
+
+    // Contador: solo contabilidad, reportes, facturas
+    if (profile?.role === 'accountant') {
+      const allowedPaths = ['/accounting', '/reports', '/invoices', '/app'];
+      const isAllowed = allowedPaths.some(path =>
+        location.pathname === path || (path !== '/' && location.pathname.startsWith(path))
+      );
+
+      if (!isAllowed) {
+        navigate('/accounting', { replace: true });
       }
       return;
     }

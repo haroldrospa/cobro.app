@@ -43,6 +43,9 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
       cashier: 'Cajero',
       employee: 'Empleado',
       manager: 'Gerente',
+      accountant: 'Contador',
+      kitchen: 'Cocinero',
+      delivery: 'Delivery',
       viewer: 'Visualizador',
     };
     return map[role.toLowerCase()] || role;

@@ -19,14 +19,31 @@ const RoleRedirect: React.FC = () => {
         return <Navigate to="/pos" replace />;
     }
 
+    const roleLower = profile.role.toLowerCase();
+
+    // Contador: va directo a Contabilidad
+    if (roleLower === 'accountant') {
+        return <Navigate to="/accounting" replace />;
+    }
+
+    // Cocinero: va a Cocina
+    if (roleLower === 'kitchen') {
+        return <Navigate to="/kitchen" replace />;
+    }
+
+    // Delivery: va a Pedidos Delivery
+    if (roleLower === 'delivery') {
+        return <Navigate to="/delivery" replace />;
+    }
+
     // Roles que van al Dashboard directamente
     const adminRoles = ['admin', 'owner', 'manager'];
     
-    if (adminRoles.includes(profile.role.toLowerCase())) {
+    if (adminRoles.includes(roleLower)) {
         return <Navigate to="/dashboard" replace />;
     }
 
-    // Por defecto para cajeros, delivery, etc.
+    // Por defecto para cajeros / staff
     return <Navigate to="/pos" replace />;
 };
 
