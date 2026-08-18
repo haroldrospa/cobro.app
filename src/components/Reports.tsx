@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,8 +62,11 @@ import {
   Landmark,
   CheckCircle2,
   Sparkles,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { useSales, Sale } from '@/hooks/useSalesManagement';
@@ -104,9 +107,11 @@ const COLORS = ['hsl(var(--accent))', 'hsl(var(--secondary))', 'hsl(var(--muted)
 const Reports = () => {
   const { toast } = useToast();
   const [activeReport, setActiveReport] = useState('dashboard');
+  
+  // Default to today (el día actual) for instant performance
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date()
+    from: startOfDay(new Date()),
+    to: endOfDay(new Date())
   });
 
   // Filter States
@@ -116,6 +121,32 @@ const Reports = () => {
   const [filterUser, setFilterUser] = useState('all');
   const [filterInvoiceType, setFilterInvoiceType] = useState('all');
   const [invoiceTableSearch, setInvoiceTableSearch] = useState('');
+
+  // Pagination for high performance on large datasets
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  // Quick Date Presets Helper
+  const setDatePreset = (preset: 'today' | 'yesterday' | 'week' | 'month' | 'last30') => {
+    const now = new Date();
+    if (preset === 'today') {
+      setDateRange({ from: startOfDay(now), to: endOfDay(now) });
+    } else if (preset === 'yesterday') {
+      const yest = subDays(now, 1);
+      setDateRange({ from: startOfDay(yest), to: endOfDay(yest) });
+    } else if (preset === 'week') {
+      setDateRange({ from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfDay(now) });
+    } else if (preset === 'month') {
+      setDateRange({ from: startOfMonth(now), to: endOfDay(now) });
+    } else if (preset === 'last30') {
+      setDateRange({ from: startOfDay(subDays(now, 30)), to: endOfDay(now) });
+    }
+  };
+
+  // Auto-reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterInvoiceType, invoiceTableSearch, filterCustomer, filterPaymentMethod, dateRange]);
 
   const { data: sales = [], isFetching: isFetchingSales } = useSales({
     dateFrom: dateRange?.from,
@@ -188,9 +219,10 @@ const Reports = () => {
     setFilterUser('all');
     setFilterInvoiceType('all');
     setInvoiceTableSearch('');
+    setCurrentPage(1);
     setDateRange({
-      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      to: new Date()
+      from: startOfDay(new Date()),
+      to: endOfDay(new Date())
     });
   };
 
@@ -1841,6 +1873,11 @@ const Reports = () => {
         const subtotalAmount = totalAmount - totalTax;
         const avgTicket = allInvoices.length > 0 ? (totalAmount / allInvoices.length) : 0;
 
+        // Pagination slice
+        const totalPages = Math.max(1, Math.ceil(allInvoices.length / pageSize));
+        const startIndex = (currentPage - 1) * pageSize;
+        const paginatedInvoices = pageSize >= 99999 ? allInvoices : allInvoices.slice(startIndex, startIndex + pageSize);
+
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* KPI Summary Cards Grid */}
@@ -1854,7 +1891,7 @@ const Reports = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
                     ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
@@ -1873,7 +1910,7 @@ const Reports = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-cyan-600 dark:text-cyan-400">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-cyan-600 dark:text-cyan-400 font-mono">
                     ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground font-medium">
@@ -1891,7 +1928,7 @@ const Reports = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
                     ${subtotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground font-medium">
@@ -1909,7 +1946,7 @@ const Reports = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400 font-mono">
                     ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground font-medium">
@@ -2056,7 +2093,7 @@ const Reports = () => {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        allInvoices.map(s => {
+                        paginatedInvoices.map(s => {
                           const typeCode = getSaleInvoiceTypeCode(s);
                           const typeName = getSaleInvoiceTypeName(s);
                           const isB01 = typeCode === 'B01' || typeCode === 'E31';
@@ -2153,6 +2190,89 @@ const Reports = () => {
                     </TableFooter>
                   </Table>
                 </div>
+
+                {/* --- MODERN PAGINATION CONTROLS --- */}
+                {allInvoices.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-card/60 border-t border-border/40 text-xs">
+                    {/* Rows per page selector */}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span>Mostrar</span>
+                      <Select 
+                        value={String(pageSize)} 
+                        onValueChange={(val) => {
+                          setPageSize(Number(val));
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-20 text-xs font-bold bg-muted/30 border-border/40 rounded-lg">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                          <SelectItem value="250">250</SelectItem>
+                          <SelectItem value="999999">Todos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span>de <strong className="text-foreground font-mono">{allInvoices.length}</strong> facturas</span>
+                    </div>
+
+                    {/* Showing Range */}
+                    <div className="text-muted-foreground text-center font-medium">
+                      Mostrando <strong className="text-foreground font-mono">{startIndex + 1}</strong> - <strong className="text-foreground font-mono">{Math.min(startIndex + pageSize, allInvoices.length)}</strong>
+                    </div>
+
+                    {/* Page Navigation Buttons */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        title="Primera página"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        title="Página anterior"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+
+                      <span className="px-3 py-1 rounded-lg bg-muted/40 font-mono font-bold text-xs border border-border/40">
+                        {currentPage} / {totalPages}
+                      </span>
+
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        title="Página siguiente"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        title="Última página"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -2723,44 +2843,83 @@ const Reports = () => {
           </div>
 
           {/* Date Picker & Quick Filters */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex-1">
-              <DateRangePicker
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
+          <div className="space-y-2">
+            {/* Quick Date Presets on Mobile */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+              <button
+                type="button"
+                onClick={() => setDatePreset('today')}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-all border",
+                  dateRange?.from && isSameDay(dateRange.from, new Date()) && dateRange?.to && isSameDay(dateRange.to, new Date())
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/30 border-border/40 text-muted-foreground"
+                )}
+              >
+                Hoy (Actual)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDatePreset('yesterday')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 bg-muted/30 border border-border/40 text-muted-foreground"
+              >
+                Ayer
+              </button>
+              <button
+                type="button"
+                onClick={() => setDatePreset('week')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 bg-muted/30 border border-border/40 text-muted-foreground"
+              >
+                Esta Semana
+              </button>
+              <button
+                type="button"
+                onClick={() => setDatePreset('month')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 bg-muted/30 border border-border/40 text-muted-foreground"
+              >
+                Este Mes
+              </button>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Select value={filterCustomer} onValueChange={setFilterCustomer}>
-                <SelectTrigger className="h-9 flex-1 sm:w-36 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
-                  <SelectValue placeholder="Cliente" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">Todos los Clientes</SelectItem>
-                  {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
 
-              <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
-                <SelectTrigger className="h-9 flex-1 sm:w-32 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
-                  <SelectValue placeholder="Método" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">Todos los Métodos</SelectItem>
-                  {uniquePaymentMethods.map(m => (
-                    <SelectItem key={m} value={m}>{m.toUpperCase()}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1">
+                <DateRangePicker
+                  dateRange={dateRange}
+                  onDateRangeChange={setDateRange}
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Select value={filterCustomer} onValueChange={setFilterCustomer}>
+                  <SelectTrigger className="h-9 flex-1 sm:w-36 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
+                    <SelectValue placeholder="Cliente" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Todos los Clientes</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all' || filterInvoiceType !== 'all') && (
-                <Button variant="ghost" size="icon" onClick={clearFilters} className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" title="Limpiar Filtros">
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              )}
+                <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
+                  <SelectTrigger className="h-9 flex-1 sm:w-32 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
+                    <SelectValue placeholder="Método" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Todos los Métodos</SelectItem>
+                    {uniquePaymentMethods.map(m => (
+                      <SelectItem key={m} value={m}>{m.toUpperCase()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all' || filterInvoiceType !== 'all') && (
+                  <Button variant="ghost" size="icon" onClick={clearFilters} className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" title="Limpiar Filtros">
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2797,6 +2956,47 @@ const Reports = () => {
 
             {/* Actions & Filters Row */}
             <div className="flex flex-wrap items-center gap-2.5 max-w-full min-w-0">
+              {/* Quick Presets on Desktop */}
+              <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-xl border border-border/50">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('today')}
+                  className={cn(
+                    "h-8 px-2.5 text-xs font-bold rounded-lg transition-all",
+                    dateRange?.from && isSameDay(dateRange.from, new Date()) && dateRange?.to && isSameDay(dateRange.to, new Date())
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Hoy (Actual)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('yesterday')}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                >
+                  Ayer
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('week')}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                >
+                  Esta Semana
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('month')}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                >
+                  Este Mes
+                </Button>
+              </div>
+
               {/* Date Range Picker */}
               <DateRangePicker
                 dateRange={dateRange}
