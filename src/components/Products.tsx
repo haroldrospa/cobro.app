@@ -770,8 +770,85 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     }
   };
 
-  // Cálculos detallados del valor del inventario — memoizados para evitar recalcular en cada render
-  const inventoryStats = useMemo(() => products.reduce((acc, product) => {
+  const currentCategoryName = useMemo(() => {
+    if (selectedCategory === 'all') return null;
+    if (selectedCategory === 'uncategorized') return 'Sin categoría';
+    const found = categories.find(c => c.id === selectedCategory);
+    return found ? found.name : null;
+  }, [selectedCategory, categories]);
+
+  // Productos filtrados por búsqueda y categoría (sin aplicar showLowStockOnly)
+  const baseFilteredProducts = useMemo(() => {
+    return products.filter(product => {
+      // Filtro por categoría
+      if (selectedCategory === 'uncategorized') {
+        if (product.category_id) {
+          return false;
+        }
+      } else if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
+        return false;
+      }
+
+      // Si no hay término de búsqueda, mostrar todos (con filtro de categoría aplicado)
+      if (!debouncedSearchTerm.trim()) {
+        return true;
+      }
+
+      // Filtro según tipo de búsqueda
+      const searchLower = debouncedSearchTerm.toLowerCase().trim();
+
+      switch (searchType) {
+        case 'all': {
+          const nameMatch = product.name && product.name.toLowerCase().includes(searchLower);
+          const idMatch = product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
+          const categoryMatch = product.category?.name && product.category.name.toLowerCase().includes(searchLower);
+          const allBarcodes = [
+            product.barcode?.toLowerCase(),
+            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
+          ].filter(Boolean) as string[];
+          const barcodeMatch = allBarcodes.some(b => b.includes(searchLower));
+          
+          return nameMatch || idMatch || categoryMatch || barcodeMatch;
+        }
+        case 'name':
+          return product.name && product.name.toLowerCase().includes(searchLower);
+        case 'id':
+          return product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
+        case 'barcode': {
+          const allBarcodes = [
+            product.barcode?.toLowerCase(),
+            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
+          ].filter(Boolean) as string[];
+          return allBarcodes.some(b => b.includes(searchLower));
+        }
+        case 'category':
+          return product.category?.name && product.category.name.toLowerCase().includes(searchLower);
+        default:
+          return true;
+      }
+    });
+  }, [products, selectedCategory, debouncedSearchTerm, searchType]);
+
+  // Contar productos con stock bajo dentro del conjunto filtrado actual
+  const lowStockProducts = useMemo(() => baseFilteredProducts.filter(p => {
+    // Excluir productos que no controlan inventario
+    if (p.track_inventory === false) return false;
+
+    const currentStock = p.stock || 0;
+    const minStock = p.min_stock || 0;
+    // Solo alertar si el producto controla inventario Y tiene stock bajo
+    return currentStock <= minStock;
+  }), [baseFilteredProducts]);
+  const lowStockCount = lowStockProducts.length;
+
+  // Lista final mostrada en pantalla ordenada alfabéticamente
+  const filteredProducts = useMemo(() => {
+    const list = showLowStockOnly ? lowStockProducts : baseFilteredProducts;
+    return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+  }, [baseFilteredProducts, lowStockProducts, showLowStockOnly]);
+
+  // Cálculos detallados del valor del inventario — calculados dinámicamente según el filtro activo
+  const inventoryStats = useMemo(() => filteredProducts.reduce((acc, product) => {
     let costWithoutTax = product.cost || 0;
     let costWithTax = product.cost || 0;
     const stock = Number(product.stock || 0);
@@ -794,19 +871,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     acc.valorEnPrecio += price * stock;
 
     return acc;
-  }, { costoSinImpuesto: 0, costoConImpuesto: 0, valorEnPrecio: 0 }), [products]);
-
-  // Contar productos con stock bajo — memoizado
-  const lowStockProducts = useMemo(() => products.filter(p => {
-    // Excluir productos que no controlan inventario
-    if (p.track_inventory === false) return false;
-
-    const currentStock = p.stock || 0;
-    const minStock = p.min_stock || 0;
-    // Solo alertar si el producto controla inventario Y tiene stock bajo
-    return currentStock <= minStock;
-  }), [products]);
-  const lowStockCount = lowStockProducts.length;
+  }, { costoSinImpuesto: 0, costoConImpuesto: 0, valorEnPrecio: 0 }), [filteredProducts]);
 
   // Función para descargar planilla de ejemplo
   const handleDownloadTemplate = () => {
@@ -1195,65 +1260,6 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     }
   };
 
-  // filteredProducts memoizado — solo recalcula cuando cambian los filtros (búsqueda con debounce)
-  const filteredProducts = useMemo(() => {
-    const list = products.filter(product => {
-      // Filtro por stock bajo
-      if (showLowStockOnly && !((product.stock || 0) <= (product.min_stock || 0))) {
-        return false;
-      }
-
-      // Filtro por categoría
-      if (selectedCategory === 'uncategorized') {
-        if (product.category_id) {
-          return false;
-        }
-      } else if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
-        return false;
-      }
-
-      // Si no hay término de búsqueda, mostrar todos (con filtro de categoría aplicado)
-      if (!debouncedSearchTerm.trim()) {
-        return true;
-      }
-
-      // Filtro según tipo de búsqueda
-      const searchLower = debouncedSearchTerm.toLowerCase().trim();
-
-      switch (searchType) {
-        case 'all': {
-          const nameMatch = product.name && product.name.toLowerCase().includes(searchLower);
-          const idMatch = product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
-          const categoryMatch = product.category?.name && product.category.name.toLowerCase().includes(searchLower);
-          const allBarcodes = [
-            product.barcode?.toLowerCase(),
-            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
-          ].filter(Boolean) as string[];
-          const barcodeMatch = allBarcodes.some(b => b.includes(searchLower));
-          
-          return nameMatch || idMatch || categoryMatch || barcodeMatch;
-        }
-        case 'name':
-          return product.name && product.name.toLowerCase().includes(searchLower);
-        case 'id':
-          return product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
-        case 'barcode': {
-          const allBarcodes = [
-            product.barcode?.toLowerCase(),
-            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
-          ].filter(Boolean) as string[];
-          return allBarcodes.some(b => b.includes(searchLower));
-        }
-        case 'category':
-          return product.category?.name && product.category.name.toLowerCase().includes(searchLower);
-        default:
-          return true;
-      }
-    });
-
-    return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
-  }, [products, showLowStockOnly, selectedCategory, debouncedSearchTerm, searchType]);
-
   // Reset pagination when filters change (usar debouncedSearchTerm para consistencia con el filtro)
   useEffect(() => {
     setVisibleCount(50);
@@ -1581,8 +1587,15 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors duration-500">
                 <DollarSign className="h-6 w-6 text-emerald-500" />
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Previsión de Venta</p>
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Previsión de Venta</p>
+                  {currentCategoryName && (
+                    <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
+                      {currentCategoryName}
+                    </span>
+                  )}
+                </div>
                 <p className="text-3xl font-black tracking-tighter text-emerald-500 flex items-baseline gap-0.5">
                   <span className="text-xl font-bold opacity-80">$</span>
                   {inventoryStats.valorEnPrecio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1615,9 +1628,18 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors duration-500">
                 <Package className="h-6 w-6 text-blue-500" />
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Total Productos</p>
-                <p className="text-4xl font-black tracking-tighter text-blue-500">{products.length}</p>
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
+                    Total Productos
+                  </p>
+                  {currentCategoryName && (
+                    <span className="text-[9px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
+                      {currentCategoryName}
+                    </span>
+                  )}
+                </div>
+                <p className="text-4xl font-black tracking-tighter text-blue-500">{filteredProducts.length}</p>
               </div>
             </div>
           </CardContent>
@@ -1640,9 +1662,16 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                   <AlertTriangle className={`h-6 w-6 text-destructive ${showLowStockOnly ? 'animate-pulse' : ''}`} />
                 </div>
                 <div className="space-y-1 min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 truncate">
-                    Stock Bajo {showLowStockOnly && <span className="text-destructive font-bold ml-1">(Filtrado)</span>}
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 truncate">
+                      Stock Bajo {showLowStockOnly && <span className="text-destructive font-bold ml-1">(Filtrado)</span>}
+                    </p>
+                    {currentCategoryName && !showLowStockOnly && (
+                      <span className="text-[9px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
+                        {currentCategoryName}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-4xl font-black tracking-tighter text-destructive">{lowStockCount}</p>
                 </div>
               </div>
