@@ -1,5 +1,5 @@
 import { useState, useRef, FC, ChangeEvent, useEffect, useMemo, useCallback, memo } from 'react';
-import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History } from 'lucide-react';
+import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History, FolderCog } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import { ActiveOffersSheet } from '@/components/products/ActiveOffersSheet';
 import { PrintLabelsDialog } from '@/components/products/PrintLabelsDialog';
 import { ImportProductsDialog } from '@/components/products/ImportProductsDialog';
 import { RestaurantInventoryControl } from '@/components/products/RestaurantInventoryControl';
+import { ManageCategoriesDialog } from '@/components/product-form/ManageCategoriesDialog';
 import ProductForm from './ProductForm';
 import { LimitReachedDialog } from './subscription/PlanRestrictions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -128,6 +129,7 @@ const Products: FC = () => {
   const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [importData, setImportData] = useState<any[]>([]);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   
   const { data: products = [], isLoading, isFetching } = useProductsOffline();
   const { data: categories = [] } = useCategories();
@@ -1796,28 +1798,42 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                             <ChevronDown className="h-3 w-3 opacity-40 group-hover/cat:opacity-100 transition-opacity shrink-0" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56 p-1.5 rounded-xl bg-card border border-border shadow-xl z-50">
-                          <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                            Categoría
+                        <DropdownMenuContent align="start" className="w-64 p-2 rounded-2xl bg-card border border-border shadow-2xl z-50">
+                          <div className="flex items-center justify-between px-2 py-1 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                              Categoría
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsManageCategoriesOpen(true);
+                              }}
+                              className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer focus:outline-none"
+                              title="Administrar y modificar categorías"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Modificar
+                            </button>
                           </div>
-                          <div className="max-h-60 overflow-y-auto space-y-0.5 pr-0.5">
+                          <div className="max-h-56 overflow-y-auto overflow-x-hidden space-y-0.5 pr-0.5">
                             <DropdownMenuItem
                               onClick={() => handleQuickCategoryChange(product, null)}
                               className={cn(
-                                "flex items-center justify-between text-xs px-2.5 py-2 rounded-lg cursor-pointer transition-colors focus:bg-muted/80",
+                                "flex items-center justify-between text-xs px-2.5 py-2 rounded-xl cursor-pointer transition-colors focus:bg-muted/80",
                                 !product.category_id 
                                   ? "bg-muted/60 text-foreground font-semibold" 
                                   : "text-muted-foreground hover:text-foreground"
                               )}
                             >
-                              <span className="flex items-center gap-2">
+                              <span className="flex items-center gap-2 truncate">
                                 <span className={cn(
-                                  "h-2 w-2 rounded-full",
+                                  "h-2 w-2 rounded-full shrink-0",
                                   !product.category_id ? "bg-primary" : "bg-muted-foreground/30"
                                 )} />
-                                <span className={!product.category_id ? "text-primary" : ""}>Sin categoría</span>
+                                <span className={!product.category_id ? "text-primary truncate" : "truncate"}>Sin categoría</span>
                               </span>
-                              {!product.category_id && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                              {!product.category_id && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />}
                             </DropdownMenuItem>
 
                             {categories.length > 0 && <DropdownMenuSeparator className="my-1 opacity-50" />}
@@ -1829,13 +1845,13 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                   key={cat.id}
                                   onClick={() => handleQuickCategoryChange(product, cat.id)}
                                   className={cn(
-                                    "flex items-center justify-between text-xs px-2.5 py-2 rounded-lg cursor-pointer transition-colors focus:bg-muted/80",
+                                    "flex items-center justify-between text-xs px-2.5 py-2 rounded-xl cursor-pointer transition-colors focus:bg-muted/80",
                                     isSelected 
                                       ? "bg-muted/60 text-foreground font-semibold" 
                                       : "text-muted-foreground hover:text-foreground"
                                   )}
                                 >
-                                  <span className="flex items-center gap-2 truncate">
+                                  <span className="flex items-center gap-2 truncate min-w-0">
                                     <span className={cn(
                                       "h-2 w-2 rounded-full shrink-0",
                                       isSelected ? "bg-primary" : "bg-muted-foreground/30"
@@ -1844,11 +1860,20 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                                       {cat.name}
                                     </span>
                                   </span>
-                                  {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                                  {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />}
                                 </DropdownMenuItem>
                               );
                             })}
                           </div>
+
+                          <DropdownMenuSeparator className="my-1.5 opacity-50" />
+                          <DropdownMenuItem
+                            onSelect={() => setIsManageCategoriesOpen(true)}
+                            className="flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 rounded-xl cursor-pointer text-primary bg-primary/5 hover:bg-primary/10 font-semibold transition-colors mt-0.5"
+                          >
+                            <FolderCog className="h-3.5 w-3.5" />
+                            <span>Modificar / Crear categorías</span>
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       {product.track_inventory === false ? (
@@ -3158,6 +3183,12 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal: Gestionar y Modificar Categorías */}
+      <ManageCategoriesDialog
+        open={isManageCategoriesOpen}
+        onOpenChange={setIsManageCategoriesOpen}
+      />
     </div >
   );
 };
