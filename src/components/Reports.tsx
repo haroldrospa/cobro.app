@@ -66,12 +66,14 @@ import { useCategories } from '@/hooks/useCategories';
 import { useEmployees } from '@/hooks/useEmployees';
 import { useAllCustomersBalances } from '@/hooks/useCustomerBalance';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
 import appLogo from '@/assets/cobro-logo.png';
 
 // --- CONFIGURATION ---
@@ -80,9 +82,7 @@ const REPORT_TYPES = [
   { id: 'sales-daily', label: 'Ventas Diarias', icon: CalendarDays, description: 'Evolución de ventas día por día' },
   { id: 'sales-hourly', label: 'Ventas por Hora', icon: Clock, description: 'Análisis de horas pico' },
   { id: 'products-sold', label: 'Productos Vendidos', icon: Package, description: 'Ranking de productos más vendidos' },
-  { id: 'sales-b01', label: 'Facturas B01 (Crédito Fiscal)', icon: FileText, description: 'Reporte de comprobantes fiscales B01' },
-  { id: 'sales-b02', label: 'Facturas B02 (Consumo Final)', icon: FileText, description: 'Reporte de comprobantes fiscales B02' },
-  { id: 'all-invoices', label: 'Reporte de Facturas', icon: FileSpreadsheet, description: 'Listado general de todas las facturas (B01 y B02)' },
+  { id: 'all-invoices', label: 'Facturas y Comprobantes', icon: FileSpreadsheet, description: 'Listado y exportación de todas las facturas y tipos de comprobantes' },
   { id: 'closings', label: 'Cierres de Caja', icon: Wallet, description: 'Historial de sesiones y cierres de caja' },
   { id: 'receivables', label: 'Cuentas por Cobrar', icon: Users, description: 'Clientes con deudas pendientes' },
   { id: 'inventory', label: 'Inventario Valorizado', icon: Package, description: 'Valoración de stock actual' },
@@ -105,6 +105,7 @@ const Reports = () => {
   const [filterPaymentMethod, setFilterPaymentMethod] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterUser, setFilterUser] = useState('all');
+  const [filterInvoiceType, setFilterInvoiceType] = useState('all');
 
   const { data: sales = [], isFetching: isFetchingSales } = useSales({
     dateFrom: dateRange?.from,
@@ -116,6 +117,7 @@ const Reports = () => {
   const { data: closings = [] } = useDailyClosings();
   const { data: movements = [] } = useCashMovements(undefined);
   const { data: categories = [] } = useCategories();
+  const { data: invoiceTypes = [] } = useInvoiceTypes();
 
   const { data: employees = [] } = useEmployees();
   const { data: customerBalancesInfo } = useAllCustomersBalances();
@@ -174,6 +176,7 @@ const Reports = () => {
     setFilterPaymentMethod('all');
     setFilterCategory('all');
     setFilterUser('all');
+    setFilterInvoiceType('all');
     setDateRange({
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
       to: new Date()
@@ -224,22 +227,78 @@ const Reports = () => {
     });
   }, [sales, dateRange, filterCustomer, filterPaymentMethod, filterUser, filterCategory, productsMap]);
 
-  const isB01Invoice = (s: Sale) => {
-    const code = s.invoice_type?.code?.toUpperCase();
+  const getSaleInvoiceTypeCode = (s: Sale): string => {
+    if (s.invoice_type?.code) return s.invoice_type.code.toUpperCase();
     const invNum = (s.invoice_number || '').toUpperCase();
-    return code === 'B01' || code === '01' || invNum.startsWith('B01') || invNum.startsWith('E31');
+    if (invNum.startsWith('E31') || invNum.startsWith('B01')) return 'B01';
+    if (invNum.startsWith('E32') || invNum.startsWith('B02')) return 'B02';
+    if (invNum.startsWith('E33') || invNum.startsWith('B03')) return 'B03';
+    if (invNum.startsWith('E34') || invNum.startsWith('B04')) return 'B04';
+    if (invNum.startsWith('E44') || invNum.startsWith('B14')) return 'B14';
+    if (invNum.startsWith('E45') || invNum.startsWith('B15')) return 'B15';
+    if (invNum.startsWith('E46') || invNum.startsWith('B16')) return 'B16';
+    return s.invoice_type_id || 'B02';
+  };
+
+  const getSaleInvoiceTypeName = (s: Sale): string => {
+    if (s.invoice_type?.name) return s.invoice_type.name;
+    const code = getSaleInvoiceTypeCode(s);
+    if (code === 'B01' || code === 'E31') return 'Crédito Fiscal';
+    if (code === 'B02' || code === 'E32') return 'Consumo Final';
+    if (code === 'B03' || code === 'E33') return 'Nota de Débito';
+    if (code === 'B04' || code === 'E34') return 'Nota de Crédito';
+    if (code === 'B14' || code === 'E44') return 'Regímenes Especiales';
+    if (code === 'B15' || code === 'E45') return 'Gubernamental';
+    if (code === 'B16' || code === 'E46') return 'Exportación';
+    return 'Factura';
+  };
+
+  const isB01Invoice = (s: Sale) => {
+    const code = getSaleInvoiceTypeCode(s);
+    return code === 'B01' || code === 'E31';
   };
 
   const isB02Invoice = (s: Sale) => {
-    const code = s.invoice_type?.code?.toUpperCase();
-    const invNum = (s.invoice_number || '').toUpperCase();
-    return code === 'B02' || code === '02' || invNum.startsWith('B02') || invNum.startsWith('E32');
+    const code = getSaleInvoiceTypeCode(s);
+    return code === 'B02' || code === 'E32';
   };
 
   const salesB01 = useMemo(() => filteredSales.filter(isB01Invoice), [filteredSales]);
   const salesB02 = useMemo(() => filteredSales.filter(isB02Invoice), [filteredSales]);
-  const allInvoices = useMemo(() => filteredSales.filter(s => isB01Invoice(s) || isB02Invoice(s))
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()), [filteredSales]);
+
+  const allInvoices = useMemo(() => {
+    let list = filteredSales;
+    if (filterInvoiceType !== 'all') {
+      list = list.filter(s => {
+        const code = getSaleInvoiceTypeCode(s);
+        const invTypeObj = invoiceTypes.find(t => t.id === filterInvoiceType || t.code === filterInvoiceType);
+        const targetCode = (invTypeObj?.code || filterInvoiceType).toUpperCase();
+        return code === targetCode || s.invoice_type_id === filterInvoiceType || (s.invoice_type?.code?.toUpperCase() === targetCode);
+      });
+    }
+    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [filteredSales, filterInvoiceType, invoiceTypes]);
+
+  const invoiceTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: filteredSales.length };
+    filteredSales.forEach(s => {
+      const code = getSaleInvoiceTypeCode(s);
+      counts[code] = (counts[code] || 0) + 1;
+    });
+    return counts;
+  }, [filteredSales]);
+
+  const availableInvoiceTypeKeys = useMemo(() => {
+    const types = new Set<string>();
+    filteredSales.forEach(s => {
+      types.add(getSaleInvoiceTypeCode(s));
+    });
+    if (types.size === 0) {
+      types.add('B01');
+      types.add('B02');
+    }
+    return Array.from(types).sort();
+  }, [filteredSales]);
 
   // New: Daily Sales Aggregation
   const dailySalesData = useMemo(() => {
@@ -512,19 +571,21 @@ const Reports = () => {
       } else if (activeReport === 'sales-hourly') {
         head = [['Hora', 'Cant. Transacciones', 'Total Ventas']];
         body = hourlySalesData.map(d => [d.label, d.count.toString(), `$${d.total.toLocaleString()}`]);
-      } else if (activeReport === 'sales-b01') {
-        head = [['Fecha', 'NCF', 'Cliente', 'RNC', 'Total', 'Impuesto']];
-        body = salesB01.map(s => [format(new Date(s.created_at), 'dd/MM/yyyy'), s.invoice_number || 'N/A', s.customer?.name || 'Consumidor', s.customer?.rnc || 'N/A', `$${s.total.toLocaleString()}`, `$${s.tax_total.toLocaleString()}`]);
-      } else if (activeReport === 'sales-b02') {
-        head = [['Fecha', 'NCF', 'Cliente', 'Total']];
-        body = salesB02.map(s => [format(new Date(s.created_at), 'dd/MM/yyyy'), s.invoice_number || 'N/A', s.customer?.name || 'Consumidor', `$${s.total.toLocaleString()}`]);
-      } else if (activeReport === 'all-invoices') {
-        head = [['Fecha', 'NCF', 'Cliente', 'RNC', 'Total', 'Impuesto']];
-        body = allInvoices.map(s => [format(new Date(s.created_at), 'dd/MM/yyyy'), s.invoice_number || 'N/A', s.customer?.name || 'Consumidor', s.customer?.rnc || 'N/A', `$${s.total.toLocaleString()}`, `$${s.tax_total.toLocaleString()}`]);
+      } else if (activeReport === 'all-invoices' || activeReport === 'sales-b01' || activeReport === 'sales-b02') {
+        head = [['Fecha', 'NCF', 'Tipo', 'Cliente', 'RNC / Cédula', 'ITBIS', 'Total']];
+        body = allInvoices.map(s => [
+          format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
+          s.invoice_number || 'N/A',
+          `${getSaleInvoiceTypeCode(s)} - ${getSaleInvoiceTypeName(s)}`,
+          s.customer?.name || 'Consumidor Final',
+          s.customer?.rnc || '-',
+          `$${(s.tax_total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          `$${s.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        ]);
         // Add summary row to PDF
         const totalSum = allInvoices.reduce((sum, s) => sum + s.total, 0);
         const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
-        body.push(['', '', '', 'TOTAL GENERAL', `$${totalSum.toLocaleString()}`, `$${totalTax.toLocaleString()}`]);
+        body.push(['', '', '', '', 'TOTAL GENERAL', `$${totalTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, `$${totalSum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
       } else if (activeReport === 'closings') {
         head = [['Apertura', 'Cierre', 'Usuario', 'Esperado', 'Real', 'Diferencia']];
         body = filteredClosings.map(c => [format(new Date(c.created_at), 'dd/MM/yyyy HH:mm'), c.closing_time ? format(new Date(c.closing_time), 'dd/MM/yyyy HH:mm') : 'ABIERTO', c.profile?.full_name || 'N/A', `$${(c.expected_cash || 0).toLocaleString()}`, `$${(c.actual_cash || 0).toLocaleString()}`, `$${(c.difference || 0).toLocaleString()}`]);
@@ -1165,35 +1226,34 @@ const Reports = () => {
         Transacciones: d.count,
         Total_Ventas: d.total
       }));
-    } else if (activeReport === 'sales-b01') {
-      data = salesB01.map(s => ({
-        Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
-        NCF: s.invoice_number,
-        Cliente: s.customer?.name || 'Consumidor Final',
-        RNC: s.customer?.rnc || 'N/A',
-        Impuesto: s.tax_total,
-        Total: s.total
-      }));
-    } else if (activeReport === 'sales-b02') {
-      data = salesB02.map(s => ({
-        Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
-        NCF: s.invoice_number,
-        Cliente: s.customer?.name || 'Consumidor Final',
-        Total: s.total
-      }));
-    } else if (activeReport === 'all-invoices') {
+    } else if (activeReport === 'all-invoices' || activeReport === 'sales-b01' || activeReport === 'sales-b02') {
       data = allInvoices.map(s => ({
         Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
-        NCF: s.invoice_number,
+        NCF: s.invoice_number || 'S/N',
+        Codigo_Tipo: getSaleInvoiceTypeCode(s),
+        Tipo_Comprobante: getSaleInvoiceTypeName(s),
         Cliente: s.customer?.name || 'Consumidor Final',
-        RNC: s.customer?.rnc || 'N/A',
-        Impuesto: s.tax_total,
+        RNC_Cedula: s.customer?.rnc || 'N/A',
+        Metodo_Pago: s.payment_method ? s.payment_method.toUpperCase() : 'EFECTIVO',
+        Estado: s.status === 'completed' || s.payment_status === 'paid' ? 'PAGADA' : (s.status ? s.status.toUpperCase() : 'PENDIENTE'),
+        ITBIS: s.tax_total || 0,
         Total: s.total
       }));
       const totalSum = allInvoices.reduce((sum, s) => sum + s.total, 0);
+      const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
       data.push({
-        Fecha: '', NCF: '', Cliente: '', RNC: 'TOTAL GENERAL', Impuesto: '', Total: totalSum
+        Fecha: '',
+        NCF: '',
+        Codigo_Tipo: '',
+        Tipo_Comprobante: '',
+        Cliente: '',
+        RNC_Cedula: 'TOTAL GENERAL',
+        Metodo_Pago: '',
+        Estado: '',
+        ITBIS: totalTax,
+        Total: totalSum
       });
+      fileName = filterInvoiceType !== 'all' ? `reporte-facturas-${filterInvoiceType}` : `reporte-todas-las-facturas`;
     } else if (activeReport === 'closings') {
       data = filteredClosings.map(c => ({
         Apertura: format(new Date(c.created_at), 'dd/MM/yyyy HH:mm'),
@@ -1526,79 +1586,245 @@ const Reports = () => {
 
       case 'sales-b01':
       case 'sales-b02':
-      case 'all-invoices':
-        const currentList = activeReport === 'sales-b01' ? salesB01 :
-          activeReport === 'sales-b02' ? salesB02 : allInvoices;
-
-        const title = activeReport === 'sales-b01' ? 'Facturas con Valor Fiscal (B01)' :
-          activeReport === 'sales-b02' ? 'Facturas de Consumo (B02)' : 'Reporte General de Facturas';
-
-        // Calculate totals for the footer
-        const totalAmount = currentList.reduce((sum, s) => sum + s.total, 0);
-        const totalTax = currentList.reduce((sum, s) => sum + (s.tax_total || 0), 0);
+      case 'all-invoices': {
+        // Calculate totals for the footer & cards
+        const totalAmount = allInvoices.reduce((sum, s) => sum + s.total, 0);
+        const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
+        const subtotalAmount = totalAmount - totalTax;
 
         return (
-          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader className="p-4 sm:p-6 pb-2">
-              <CardTitle>{title}</CardTitle>
-              <CardDescription>Mostrando {currentList.length} comprobantes emitidos en el periodo.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-              <div className="overflow-x-auto w-full">
-                <Table className="border-collapse min-w-full">
-                  <TableHeader>
-                    <TableRow className="border-b border-border/40 hover:bg-transparent">
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">Fecha</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">NCF</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 min-w-[140px]">Cliente</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 hidden sm:table-cell whitespace-nowrap">RNC/Cédula</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right hidden sm:table-cell whitespace-nowrap">ITBIS</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right whitespace-nowrap">Total</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-center whitespace-nowrap">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentList.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No se encontraron facturas de este tipo.</TableCell></TableRow> :
-                      currentList.map(s => (
-                        <TableRow key={s.id} onClick={() => setSelectedSale(s)} className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/20 group">
-                          <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{format(new Date(s.created_at), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell className="py-3 text-xs font-mono text-muted-foreground tracking-tight whitespace-nowrap">{s.invoice_number}</TableCell>
-                          <TableCell className="py-3 text-xs sm:text-sm font-semibold max-w-[150px] sm:max-w-none truncate" title={s.customer?.name || 'Consumidor Final'}>
-                            {s.customer?.name || 'Consumidor Final'}
-                          </TableCell>
-                          <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap">{s.customer?.rnc || '-'}</TableCell>
-                          <TableCell className="py-3 text-right text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap">${(s.tax_total || 0).toLocaleString()}</TableCell>
-                          <TableCell className="py-3 text-right text-xs sm:text-sm font-bold whitespace-nowrap">${s.total.toLocaleString()}</TableCell>
-                          <TableCell className="py-3 text-center whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
-                                <Mail className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* KPI Summary Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              <Card className="bg-card shadow-xs border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Total Facturado</CardTitle>
+                  <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
+                </CardHeader>
+                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-black text-emerald-600">
+                    ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">{allInvoices.length} facturas emitidas</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card shadow-xs border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Total ITBIS (18%)</CardTitle>
+                  <Tag className="h-4 w-4 text-blue-600 shrink-0" />
+                </CardHeader>
+                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-black text-blue-600">
+                    ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">Impuesto liquidado</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card shadow-xs border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Subtotal Neto</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardHeader>
+                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-bold">
+                    ${subtotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">Venta neta (sin ITBIS)</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card shadow-xs border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium">Promedio / Factura</CardTitle>
+                  <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
+                </CardHeader>
+                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
+                  <div className="text-lg md:text-2xl font-bold">
+                    ${allInvoices.length > 0 ? (totalAmount / allInvoices.length).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                  </div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">Ticket promedio</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Invoices Table Card */}
+            <Card>
+              <CardHeader className="p-4 sm:p-6 pb-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-lg font-bold">Facturas y Comprobantes Emitidos</CardTitle>
+                    <CardDescription>
+                      Mostrando {allInvoices.length} {allInvoices.length === 1 ? 'comprobante emitido' : 'comprobantes emitidos'} en el periodo seleccionado.
+                    </CardDescription>
+                  </div>
+
+                  {/* Quick Pill Filter for Invoice Type */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => setFilterInvoiceType('all')}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5",
+                        filterInvoiceType === 'all'
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <span>Todos</span>
+                      <span className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px]",
+                        filterInvoiceType === 'all' ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
+                      )}>
+                        {filteredSales.length}
+                      </span>
+                    </button>
+
+                    {availableInvoiceTypeKeys.map(codeKey => {
+                      const count = invoiceTypeCounts[codeKey] || 0;
+                      const typeName = getSaleInvoiceTypeName({ invoice_type: { code: codeKey, name: '' } } as any);
+                      const isSelected = filterInvoiceType === codeKey;
+                      return (
+                        <button
+                          key={codeKey}
+                          onClick={() => setFilterInvoiceType(codeKey)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5",
+                            isSelected
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          <span>{codeKey} - {typeName}</span>
+                          <span className={cn(
+                            "px-1.5 py-0.2 rounded-full text-[10px]",
+                            isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
+                          )}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+                <div className="overflow-x-auto w-full">
+                  <Table className="border-collapse min-w-full">
+                    <TableHeader>
+                      <TableRow className="border-b border-border/40 hover:bg-transparent">
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">Fecha</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">NCF / Número</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">Tipo</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 min-w-[140px]">Cliente</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 hidden sm:table-cell whitespace-nowrap">RNC / Cédula</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-center hidden md:table-cell whitespace-nowrap">Método</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right hidden sm:table-cell whitespace-nowrap">ITBIS</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right whitespace-nowrap">Total</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-center whitespace-nowrap">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allInvoices.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
+                            No se encontraron facturas en este periodo o con los filtros seleccionados.
                           </TableCell>
                         </TableRow>
-                      ))
-                    }
-                  </TableBody>
-                  <TableFooter className="bg-transparent border-t border-border/50">
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={4} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-4">Total General</TableCell>
-                      <TableCell className="text-right text-sm font-semibold text-muted-foreground hidden sm:table-cell whitespace-nowrap">${totalTax.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-base sm:text-lg font-black text-primary whitespace-nowrap">${totalAmount.toLocaleString()}</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                      ) : (
+                        allInvoices.map(s => {
+                          const typeCode = getSaleInvoiceTypeCode(s);
+                          const typeName = getSaleInvoiceTypeName(s);
+                          const isB01 = typeCode === 'B01' || typeCode === 'E31';
+
+                          return (
+                            <TableRow 
+                              key={s.id} 
+                              onClick={() => setSelectedSale(s)} 
+                              className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/20 group"
+                            >
+                              <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                                {format(new Date(s.created_at), 'dd/MM/yyyy HH:mm')}
+                              </TableCell>
+                              <TableCell className="py-3 text-xs font-mono font-bold text-foreground tracking-tight whitespace-nowrap">
+                                {s.invoice_number || 'S/N'}
+                              </TableCell>
+                              <TableCell className="py-3 whitespace-nowrap">
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "text-[10px] font-bold px-2 py-0.5",
+                                    isB01 
+                                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" 
+                                      : "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                                  )}
+                                >
+                                  {typeCode} - {typeName}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-3 text-xs sm:text-sm font-semibold max-w-[150px] sm:max-w-none truncate" title={s.customer?.name || 'Consumidor Final'}>
+                                {s.customer?.name || 'Consumidor Final'}
+                              </TableCell>
+                              <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap font-mono">
+                                {s.customer?.rnc || '-'}
+                              </TableCell>
+                              <TableCell className="py-3 text-center hidden md:table-cell whitespace-nowrap">
+                                <Badge variant="secondary" className="text-[10px] uppercase font-bold">
+                                  {s.payment_method === 'cash' ? 'Efectivo' :
+                                   s.payment_method === 'credit' ? 'Crédito' :
+                                   s.payment_method === 'card' ? 'Tarjeta' :
+                                   s.payment_method === 'transfer' ? 'Transferencia' :
+                                   s.payment_method || 'Efectivo'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-3 text-right text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap font-medium">
+                                ${(s.tax_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </TableCell>
+                              <TableCell className="py-3 text-right text-xs sm:text-sm font-black text-foreground whitespace-nowrap">
+                                ${s.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </TableCell>
+                              <TableCell className="py-3 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
+                                    <Printer className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
+                                    <Mail className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                    <TableFooter className="bg-transparent border-t border-border/50">
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={6} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-4 hidden sm:table-cell">
+                          Total General ({allInvoices.length} Facturas)
+                        </TableCell>
+                        <TableCell colSpan={3} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-4 sm:hidden">
+                          Total General
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-bold text-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                          ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right text-base sm:text-lg font-black text-primary whitespace-nowrap">
+                          ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         );
+      }
 
       case 'closings':
         return (
@@ -2176,7 +2402,7 @@ const Reports = () => {
                 </SelectContent>
               </Select>
 
-              {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all') && (
+              {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all' || filterInvoiceType !== 'all') && (
                 <Button variant="ghost" size="icon" onClick={clearFilters} className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" title="Limpiar Filtros">
                   <XCircle className="h-4 w-4" />
                 </Button>
@@ -2251,7 +2477,7 @@ const Reports = () => {
                   </SelectContent>
                 </Select>
 
-                {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all') && (
+                {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all' || filterInvoiceType !== 'all') && (
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 px-2 text-[10px] font-bold text-destructive hover:bg-destructive/10 rounded-md">
                     Limpiar
                   </Button>

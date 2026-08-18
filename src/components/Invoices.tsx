@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { FileText, Plus, RefreshCw, CheckCircle2, Clock, XCircle, DollarSign } from 'lucide-react';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { FileText, Plus, RefreshCw, CheckCircle2, Clock, XCircle, DollarSign, Download, FileSpreadsheet } from 'lucide-react';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +12,9 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import InvoiceSearch from './invoices/InvoiceSearch';
 import InvoiceTable from './invoices/InvoiceTable';
 import InvoiceDetailsDialog from './invoices/InvoiceDetailsDialog';
@@ -177,6 +180,109 @@ const Invoices: React.FC = () => {
     });
   };
 
+  const handleExportExcel = () => {
+    if (sales.length === 0) {
+      toast({ title: 'Sin datos', description: 'No hay facturas para exportar.', variant: 'outline' });
+      return;
+    }
+    const data = sales.map(s => ({
+      Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
+      NCF: s.invoice_number || 'S/N',
+      Tipo_Comprobante: s.invoice_type?.name || s.invoice_type?.code || 'Factura',
+      Codigo_Tipo: s.invoice_type?.code || 'N/A',
+      Cliente: s.customer?.name || 'Consumidor Final',
+      RNC_Cedula: s.customer?.rnc || 'N/A',
+      Facturado_Por: s.profile?.full_name || 'Sistema',
+      Metodo_Pago: s.payment_method?.toUpperCase() || 'EFECTIVO',
+      Estado: s.payment_method === 'credit' ? (s.payment_status?.toUpperCase() || 'PENDIENTE') : (s.status?.toUpperCase() || 'COMPLETADO'),
+      ITBIS: s.tax_total || 0,
+      Total: s.total
+    }));
+
+    const totalSum = sales.reduce((sum, s) => sum + s.total, 0);
+    const totalTax = sales.reduce((sum, s) => sum + (s.tax_total || 0), 0);
+    data.push({
+      Fecha: '',
+      NCF: '',
+      Tipo_Comprobante: '',
+      Codigo_Tipo: '',
+      Cliente: '',
+      RNC_Cedula: 'TOTAL GENERAL',
+      Facturado_Por: '',
+      Metodo_Pago: '',
+      Estado: '',
+      ITBIS: totalTax,
+      Total: totalSum
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Facturas");
+    const cols = Object.keys(data[0]).map(key => ({ wch: Math.max(key.length, 18) }));
+    ws['!cols'] = cols;
+
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    XLSX.writeFile(wb, `facturas-export-${dateStr}.xlsx`);
+    toast({
+      title: 'Excel Generado',
+      description: 'El listado de facturas se ha exportado correctamente.'
+    });
+  };
+
+  const handleExportPDF = () => {
+    if (sales.length === 0) {
+      toast({ title: 'Sin datos', description: 'No hay facturas para exportar.', variant: 'outline' });
+      return;
+    }
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Header
+    doc.setFillColor(20, 20, 20);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(storeSettings?.company_name || 'Cobro App', 15, 20);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 200, 200);
+    doc.text(`Listado General de Facturas — Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 15, 28);
+
+    const head = [['Fecha', 'NCF', 'Tipo', 'Cliente', 'RNC / Cédula', 'ITBIS', 'Total']];
+    const body: string[][] = sales.map(s => [
+      format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
+      s.invoice_number || 'S/N',
+      `${s.invoice_type?.code || 'N/A'} - ${s.invoice_type?.name || 'Factura'}`,
+      s.customer?.name || 'Consumidor Final',
+      s.customer?.rnc || '-',
+      `$${(s.tax_total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `$${s.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+
+    const totalSum = sales.reduce((sum, s) => sum + s.total, 0);
+    const totalTax = sales.reduce((sum, s) => sum + (s.tax_total || 0), 0);
+    body.push(['', '', '', '', 'TOTAL GENERAL', `$${totalTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, `$${totalSum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
+
+    autoTable(doc, {
+      startY: 48,
+      head,
+      body,
+      theme: 'grid',
+      headStyles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
+      styles: { fontSize: 8, cellPadding: 2.5, textColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [248, 248, 250] },
+      margin: { left: 15, right: 15 }
+    });
+
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    doc.save(`facturas-${dateStr}.pdf`);
+    toast({
+      title: 'PDF Generado',
+      description: 'El reporte de facturas en PDF se ha descargado correctamente.'
+    });
+  };
+
   const handleClearFilters = () => {
     setFilters({
       searchTerm: '',
@@ -236,7 +342,7 @@ const Invoices: React.FC = () => {
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             size="lg"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-12 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
             onClick={() => window.location.href = '/pos'}
           >
             <Plus className="h-5 w-5" />
@@ -245,12 +351,34 @@ const Invoices: React.FC = () => {
 
           <Button 
             variant="outline" 
-            className="h-14 px-6 rounded-2xl border-border/50 bg-muted/10 font-black uppercase text-[10px] tracking-widest"
+            className="h-14 px-5 rounded-2xl border-border/50 bg-muted/10 font-black uppercase text-[10px] tracking-widest gap-2"
             onClick={handleRefresh} 
             disabled={isLoading}
           >
-            <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
             Actualizar
+          </Button>
+
+          <Button 
+            variant="outline" 
+            className="h-14 px-5 rounded-2xl border-border/50 bg-muted/10 font-black uppercase text-[10px] tracking-widest text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 gap-2"
+            onClick={handleExportExcel}
+            disabled={isLoading || sales.length === 0}
+            title="Exportar a Excel"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
+          </Button>
+
+          <Button 
+            variant="outline" 
+            className="h-14 px-5 rounded-2xl border-border/50 bg-muted/10 font-black uppercase text-[10px] tracking-widest text-red-500 hover:bg-red-500/10 hover:text-red-600 gap-2"
+            onClick={handleExportPDF}
+            disabled={isLoading || sales.length === 0}
+            title="Exportar a PDF"
+          >
+            <Download className="h-4 w-4" />
+            PDF
           </Button>
         </div>
       </div>
