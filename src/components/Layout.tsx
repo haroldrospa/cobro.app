@@ -15,6 +15,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { Badge } from '@/components/ui/badge';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useUserStore } from '@/hooks/useUserStore';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { SubscriptionWarningBanner } from '@/components/SubscriptionWarningBanner';
 
@@ -43,6 +44,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const queryClient = useQueryClient();
   const { hasKitchenDisplay, hasDelivery } = useBusinessType();
   const { settings } = useCompanySettings();
+  const { data: userStore } = useUserStore();
+  const companyName = settings?.company_name || userStore?.store_name;
 
   const isMasterAuth = sessionStorage.getItem('cobroapp_master_auth') === 'true' || location.pathname.startsWith('/admin');
 
@@ -363,12 +366,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           <div className="flex items-center gap-2 sm:gap-4">
             {profile && (
-              <div className="flex items-center gap-1.5 sm:gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="font-medium max-w-[80px] sm:max-w-[150px] truncate">{profile.full_name || profile.email}</span>
-                <span className="text-[10px] sm:text-xs text-muted-foreground">
-                  ({settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : profile.user_number})
-                </span>
+              <div className="flex items-center gap-2 text-sm">
+                {companyName && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted/60 border border-border/60 text-foreground font-bold text-xs">
+                    <Store className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="max-w-[120px] sm:max-w-[200px] truncate">{companyName}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="font-medium max-w-[80px] sm:max-w-[150px] truncate">{profile.full_name || profile.email}</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">
+                    ({settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : profile.user_number})
+                  </span>
+                </div>
               </div>
             )}
             <PlanBadge />
