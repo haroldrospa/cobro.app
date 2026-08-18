@@ -53,6 +53,15 @@ import {
   Tag,
   BadgeDollarSign,
   Percent,
+  Search,
+  Building2,
+  ShieldCheck,
+  Receipt,
+  Layers,
+  CreditCard,
+  Landmark,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -106,6 +115,7 @@ const Reports = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterUser, setFilterUser] = useState('all');
   const [filterInvoiceType, setFilterInvoiceType] = useState('all');
+  const [invoiceTableSearch, setInvoiceTableSearch] = useState('');
 
   const { data: sales = [], isFetching: isFetchingSales } = useSales({
     dateFrom: dateRange?.from,
@@ -177,6 +187,7 @@ const Reports = () => {
     setFilterCategory('all');
     setFilterUser('all');
     setFilterInvoiceType('all');
+    setInvoiceTableSearch('');
     setDateRange({
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
       to: new Date()
@@ -276,8 +287,20 @@ const Reports = () => {
         return code === targetCode || s.invoice_type_id === filterInvoiceType || (s.invoice_type?.code?.toUpperCase() === targetCode);
       });
     }
+    if (invoiceTableSearch.trim()) {
+      const q = invoiceTableSearch.toLowerCase().trim();
+      list = list.filter(s => {
+        const num = (s.invoice_number || '').toLowerCase();
+        const client = (s.customer?.name || '').toLowerCase();
+        const rnc = (s.customer?.rnc || '').toLowerCase();
+        const method = (s.payment_method || '').toLowerCase();
+        const code = getSaleInvoiceTypeCode(s).toLowerCase();
+        const typeName = getSaleInvoiceTypeName(s).toLowerCase();
+        return num.includes(q) || client.includes(q) || rnc.includes(q) || method.includes(q) || code.includes(q) || typeName.includes(q);
+      });
+    }
     return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [filteredSales, filterInvoiceType, invoiceTypes]);
+  }, [filteredSales, filterInvoiceType, invoiceTableSearch, invoiceTypes]);
 
   const invoiceTypeCounts = useMemo(() => {
     const counts: Record<string, number> = { all: filteredSales.length };
@@ -1591,144 +1614,220 @@ const Reports = () => {
         const totalAmount = allInvoices.reduce((sum, s) => sum + s.total, 0);
         const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
         const subtotalAmount = totalAmount - totalTax;
+        const avgTicket = allInvoices.length > 0 ? (totalAmount / allInvoices.length) : 0;
 
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* KPI Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <Card className="bg-card shadow-xs border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Total Facturado</CardTitle>
-                  <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-black text-emerald-600">
+            {/* KPI Summary Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Total Facturado */}
+              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Facturado</span>
+                  <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                    <BadgeDollarSign className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
                     ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">{allInvoices.length} facturas emitidas</p>
-                </CardContent>
-              </Card>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>{allInvoices.length} {allInvoices.length === 1 ? 'factura emitida' : 'facturas emitidas'}</span>
+                  </div>
+                </div>
+              </div>
 
-              <Card className="bg-card shadow-xs border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Total ITBIS (18%)</CardTitle>
-                  <Tag className="h-4 w-4 text-blue-600 shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-black text-blue-600">
+              {/* Card 2: ITBIS Liquidado */}
+              <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-cyan-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total ITBIS (18%)</span>
+                  <div className="p-2.5 rounded-xl bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                    <Tag className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-cyan-600 dark:text-cyan-400">
                     ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">Impuesto liquidado</p>
-                </CardContent>
-              </Card>
+                  <div className="mt-1 text-xs text-muted-foreground font-medium">
+                    Impuesto fiscal liquidado
+                  </div>
+                </div>
+              </div>
 
-              <Card className="bg-card shadow-xs border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Subtotal Neto</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold">
+              {/* Card 3: Subtotal Neto */}
+              <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-indigo-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Subtotal Neto</span>
+                  <div className="p-2.5 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
                     ${subtotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">Venta neta (sin ITBIS)</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card shadow-xs border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-5 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Promedio / Factura</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-5 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold">
-                    ${allInvoices.length > 0 ? (totalAmount / allInvoices.length).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                  <div className="mt-1 text-xs text-muted-foreground font-medium">
+                    Venta neta (base imponible)
                   </div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">Ticket promedio</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+
+              {/* Card 4: Ticket Promedio */}
+              <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Promedio / Factura</span>
+                  <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400">
+                    ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground font-medium">
+                    Ticket promedio por venta
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Invoices Table Card */}
-            <Card>
-              <CardHeader className="p-4 sm:p-6 pb-3">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-4 border-b border-border/40 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-lg font-bold">Facturas y Comprobantes Emitidos</CardTitle>
-                    <CardDescription>
-                      Mostrando {allInvoices.length} {allInvoices.length === 1 ? 'comprobante emitido' : 'comprobantes emitidos'} en el periodo seleccionado.
-                    </CardDescription>
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                        <FileSpreadsheet className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base sm:text-lg font-black tracking-tight">Facturas y Comprobantes Fiscales</CardTitle>
+                        <CardDescription className="text-xs">
+                          {allInvoices.length} {allInvoices.length === 1 ? 'comprobante registrado' : 'comprobantes registrados'} en este periodo
+                        </CardDescription>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Quick Pill Filter for Invoice Type */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      onClick={() => setFilterInvoiceType('all')}
-                      className={cn(
-                        "px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5",
-                        filterInvoiceType === 'all'
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <span>Todos</span>
-                      <span className={cn(
-                        "px-1.5 py-0.2 rounded-full text-[10px]",
-                        filterInvoiceType === 'all' ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
-                      )}>
-                        {filteredSales.length}
-                      </span>
-                    </button>
-
-                    {availableInvoiceTypeKeys.map(codeKey => {
-                      const count = invoiceTypeCounts[codeKey] || 0;
-                      const typeName = getSaleInvoiceTypeName({ invoice_type: { code: codeKey, name: '' } } as any);
-                      const isSelected = filterInvoiceType === codeKey;
-                      return (
-                        <button
-                          key={codeKey}
-                          onClick={() => setFilterInvoiceType(codeKey)}
-                          className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5",
-                            isSelected
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          <span>{codeKey} - {typeName}</span>
-                          <span className={cn(
-                            "px-1.5 py-0.2 rounded-full text-[10px]",
-                            isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
-                          )}>
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  {/* Search Bar */}
+                  <div className="relative w-full md:w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por NCF, cliente, RNC..."
+                      value={invoiceTableSearch}
+                      onChange={(e) => setInvoiceTableSearch(e.target.value)}
+                      className="pl-9 pr-8 h-9 text-xs rounded-xl bg-muted/40 border-border/60 focus:bg-background transition-all"
+                    />
+                    {invoiceTableSearch && (
+                      <button
+                        onClick={() => setInvoiceTableSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Filter Pills Chips */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 scrollbar-none">
+                  <button
+                    onClick={() => setFilterInvoiceType('all')}
+                    className={cn(
+                      "px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 border",
+                      filterInvoiceType === 'all'
+                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                        : "bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground border-border/50"
+                    )}
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    <span>Todos los Comprobantes</span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-black",
+                      filterInvoiceType === 'all'
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {filteredSales.length}
+                    </span>
+                  </button>
+
+                  {availableInvoiceTypeKeys.map(codeKey => {
+                    const count = invoiceTypeCounts[codeKey] || 0;
+                    const typeName = getSaleInvoiceTypeName({ invoice_type: { code: codeKey, name: '' } } as any);
+                    const isSelected = filterInvoiceType === codeKey;
+                    const isB01 = codeKey === 'B01' || codeKey === 'E31';
+                    const isB02 = codeKey === 'B02' || codeKey === 'E32';
+                    const isB04 = codeKey === 'B04' || codeKey === 'E34';
+
+                    return (
+                      <button
+                        key={codeKey}
+                        onClick={() => setFilterInvoiceType(codeKey)}
+                        className={cn(
+                          "px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 border",
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                            : "bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground border-border/50"
+                        )}
+                      >
+                        {isB01 ? <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> :
+                         isB02 ? <Receipt className="h-3.5 w-3.5 text-blue-500" /> :
+                         isB04 ? <RefreshCw className="h-3.5 w-3.5 text-amber-500" /> :
+                         <FileText className="h-3.5 w-3.5 text-purple-500" />}
+                        <span>{codeKey} - {typeName}</span>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full text-[10px] font-black",
+                          isSelected
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+
+              <CardContent className="p-0">
                 <div className="overflow-x-auto w-full">
                   <Table className="border-collapse min-w-full">
-                    <TableHeader>
-                      <TableRow className="border-b border-border/40 hover:bg-transparent">
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">Fecha</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">NCF / Número</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">Tipo</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 min-w-[140px]">Cliente</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 hidden sm:table-cell whitespace-nowrap">RNC / Cédula</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-center hidden md:table-cell whitespace-nowrap">Método</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right hidden sm:table-cell whitespace-nowrap">ITBIS</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right whitespace-nowrap">Total</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-center whitespace-nowrap">Acciones</TableHead>
+                    <TableHeader className="bg-muted/30 sticky top-0 z-10 border-b border-border/50">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap">Fecha</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 whitespace-nowrap">NCF / Número</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 whitespace-nowrap">Tipo</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 min-w-[150px]">Cliente</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 hidden sm:table-cell whitespace-nowrap">RNC / Cédula</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 text-center hidden md:table-cell whitespace-nowrap">Método</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 text-right hidden sm:table-cell whitespace-nowrap">ITBIS (18%)</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap">Total</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 text-center whitespace-nowrap">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {allInvoices.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
-                            No se encontraron facturas en este periodo o con los filtros seleccionados.
+                          <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
+                            <div className="flex flex-col items-center justify-center gap-3">
+                              <div className="p-4 rounded-2xl bg-muted/40 text-muted-foreground border border-border/50">
+                                <Receipt className="h-8 w-8 stroke-1" />
+                              </div>
+                              <p className="font-bold text-sm text-foreground">No se encontraron facturas en este periodo</p>
+                              <p className="text-xs text-muted-foreground max-w-sm">
+                                Modifica el rango de fechas en la parte superior o limpia los filtros activos para ver los comprobantes emitidos.
+                              </p>
+                              {(filterInvoiceType !== 'all' || invoiceTableSearch || filterCustomer !== 'all' || filterPaymentMethod !== 'all') && (
+                                <Button size="sm" variant="outline" onClick={clearFilters} className="mt-2 rounded-xl text-xs gap-1.5 font-bold">
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Limpiar Filtros
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1736,63 +1835,72 @@ const Reports = () => {
                           const typeCode = getSaleInvoiceTypeCode(s);
                           const typeName = getSaleInvoiceTypeName(s);
                           const isB01 = typeCode === 'B01' || typeCode === 'E31';
+                          const isB02 = typeCode === 'B02' || typeCode === 'E32';
+                          const isB04 = typeCode === 'B04' || typeCode === 'E34';
 
                           return (
                             <TableRow 
                               key={s.id} 
                               onClick={() => setSelectedSale(s)} 
-                              className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/20 group"
+                              className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/30 group"
                             >
-                              <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                                {format(new Date(s.created_at), 'dd/MM/yyyy HH:mm')}
+                              <TableCell className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap font-medium">
+                                {format(new Date(s.created_at), 'dd/MM/yy HH:mm', { locale: es })}
                               </TableCell>
-                              <TableCell className="py-3 text-xs font-mono font-bold text-foreground tracking-tight whitespace-nowrap">
-                                {s.invoice_number || 'S/N'}
+                              <TableCell className="py-3 px-3 whitespace-nowrap">
+                                <span className="font-mono text-xs font-bold text-foreground bg-muted/60 px-2 py-1 rounded-md border border-border/40 tracking-tight">
+                                  {s.invoice_number || 'S/N'}
+                                </span>
                               </TableCell>
-                              <TableCell className="py-3 whitespace-nowrap">
+                              <TableCell className="py-3 px-3 whitespace-nowrap">
                                 <Badge 
                                   variant="outline" 
                                   className={cn(
-                                    "text-[10px] font-bold px-2 py-0.5",
-                                    isB01 
-                                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" 
-                                      : "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                                    "text-[10px] font-bold px-2.5 py-0.5 rounded-md",
+                                    isB01 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" :
+                                    isB02 ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" :
+                                    isB04 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" :
+                                    "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
                                   )}
                                 >
                                   {typeCode} - {typeName}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-3 text-xs sm:text-sm font-semibold max-w-[150px] sm:max-w-none truncate" title={s.customer?.name || 'Consumidor Final'}>
+                              <TableCell className="py-3 px-3 text-xs font-semibold max-w-[160px] sm:max-w-none truncate text-foreground" title={s.customer?.name || 'Consumidor Final'}>
                                 {s.customer?.name || 'Consumidor Final'}
                               </TableCell>
-                              <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap font-mono">
-                                {s.customer?.rnc || '-'}
+                              <TableCell className="py-3 px-3 text-xs font-mono text-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                                {s.customer?.rnc ? (
+                                  <span className="bg-muted/40 px-1.5 py-0.5 rounded border border-border/30">{s.customer.rnc}</span>
+                                ) : (
+                                  '-'
+                                )}
                               </TableCell>
-                              <TableCell className="py-3 text-center hidden md:table-cell whitespace-nowrap">
-                                <Badge variant="secondary" className="text-[10px] uppercase font-bold">
-                                  {s.payment_method === 'cash' ? 'Efectivo' :
-                                   s.payment_method === 'credit' ? 'Crédito' :
-                                   s.payment_method === 'card' ? 'Tarjeta' :
-                                   s.payment_method === 'transfer' ? 'Transferencia' :
+                              <TableCell className="py-3 px-3 text-center hidden md:table-cell whitespace-nowrap">
+                                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                  {s.payment_method === 'cash' ? '💵 Efectivo' :
+                                   s.payment_method === 'credit' ? '⏳ Crédito' :
+                                   s.payment_method === 'card' ? '💳 Tarjeta' :
+                                   s.payment_method === 'transfer' ? '🏦 Transfer.' :
                                    s.payment_method || 'Efectivo'}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-3 text-right text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap font-medium">
+                              <TableCell className="py-3 px-3 text-right text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap font-medium">
                                 ${(s.tax_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </TableCell>
-                              <TableCell className="py-3 text-right text-xs sm:text-sm font-black text-foreground whitespace-nowrap">
+                              <TableCell className="py-3 px-4 text-right text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap font-mono">
                                 ${s.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </TableCell>
-                              <TableCell className="py-3 text-center whitespace-nowrap">
-                                <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
-                                    <Printer className="h-4 w-4" />
+                              <TableCell className="py-3 px-3 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1 opacity-75 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
+                                    <Printer className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
-                                    <Mail className="h-4 w-4" />
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
+                                    <Mail className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
-                                    <Download className="h-4 w-4" />
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
+                                    <Download className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -1801,18 +1909,18 @@ const Reports = () => {
                         })
                       )}
                     </TableBody>
-                    <TableFooter className="bg-transparent border-t border-border/50">
+                    <TableFooter className="bg-muted/40 border-t-2 border-border/70">
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={6} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-4 hidden sm:table-cell">
-                          Total General ({allInvoices.length} Facturas)
+                        <TableCell colSpan={6} className="text-right text-xs font-black uppercase tracking-wider text-muted-foreground py-4 px-4 hidden sm:table-cell">
+                          TOTAL GENERAL ({allInvoices.length} {allInvoices.length === 1 ? 'Factura' : 'Facturas'})
                         </TableCell>
-                        <TableCell colSpan={3} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-4 sm:hidden">
-                          Total General
+                        <TableCell colSpan={3} className="text-right text-xs font-black uppercase tracking-wider text-muted-foreground py-4 px-4 sm:hidden">
+                          TOTAL GENERAL
                         </TableCell>
-                        <TableCell className="text-right text-sm font-bold text-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                        <TableCell className="text-right text-sm font-black text-cyan-600 dark:text-cyan-400 hidden sm:table-cell whitespace-nowrap px-3 font-mono">
                           ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </TableCell>
-                        <TableCell className="text-right text-base sm:text-lg font-black text-primary whitespace-nowrap">
+                        <TableCell className="text-right text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap px-4 font-mono">
                           ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </TableCell>
                         <TableCell></TableCell>
@@ -2332,8 +2440,8 @@ const Reports = () => {
             </div>
 
             {/* Compact Action Buttons */}
-            <div className="flex items-center gap-1 shrink-0 bg-muted/20 p-1 rounded-xl border border-border/40">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10 rounded-lg" onClick={() => generatePDF()} title="Descargar PDF">
+            <div className="flex items-center gap-1 shrink-0 bg-card/60 p-1 rounded-xl border border-border/60">
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:bg-rose-500/10 rounded-lg" onClick={() => generatePDF()} title="Descargar PDF">
                 <FileText className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-600 hover:bg-emerald-500/10 rounded-lg" onClick={() => generateExcel()} title="Descargar Excel">
@@ -2485,17 +2593,35 @@ const Reports = () => {
               </div>
 
               {/* Export Action Buttons */}
-              <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50">
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg gap-1.5 transition-all" onClick={() => generatePDF()} title="Descargar PDF">
-                  <FileText className="h-3.5 w-3.5 text-red-500 shrink-0" />
+              <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-md p-1 rounded-xl border border-border/70 shadow-xs">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs font-bold text-rose-500 bg-rose-500/10 border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-lg gap-1.5 transition-all shadow-xs" 
+                  onClick={() => generatePDF()} 
+                  title="Descargar Reporte PDF"
+                >
+                  <FileText className="h-3.5 w-3.5 shrink-0" />
                   <span>PDF</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg gap-1.5 transition-all" onClick={() => generateExcel()} title="Descargar Excel">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs font-bold text-emerald-600 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-600 hover:text-white rounded-lg gap-1.5 transition-all shadow-xs" 
+                  onClick={() => generateExcel()} 
+                  title="Descargar Reporte Excel"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
                   <span>Excel</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg gap-1.5 transition-all" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
-                  <Mail className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs font-bold text-blue-600 bg-blue-500/10 border-blue-500/20 hover:bg-blue-600 hover:text-white rounded-lg gap-1.5 transition-all shadow-xs" 
+                  onClick={() => setIsEmailDialogOpen(true)} 
+                  title="Enviar Reporte por Email"
+                >
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
                   <span>Email</span>
                 </Button>
               </div>
