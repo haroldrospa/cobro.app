@@ -25,7 +25,8 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
 
     // Fetch sales based on search term (only if term is long enough to avoid fetching everything)
     const { data: sales = [], isLoading } = useSales({
-        searchTerm: searchTerm.length > 2 ? searchTerm : undefined
+        searchTerm: searchTerm.length > 2 ? searchTerm : undefined,
+        includeItems: true
     });
 
     const { data: invoiceTypes = [] } = useInvoiceTypes();

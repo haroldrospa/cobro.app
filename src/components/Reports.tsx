@@ -65,6 +65,7 @@ import {
   ChevronLeft,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -86,6 +87,7 @@ import * as XLSX from 'xlsx';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
+import { supabase } from '@/integrations/supabase/client';
 import appLogo from '@/assets/cobro-logo.png';
 
 // --- CONFIGURATION ---
@@ -148,10 +150,11 @@ const Reports = () => {
     setCurrentPage(1);
   }, [filterInvoiceType, invoiceTableSearch, filterCustomer, filterPaymentMethod, dateRange]);
 
-  const { data: sales = [], isFetching: isFetchingSales } = useSales({
+  const needsItems = activeReport === 'products-sold' || activeReport === 'profit';
+  const { data: sales = [], isFetching: isFetchingSales, isLoading: isLoadingSales } = useSales({
     dateFrom: dateRange?.from,
     dateTo: dateRange?.to,
-    includeItems: true
+    includeItems: needsItems
   });
   const { data: products = [] } = useProducts();
   const { data: customers = [] } = useCustomers();
@@ -974,7 +977,27 @@ const Reports = () => {
   };
 
   // --- SINGLE INVOICE ACTIONS ---
-  const generateInvoicePDF = (sale: Sale, returnBlob = false): any => {
+  // --- SINGLE INVOICE ACTIONS ---
+  const generateInvoicePDF = async (sale: Sale, returnBlob = false): Promise<any> => {
+    let items = sale.sale_items || [];
+    if (items.length === 0 && sale.id) {
+      try {
+        const { data } = await supabase
+          .from('sale_items')
+          .select(`
+            id,
+            quantity,
+            unit_price,
+            total,
+            product:products(name)
+          `)
+          .eq('sale_id', sale.id);
+        if (data) items = data as any;
+      } catch (e) {
+        console.error('Error fetching items for invoice PDF:', e);
+      }
+    }
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
 
@@ -1000,12 +1023,12 @@ const Reports = () => {
 
     // Items Table
     const head = [['Cant.', 'Descripción', 'Precio', 'Total']];
-    const body = sale.sale_items?.map(item => [
+    const body = items.map(item => [
       item.quantity.toString(),
       item.product?.name || 'Producto',
       `$${item.unit_price.toLocaleString()}`,
       `$${item.total.toLocaleString()}`
-    ]) || [];
+    ]);
 
     autoTable(doc, {
       startY: 75,
@@ -1044,8 +1067,8 @@ const Reports = () => {
     }
   };
 
-  const handlePrintInvoice = (sale: Sale) => {
-    const pdfBlob = generateInvoicePDF(sale, true);
+  const handlePrintInvoice = async (sale: Sale) => {
+    const pdfBlob = await generateInvoicePDF(sale, true);
     const pdfUrl = URL.createObjectURL(pdfBlob);
     const printWindow = window.open(pdfUrl);
     if (printWindow) {
@@ -1472,15 +1495,22 @@ const Reports = () => {
                     <DollarSign className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
-                    ${totalSalesSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-emerald-500/20 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>{filteredSales.length} transacciones</span>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                      ${totalSalesSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>{filteredSales.length} transacciones</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Ticket Promedio */}
@@ -1491,14 +1521,21 @@ const Reports = () => {
                     <ShoppingCart className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-blue-600 dark:text-blue-400 font-mono">
-                    ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-blue-500/20 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground font-medium">
-                    Promedio por cliente
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-blue-600 dark:text-blue-400 font-mono">
+                      ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Promedio por cliente
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Crédito Pendiente */}
@@ -1890,15 +1927,22 @@ const Reports = () => {
                     <BadgeDollarSign className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
-                    ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-emerald-500/20 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>{allInvoices.length} {allInvoices.length === 1 ? 'factura emitida' : 'facturas emitidas'}</span>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                      ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>{allInvoices.length} {allInvoices.length === 1 ? 'factura emitida' : 'facturas emitidas'}</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Card 2: ITBIS Liquidado */}
@@ -1909,14 +1953,21 @@ const Reports = () => {
                     <Tag className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-cyan-600 dark:text-cyan-400 font-mono">
-                    ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-cyan-500/20 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground font-medium">
-                    Impuesto fiscal liquidado
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-cyan-600 dark:text-cyan-400 font-mono">
+                      ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Impuesto fiscal liquidado
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Card 3: Subtotal Neto */}
@@ -1927,14 +1978,21 @@ const Reports = () => {
                     <FileText className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
-                    ${subtotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-indigo-500/20 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground font-medium">
-                    Venta neta (base imponible)
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${subtotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Venta neta (base imponible)
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Card 4: Ticket Promedio */}
@@ -1945,14 +2003,21 @@ const Reports = () => {
                     <TrendingUp className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400 font-mono">
-                    ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-amber-500/20 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/50 rounded-md animate-pulse" />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground font-medium">
-                    Ticket promedio por venta
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400 font-mono">
+                      ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Ticket promedio por venta
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -1968,7 +2033,11 @@ const Reports = () => {
                       <div>
                         <CardTitle className="text-base sm:text-lg font-black tracking-tight">Facturas y Comprobantes Fiscales</CardTitle>
                         <CardDescription className="text-xs">
-                          {allInvoices.length} {allInvoices.length === 1 ? 'comprobante registrado' : 'comprobantes registrados'} en este periodo
+                          {isFetchingSales && allInvoices.length === 0 ? (
+                            'Consultando comprobantes del período...'
+                          ) : (
+                            `${allInvoices.length} ${allInvoices.length === 1 ? 'comprobante registrado' : 'comprobantes registrados'} en este periodo`
+                          )}
                         </CardDescription>
                       </div>
                     </div>
@@ -1981,68 +2050,50 @@ const Reports = () => {
                       placeholder="Buscar por NCF, cliente, RNC..."
                       value={invoiceTableSearch}
                       onChange={(e) => setInvoiceTableSearch(e.target.value)}
-                      className="pl-9 pr-8 h-9 text-xs rounded-xl bg-muted/40 border-border/60 focus:bg-background transition-all"
+                      className="pl-9 h-9 text-xs rounded-xl bg-muted/40 border-border/60 focus:bg-background transition-colors"
                     />
                     {invoiceTableSearch && (
                       <button
                         onClick={() => setInvoiceTableSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
                       >
-                        <XCircle className="h-4 w-4" />
+                        <XCircle className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Filter Pills Chips */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 scrollbar-none">
-                  <button
-                    onClick={() => setFilterInvoiceType('all')}
-                    className={cn(
-                      "px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 border",
-                      filterInvoiceType === 'all'
-                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                        : "bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground border-border/50"
-                    )}
-                  >
-                    <Layers className="h-3.5 w-3.5" />
-                    <span>Todos los Comprobantes</span>
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-full text-[10px] font-black",
-                      filterInvoiceType === 'all'
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    )}>
-                      {filteredSales.length}
-                    </span>
-                  </button>
-
-                  {availableInvoiceTypeKeys.map(codeKey => {
-                    const count = invoiceTypeCounts[codeKey] || 0;
-                    const typeName = getSaleInvoiceTypeName({ invoice_type: { code: codeKey, name: '' } } as any);
-                    const isSelected = filterInvoiceType === codeKey;
-                    const isB01 = codeKey === 'B01' || codeKey === 'E31';
-                    const isB02 = codeKey === 'B02' || codeKey === 'E32';
-                    const isB04 = codeKey === 'B04' || codeKey === 'E34';
+                {/* Sub-tabs: All, B01, B02, B04, etc. */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+                  {[
+                    { id: 'all', label: 'Todos los Comprobantes', icon: Layers },
+                    { id: 'b01', label: 'B01 - Crédito Fiscal', icon: CheckCircle2 },
+                    { id: 'b02', label: 'B02 - Consumo Final', icon: Receipt },
+                    { id: 'b04', label: 'B04 - Nota de Crédito', icon: RotateCcw },
+                    { id: 'b14', label: 'B14 - Régimen Especial', icon: Sparkles },
+                    { id: 'b15', label: 'B15 - Gubernamental', icon: Landmark }
+                  ].map(tab => {
+                    const Icon = tab.icon;
+                    const isSelected = filterInvoiceType === tab.id;
+                    const count = tab.id === 'all' 
+                      ? sales.length 
+                      : sales.filter(s => getSaleInvoiceTypeCode(s).toLowerCase() === tab.id || (tab.id === 'b01' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e31') || (tab.id === 'b02' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e32') || (tab.id === 'b04' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e34')).length;
 
                     return (
                       <button
-                        key={codeKey}
-                        onClick={() => setFilterInvoiceType(codeKey)}
+                        key={tab.id}
+                        onClick={() => setFilterInvoiceType(tab.id)}
                         className={cn(
-                          "px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 border",
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0",
                           isSelected
                             ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                            : "bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground border-border/50"
+                            : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                         )}
                       >
-                        {isB01 ? <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> :
-                         isB02 ? <Receipt className="h-3.5 w-3.5 text-blue-500" /> :
-                         isB04 ? <RefreshCw className="h-3.5 w-3.5 text-amber-500" /> :
-                         <FileText className="h-3.5 w-3.5 text-purple-500" />}
-                        <span>{codeKey} - {typeName}</span>
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{tab.label}</span>
                         <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px] font-black",
+                          "ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold",
                           isSelected
                             ? "bg-primary-foreground/20 text-primary-foreground"
                             : "bg-muted text-muted-foreground"
@@ -2055,7 +2106,12 @@ const Reports = () => {
                 </div>
               </CardHeader>
 
-              <CardContent className="p-0">
+              <CardContent className="p-0 relative">
+                {isFetchingSales && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-primary/20 overflow-hidden z-20">
+                    <div className="h-full bg-primary animate-pulse w-full" />
+                  </div>
+                )}
                 <div className="overflow-x-auto w-full">
                   <Table className="border-collapse min-w-full">
                     <TableHeader className="bg-muted/30 sticky top-0 z-10 border-b border-border/50">
@@ -2072,7 +2128,21 @@ const Reports = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {allInvoices.length === 0 ? (
+                      {isFetchingSales && allInvoices.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-20 text-muted-foreground">
+                            <div className="flex flex-col items-center justify-center gap-3">
+                              <div className="p-4 rounded-2xl bg-primary/10 text-primary border border-primary/30">
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                              </div>
+                              <p className="font-bold text-sm text-foreground">Consultando comprobantes fiscales...</p>
+                              <p className="text-xs text-muted-foreground max-w-sm">
+                                Cargando las facturas del período seleccionado desde la base de datos.
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : allInvoices.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
                             <div className="flex flex-col items-center justify-center gap-3">
@@ -2942,10 +3012,15 @@ const Reports = () => {
                 <h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground">
                   {REPORT_TYPES.find(r => r.id === activeReport)?.label}
                 </h1>
-                {isFetchingSales && (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full animate-pulse border border-primary/20">
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    Actualizando
+                {isFetchingSales ? (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/15 px-3 py-1 rounded-full border border-primary/30 shadow-xs animate-pulse">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                    <span>Actualizando datos...</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground bg-muted/40 px-2.5 py-0.5 rounded-full border border-border/40">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                    <span>Al día</span>
                   </span>
                 )}
               </div>

@@ -95,7 +95,7 @@ export const useSales = (filters: SalesFilters = {}) => {
         invoice_type:invoice_types(name, code)
       `;
 
-      if (filters.includeItems !== false) {
+      if (filters.includeItems === true) {
         selectFields += `,
           sale_items:sale_items(
             id,
