@@ -1421,128 +1421,299 @@ const Reports = () => {
   // --- RENDER CONTENT AREA ---
   const renderContent = () => {
     switch (activeReport) {
-      case 'dashboard':
+      case 'dashboard': {
+        const totalSalesSum = filteredSales.reduce((a, b) => a + b.total, 0);
+        const avgTicket = filteredSales.length > 0 ? (totalSalesSum / filteredSales.length) : 0;
+        const totalReceivables = receivables.reduce((a, c) => a + (c.credit_used || 0), 0);
+        const maxDaySale = dailySalesData.reduce((max, d) => (d.total > (max?.total || 0) ? d : max), dailySalesData[0] || null);
+        const avgDaily = dailySalesData.length > 0 ? (totalSalesSum / dailySalesData.length) : 0;
+
         return (
           <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Ventas Totales</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold">${filteredSales.reduce((a, b) => a + b.total, 0).toLocaleString()}</div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">{filteredSales.length} transacciones</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Ticket Promedio</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold">
-                    ${filteredSales.length > 0 ? (filteredSales.reduce((a, b) => a + b.total, 0) / filteredSales.length).toFixed(2) : 0}
+            {/* KPI Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Ventas Totales */}
+              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ventas Totales</span>
+                  <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                    <DollarSign className="h-5 w-5" />
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Crédito Pendiente</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold text-orange-600">${receivables.reduce((a, c) => a + (c.credit_used || 0), 0).toLocaleString()}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Utilidad Estimada</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold text-green-600">${profitData.profit.toLocaleString()}</div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">{profitData.margin.toFixed(1)}% Margen</p>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                    ${totalSalesSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>{filteredSales.length} transacciones</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ticket Promedio */}
+              <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ticket Promedio</span>
+                  <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
+                    <ShoppingCart className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-blue-600 dark:text-blue-400 font-mono">
+                    ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground font-medium">
+                    Promedio por cliente
+                  </div>
+                </div>
+              </div>
+
+              {/* Crédito Pendiente */}
+              <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-orange-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Crédito Pendiente</span>
+                  <div className="p-2.5 rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/20 group-hover:scale-110 transition-transform">
+                    <Users className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-orange-600 dark:text-orange-400 font-mono">
+                    ${totalReceivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground font-medium">
+                    Cuentas por cobrar activas
+                  </div>
+                </div>
+              </div>
+
+              {/* Utilidad Estimada */}
+              <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 via-card to-card p-5 shadow-xs hover:shadow-md hover:border-purple-500/50 transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Utilidad Estimada</span>
+                  <div className="p-2.5 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-purple-600 dark:text-purple-400 font-mono">
+                    ${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground font-medium">
+                    {profitData.margin.toFixed(1)}% Margen de ganancia
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <Card>
-              <CardHeader><CardTitle>Tendencia de Ventas (Últimos Días)</CardTitle></CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailySalesData}>
-                    <defs>
-                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <RechartsTooltip
-                      formatter={(value) => `$${Number(value).toLocaleString()}`}
-                      contentStyle={{ backgroundColor: 'white', color: 'black', border: '1px solid #ccc', borderRadius: '4px' }}
-                      itemStyle={{ color: 'black' }}
-                      labelStyle={{ color: '#666' }}
-                    />
-                    <Area type="monotone" dataKey="total" stroke="#8884d8" fillOpacity={1} fill="url(#colorSales)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+            {/* High-End Modern Chart Card */}
+            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      <TrendingUp className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base sm:text-lg font-black tracking-tight">Tendencia de Ventas</CardTitle>
+                      <CardDescription className="text-xs">
+                        Evolución de ingresos y volumen diario en el periodo
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  {/* Header Metrics Badges */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {maxDaySale && (
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-mono">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>Pico: {maxDaySale.date} (${maxDaySale.total >= 1000 ? `${(maxDaySale.total / 1000).toFixed(1)}k` : maxDaySale.total.toFixed(0)})</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-muted/40 border border-border/50 text-muted-foreground text-xs font-bold font-mono">
+                      <span>Promedio: ${(avgDaily >= 1000 ? `${(avgDaily / 1000).toFixed(1)}k` : avgDaily.toFixed(0))}/día</span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 pt-6">
+                <div className="h-[320px] sm:h-[360px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={dailySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="dashboardSalesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
+                          <stop offset="60%" stopColor="#10b981" stopOpacity={0.10} />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.00} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickLine={false}
+                        axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        interval={dailySalesData.length > 20 ? 3 : dailySalesData.length > 10 ? 1 : 0}
+                        dy={8}
+                      />
+                      <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
+                        dx={-4}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3.5 rounded-2xl shadow-2xl space-y-2 min-w-[180px]">
+                                <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-1.5">
+                                  <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                                    <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                                    {d.date}
+                                  </span>
+                                  <Badge variant="secondary" className="text-[10px] font-black px-1.5 py-0.2">
+                                    {d.count} {d.count === 1 ? 'venta' : 'ventas'}
+                                  </Badge>
+                                </div>
+                                <div className="pt-0.5">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Facturado</p>
+                                  <p className="text-xl font-black text-emerald-500 font-mono">
+                                    ${Number(d.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                                {d.count > 0 && (
+                                  <p className="text-[10px] text-muted-foreground border-t border-border/30 pt-1.5 flex items-center justify-between">
+                                    <span>Ticket promedio:</span>
+                                    <span className="font-bold text-foreground font-mono">
+                                      ${(d.total / d.count).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="total" 
+                        stroke="#10b981" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#dashboardSalesGradient)" 
+                        activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 3, fill: '#ffffff' }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
         );
+      }
 
       case 'sales-daily':
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ventas Diarias</CardTitle>
-                <CardDescription>Resumen de ventas agrupadas por día.</CardDescription>
+            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                    <CalendarDays className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-black tracking-tight">Ventas Diarias</CardTitle>
+                    <CardDescription className="text-xs">Resumen de ventas agrupadas y ordenadas por día</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <div className="h-[300px] w-full mb-6">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailySalesData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <RechartsTooltip
-                        cursor={{ fill: 'transparent' }}
-                        formatter={(value) => `$${Number(value).toLocaleString()}`}
-                        contentStyle={{ backgroundColor: 'white', color: 'black', border: '1px solid #ccc', borderRadius: '4px' }}
-                        itemStyle={{ color: 'black' }}
-                        labelStyle={{ color: '#666' }}
+                    <BarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickLine={false}
+                        axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        interval={dailySalesData.length > 20 ? 3 : dailySalesData.length > 10 ? 1 : 0}
+                        dy={8}
                       />
-                      <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
+                      <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
+                        dx={-4}
+                      />
+                      <RechartsTooltip
+                        cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3.5 rounded-2xl shadow-2xl space-y-1.5 min-w-[180px]">
+                                <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5 border-b border-border/40 pb-1">
+                                  <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                                  {d.date}
+                                </p>
+                                <div>
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Vendido</p>
+                                  <p className="text-lg font-black text-emerald-500 font-mono">
+                                    ${Number(d.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                                  Transacciones: <span className="font-bold text-foreground font-mono">{d.count}</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} barSize={28} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="overflow-x-auto w-full">
+                <div className="overflow-x-auto w-full rounded-xl border border-border/50">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/30">
                       <TableRow>
-                        <TableHead className="whitespace-nowrap">Fecha</TableHead>
-                        <TableHead className="text-center whitespace-nowrap">Transacciones</TableHead>
-                        <TableHead className="text-right whitespace-nowrap">Total Vendido</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap px-4 py-3">Fecha</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-center whitespace-nowrap px-3 py-3">Transacciones</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-right whitespace-nowrap px-4 py-3">Total Vendido</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dailySalesData.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center py-6">No hay datos en este rango.</TableCell></TableRow> :
+                      {dailySalesData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-xs">
+                            No hay datos en este rango de fechas.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
                         dailySalesData.map((d, i) => (
                           <TableRow 
                             key={i} 
-                            className="cursor-pointer hover:bg-muted/60 transition-colors"
+                            className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/30"
                             onClick={() => setSelectedDailySalesDate(d.key)}
                           >
-                            <TableCell className="font-medium whitespace-nowrap">{d.date}</TableCell>
-                            <TableCell className="text-center">{d.count}</TableCell>
-                            <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">${d.total.toLocaleString()}</TableCell>
+                            <TableCell className="font-semibold text-xs whitespace-nowrap px-4 py-3">{d.date}</TableCell>
+                            <TableCell className="text-center text-xs whitespace-nowrap px-3 py-3 font-mono">
+                              <Badge variant="secondary" className="font-bold text-[10px]">{d.count}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-black font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap px-4 py-3 text-xs sm:text-sm">
+                              ${d.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </TableCell>
                           </TableRow>
-                        ))}
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1554,25 +1725,79 @@ const Reports = () => {
       case 'sales-hourly':
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card>
-              <CardHeader className="p-4 sm:p-6 pb-2">
-                <CardTitle>Ventas por Hora</CardTitle>
-                <CardDescription>Identifica tus horas pico de mayor venta.</CardDescription>
+            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-black tracking-tight">Ventas por Hora</CardTitle>
+                    <CardDescription className="text-xs">Identifica las horas pico de mayor afluencia y venta</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-                <div className="h-[250px] sm:h-[300px] w-full mb-6">
+              <CardContent className="p-4 sm:p-6">
+                <div className="h-[260px] sm:h-[320px] w-full mb-6">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={hourlySalesData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="label" interval={2} />
-                      <YAxis />
-                      <RechartsTooltip
-                        formatter={(value) => `$${Number(value).toLocaleString()}`}
-                        contentStyle={{ backgroundColor: 'white', color: 'black', border: '1px solid #ccc', borderRadius: '4px' }}
-                        itemStyle={{ color: 'black' }}
-                        labelStyle={{ color: '#666' }}
+                    <AreaChart data={hourlySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="hourlySalesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.45} />
+                          <stop offset="60%" stopColor="#6366f1" stopOpacity={0.10} />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.00} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                      <XAxis 
+                        dataKey="label" 
+                        interval={2} 
+                        tickLine={false}
+                        axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        dy={8}
                       />
-                      <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
+                      <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
+                        dx={-4}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3.5 rounded-2xl shadow-2xl space-y-1.5 min-w-[180px]">
+                                <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5 border-b border-border/40 pb-1">
+                                  <Clock className="h-3.5 w-3.5 text-indigo-500" />
+                                  {d.label}
+                                </p>
+                                <div>
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Total en esta hora</p>
+                                  <p className="text-lg font-black text-indigo-400 font-mono">
+                                    ${Number(d.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                                  Transacciones: <span className="font-bold text-foreground font-mono">{d.count}</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="total" 
+                        stroke="#6366f1" 
+                        strokeWidth={2.5}
+                        fill="url(#hourlySalesGradient)" 
+                        fillOpacity={1} 
+                        activeDot={{ r: 6, stroke: '#6366f1', strokeWidth: 3, fill: '#ffffff' }}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -2100,25 +2325,32 @@ const Reports = () => {
 
       case 'profit':
         return (
-          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader>
-              <CardTitle>Análisis de Rentabilidad</CardTitle>
-              <CardDescription>Calculado base Ventas Netas - Costo de Productos vendidos.</CardDescription>
+          <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-base sm:text-lg font-black tracking-tight">Análisis de Rentabilidad</CardTitle>
+                  <CardDescription className="text-xs">Calculado en base a Ventas Netas - Costo de Productos vendidos</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="text-center p-4 border rounded-lg">
-                  <p className="text-muted-foreground mb-2">Ingresos por Ventas</p>
-                  <p className="text-2xl font-bold text-primary">${profitData.totalRevenue.toLocaleString()}</p>
+            <CardContent className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="p-5 border border-border/60 rounded-2xl bg-muted/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Ingresos por Ventas</p>
+                  <p className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">${profitData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <p className="text-muted-foreground mb-2">Costo de Mercancía</p>
-                  <p className="text-2xl font-bold text-red-600">${profitData.totalCost.toLocaleString()}</p>
+                <div className="p-5 border border-border/60 rounded-2xl bg-muted/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Costo de Mercancía</p>
+                  <p className="text-2xl font-black text-rose-500 font-mono">${profitData.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="text-center p-4 border rounded-lg bg-accent/10">
-                  <p className="text-muted-foreground mb-2">Utilidad Bruta</p>
-                  <p className="text-3xl font-bold text-green-600">${profitData.profit.toLocaleString()}</p>
-                  <p className="text-sm font-semibold text-green-700 mt-1">{profitData.margin.toFixed(2)}% Margen</p>
+                <div className="p-5 border border-emerald-500/30 rounded-2xl bg-emerald-500/10">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Utilidad Bruta</p>
+                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-xs font-bold text-emerald-600/80 mt-1">{profitData.margin.toFixed(2)}% Margen de ganancia</p>
                 </div>
               </div>
               <div className="h-[300px] w-full">
@@ -2127,15 +2359,29 @@ const Reports = () => {
                     { name: 'Ingresos', value: profitData.totalRevenue },
                     { name: 'Costos', value: profitData.totalCost },
                     { name: 'Utilidad', value: profitData.profit }
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
-                    <Bar dataKey="value" fill="hsl(var(--primary))">
+                  ]} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                    <XAxis dataKey="name" tickLine={false} axisLine={{ stroke: 'currentColor', opacity: 0.15 }} tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }} dy={8} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }} tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`} dx={-4} />
+                    <RechartsTooltip
+                      cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const d = payload[0];
+                          return (
+                            <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3 rounded-xl shadow-2xl space-y-1 min-w-[150px]">
+                              <p className="text-xs font-bold text-foreground">{d.payload.name}</p>
+                              <p className="text-base font-black font-mono text-emerald-500">${Number(d.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={44}>
                       <Cell fill="#3b82f6" />
-                      <Cell fill="#ef4444" />
-                      <Cell fill="#22c55e" />
+                      <Cell fill="#f43f5e" />
+                      <Cell fill="#10b981" />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
