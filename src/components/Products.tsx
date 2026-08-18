@@ -41,6 +41,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
@@ -300,6 +301,31 @@ const Products: FC = () => {
       toast({
         title: "Error al actualizar",
         description: "No se pudieron guardar los cambios en el producto.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleQuickCategoryChange = async (product: Product, newCategoryId: string | null) => {
+    if (product.category_id === newCategoryId || (!product.category_id && !newCategoryId)) {
+      return;
+    }
+    try {
+      await updateProduct.mutateAsync({
+        ...product,
+        category_id: newCategoryId,
+        reason: 'Cambio rápido de categoría'
+      });
+      const selectedCat = categories.find(c => c.id === newCategoryId);
+      toast({
+        title: "Categoría actualizada",
+        description: `"${product.name}" asignado a "${selectedCat?.name || 'Sin categoría'}".`,
+      });
+    } catch (err: any) {
+      console.error("Error cambiando categoría:", err);
+      toast({
+        title: "Error al actualizar",
+        description: err?.message || "No se pudo cambiar la categoría.",
         variant: "destructive"
       });
     }
@@ -1755,8 +1781,51 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 <div className="flex-1 min-w-0 space-y-2 w-full text-center sm:text-left">
                   <div className="flex flex-col gap-2">
                     <h3 className="font-bold text-base sm:text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2" title={product.name}>{product.name}</h3>
-                    <div className="flex flex-wrap justify-center sm:justify-start gap-1.5">
-                      <Badge variant="secondary" className="bg-secondary/60 hover:bg-secondary/80 text-[10px] px-2 py-0.5 font-medium transition-colors">{product.category?.name || 'Sin categoría'}</Badge>
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 items-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="group/cat inline-flex items-center gap-1 bg-secondary/70 hover:bg-secondary text-foreground text-[10px] px-2.5 py-0.5 rounded-full font-medium transition-all border border-border/50 hover:border-primary/50 cursor-pointer shadow-xs focus:outline-none"
+                            title="Haz clic para cambiar categoría rápidamente"
+                          >
+                            <Tag className="h-2.5 w-2.5 opacity-60 text-primary shrink-0" />
+                            <span className="truncate max-w-[130px] sm:max-w-[180px]">
+                              {product.category?.name || 'Sin categoría'}
+                            </span>
+                            <ChevronDown className="h-2.5 w-2.5 opacity-50 group-hover/cat:opacity-100 transition-opacity shrink-0" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto bg-popover z-50">
+                          <DropdownMenuItem
+                            onClick={() => handleQuickCategoryChange(product, null)}
+                            className={`flex items-center justify-between text-xs cursor-pointer py-2 ${!product.category_id ? 'bg-accent font-bold text-primary' : ''}`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                              Sin categoría
+                            </span>
+                            {!product.category_id && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                          </DropdownMenuItem>
+                          {categories.length > 0 && <DropdownMenuSeparator />}
+                          {categories.map((cat) => {
+                            const isSelected = product.category_id === cat.id;
+                            return (
+                              <DropdownMenuItem
+                                key={cat.id}
+                                onClick={() => handleQuickCategoryChange(product, cat.id)}
+                                className={`flex items-center justify-between text-xs cursor-pointer py-2 ${isSelected ? 'bg-accent font-bold text-primary' : ''}`}
+                              >
+                                <span className="flex items-center gap-2 truncate">
+                                  <span className={`h-2 w-2 rounded-full shrink-0 ${isSelected ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
+                                  <span className="truncate">{cat.name}</span>
+                                </span>
+                                {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       {product.track_inventory === false ? (
                         <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 text-[10px] px-2 py-0.5 font-medium">Sin stock</Badge>
                       ) : ((product.stock || 0) <= (product.min_stock || 0)) && (
