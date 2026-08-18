@@ -1590,17 +1590,19 @@ const Reports = () => {
             </div>
 
             {/* High-End Modern Chart Card */}
-            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
-              <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                      <TrendingUp className="h-5 w-5" />
+            <Card className="rounded-2xl border border-border/60 shadow-2xs overflow-hidden bg-card/80 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-4 border-b border-border/40">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground border border-border/40">
+                      <TrendingUp className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base sm:text-lg font-black tracking-tight">Tendencia de Ventas</CardTitle>
-                      <CardDescription className="text-xs">
-                        Evolución de ingresos y volumen diario en el periodo
+                      <CardTitle className="text-base sm:text-lg font-black tracking-tight text-foreground">
+                        Tendencia de Ventas
+                      </CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground font-medium mt-0.5">
+                        Evolución de ingresos y volumen diario en el período
                       </CardDescription>
                     </div>
                   </div>
@@ -1608,13 +1610,19 @@ const Reports = () => {
                   {/* Header Metrics Badges */}
                   <div className="flex items-center gap-2 flex-wrap">
                     {maxDaySale && (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-mono">
-                        <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-                        <span>Pico: {maxDaySale.date} (${maxDaySale.total >= 1000 ? `${(maxDaySale.total / 1000).toFixed(1)}k` : maxDaySale.total.toFixed(0)})</span>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/50 text-xs font-medium">
+                        <span className="text-[11px] text-muted-foreground font-semibold">Pico:</span>
+                        <span className="font-mono font-black text-foreground">{maxDaySale.date}</span>
+                        <span className="font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[11px]">
+                          ${maxDaySale.total >= 1000 ? `${(maxDaySale.total / 1000).toFixed(1)}k` : maxDaySale.total.toFixed(0)}
+                        </span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-muted/40 border border-border/50 text-muted-foreground text-xs font-bold font-mono">
-                      <span>Promedio: ${(avgDaily >= 1000 ? `${(avgDaily / 1000).toFixed(1)}k` : avgDaily.toFixed(0))}/día</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/50 text-xs font-medium">
+                      <span className="text-[11px] text-muted-foreground font-semibold">Promedio:</span>
+                      <span className="font-mono font-black text-foreground">
+                        ${(avgDaily >= 1000 ? `${(avgDaily / 1000).toFixed(1)}k` : avgDaily.toFixed(0))}/día
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1826,9 +1834,9 @@ const Reports = () => {
                     <AreaChart data={hourlySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                       <defs>
                         <linearGradient id="hourlySalesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.45} />
-                          <stop offset="60%" stopColor="#6366f1" stopOpacity={0.10} />
-                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.00} />
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
+                          <stop offset="60%" stopColor="#10b981" stopOpacity={0.10} />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.00} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
