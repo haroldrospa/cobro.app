@@ -7,11 +7,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, Usb, Bluetooth, Loader2, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Printer, Usb, Bluetooth, Loader2, Zap, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { thermalPrinter } from '@/utils/thermalPrinter';
 import { cn } from '@/lib/utils';
 import { isElectron, getSystemPrinters, SystemPrinter } from '@/utils/electronPrinter';
+import {
+  isAndroidNative,
+  getPairedPrinters,
+  selectPrinter as selectAndroidPrinter,
+  printTestPage,
+  openCashDrawer,
+  getPrinterStatus,
+  type PairedPrinter,
+} from '@/utils/bluetoothPrinter';
 
 interface ThermalPrinterDialogProps {
   open: boolean;
@@ -32,12 +41,22 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
   const [showUsbList, setShowUsbList] = useState(false);
   const [showBluetoothList, setShowBluetoothList] = useState(false);
   const isElectronApp = isElectron();
+  const isAndroid = isAndroidNative();
+
+  // ── Android: impresoras Bluetooth ya emparejadas en el sistema ──────────
+  const [androidPrinters, setAndroidPrinters] = useState<PairedPrinter[]>([]);
+  const [loadingAndroidPrinters, setLoadingAndroidPrinters] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [testingPrint, setTestingPrint] = useState(false);
 
   useEffect(() => {
     if (open && isElectronApp) {
       loadSystemPrinters();
     }
-  }, [open, isElectronApp]);
+    if (open && isAndroid) {
+      loadAndroidPrinters();
+    }
+  }, [open, isElectronApp, isAndroid]);
 
   const loadSystemPrinters = async () => {
     setLoadingPrinters(true);
@@ -48,6 +67,75 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
       console.error('Failed to load printers:', error);
     } finally {
       setLoadingPrinters(false);
+    }
+  };
+
+  const loadAndroidPrinters = async () => {
+    setLoadingAndroidPrinters(true);
+    try {
+      const [printers, status] = await Promise.all([getPairedPrinters(), getPrinterStatus()]);
+      setAndroidPrinters(printers);
+      setConnectedAddress(status.address || null);
+    } catch (error) {
+      console.error('Failed to load paired Bluetooth printers:', error);
+      toast({
+        title: "No se pudo leer el Bluetooth",
+        description: "Verifica que el Bluetooth esté activado y que la app tenga permiso.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingAndroidPrinters(false);
+    }
+  };
+
+  const handleSelectAndroidPrinter = async (printer: PairedPrinter) => {
+    setConnecting(true);
+    setActiveMethod('bluetooth');
+    try {
+      await selectAndroidPrinter(printer.address);
+      setConnectedAddress(printer.address);
+      onConnect(printer.name);
+      toast({
+        title: "Impresora conectada",
+        description: `Conectado a ${printer.name}. Puedes hacer una impresión de prueba.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "No se pudo conectar",
+        description: error.message || "Revisa que la impresora esté encendida y emparejada.",
+        variant: "destructive",
+      });
+    } finally {
+      setConnecting(false);
+      setActiveMethod(null);
+    }
+  };
+
+  const handleTestPrint = async () => {
+    setTestingPrint(true);
+    try {
+      await printTestPage();
+      toast({ title: "Página de prueba enviada", description: "Revisa la impresora." });
+    } catch (error: any) {
+      toast({
+        title: "Error en la prueba",
+        description: error.message || "No se pudo imprimir la página de prueba.",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingPrint(false);
+    }
+  };
+
+  const handleOpenDrawer = async () => {
+    try {
+      await openCashDrawer();
+    } catch (error: any) {
+      toast({
+        title: "No se pudo abrir la gaveta",
+        description: error.message || "Verifica la conexión con la impresora.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -116,7 +204,16 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
       return;
     }
 
-    // On Web/Mobile, trigger the native Bluetooth selection
+    // Android nativo: la lista de emparejados ya se carga en loadAndroidPrinters();
+    // este botón solo abre/cierra esa lista y la refresca.
+    if (isAndroid) {
+      setShowBluetoothList(!showBluetoothList);
+      if (!showBluetoothList) loadAndroidPrinters();
+      return;
+    }
+
+    // Web (navegador de escritorio): Web Bluetooth solo sirve para
+    // emparejar/nombrar el dispositivo, no envía datos de impresión real.
     setConnecting(true);
     setActiveMethod('bluetooth');
 
@@ -183,58 +280,64 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
             Seleccionar Impresora
           </DialogTitle>
           <DialogDescription className="text-muted-foreground/80">
-            {isElectronApp ? 'Selecciona tu impresora de la lista' : 'Elige un método para conectar'}
+            {isElectronApp
+              ? 'Selecciona tu impresora de la lista'
+              : isAndroid
+                ? 'Elige una impresora Bluetooth ya emparejada'
+                : 'Elige un método para conectar'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-6 space-y-4 relative z-10">
-          {/* USB Option */}
-          <div className="space-y-2">
-            <button
-              onClick={handleConnectUSB}
-              disabled={connecting}
-              className={cn(
-                "w-full flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-card/80 transition-all text-left",
-                showUsbList ? "border-emerald-500/50 ring-2 ring-emerald-500/20 bg-emerald-500/5" : "border-border"
-              )}
-            >
-              <div className={cn(
-                "w-12 h-12 rounded-lg flex items-center justify-center shrink-0",
-                showUsbList ? "bg-emerald-500/20 text-emerald-600" : "bg-emerald-500/10 text-emerald-500"
-              )}>
-                {activeMethod === 'usb' ? <Loader2 className="h-6 w-6 animate-spin" /> : <Usb className="h-6 w-6" />}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold flex items-center gap-2">
-                  🔌 Impresoras USB
+          {/* USB Option — no aplica en Android (no hay soporte USB-host nativo) */}
+          {!isAndroid && (
+            <div className="space-y-2">
+              <button
+                onClick={handleConnectUSB}
+                disabled={connecting}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-card/80 transition-all text-left",
+                  showUsbList ? "border-emerald-500/50 ring-2 ring-emerald-500/20 bg-emerald-500/5" : "border-border"
+                )}
+              >
+                <div className={cn(
+                  "w-12 h-12 rounded-lg flex items-center justify-center shrink-0",
+                  showUsbList ? "bg-emerald-500/20 text-emerald-600" : "bg-emerald-500/10 text-emerald-500"
+                )}>
+                  {activeMethod === 'usb' ? <Loader2 className="h-6 w-6 animate-spin" /> : <Usb className="h-6 w-6" />}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {isElectronApp ?
-                    (systemPrinters.length > 0 ? `${systemPrinters.length} detectadas` : 'Ver instaladas') :
-                    'Conexión directa por cable OTG'}
-                </p>
-              </div>
-              {showUsbList && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-            </button>
+                <div className="flex-1">
+                  <div className="font-semibold flex items-center gap-2">
+                    🔌 Impresoras USB
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isElectronApp ?
+                      (systemPrinters.length > 0 ? `${systemPrinters.length} detectadas` : 'Ver instaladas') :
+                      'Conexión directa por cable OTG'}
+                  </p>
+                </div>
+                {showUsbList && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+              </button>
 
-            {isElectronApp && showUsbList && (
-              <div className="ml-4 p-3 bg-muted/30 rounded-xl border border-emerald-500/20 max-h-[200px] overflow-y-auto space-y-2">
-                {systemPrinters.length > 0 ? (
-                  systemPrinters.map((printer) => (
-                    <button
-                      key={printer.name}
-                      onClick={() => handleSystemPrinterSelect(printer)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:bg-emerald-50 transition-colors text-left text-sm"
-                    >
-                      <Printer className="h-4 w-4 text-emerald-600" />
-                      <span className="flex-1 truncate">{printer.displayName || printer.name}</span>
-                      {printer.status === 0 && <span className="text-[10px] text-emerald-600">En línea</span>}
-                    </button>
-                  ))
-                ) : <p className="text-xs text-center p-2">No se encontraron impresoras</p>}
-              </div>
-            )}
-          </div>
+              {isElectronApp && showUsbList && (
+                <div className="ml-4 p-3 bg-muted/30 rounded-xl border border-emerald-500/20 max-h-[200px] overflow-y-auto space-y-2">
+                  {systemPrinters.length > 0 ? (
+                    systemPrinters.map((printer) => (
+                      <button
+                        key={printer.name}
+                        onClick={() => handleSystemPrinterSelect(printer)}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:bg-emerald-50 transition-colors text-left text-sm"
+                      >
+                        <Printer className="h-4 w-4 text-emerald-600" />
+                        <span className="flex-1 truncate">{printer.displayName || printer.name}</span>
+                        {printer.status === 0 && <span className="text-[10px] text-emerald-600">En línea</span>}
+                      </button>
+                    ))
+                  ) : <p className="text-xs text-center p-2">No se encontraron impresoras</p>}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Bluetooth Option */}
           <div className="space-y-2">
@@ -255,7 +358,11 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
               <div className="flex-1">
                 <div className="font-semibold">📡 Impresoras Bluetooth</div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {isElectronApp ? 'Dispositivos vinculados' : 'Escanea y empareja dispositivos'}
+                  {isElectronApp
+                    ? 'Dispositivos vinculados'
+                    : isAndroid
+                      ? 'Ya emparejadas en este dispositivo'
+                      : 'Escanea y empareja dispositivos'}
                 </p>
               </div>
               {showBluetoothList && <CheckCircle2 className="h-5 w-5 text-blue-500" />}
@@ -263,7 +370,75 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
 
             {showBluetoothList && (
               <div className="ml-4 p-4 bg-muted/30 rounded-xl border border-blue-500/20 space-y-3">
-                {!isElectronApp && (
+                {isAndroid && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-muted-foreground">Impresoras emparejadas por Bluetooth</p>
+                      <button
+                        onClick={loadAndroidPrinters}
+                        disabled={loadingAndroidPrinters}
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label="Actualizar lista"
+                      >
+                        <RefreshCw className={cn("h-3.5 w-3.5", loadingAndroidPrinters && "animate-spin")} />
+                      </button>
+                    </div>
+
+                    {loadingAndroidPrinters ? (
+                      <div className="flex justify-center p-3"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+                    ) : androidPrinters.length > 0 ? (
+                      <div className="grid gap-2 max-h-[200px] overflow-y-auto pr-1">
+                        {androidPrinters.map((printer) => {
+                          const isConnected = printer.address === connectedAddress;
+                          return (
+                            <button
+                              key={printer.address}
+                              onClick={() => handleSelectAndroidPrinter(printer)}
+                              disabled={connecting}
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-lg border bg-background hover:bg-blue-50 transition-colors text-left text-sm",
+                                isConnected && "border-blue-500/50 ring-1 ring-blue-500/30"
+                              )}
+                            >
+                              <Printer className="h-4 w-4 text-blue-600" />
+                              <span className="flex-1 truncate">{printer.name}</span>
+                              {isConnected && <CheckCircle2 className="h-4 w-4 text-blue-500" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-center p-2">
+                        No hay impresoras emparejadas. Vincúlala primero en Ajustes del sistema → Bluetooth de Android.
+                      </p>
+                    )}
+
+                    {connectedAddress && (
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-8 text-xs"
+                          onClick={handleTestPrint}
+                          disabled={testingPrint}
+                        >
+                          {testingPrint ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Zap className="mr-1.5 h-3 w-3" />}
+                          Imprimir prueba
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-8 text-xs"
+                          onClick={handleOpenDrawer}
+                        >
+                          Abrir gaveta
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {!isElectronApp && !isAndroid && (
                   <Button
                     onClick={handleConnectBluetooth}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -291,9 +466,11 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
                   </div>
                 )}
 
-                <p className="text-[10px] text-center text-muted-foreground italic">
-                  Asegúrate de que la impresora esté encendida y visible.
-                </p>
+                {!isElectronApp && (
+                  <p className="text-[10px] text-center text-muted-foreground italic">
+                    Asegúrate de que la impresora esté encendida y visible.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -303,7 +480,9 @@ export const ThermalPrinterDialog: React.FC<ThermalPrinterDialogProps> = ({
               <div className="rounded-lg bg-orange-500/5 border border-orange-500/10 p-3 flex gap-3">
                 <AlertCircle className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
                 <p className="text-[10px] text-muted-foreground">
-                  Para móviles, vincula primero la impresora en los ajustes del sistema de Android/iOS.
+                  {isAndroid
+                    ? 'Si no ves tu impresora, vincúlala primero en los ajustes de Bluetooth de Android.'
+                    : 'Para móviles, vincula primero la impresora en los ajustes del sistema de Android/iOS.'}
                 </p>
               </div>
             </div>

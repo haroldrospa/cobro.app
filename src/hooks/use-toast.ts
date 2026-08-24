@@ -6,7 +6,13 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+// Antes en 1000000ms (~16 min) — un valor que claramente quedó de un
+// placeholder y nunca se ajustó. Con eso, el toast cerrado (visualmente
+// ya invisible tras animar su salida) seguía vivo en el árbol de React
+// por minutos. Ahora coincide con el `duration` de ToastProvider (ver
+// toaster.tsx) más un margen chico para que la animación de salida
+// termine antes de desmontarlo.
+const TOAST_REMOVE_DELAY = 4300
 
 type ToasterToast = ToastProps & {
   id: string

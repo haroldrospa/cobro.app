@@ -1,7 +1,7 @@
 // Utility to generate clean, black & white invoice HTML matching the selected Paper Size (80mm, 58mm, A4, Carta)
 import appLogo from '@/assets/cobro-logo.png';
 
-interface InvoiceData {
+export interface InvoiceData {
   invoiceNumber: string;
   invoicePrefix: string;
   date: Date;
@@ -38,7 +38,7 @@ interface InvoiceData {
   qrCodeUrl?: string;
 }
 
-interface CompanyData {
+export interface CompanyData {
   name: string;
   logo?: string;
   logoSize?: number;
@@ -65,7 +65,10 @@ export const generateCleanInvoiceHTML = (
   const isFullPage = isA4 || isCarta;
 
   const logoHeight = companyData.logoSize || (isFullPage ? 80 : 60);
-  const baseFontSize = companyData.fontSize || (isFullPage ? 13 : is58mm ? 9.5 : 12);
+  // 58mm sube de 9.5 a 11 — a los ~168 DPI reales de una térmica de 58mm
+  // (384 dots de ancho), el tamaño anterior quedaba demasiado chico para
+  // sobrevivir la conversión a blanco/negro sin volverse ilegible.
+  const baseFontSize = companyData.fontSize || (isFullPage ? 13 : is58mm ? 11 : 12);
 
   // Helper to format currency with thousands separators (e.g. 1,529.66)
   const fmt = (num: number | undefined): string => {
@@ -352,10 +355,13 @@ export const generateCleanInvoiceHTML = (
   // THERMAL TICKET TEMPLATE (80MM & 58MM)
   // ==========================================
   const ticketWidth = is58mm ? '58mm' : '80mm';
-  const sizeH1 = is58mm ? 13 : Math.round(baseFontSize * 1.35);
+  // Igual que baseFontSize arriba: subidos para la resolución real de una
+  // térmica de 58mm (~168 DPI) — el texto más chico es el que peor
+  // sobrevive la conversión a blanco/negro.
+  const sizeH1 = is58mm ? 15 : Math.round(baseFontSize * 1.35);
   const sizeBase = baseFontSize;
-  const sizeSmall = is58mm ? 8 : Math.max(9, Math.round(baseFontSize * 0.88));
-  const sizeXSmall = is58mm ? 7.5 : Math.max(8, Math.round(baseFontSize * 0.78));
+  const sizeSmall = is58mm ? 9.5 : Math.max(9, Math.round(baseFontSize * 0.88));
+  const sizeXSmall = is58mm ? 9 : Math.max(8, Math.round(baseFontSize * 0.78));
   const containerPadding = is58mm ? '2px 2mm' : '4px 5mm';
 
   return `
@@ -424,10 +430,10 @@ export const generateCleanInvoiceHTML = (
     <div style="text-align: center; margin-bottom: 6px;">
       ${companyData.logo ? `
         <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 4px;">
-          <img src="${companyData.logo}" alt="Logo" style="max-height: ${Math.min(logoHeight, is58mm ? 45 : 60)}px; max-width: 85%; object-fit: contain; margin: 0 auto; display: block;" />
+          <img src="${companyData.logo}" alt="Logo" style="max-height: ${Math.min(logoHeight, is58mm ? 65 : 85)}px; max-width: 85%; object-fit: contain; margin: 0 auto; display: block;" />
         </div>
       ` : `
-        <div style="display: inline-block; background-color: #ffffff; color: #000000; border: 2px solid #000000; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: ${is58mm ? '10px' : '12px'}; text-transform: uppercase;">
+        <div style="display: inline-block; background-color: #ffffff; color: #000000; border: 2px solid #000000; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: ${is58mm ? '13px' : '12px'}; text-transform: uppercase;">
           ${companyInitials}
         </div>
       `}
@@ -454,28 +460,28 @@ export const generateCleanInvoiceHTML = (
     <!-- Card 1: Comprobante & Info Card -->
     <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 5px 6px; margin-bottom: 6px;">
       <div style="background-color: #ffffff; color: #000000; border: 2px solid #000000; border-radius: 4px; padding: 3px 4px; text-align: center; margin-bottom: 5px;">
-        <div style="font-size: ${is58mm ? '7.5px' : '8.5px'}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000000;">
+        <div style="font-size: ${is58mm ? '10px' : '8.5px'}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000000;">
           ${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'COMPROBANTE DE VENTA (NCF)'}
         </div>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: ${is58mm ? '12px' : '15px'}; font-weight: 900; letter-spacing: 1px; color: #000000; margin-top: 1px; word-break: break-all;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: ${is58mm ? '15px' : '15px'}; font-weight: 900; letter-spacing: 1px; color: #000000; margin-top: 1px; word-break: break-all;">
           ${displayNCF}
         </div>
       </div>
-      
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: ${is58mm ? '8px' : '9px'}; border-top: 1.5px solid #000000; padding-top: 4px;">
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: ${is58mm ? '10.5px' : '9px'}; border-top: 1.5px solid #000000; padding-top: 4px;">
         <div>
-          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: ${is58mm ? '7.5px' : '8.5px'};">FACTURA / TIPO</div>
+          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: ${is58mm ? '10px' : '8.5px'};">FACTURA / TIPO</div>
           <div style="font-weight: 900; color: #000000; word-break: break-word;">${fullInvoiceCode}</div>
-          <div style="font-weight: 800; color: #000000; font-size: ${is58mm ? '7.5px' : '8.5px'};">(${customerTypeLabel})</div>
+          <div style="font-weight: 800; color: #000000; font-size: ${is58mm ? '10px' : '8.5px'};">(${customerTypeLabel})</div>
         </div>
         <div style="text-align: right;">
-          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: ${is58mm ? '7.5px' : '8.5px'};">FECHA Y HORA</div>
+          <div style="color: #000000; font-weight: 900; text-transform: uppercase; font-size: ${is58mm ? '10px' : '8.5px'};">FECHA Y HORA</div>
           <div style="font-weight: 900; color: #000000;">${formattedTimeStr}</div>
-          <div style="font-weight: 800; color: #000000; font-size: ${is58mm ? '7.5px' : '8.5px'};">(${formattedDateStr})</div>
+          <div style="font-weight: 800; color: #000000; font-size: ${is58mm ? '10px' : '8.5px'};">(${formattedDateStr})</div>
         </div>
       </div>
 
-      <div style="border-top: 1.5px solid #000000; margin-top: 4px; padding-top: 4px; font-size: ${is58mm ? '8px' : '9px'}; line-height: 1.35;">
+      <div style="border-top: 1.5px solid #000000; margin-top: 4px; padding-top: 4px; font-size: ${is58mm ? '10.5px' : '9px'}; line-height: 1.35;">
         <div><span style="font-weight: 900; text-transform: uppercase;">CLIENTE:</span> <strong style="font-weight: 900;">${(invoiceData.customerName || 'CONSUMIDOR FINAL').toUpperCase()}</strong></div>
         ${invoiceData.customerRnc ? `<div><span style="font-weight: 900; text-transform: uppercase;">RNC CLIENTE:</span> <strong style="font-weight: 900;">${invoiceData.customerRnc}</strong></div>` : ''}
         ${invoiceData.cashierName ? `<div><span style="font-weight: 900; text-transform: uppercase;">CAJERO:</span> <strong style="font-weight: 900;">${invoiceData.cashierName.toUpperCase()}</strong></div>` : ''}
@@ -484,7 +490,7 @@ export const generateCleanInvoiceHTML = (
 
     <!-- Card 2: Items Table -->
     <div style="margin-bottom: 6px;">
-      <div style="background-color: #ffffff; color: #000000; padding: 4px 6px; border: 2px solid #000000; border-top-left-radius: 6px; border-top-right-radius: 6px; display: flex; justify-content: space-between; font-weight: 900; font-size: ${is58mm ? '8px' : '9px'}; text-transform: uppercase;">
+      <div style="background-color: #ffffff; color: #000000; padding: 4px 6px; border: 2px solid #000000; border-top-left-radius: 6px; border-top-right-radius: 6px; display: flex; justify-content: space-between; font-weight: 900; font-size: ${is58mm ? '10.5px' : '9px'}; text-transform: uppercase;">
         <span>CANT / DESCRIPCIÓN</span>
         <span>TOTAL</span>
       </div>
@@ -534,7 +540,7 @@ export const generateCleanInvoiceHTML = (
     <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 5px 6px; margin-bottom: 6px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
         <span style="font-weight: 900; font-size: ${sizeXSmall}px; text-transform: uppercase;">MÉTODO DE PAGO:</span>
-        <span style="background-color: #ffffff; border: 1.5px solid #000000; font-weight: 900; font-size: ${is58mm ? '8.5px' : '9.5px'}; padding: 1px 4px; border-radius: 4px; text-transform: uppercase;">
+        <span style="background-color: #ffffff; border: 1.5px solid #000000; font-weight: 900; font-size: ${is58mm ? '11px' : '9.5px'}; padding: 1px 4px; border-radius: 4px; text-transform: uppercase;">
           ${pMethod}
         </span>
       </div>
@@ -572,7 +578,7 @@ export const generateCleanInvoiceHTML = (
       ${invoiceData.isElectronic && invoiceData.qrCodeUrl ? `
         <div style="text-align: center; margin-bottom: 6px;">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceData.qrCodeUrl)}" alt="Código QR Fiscal" style="width: ${is58mm ? '75px' : '90px'}; height: ${is58mm ? '75px' : '90px'}; display: block; margin: 0 auto;" />
-          <div style="font-size: 8px; font-weight: 900; margin-top: 3px; text-transform: uppercase;">Comprobante Autorizado por la DGII</div>
+          <div style="font-size: ${is58mm ? '10px' : '8px'}; font-weight: 900; margin-top: 3px; text-transform: uppercase;">Comprobante Autorizado por la DGII</div>
         </div>
       ` : ''}
       

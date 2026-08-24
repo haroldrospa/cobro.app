@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,8 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import PrintOptionsDialog from './PrintOptionsDialog';
+// Lazy: arrastra jsPDF + html2canvas, y solo hace falta al elegir imprimir
+const PrintOptionsDialog = lazy(() => import('./PrintOptionsDialog'));
 import InvoicePreviewDialog from '../invoices/InvoicePreviewDialog';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -551,11 +552,13 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
             </Dialog>
 
             {selectedActionSale && (
-                <PrintOptionsDialog
-                    isOpen={true}
-                    onClose={() => setSelectedActionSale(null)}
-                    saleData={selectedActionSale}
-                />
+                <Suspense fallback={null}>
+                    <PrintOptionsDialog
+                        isOpen={true}
+                        onClose={() => setSelectedActionSale(null)}
+                        saleData={selectedActionSale}
+                    />
+                </Suspense>
             )}
 
             {selectedSaleForPreview && (

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { shopperSupabase } from "@/integrations/supabase/shopperClient";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRedirect from "./components/RoleRedirect";
+import RootRoute from "./components/RootRoute";
 import { ScrollUnlocker } from "./components/ScrollUnlocker";
 import { MasterDataProvider } from "@/providers/MasterDataProvider";
 import { initializePaddle } from "@paddle/paddle-js";
@@ -37,13 +38,16 @@ const SuperAdmin = lazy(() => import("./pages/admin/SuperAdmin"));
 const StoreSuspended = lazy(() => import("./pages/StoreSuspended"));
 const Delivery = lazy(() => import("./components/Delivery"));
 const Kitchen = lazy(() => import("./components/KitchenDisplay"));
-const Landing = lazy(() => import("./pages/Landing"));
+// Landing ya no se importa acá directo — ver RootRoute, que revisa la sesión
+// antes de decidir si hace falta cargarla (evita bajar la landing completa
+// de marketing para usuarios que ya tienen sesión iniciada).
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 
 // Legal Pages
 const Terms = lazy(() => import("./pages/legal/Terms"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Refunds = lazy(() => import("./pages/legal/Refunds"));
+const AccountDeletion = lazy(() => import("./pages/legal/AccountDeletion"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -184,7 +188,7 @@ const App = () => {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public routes - no auth required */}
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<RootRoute />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/store-suspended" element={<StoreSuspended />} />
               <Route path="/tienda/:slug" element={<Tienda />} />
@@ -192,6 +196,7 @@ const App = () => {
               <Route path="/terminos" element={<Terms />} />
               <Route path="/privacidad" element={<Privacy />} />
               <Route path="/reembolsos" element={<Refunds />} />
+              <Route path="/eliminar-cuenta" element={<AccountDeletion />} />
 
               {/* Full-screen protected routes - NO Layout header */}
               <Route

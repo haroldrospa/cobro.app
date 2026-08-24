@@ -6,7 +6,7 @@
   "browserslist": [
     "> 0.2%",
     "last 4 versions",
-    "Android >= 6",
+    "Android >= 7",
     "Chrome >= 49",
     "Safari >= 10",
     "not dead"
@@ -73,7 +73,6 @@
     "@tanstack/react-query": "^5.56.2",
     "@types/canvas-confetti": "^1.9.0",
     "@vitejs/plugin-legacy": "^5.4.3",
-    "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
@@ -84,11 +83,8 @@
     "dotenv": "^17.4.2",
     "driver.js": "^1.4.0",
     "embla-carousel-react": "^8.3.0",
-    "escpos-buffer": "^4.1.0",
     "framer-motion": "^12.24.0",
     "heic2any": "^0.0.4",
-    "html5-qrcode": "^2.3.8",
-    "iconv-lite": "^0.7.3",
     "input-otp": "^1.2.4",
     "jsbarcode": "^3.11.5",
     "jspdf": "^3.0.4",

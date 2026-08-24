@@ -41,10 +41,11 @@
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
-    <!-- API 33+ granular media permissions -->
+    <!-- API 33+ granular media permission — solo imágenes: la app deja
+         subir fotos de productos y comprobantes de pago, pero no usa
+         video ni lee archivos de audio del dispositivo (los sonidos de
+         notificación se generan en tiempo real con Web Audio API). -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <!-- ═══════════════════════════════════════════════ -->
     <!--           NOTIFICACIONES Y DISPOSITIVO          -->
@@ -108,7 +109,7 @@
         <activity
             android:name=".BarcodeScannerActivity"
             android:label="Escáner"
-            android:theme="@style/AppTheme.NoActionBar"
+            android:theme="@style/AppTheme.ScannerFloating"
             android:exported="false"
             android:screenOrientation="portrait" />
 
@@ -129,7 +130,7 @@
             android:value="cobro_general" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@drawable/ic_stat_notify" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/colorPrimary" />

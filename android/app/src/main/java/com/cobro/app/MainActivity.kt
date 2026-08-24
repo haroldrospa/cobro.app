@@ -76,6 +76,17 @@ class MainActivity : BridgeActivity() {
 
         super.onCreate(savedInstanceState)
 
+        // El theme de arranque (AppTheme.NoActionBarLaunch, requerido por la
+        // Splash Screen API) no desactivaba la action bar nativa como sí
+        // hacen AppTheme/AppTheme.NoActionBar — Android pintaba una barra de
+        // título nativa arriba de todo con el label de esta Activity
+        // (title_activity_main = "CobroApp POS" en strings.xml), encima de
+        // la propia UI de la webapp. El fix real está en el theme
+        // (android:windowNoTitle/windowActionBar en styles.xml); esto es
+        // solo respaldo por si el dispositivo igual expone una action bar.
+        supportActionBar?.hide()
+        actionBar?.hide()
+
         // Configurar WebView para máxima compatibilidad con CobroApp
         configureWebView()
 

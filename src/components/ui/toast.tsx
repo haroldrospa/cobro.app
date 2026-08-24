@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[calc(100%-2.5rem)] flex-col gap-2 sm:left-auto sm:translate-x-0 sm:right-5 sm:max-w-[320px]",
+      "fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[calc(100%-2rem)] flex-col gap-2 sm:left-auto sm:translate-x-0 sm:right-4 sm:max-w-[280px]",
       className
     )}
     {...props}
@@ -22,23 +22,28 @@ const ToastViewport = React.forwardRef<
 ))
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
+// Diseño minimalista: chip chico y sólido en vez de la tarjeta grande con
+// blur/glow/blob que había antes — sigue el mismo pedido que el resto del
+// rediseño (profesional, simple, futurista) y de paso evita backdrop-blur
+// en un elemento que aparece en cada pantalla (ver la nota de rendimiento
+// sobre backdrop-blur en MobileProductSearch.tsx).
 const toastVariants = cva(
   [
-    "group pointer-events-auto relative flex w-full items-center gap-4 overflow-hidden",
-    "rounded-[2rem] border shadow-2xl backdrop-blur-xl transition-all duration-500",
-    "px-6 py-4",
+    "group pointer-events-auto relative flex w-full items-center gap-2.5 overflow-hidden",
+    "rounded-xl border shadow-lg shadow-black/30 transition-all duration-300",
+    "px-3 py-2.5",
     "data-[swipe=cancel]:translate-x-0",
     "data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]",
     "data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full",
-    "data-[state=open]:slide-in-from-bottom-5 data-[state=open]:zoom-in-95",
+    "data-[state=open]:slide-in-from-bottom-3 data-[state=open]:fade-in-0",
   ].join(" "),
   {
     variants: {
       variant: {
-        default: "bg-zinc-950/80 border-white/5 text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.6)]",
-        destructive: "bg-zinc-950/80 border-white/5 text-red-100 shadow-[0_20px_50px_rgba(0,0,0,0.6)]",
+        default: "bg-zinc-950 border-white/[0.06] text-zinc-100",
+        destructive: "bg-zinc-950 border-white/[0.06] text-red-100",
       },
     },
     defaultVariants: {
@@ -103,7 +108,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-base font-black tracking-tight text-zinc-100", className)}
+    className={cn("text-[13px] font-semibold tracking-tight text-zinc-100", className)}
     {...props}
   />
 ))
@@ -115,7 +120,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-xs font-semibold text-zinc-400 tracking-wide leading-relaxed mt-1", className)}
+    className={cn("text-[11px] text-zinc-500 leading-snug mt-0.5", className)}
     {...props}
   />
 ))

@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import android.webkit.JavascriptInterface
 import androidx.core.content.FileProvider
 import com.cobro.app.printer.BluetoothPrinterManager
@@ -17,11 +18,12 @@ import java.io.File
 /**
  * JavaScriptBridge — Puente nativo expuesto como window.Android en el frontend web.
  *
+ * La impresión Bluetooth ESC/POS y el escaneo de códigos viven en plugins
+ * Capacitor dedicados ("BluetoothPrinter" y "BarcodeScanner" — ver
+ * plugins/BluetoothPrinterPlugin.kt y plugins/BarcodeScannerPlugin.kt), no
+ * aquí, para no tener dos caminos duplicados hacia la misma funcionalidad.
+ *
  * Ejemplo de uso desde CobroApp JavaScript:
- *   window.Android.printTicket(JSON.stringify(ticket))
- *   window.Android.scanBarcode()
- *   window.Android.openCashDrawer()
- *   window.Android.getPrinterStatus()
  *   window.Android.openPosSettings()
  *   window.Android.vibrate(200)
  *   window.Android.getDeviceInfo()
@@ -36,151 +38,17 @@ class JavaScriptBridge(
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  IMPRESIÓN BLUETOOTH ESC/POS
+    //  DIAGNÓSTICO TEMPORAL — DEBUG DE RENDIMIENTO
     // ═══════════════════════════════════════════════════════════
-
-    /**
-     * Imprime un ticket ESC/POS directamente en la impresora Bluetooth.
-     *
-     * @param ticketJson JSON con la estructura del ticket:
-     * {
-     *   "businessName": "Mi Negocio",
-     *   "address": "Calle Principal #1",
-     *   "rnc": "123456789",
-     *   "phone": "809-000-0000",
-     *   "customer": "Juan Pérez",
-     *   "cashier": "Admin",
-     *   "invoiceNumber": "001-001-0000001",
-     *   "date": "2024-01-15",
-     *   "time": "10:30 AM",
-     *   "items": [{ "name": "Producto", "qty": 2, "price": 100.00, "discount": 0 }],
-     *   "subtotal": 200.00,
-     *   "tax": 30.00,
-     *   "discount": 0,
-     *   "total": 230.00,
-     *   "paymentMethod": "Efectivo",
-     *   "barcode": "0000000001",
-     *   "qrData": "https://cobroapp.app/inv/001"
-     * }
-     */
+    // window.console.log/warn no está llegando a Logcat en este WebView (se
+    // confirmó vacío incluso con console.error) — Log.d() nativo sí es 100%
+    // confiable porque no depende de ningún puente de consola del WebView.
+    // Quitar junto con las llamadas a window.Android.log(...) en el frontend
+    // una vez resuelto el problema de rendimiento del POS que se está
+    // diagnosticando.
     @JavascriptInterface
-    fun printTicket(ticketJson: String) {
-        try {
-            val ticket = JSONObject(ticketJson)
-            printerManager.printTicket(ticket) { success, error ->
-                notifyJS(
-                    "cobro_print_result",
-                    mapOf("success" to success, "error" to (error ?: ""))
-                )
-            }
-        } catch (e: Exception) {
-            notifyJS("cobro_print_result", mapOf("success" to false, "error" to e.message))
-        }
-    }
-
-    /**
-     * Imprime una página de prueba para verificar la conexión con la impresora.
-     */
-    @JavascriptInterface
-    fun printTestPage() {
-        printerManager.printTestPage { success, error ->
-            notifyJS("cobro_print_result", mapOf("success" to success, "error" to (error ?: "")))
-        }
-    }
-
-    /**
-     * Conecta a una impresora Bluetooth por dirección MAC.
-     */
-    @JavascriptInterface
-    fun connectPrinter(address: String) {
-        printerManager.connectByAddress(address) { success, error ->
-            notifyJS(
-                "cobro_printer_connected",
-                mapOf("success" to success, "address" to address, "error" to (error ?: ""))
-            )
-        }
-    }
-
-    /**
-     * Desconecta la impresora actual.
-     */
-    @JavascriptInterface
-    fun disconnectPrinter() {
-        printerManager.disconnect()
-        notifyJS("cobro_printer_connected", mapOf("success" to false, "address" to ""))
-    }
-
-    /**
-     * Retorna el estado actual de la impresora como JSON string.
-     * {"status": "CONNECTED"|"DISCONNECTED"|"PRINTING"|"ERROR", "printerName": "XPrinter-...", "address": "..."}
-     */
-    @JavascriptInterface
-    fun getPrinterStatus(): String {
-        val info = printerManager.getCurrentPrinterInfo()
-        return JSONObject().apply {
-            put("status", printerManager.status.name)
-            put("printerName", info?.name ?: "")
-            put("address", info?.address ?: "")
-        }.toString()
-    }
-
-    /**
-     * Retorna la lista de impresoras Bluetooth emparejadas.
-     * Retorna JSON array: [{"name": "XPrinter", "address": "00:11:22:33:44:55"}, ...]
-     */
-    @JavascriptInterface
-    fun getPairedPrinters(): String {
-        return printerManager.getPairedPrinters()
-    }
-
-    /**
-     * Selecciona una impresora como predeterminada y se conecta.
-     */
-    @JavascriptInterface
-    fun selectPrinter(address: String) {
-        printerManager.setDefaultPrinter(address)
-        connectPrinter(address)
-    }
-
-    /**
-     * Abre la gaveta de efectivo vía señal ESC/POS.
-     */
-    @JavascriptInterface
-    fun openCashDrawer() {
-        printerManager.openCashDrawer { success, error ->
-            notifyJS("cobro_drawer_result", mapOf("success" to success, "error" to (error ?: "")))
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    //  ESCÁNER DE CÓDIGOS DE BARRAS
-    // ═══════════════════════════════════════════════════════════
-
-    /**
-     * Abre el escáner de cámara para leer códigos de barras.
-     * Cuando lee un código, dispara el evento 'cobro_barcode' en el frontend.
-     */
-    @JavascriptInterface
-    fun scanBarcode() {
-        bridge.activity.runOnUiThread {
-            val intent = Intent(context, BarcodeScannerActivity::class.java).apply {
-                putExtra("mode", "barcode")
-            }
-            bridge.activity.startActivityForResult(intent, SCANNER_REQUEST_CODE)
-        }
-    }
-
-    /**
-     * Abre el escáner de cámara para leer códigos QR.
-     */
-    @JavascriptInterface
-    fun scanQRCode() {
-        bridge.activity.runOnUiThread {
-            val intent = Intent(context, BarcodeScannerActivity::class.java).apply {
-                putExtra("mode", "qr")
-            }
-            bridge.activity.startActivityForResult(intent, QR_REQUEST_CODE)
-        }
+    fun log(message: String) {
+        Log.d("PERF", message)
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -347,10 +215,5 @@ class JavaScriptBridge(
 
     fun cleanup() {
         printerManager.disconnect()
-    }
-
-    companion object {
-        const val SCANNER_REQUEST_CODE = 2001
-        const val QR_REQUEST_CODE = 2002
     }
 }

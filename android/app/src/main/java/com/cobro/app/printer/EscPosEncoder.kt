@@ -53,6 +53,8 @@ class EscPosEncoder(private val paperWidth: PaperWidth = PaperWidth.MM_80) {
         val NORMAL_SIZE       = byteArrayOf(0x1D, 0x21, 0x00)
         val UNDERLINE_ON      = byteArrayOf(0x1B, 0x2D, 0x01)
         val UNDERLINE_OFF     = byteArrayOf(0x1B, 0x2D, 0x00)
+        val INVERT_ON         = byteArrayOf(0x1D, 0x42, 0x01)
+        val INVERT_OFF        = byteArrayOf(0x1D, 0x42, 0x00)
         val FONT_A            = byteArrayOf(0x1B, 0x4D, 0x00)
         val FONT_B            = byteArrayOf(0x1B, 0x4D, 0x01)
 
@@ -104,8 +106,24 @@ class EscPosEncoder(private val paperWidth: PaperWidth = PaperWidth.MM_80) {
         return this
     }
 
+    /** Fuente B (más chica que la normal) — para la sublínea "qty x precio
+     *  unitario" bajo cada ítem, como la insignia chica de la vista previa. */
+    fun smallFont(enabled: Boolean): EscPosEncoder {
+        write(if (enabled) FONT_B else FONT_A)
+        return this
+    }
+
     fun underline(enabled: Boolean): EscPosEncoder {
         write(if (enabled) UNDERLINE_ON else UNDERLINE_OFF)
+        return this
+    }
+
+    /** Modo invertido (fondo negro, texto blanco) — GS B n. Para destacar el
+     *  total como la barra negra de la vista previa web. No todas las
+     *  impresoras lo soportan; si no, simplemente lo ignoran y siguen
+     *  imprimiendo en negro sobre blanco normal. */
+    fun invert(enabled: Boolean): EscPosEncoder {
+        write(if (enabled) INVERT_ON else INVERT_OFF)
         return this
     }
 
@@ -254,10 +272,14 @@ class EscPosEncoder(private val paperWidth: PaperWidth = PaperWidth.MM_80) {
      * La imagen se convierte a blanco/negro con dithering.
      *
      * @param bitmap Imagen a imprimir
-     * @param maxWidth Ancho máximo en dots (58mm=384, 80mm=576)
+     * @param widthFraction Fracción del ancho del papel que puede ocupar
+     *   como máximo (0.0-1.0). Para logos conviene bien por debajo de 1.0 —
+     *   a ancho completo se ve desproporcionado/pixelado; la vista previa
+     *   web tampoco lo muestra a ancho completo.
      */
-    fun image(bitmap: Bitmap): EscPosEncoder {
-        val maxDots = if (paperWidth == PaperWidth.MM_58) 384 else 576
+    fun image(bitmap: Bitmap, widthFraction: Double = 1.0): EscPosEncoder {
+        val fullDots = if (paperWidth == PaperWidth.MM_58) 384 else 576
+        val maxDots = (fullDots * widthFraction.coerceIn(0.1, 1.0)).toInt()
 
         // Escalar la imagen
         val scaledBitmap = scaleBitmap(bitmap, maxDots)
@@ -266,30 +288,47 @@ class EscPosEncoder(private val paperWidth: PaperWidth = PaperWidth.MM_80) {
         val width = bwBitmap.width
         val height = bwBitmap.height
 
+        // Leer TODOS los píxeles de una sola vez a un array plano — ver el
+        // comentario de toBWBitmap() más abajo sobre por qué esto importa
+        // (evita cientos de miles de llamadas getPixel() sueltas acá abajo).
+        val pixels = IntArray(width * height)
+        bwBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
         // Alinear al centro
         write(ALIGN_CENTER)
 
         // ESC * mode nL nH data
-        // mode 33 = 24-dot double density
-        val bytesPerRow = (width + 7) / 8
-
+        // mode 33 = 24-dot double density: nL/nH declaran el ANCHO EN DOTS
+        // (columnas) de esta franja — NO la cantidad de bytes. La impresora
+        // ya sabe que en este modo le siguen 3 bytes por columna (24 dots
+        // verticales / 8 bits). Antes acá se mandaba bytesPerRow*3 (una
+        // cuenta de bytes, no de columnas) — la impresora esperaba menos
+        // columnas de las que realmente se escribían después, se
+        // desincronizaba, y el resto de los bytes de la imagen se
+        // interpretaban como texto suelto (el "ruido" de símbolos en el
+        // ticket impreso).
         for (y in 0 until height step 24) {
-            write(byteArrayOf(0x1B, 0x2A, 33, (bytesPerRow * 3 % 256).toByte(), (bytesPerRow * 3 / 256).toByte()))
+            write(byteArrayOf(0x1B, 0x2A, 33, (width % 256).toByte(), (width / 256).toByte()))
+            // Junta la franja completa en un solo array y un solo write() —
+            // antes se hacía un write() de 1 byte por cada (x, k), miles de
+            // llamadas sueltas por franja para un ticket normal.
+            val rowBytes = ByteArray(width * 3)
+            var idx = 0
             for (x in 0 until width) {
                 for (k in 0..2) {
                     var slice = 0
                     for (bit in 0..7) {
                         val py = y + k * 8 + bit
                         if (py < height) {
-                            val pixel = bwBitmap.getPixel(x, py)
-                            if (pixel != Color.WHITE) {
+                            if (pixels[py * width + x] != Color.WHITE) {
                                 slice = slice or (0x80 shr bit)
                             }
                         }
                     }
-                    write(byteArrayOf(slice.toByte()))
+                    rowBytes[idx++] = slice.toByte()
                 }
             }
+            write(rowBytes)
             write(LF)
         }
 
@@ -354,7 +393,9 @@ class EscPosEncoder(private val paperWidth: PaperWidth = PaperWidth.MM_80) {
     }
 
     private fun toBWBitmap(source: Bitmap): Bitmap {
-        val result = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        val width = source.width
+        val height = source.height
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
         val paint = Paint().apply {
             isAntiAlias = false
@@ -364,14 +405,50 @@ class EscPosEncoder(private val paperWidth: PaperWidth = PaperWidth.MM_80) {
         canvas.drawColor(Color.WHITE)
         canvas.drawBitmap(source, 0f, 0f, paint)
 
-        // Convertir a blanco/negro con threshold
-        for (x in 0 until result.width) {
-            for (y in 0 until result.height) {
-                val pixel = result.getPixel(x, y)
-                val brightness = (Color.red(pixel) * 0.299 + Color.green(pixel) * 0.587 + Color.blue(pixel) * 0.114).toInt()
-                result.setPixel(x, y, if (brightness < 128) Color.BLACK else Color.WHITE)
+        // Leyendo y escribiendo TODO el bitmap de una sola vez
+        // (getPixels/setPixels) en vez de un getPixel()/setPixel() por cada
+        // píxel individual. Esto último es un anti-patrón conocido de
+        // Android: cada llamada cruza a código nativo (JNI) por separado, y
+        // para una imagen de un ticket completo (cientos de miles de
+        // píxeles) eso significaba más de un millón de llamadas sueltas —
+        // en una tablet de gama baja eso se traducía en varios minutos
+        // "imprimiendo" sin ningún error, solo procesando muy lento.
+        val pixels = IntArray(width * height)
+        result.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        // Escala de grises en punto flotante — hace falta precisión extra
+        // para difundir el error de redondeo (dithering) sin perderlo.
+        val gray = FloatArray(width * height)
+        for (i in pixels.indices) {
+            val p = pixels[i]
+            gray[i] = Color.red(p) * 0.299f + Color.green(p) * 0.587f + Color.blue(p) * 0.114f
+        }
+
+        // Dithering Floyd-Steinberg en vez de un umbral plano (blanco si
+        // brightness>=128, negro si no). Un umbral plano le queda bien a
+        // fotos/degradados pero es duro con texto chico: cualquier trazo
+        // fino que promedie "gris medio" al escalar la imagen desaparece
+        // de golpe. Difundiendo el error de cada píxel a sus vecinos
+        // (7/16 derecha, 3/16 abajo-izq, 5/16 abajo, 1/16 abajo-der) los
+        // bordes de las letras se conservan mucho mejor a la resolución
+        // real de una impresora térmica (~168 DPI en 58mm).
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val idx = y * width + x
+                val old = gray[idx]
+                val new = if (old < 128f) 0f else 255f
+                pixels[idx] = if (new == 0f) Color.BLACK else Color.WHITE
+                val error = old - new
+                if (error == 0f) continue
+                if (x + 1 < width) gray[idx + 1] += error * 7f / 16f
+                if (y + 1 < height) {
+                    if (x > 0) gray[idx + width - 1] += error * 3f / 16f
+                    gray[idx + width] += error * 5f / 16f
+                    if (x + 1 < width) gray[idx + width + 1] += error * 1f / 16f
+                }
             }
         }
+        result.setPixels(pixels, 0, width, 0, 0, width, height)
         return result
     }
 }

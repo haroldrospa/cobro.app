@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -54,11 +55,9 @@ import {
     Shield,
     ShieldCheck,
     ShieldAlert,
-    MapPin,
     Globe,
     Mail,
     Smartphone,
-    Key,
     LogOut,
     Radio,
     UserCheck,
@@ -103,132 +102,19 @@ type PaymentReport = {
     };
 };
 
-// Helper para obtener IP y Geolocalización
-const fetchClientSecurityInfo = async () => {
-    let ip = "Desconocida";
-    let location = "Santo Domingo, República Dominicana";
-    let isp = "Proveedor de Internet Local";
-    
-    try {
-        const res = await fetch("https://ipapi.co/json/");
-        if (res.ok) {
-            const data = await res.json();
-            ip = data.ip || ip;
-            const parts = [data.city, data.region, data.country_name].filter(Boolean);
-            if (parts.length > 0) location = parts.join(", ");
-            isp = data.org || data.asn || isp;
-        }
-    } catch (e) {
-        try {
-            const res2 = await fetch("https://ipwho.is/");
-            if (res2.ok) {
-                const data2 = await res2.json();
-                ip = data2.ip || ip;
-                const parts2 = [data2.city, data2.region, data2.country].filter(Boolean);
-                if (parts2.length > 0) location = parts2.join(", ");
-                isp = data2.connection?.isp || isp;
-            }
-        } catch (e2) {
-            console.warn("Fallback IP check failed", e2);
-        }
-    }
-
-    const userAgent = navigator.userAgent;
-    let device = "Navegador Web";
-    if (userAgent.includes("Windows")) device = "PC Windows";
-    else if (userAgent.includes("Macintosh")) device = "Mac OS";
-    else if (userAgent.includes("Android")) device = "Dispositivo Android";
-    else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) device = "Dispositivo iOS";
-
-    return {
-        ip,
-        location,
-        isp,
-        device,
-        timestamp: format(new Date(), "dd/MM/yyyy, hh:mm:ss a", { locale: es })
-    };
-};
-
-// Helper para enviar notificación de seguridad a Haroldrospa@gmail.com
-const sendSecurityNotificationEmail = async (loginInfo: {
-    email: string;
-    ip: string;
-    location: string;
-    isp: string;
-    device: string;
-    timestamp: string;
-}) => {
-    const targetEmail = "Haroldrospa@gmail.com";
-
-    // 1. Notificación vía Supabase Edge Function
-    try {
-        await supabase.functions.invoke("send-otp-email", {
-            body: {
-                email: targetEmail,
-                subject: `🚨 ALERTA DE SEGURIDAD: Inicio de sesión en Panel Maestro - CobroApp`,
-                message: `
-Se ha registrado un inicio de sesión exitoso al PANEL MAESTRO de CobroApp.
-
-📍 INFORMACIÓN DETALLADA DEL ACCESO:
----------------------------------------------
-• Usuario / Correo Maestro: ${loginInfo.email}
-• Dirección IP: ${loginInfo.ip}
-• Ubicación Geográfica: ${loginInfo.location}
-• Proveedor de Internet (ISP): ${loginInfo.isp}
-• Dispositivo / Sistema: ${loginInfo.device}
-• Fecha y Hora Local: ${loginInfo.timestamp}
----------------------------------------------
-
-Si reconoces este acceso, no necesitas realizar ninguna acción.
-En caso contrario, cambia la contraseña maestra de inmediato.
-`
-            }
-        });
-    } catch (err) {
-        console.warn("Could not send via Edge Function:", err);
-    }
-
-    // 2. Notificación vía Formspree webhook instantáneo
-    try {
-        await fetch("https://formspree.io/f/xknkqpoy", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                _subject: `🚨 ALERTA SEGURIDAD: Inicio de sesión Panel Maestro (${loginInfo.location})`,
-                email_notificacion: targetEmail,
-                usuario_maestro: loginInfo.email,
-                direccion_ip: loginInfo.ip,
-                ubicacion_geografica: loginInfo.location,
-                proveedor_isp: loginInfo.isp,
-                dispositivo: loginInfo.device,
-                fecha_hora: loginInfo.timestamp,
-                alerta: `Inicio de sesión al Panel Maestro detectado desde ${loginInfo.location} (IP: ${loginInfo.ip})`
-            })
-        });
-    } catch (err) {
-        console.warn("Formspree fallback email attempt:", err);
-    }
-};
+// (Antes había aquí un par de helpers para capturar IP/ubicación y mandar
+// un correo de alerta -incluso a un webhook externo de Formspree- cada vez
+// que alguien entraba con la contraseña maestra hardcodeada. Se eliminaron
+// junto con ese login: el acceso a este panel ahora depende exclusivamente
+// de is_platform_admin(), ver usePlatformAdmin, verificado tanto aquí como,
+// sobre todo, dentro de cada RPC admin en la base de datos.)
 
 const SuperAdmin = () => {
     const [selectedProof, setSelectedProof] = useState<string | null>(null);
-    const [masterUser, setMasterUser] = useState("cobroapp@cobroapp.com");
-    const [masterPassword, setMasterPassword] = useState("");
-    const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-    const [isAuthenticated, setIsAuthenticated] = useState(() => {
-        return sessionStorage.getItem("cobroapp_master_auth") === "true";
-    });
-
-    const [lastLoginInfo, setLastLoginInfo] = useState<any>(() => {
-        const saved = sessionStorage.getItem("cobroapp_master_session_info");
-        return saved ? JSON.parse(saved) : null;
-    });
-
-    const [securityLogs, setSecurityLogs] = useState<any[]>(() => {
-        const saved = localStorage.getItem("cobroapp_master_security_logs");
-        return saved ? JSON.parse(saved) : [];
-    });
+    // Fuente única de verdad para el acceso a este panel — la misma función
+    // is_platform_admin() que ya protege cada RPC admin en la base de datos.
+    const { isPlatformAdmin, loading: checkingAdmin } = usePlatformAdmin();
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState("");
@@ -237,70 +123,15 @@ const SuperAdmin = () => {
     const queryClient = useQueryClient();
     const { profile } = useUserProfile();
 
-    const handleMasterLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        const cleanUser = masterUser.trim().toLowerCase();
-        const cleanPass = masterPassword.trim();
-
-        const isMasterUser = cleanUser === "cobroapp@cobroapp.com" || cleanUser === "haroldrospa@gmail.com";
-        const isMasterPass = cleanPass === "190421" || cleanPass === "2026" || cleanPass === "admin123";
-
-        if (!isMasterUser || !isMasterPass) {
-            toast.error("Credenciales maestras incorrectas", {
-                description: "Usuario o contraseña de seguridad no válidos."
-            });
-            return;
-        }
-
-        setIsAuthenticating(true);
-        toast.info("Verificando seguridad y obteniendo ubicación de acceso...");
-
-        try {
-            const secInfo = await fetchClientSecurityInfo();
-            const fullLoginInfo = {
-                email: cleanUser,
-                ...secInfo,
-                id: Date.now().toString()
-            };
-
-            setLastLoginInfo(fullLoginInfo);
-            sessionStorage.setItem("cobroapp_master_auth", "true");
-            sessionStorage.setItem("cobroapp_master_session_info", JSON.stringify(fullLoginInfo));
-
-            const newLogs = [fullLoginInfo, ...securityLogs].slice(0, 50);
-            setSecurityLogs(newLogs);
-            localStorage.setItem("cobroapp_master_security_logs", JSON.stringify(newLogs));
-
-            // Enviar correo a Haroldrospa@gmail.com
-            await sendSecurityNotificationEmail(fullLoginInfo);
-
-            setIsAuthenticated(true);
-            toast.success("🔓 Acceso Maestro Autorizado", {
-                description: `Notificación enviada a Haroldrospa@gmail.com | ${secInfo.location}`
-            });
-        } catch (err: any) {
-            console.error("Auth error:", err);
-            sessionStorage.setItem("cobroapp_master_auth", "true");
-            setIsAuthenticated(true);
-            toast.success("🔓 Acceso Maestro Autorizado");
-        } finally {
-            setIsAuthenticating(false);
-        }
-    };
-
-    const handleMasterLogout = () => {
-        sessionStorage.removeItem("cobroapp_master_auth");
-        sessionStorage.removeItem("cobroapp_master_session_info");
-        setIsAuthenticated(false);
-        setMasterPassword("");
-        toast.info("Sesión maestra cerrada");
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        window.location.href = '/auth';
     };
 
     // 3. Obtener Todas las Tiendas (USANDO RPC SECURE)
     const { data: stores, isLoading: loadingStores } = useQuery<any[]>({
         queryKey: ["admin-all-stores"],
-        enabled: isAuthenticated,
+        enabled: isPlatformAdmin,
         queryFn: async () => {
             // @ts-ignore - Supabase RPC type issue
             const { data, error } = await supabase.rpc("get_all_stores_admin");
@@ -316,7 +147,7 @@ const SuperAdmin = () => {
     // 1. Obtener Reportes Pendientes
     const { data: reports, isLoading: loadingReports } = useQuery<any[]>({
         queryKey: ["admin-pending-payments"],
-        enabled: isAuthenticated,
+        enabled: isPlatformAdmin,
         queryFn: async () => {
             // @ts-ignore
             const { data, error } = await supabase.rpc("get_payment_reports_admin");
@@ -562,7 +393,7 @@ const SuperAdmin = () => {
     // 6. Global Settings Logic
     const { data: globalSettings, refetch: refetchGlobalSettings } = useQuery({
         queryKey: ["admin-global-settings"],
-        enabled: isAuthenticated,
+        enabled: isPlatformAdmin,
         queryFn: async () => {
             const { data, error } = await supabase
                 .from("admin_global_settings")
@@ -606,89 +437,44 @@ const SuperAdmin = () => {
         }
     }, [globalSettings]);
 
-    if (!isAuthenticated) {
+    if (checkingAdmin) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+                <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!isPlatformAdmin) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 relative overflow-hidden">
-                {/* Glowing background highlights */}
-                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                <Card className="w-full max-w-md border-emerald-500/30 bg-slate-900/90 text-white shadow-2xl backdrop-blur-xl relative z-10 rounded-2xl overflow-hidden">
-                    <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
-                    
+                <Card className="w-full max-w-md border-rose-500/30 bg-slate-900/90 text-white shadow-2xl backdrop-blur-xl relative z-10 rounded-2xl overflow-hidden">
+                    <div className="h-1.5 w-full bg-gradient-to-r from-rose-500 via-red-400 to-rose-500" />
+
                     <CardHeader className="text-center pb-2 pt-6">
-                        <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center mb-3 shadow-inner">
-                            <ShieldCheck className="w-9 h-9 text-emerald-400 animate-pulse" />
+                        <div className="mx-auto w-16 h-16 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center justify-center mb-3 shadow-inner">
+                            <ShieldAlert className="w-9 h-9 text-rose-400" />
                         </div>
-                        <Badge variant="outline" className="mx-auto bg-emerald-950/60 text-emerald-300 border-emerald-800 text-[10px] uppercase font-bold tracking-widest px-3 py-1 mb-2">
-                            🔒 ACCESO RESTRINGIDO MAESTRO
+                        <Badge variant="outline" className="mx-auto bg-rose-950/60 text-rose-300 border-rose-800 text-[10px] uppercase font-bold tracking-widest px-3 py-1 mb-2">
+                            🔒 ACCESO RESTRINGIDO
                         </Badge>
                         <CardTitle className="text-2xl font-black text-white tracking-tight">
-                            Panel Maestro de CobroApp
+                            No autorizado
                         </CardTitle>
                         <CardDescription className="text-slate-400 text-xs mt-1">
-                            Ingresa tus credenciales maestras autorizadas para ingresar.
+                            Tu cuenta ({profile?.email || 'sesión actual'}) no tiene acceso al Panel Maestro.
                         </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="space-y-5 pt-4">
-                        <form onSubmit={handleMasterLogin} className="space-y-4">
-                            <div className="space-y-1.5 text-left">
-                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                                    <User className="h-3.5 w-3.5 text-emerald-400" /> Usuario Maestro
-                                </label>
-                                <Input
-                                    type="email"
-                                    placeholder="cobroapp@cobroapp.com"
-                                    value={masterUser}
-                                    onChange={(e) => setMasterUser(e.target.value)}
-                                    className="h-11 bg-slate-950/80 border-slate-800 text-white text-sm focus:border-emerald-500 font-mono"
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-1.5 text-left">
-                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                                    <Key className="h-3.5 w-3.5 text-emerald-400" /> Contraseña de Seguridad
-                                </label>
-                                <Input
-                                    type="password"
-                                    placeholder="••••••"
-                                    value={masterPassword}
-                                    onChange={(e) => setMasterPassword(e.target.value)}
-                                    className="h-11 bg-slate-950/80 border-slate-800 text-white text-sm focus:border-emerald-500 font-mono"
-                                    required
-                                />
-                            </div>
-
-                            <Button 
-                                type="submit" 
-                                disabled={isAuthenticating}
-                                className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/25 transition-all active:scale-[0.98] gap-2 mt-2"
-                            >
-                                {isAuthenticating ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Obteniendo ubicación y notificando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <ShieldCheck className="h-4 w-4" />
-                                        Verificar y Entrar al Panel Maestro
-                                    </>
-                                )}
-                            </Button>
-                        </form>
-
-                        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-left space-y-2">
-                            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                                <Mail className="h-4 w-4 shrink-0" />
-                                Notificación de Alerta de Seguridad
-                            </div>
-                            <p className="text-[11px] text-slate-400 leading-relaxed">
-                                Al ingresar con <strong>cobroapp@cobroapp.com</strong> y contraseña <strong>190421</strong>, el sistema capturará automáticamente tu dirección IP y geolocalización, enviando un correo de alerta en tiempo real a <strong>Haroldrospa@gmail.com</strong>.
-                            </p>
-                        </div>
+                    <CardContent className="pt-2 pb-6">
+                        <Button
+                            onClick={() => (window.location.href = '/dashboard')}
+                            className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl"
+                        >
+                            Volver a mi tienda
+                        </Button>
                     </CardContent>
                 </Card>
             </div>
@@ -710,17 +496,9 @@ const SuperAdmin = () => {
                         </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                        {lastLoginInfo && (
-                            <>
-                                <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                                    <MapPin className="h-3 w-3" /> {lastLoginInfo.location} ({lastLoginInfo.ip})
-                                </span>
-                                <span>•</span>
-                                <span className="flex items-center gap-1 text-blue-600">
-                                    <Mail className="h-3 w-3" /> Notificado a Haroldrospa@gmail.com
-                                </span>
-                            </>
-                        )}
+                        <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" /> {profile?.email}
+                        </span>
                     </p>
                 </div>
 
@@ -737,11 +515,11 @@ const SuperAdmin = () => {
                     <Button
                         variant="destructive"
                         size="sm"
-                        onClick={handleMasterLogout}
+                        onClick={handleLogout}
                         className="h-9 gap-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white"
                     >
                         <LogOut className="h-3.5 w-3.5" />
-                        Cerrar Sesión Maestra
+                        Cerrar Sesión
                     </Button>
                 </div>
             </div>

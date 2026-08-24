@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Package, Barcode, Hash, Tag, Asterisk, Settings2, LayoutGrid, List as ListIcon, RefreshCcw, Plus, ShoppingCart, Minus, Utensils, ShoppingBag, Trash2 } from 'lucide-react';
+import { Search, Package, Barcode, Hash, Tag, Asterisk, Settings2, LayoutGrid, List as ListIcon, RefreshCcw, Plus, ShoppingCart, Minus, Utensils, ShoppingBag, Trash2, ScanBarcode } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 import VariablePriceDialog from './VariablePriceDialog';
 import QuantityDialog from './QuantityDialog';
+import BarcodeScannerPanel, { ScanDetectResult } from './BarcodeScannerPanel';
 import appLogo from '@/assets/cobro-logo.png';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { usePOSSearch } from '@/contexts/POSSearchContext';
@@ -274,6 +275,65 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     setSearchTerm('');
   }, [searchTerm, onAddToCart, setSearchTerm]);
 
+  // Busca una coincidencia EXACTA de código de barras (propio o de bundle) y
+  // agrega el producto al carrito. Compartido entre Enter, el diálogo de
+  // escaneo por cámara y el lector físico Sunmi — una sola lógica de match.
+  const addByExactCode = React.useCallback((rawCode: string): ScanDetectResult => {
+    const search = rawCode.toLowerCase().trim();
+    if (!search) return { found: false };
+
+    let matchedBundle: any = null;
+    const exactBarcodeMatch: Product | undefined = products.find(p => {
+      if (p.barcode && p.barcode.toLowerCase() === search) return true;
+      const extraMatch = p.barcodes?.find(b => b.barcode.toLowerCase() === search);
+      if (extraMatch) { matchedBundle = extraMatch; return true; }
+      return false;
+    });
+
+    if (!exactBarcodeMatch) return { found: false };
+
+    if (matchedBundle) {
+      const qty = matchedBundle.quantity || 1;
+      const discount = matchedBundle.discount_value || 0;
+      const type = matchedBundle.discount_type || 'percentage';
+      let finalPrice = exactBarcodeMatch.price;
+      if (discount > 0) {
+        if (type === 'percentage') finalPrice = exactBarcodeMatch.price * (1 - discount / 100);
+        else finalPrice = exactBarcodeMatch.price - (discount / qty);
+      }
+      onAddToCart(exactBarcodeMatch, qty, finalPrice);
+    } else {
+      handleProductSelect(exactBarcodeMatch);
+    }
+    return { found: true, productName: exactBarcodeMatch.name };
+  }, [products, onAddToCart, handleProductSelect]);
+
+  // Igual que addByExactCode, pero además refleja el código escaneado en la
+  // barra de búsqueda cuando no hay coincidencia — para que quede visible
+  // arriba aunque el producto no exista en el catálogo.
+  const handleScanDetect = React.useCallback((code: string): ScanDetectResult => {
+    const result = addByExactCode(code);
+    if (!result.found) {
+      setSearchTerm(code);
+    }
+    return result;
+  }, [addByExactCode, setSearchTerm]);
+
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  // Lector físico Sunmi: el nativo dispara este evento con el código leído.
+  React.useEffect(() => {
+    const handlePhysicalScan = (e: Event) => {
+      const code = (e as CustomEvent<{ code: string }>).detail?.code;
+      if (!code) return;
+      if (!addByExactCode(code).found) {
+        setSearchTerm(code);
+      }
+    };
+    window.addEventListener('cobro_barcode', handlePhysicalScan);
+    return () => window.removeEventListener('cobro_barcode', handlePhysicalScan);
+  }, [addByExactCode, setSearchTerm]);
+
   const handleVariablePriceConfirm = (price: number, name?: string) => {
     if (selectedVariableProduct) {
       const productWithPrice = { 
@@ -309,30 +369,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
         return;
       }
 
-      let matchedBundle: any = null;
-      let exactBarcodeMatch: Product | undefined = products.find(p => {
-        if (p.barcode && p.barcode.toLowerCase() === search) return true;
-        const extraMatch = p.barcodes?.find(b => b.barcode.toLowerCase() === search);
-        if (extraMatch) { matchedBundle = extraMatch; return true; }
-        return false;
-      });
-
-      if (exactBarcodeMatch) {
-        if (matchedBundle) {
-          const qty = matchedBundle.quantity || 1;
-          const discount = matchedBundle.discount_value || 0;
-          const type = matchedBundle.discount_type || 'percentage';
-          let finalPrice = exactBarcodeMatch.price;
-          if (discount > 0) {
-            if (type === 'percentage') finalPrice = exactBarcodeMatch.price * (1 - discount / 100);
-            else finalPrice = exactBarcodeMatch.price - (discount / qty);
-          }
-          onAddToCart(exactBarcodeMatch, qty, finalPrice);
-        } else {
-          handleProductSelect(exactBarcodeMatch);
-        }
-        return;
-      }
+      if (addByExactCode(searchTerm).found) return;
 
       if (filteredProducts.length === 1) handleProductSelect(filteredProducts[0]);
     }
@@ -405,14 +442,28 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
             ref={searchInputRef}
             type="text"
             placeholder="Escanear o buscar producto..."
-            className="pl-9 pr-3 h-10 bg-background border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all rounded-xl shadow-md font-bold text-xs tracking-tight placeholder:text-muted-foreground text-foreground w-full"
+            className="pl-9 pr-11 h-10 bg-background border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all rounded-xl shadow-md font-bold text-xs tracking-tight placeholder:text-muted-foreground text-foreground w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={onSearchFocus}
             autoComplete="off"
           />
+          <button
+            type="button"
+            onClick={() => setIsScannerOpen(true)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 flex items-center justify-center rounded-lg text-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+            title="Escanear código de barras o QR"
+          >
+            <ScanBarcode className="h-4 w-4" />
+          </button>
         </div>
+
+        <BarcodeScannerPanel
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onDetect={handleScanDetect}
+        />
 
         {/* Category Pills - Premium Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full -mx-3 px-3">
@@ -597,6 +648,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
         itemName={selectedQuantityProduct?.name || ''}
         currentQuantity={selectedQuantityProduct?.currentQuantity || 0}
       />
+
     </div>
   );
 });
@@ -649,176 +701,217 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
         }[gridCols] || "grid-cols-2 min-[420px]:grid-cols-3 gap-1.5"
       )}
     >
-      {filteredProducts.map((product) => {
-        const outOfStock = product.track_inventory !== false && (product.stock || 0) <= 0;
-        const canSelect = !outOfStock;
-        const cartQty = cartMap.get(product.id) || 0;
+      {filteredProducts.map((product) => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          viewMode={viewMode}
+          gridCols={gridCols}
+          cartQty={cartMap.get(product.id) || 0}
+          onSelect={onSelect}
+          onUpdateQuantity={onUpdateQuantity}
+          onQuantityClick={onQuantityClick}
+        />
+      ))}
+    </div>
+  );
+});
 
-        return (
-          <div
-            key={product.id}
-            onClick={() => {
-              if (canSelect) {
-                onSelect(product);
-              }
-            }}
-            className={cn(
-              "group text-left overflow-hidden border transition-all duration-300 shadow-sm relative flex",
-              cartQty > 0 
-                ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] shadow-sm" 
-                : "border-border/60 bg-card hover:border-emerald-500/20 hover:shadow-md",
-              viewMode === 'list' ? "rounded-xl flex-row h-16 items-center mx-1" : (gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col"),
-              outOfStock && "opacity-40 grayscale pointer-events-none",
-              canSelect && "cursor-pointer"
-            )}
-          >
-            {/* Quantity Badge - Only in Grid mode to avoid clutter in List mode */}
-            {cartQty > 0 && viewMode === 'grid' && (
-              <div className="absolute top-1.5 right-1.5 z-10">
-                <span className="inline-flex items-center justify-center h-4.5 min-w-4.5 px-1 text-[8px] font-black rounded-full bg-emerald-600 text-white shadow-md border border-emerald-400/10">
-                  {cartQty}
-                </span>
-              </div>
-            )}
+// ── ISOLATED PRODUCT CARD — React.memo con cartQty como número plano (no el
+// carrito entero) — así cambiar el carrito solo re-renderiza la tarjeta cuya
+// cantidad realmente cambió, no las 24-80 tarjetas visibles en pantalla.
+// Antes cada tarjeta vivía inline dentro del .map() de ProductGrid, leyendo
+// el mapa completo desde el closure — eso hacía que CUALQUIER cambio de
+// carrito re-renderizara TODA la grilla visible (medido: ~800ms-1.3s de
+// frame trabado por interacción en esta tablet). El resto del JSX es
+// idéntico, solo se movió a su propio componente.
+interface ProductCardProps {
+  product: any;
+  viewMode: 'grid' | 'list';
+  gridCols: number;
+  cartQty: number;
+  onSelect: (product: any) => void;
+  onUpdateQuantity?: (id: string, q: number) => void;
+  onQuantityClick?: (id: string, name: string, qty: number) => void;
+}
 
-            {/* Image Area — Inset rounded square in list mode */}
-            <div className={cn(
-              "relative bg-muted overflow-hidden shrink-0 flex items-center justify-center",
-              viewMode === 'list' 
-                ? "w-12 h-12 rounded-lg my-auto ml-2 border border-border/40" 
-                : "aspect-square w-full border-b border-border"
-            )}>
-              {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center opacity-30">
-                  <Package className="h-5 w-5 text-emerald-500" strokeWidth={1.5} />
-                </div>
-              )}
+const ProductCard = React.memo<ProductCardProps>(function ProductCard({
+  product,
+  viewMode,
+  gridCols,
+  cartQty,
+  onSelect,
+  onUpdateQuantity,
+  onQuantityClick,
+}) {
+  const outOfStock = product.track_inventory !== false && (product.stock || 0) <= 0;
+  const canSelect = !outOfStock;
 
-              {/* Stock Badge - clean pill */}
-              {product.track_inventory !== false && (
-                <div className={viewMode === 'list' ? "absolute top-0.5 left-0.5 z-10" : "absolute top-1.5 left-1.5"}>
-                  <span className={cn(
-                    "inline-flex items-center h-3.5 px-1.5 text-[7px] font-bold uppercase tracking-tight rounded-md shadow-sm backdrop-blur-md",
-                    (product.stock || 0) > 10
-                      ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10"
-                      : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/10"
-                  )}>
-                    {product.stock || 0}
-                  </span>
-                </div>
-              )}
-            </div>
+  return (
+    <div
+      onClick={() => {
+        if (canSelect) {
+          onSelect(product);
+        }
+      }}
+      className={cn(
+        "group text-left overflow-hidden border transition-all duration-300 shadow-sm relative flex",
+        cartQty > 0
+          ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] shadow-sm"
+          : "border-border/60 bg-card hover:border-emerald-500/20 hover:shadow-md",
+        viewMode === 'list' ? "rounded-xl flex-row h-16 items-center mx-1" : (gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col"),
+        outOfStock && "opacity-40 grayscale pointer-events-none",
+        canSelect && "cursor-pointer"
+      )}
+    >
+      {/* Quantity Badge - Only in Grid mode to avoid clutter in List mode */}
+      {cartQty > 0 && viewMode === 'grid' && (
+        <div className="absolute top-1.5 right-1.5 z-10">
+          <span className="inline-flex items-center justify-center h-4.5 min-w-4.5 px-1 text-[8px] font-black rounded-full bg-emerald-600 text-white shadow-md border border-emerald-400/10">
+            {cartQty}
+          </span>
+        </div>
+      )}
 
-            {/* Content Area */}
-            <div className={cn(
-              "flex min-w-0 flex-1",
-              viewMode === 'list' ? "flex-row items-center justify-between pl-3 pr-4 py-1.5 h-full" : (gridCols >= 4 ? "flex-col justify-between p-2 h-22 sm:h-18 gap-1" : "flex-col justify-between p-3 h-28 gap-2")
-            )}>
-              <div className={cn("min-w-0", viewMode === 'list' ? "flex flex-col justify-center" : "space-y-0.5")}>
-                <h4 className={cn(
-                  "font-semibold leading-snug line-clamp-2 tracking-tight text-foreground group-hover:text-emerald-500 transition-colors duration-200",
-                  viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[9px]" : "text-[11px]")
-                )}>
-                  {product.name}
-                </h4>
-                {viewMode === 'list' && (
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight text-xs mt-0.5">
-                    ${(product.price || 0).toLocaleString()}
-                  </span>
-                )}
-                {product.category?.name && gridCols < 4 && viewMode !== 'list' && (
-                  <p className="text-[8px] font-bold uppercase tracking-wider text-emerald-600/60 truncate">
-                    {product.category.name}
-                  </p>
-                )}
-              </div>
-
-              <div className={cn(
-                "flex items-center",
-                viewMode === 'list' ? "ml-2 shrink-0" : "justify-between mt-auto border-t border-border/50 pt-1.5 w-full"
-              )}>
-                {viewMode !== 'list' && (
-                  <span className={cn(
-                    "font-bold text-emerald-600 dark:text-emerald-400 tracking-tight",
-                    gridCols >= 4 ? "text-xs" : "text-sm"
-                  )}>
-                    ${(product.price || 0).toLocaleString()}
-                  </span>
-                )}
-                
-                {cartQty > 0 ? (
-                  <div 
-                    onClick={(e) => e.stopPropagation()} 
-                    className="flex items-center bg-secondary/80 border border-border/30 rounded-full p-0.5 shadow-sm"
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onUpdateQuantity?.(product.id, cartQty - 1);
-                      }}
-                      className={cn(
-                        "flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-card rounded-full transition-all active:scale-90",
-                        viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
-                      )}
-                    >
-                      <Minus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
-                    </button>
-                    <span 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onQuantityClick?.(product.id, product.name, cartQty);
-                      }}
-                      className={cn(
-                        "text-center font-bold text-foreground shrink-0 cursor-pointer hover:text-emerald-500 transition-colors active:scale-95",
-                        viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
-                      )}
-                    >
-                      {cartQty}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onUpdateQuantity?.(product.id, cartQty + 1);
-                      }}
-                      className={cn(
-                        "flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:bg-card rounded-full transition-all active:scale-90",
-                        viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
-                      )}
-                    >
-                      <Plus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
-                    </button>
-                  </div>
-                ) : (
-                  <div 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(product);
-                    }}
-                    className={cn(
-                    "rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-sm active:scale-90 transition-all duration-150 cursor-pointer",
-                    viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
-                  )}>
-                    <Plus className={cn(
-                      "text-white",
-                      viewMode === 'list' ? "h-3.5 w-3.5" : (gridCols >= 4 ? "h-3 w-3" : "h-4 w-4")
-                    )} strokeWidth={2.5} />
-                  </div>
-                )}
-              </div>
-            </div>
+      {/* Image Area — Inset rounded square in list mode */}
+      <div className={cn(
+        "relative bg-muted overflow-hidden shrink-0 flex items-center justify-center",
+        viewMode === 'list'
+          ? "w-12 h-12 rounded-lg my-auto ml-2 border border-border/40"
+          : "aspect-square w-full border-b border-border"
+      )}>
+        {product.image_url ? (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center opacity-30">
+            <Package className="h-5 w-5 text-emerald-500" strokeWidth={1.5} />
           </div>
-        );
-      })}
+        )}
+
+        {/* Stock Badge - clean pill */}
+        {product.track_inventory !== false && (
+          <div className={viewMode === 'list' ? "absolute top-0.5 left-0.5 z-10" : "absolute top-1.5 left-1.5"}>
+            <span className={cn(
+              // Sin backdrop-blur: esta insignia se repite en cada tarjeta
+              // de la grilla (hasta 80 en pantalla) y el fondo ya es
+              // semitransparente de por sí — el blur no se nota pero sí
+              // cuesta caro recomponerlo en cada render en GPUs débiles.
+              "inline-flex items-center h-3.5 px-1.5 text-[7px] font-bold uppercase tracking-tight rounded-md shadow-sm",
+              (product.stock || 0) > 10
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10"
+                : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/10"
+            )}>
+              {product.stock || 0}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Content Area */}
+      <div className={cn(
+        "flex min-w-0 flex-1",
+        viewMode === 'list' ? "flex-row items-center justify-between pl-3 pr-4 py-1.5 h-full" : (gridCols >= 4 ? "flex-col justify-between p-2 h-22 sm:h-18 gap-1" : "flex-col justify-between p-3 h-28 gap-2")
+      )}>
+        <div className={cn("min-w-0", viewMode === 'list' ? "flex flex-col justify-center" : "space-y-0.5")}>
+          <h4 className={cn(
+            "font-semibold leading-snug line-clamp-2 tracking-tight text-foreground group-hover:text-emerald-500 transition-colors duration-200",
+            viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[9px]" : "text-[11px]")
+          )}>
+            {product.name}
+          </h4>
+          {viewMode === 'list' && (
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight text-xs mt-0.5">
+              ${(product.price || 0).toLocaleString()}
+            </span>
+          )}
+          {product.category?.name && gridCols < 4 && viewMode !== 'list' && (
+            <p className="text-[8px] font-bold uppercase tracking-wider text-emerald-600/60 truncate">
+              {product.category.name}
+            </p>
+          )}
+        </div>
+
+        <div className={cn(
+          "flex items-center",
+          viewMode === 'list' ? "ml-2 shrink-0" : "justify-between mt-auto border-t border-border/50 pt-1.5 w-full"
+        )}>
+          {viewMode !== 'list' && (
+            <span className={cn(
+              "font-bold text-emerald-600 dark:text-emerald-400 tracking-tight",
+              gridCols >= 4 ? "text-xs" : "text-sm"
+            )}>
+              ${(product.price || 0).toLocaleString()}
+            </span>
+          )}
+
+          {cartQty > 0 ? (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center bg-secondary/80 border border-border/30 rounded-full p-0.5 shadow-sm"
+            >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateQuantity?.(product.id, cartQty - 1);
+                }}
+                className={cn(
+                  "flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-card rounded-full transition-all active:scale-90",
+                  viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+                )}
+              >
+                <Minus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
+              </button>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuantityClick?.(product.id, product.name, cartQty);
+                }}
+                className={cn(
+                  "text-center font-bold text-foreground shrink-0 cursor-pointer hover:text-emerald-500 transition-colors active:scale-95",
+                  viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
+                )}
+              >
+                {cartQty}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateQuantity?.(product.id, cartQty + 1);
+                }}
+                className={cn(
+                  "flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:bg-card rounded-full transition-all active:scale-90",
+                  viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+                )}
+              >
+                <Plus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
+              </button>
+            </div>
+          ) : (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(product);
+              }}
+              className={cn(
+                "rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-sm active:scale-90 transition-all duration-150 cursor-pointer",
+                viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+              )}>
+              <Plus className={cn(
+                "text-white",
+                viewMode === 'list' ? "h-3.5 w-3.5" : (gridCols >= 4 ? "h-3 w-3" : "h-4 w-4")
+              )} strokeWidth={2.5} />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 });

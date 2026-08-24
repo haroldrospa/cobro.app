@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { useTheme } from '@/components/ThemeProvider';
 import cobroLogoLight from '@/assets/cobro-logo-light.png';
 import cobroLogoDark from '@/assets/cobro-logo-dark.png';
@@ -44,15 +45,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const queryClient = useQueryClient();
   const { hasKitchenDisplay, hasDelivery } = useBusinessType();
   const { settings } = useCompanySettings();
+  const { isPlatformAdmin } = usePlatformAdmin();
   const { data: userStore } = useUserStore();
   const companyName = settings?.company_name || userStore?.store_name;
-
-  const isMasterAuth = sessionStorage.getItem('cobroapp_master_auth') === 'true' || location.pathname.startsWith('/admin');
 
   const isFullScreenApp = location.pathname === '/' ||
     location.pathname === '/pos' ||
     location.pathname.startsWith('/admin') ||
-    isMasterAuth ||
     profile?.role === 'kitchen' ||
     profile?.role === 'delivery';
 
@@ -156,9 +155,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
       { name: 'Usuario', href: '/subscription', icon: User },
       { name: 'Configuración', href: '/settings', icon: Settings },
-      ...( ['haroldrospa@gmail.com', 'cobroapp@cobroapp.com'].includes(profile?.email?.toLowerCase() || '') || profile?.role === 'admin' || profile?.role === 'owner' ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }] : []),
+      ...(isPlatformAdmin ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }] : []),
     ];
-  }, [profile, hasKitchenDisplay, hasDelivery]);
+  }, [profile, hasKitchenDisplay, hasDelivery, isPlatformAdmin]);
 
   const { theme } = useTheme();
   const [systemTheme, setSystemTheme] = React.useState<'dark' | 'light'>(

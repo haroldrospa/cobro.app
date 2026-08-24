@@ -20,5 +20,29 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- MainActivity usa este theme (Theme.SplashScreen no lo hereda de
+             forma confiable) — sin esto Android mostraba una action bar
+             nativa arriba de todo con el label de la Activity
+             (title_activity_main = "CobroApp POS" en strings.xml).
+             activity?.hide() en MainActivity.onCreate() no alcanzaba porque
+             dependía de qué sistema de action bar estuviera activo; esto lo
+             resuelve a nivel de tema, sin ambigüedad. -->
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- Ventana flotante chica para BarcodeScannerActivity — el escaneo nativo
+         (CameraX + ML Kit) corre en una Activity aparte, pero el usuario
+         quiere el recuadro chico de antes, no pantalla completa. El tamaño y
+         posición reales se calculan en BarcodeScannerActivity.kt (porcentaje
+         de pantalla); este theme solo habilita que la ventana pueda flotar. -->
+    <style name="AppTheme.ScannerFloating" parent="Theme.AppCompat.DayNight.Dialog">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.6</item>
+        <item name="android:windowContentOverlay">@null</item>
     </style>
 </resources>

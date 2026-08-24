@@ -34,13 +34,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     let mounted = true;
 
     const checkAuth = async () => {
-      if (sessionStorage.getItem('cobroapp_master_auth') === 'true') {
-        if (mounted) {
-          setLoading(false);
-        }
-        return;
-      }
-
       try {
         // Usar getSessionSafe para manejar AbortErrors y llamadas concurrentes
         const session = await getSessionSafe();
@@ -330,11 +323,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         </div>
       </div>
     );
-  }
-
-  // If master auth is active in sessionStorage, render children immediately
-  if (sessionStorage.getItem('cobroapp_master_auth') === 'true') {
-    return <>{children}</>;
   }
 
   // If session verification has completed and there is no valid session, redirect to login
