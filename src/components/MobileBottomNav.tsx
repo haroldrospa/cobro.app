@@ -20,6 +20,7 @@ import {
   CloudUpload,
 } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,6 +39,7 @@ import { triggerHaptic } from '@/lib/haptics';
 export const MobileBottomNav: React.FC = () => {
   const location = useLocation();
   const { profile } = useUserProfile();
+  const { isPlatformAdmin } = usePlatformAdmin();
   const { hasKitchenDisplay, hasDelivery } = useBusinessType();
   const [moreOpen, setMoreOpen] = React.useState(false);
   const queryClient = useQueryClient();
@@ -45,11 +47,10 @@ export const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
 
   // No mostrar en rutas de pantalla completa o panel maestro
-  const isMasterAuth = sessionStorage.getItem('cobroapp_master_auth') === 'true';
   const hiddenRoutes = ['/', '/pos', '/kitchen', '/delivery', '/auth', '/admin'];
   const isHiddenRoute = hiddenRoutes.some(r =>
     r === '/' ? location.pathname === '/' : location.pathname.startsWith(r)
-  ) || isMasterAuth;
+  );
 
   // Para kitchen/delivery, mostrar su única opción
   const isKitchen = profile?.role === 'kitchen';
@@ -105,11 +106,11 @@ export const MobileBottomNav: React.FC = () => {
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
       { name: 'Mi Cuenta', href: '/subscription', icon: User },
       { name: 'Configuración', href: '/settings', icon: Settings },
-      ...(['haroldrospa@gmail.com', 'cobroapp@cobroapp.com'].includes(profile?.email?.toLowerCase() || '') || profile?.role === 'admin' || profile?.role === 'owner'
+      ...(isPlatformAdmin
         ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }]
         : []),
     ];
-  }, [profile, hasKitchenDisplay, hasDelivery]);
+  }, [profile, hasKitchenDisplay, hasDelivery, isPlatformAdmin]);
 
   return (
     <>

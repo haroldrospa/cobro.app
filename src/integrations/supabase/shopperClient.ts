@@ -26,7 +26,7 @@ const customShopperFetch: typeof fetch = async (url, options) => {
   return response;
 };
 
-// Create a dedicated client for Shoppers (Customers) 
+// Create a dedicated client for Shoppers (Customers)
 // with its own storage key to prevent session overlap with the App (Merchants)
 export const shopperSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
