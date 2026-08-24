@@ -229,7 +229,6 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     if (onLoadToCart) {
       onLoadToCart(cartItems, orderToLoad.id, orderToLoad.customer_name, orderToLoad.order_number, 'pos', orderToLoad.notes);
     }
-    toast({ title: "Pedido cargado", description: `${cartItems.length} productos agregados al carrito` });
     setSelectedOrderId(null);
     onClose();
   };

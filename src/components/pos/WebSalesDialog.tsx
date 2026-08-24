@@ -243,11 +243,6 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
       onLoadToCart(cartItems, orderToLoad.id, orderToLoad.customer_name, orderToLoad.order_number, 'web', orderToLoad.notes);
     }
 
-    toast({
-      title: "Pedido cargado",
-      description: `${cartItems.length} productos agregados al carrito`
-    });
-
     setSelectedOrderId(null);
     onClose();
   };

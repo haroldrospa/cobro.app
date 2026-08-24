@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, User, CreditCard, Package, Calendar, Receipt, Tag, Hash } from 'lucide-react';
+import { Loader2, User, CreditCard, Package, Calendar, Receipt, Tag, Hash, UserCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,6 +34,21 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
       cash: 'Efectivo', credit: 'Crédito', card: 'Tarjeta', split: 'Mixto'
     };
     return map[method] || method;
+  };
+
+  const roleLabel = (role?: string) => {
+    if (!role) return null;
+    const map: Record<string, string> = {
+      admin: 'Administrador',
+      cashier: 'Cajero',
+      employee: 'Empleado',
+      manager: 'Gerente',
+      accountant: 'Contador',
+      kitchen: 'Cocinero',
+      delivery: 'Delivery',
+      viewer: 'Visualizador',
+    };
+    return map[role.toLowerCase()] || role;
   };
 
   const LoadingOrEmpty = ({ children }: { children: React.ReactNode }) => (
@@ -96,6 +111,15 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
                 <Badge variant="outline" className="h-4 px-1.5 text-[10px] font-bold border-primary/20 text-primary bg-primary/5">
                   {sale.invoice_type?.code || 'B02'}
                 </Badge>
+                {sale.profile?.full_name && (
+                  <>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1 font-medium text-foreground/80">
+                      <UserCheck className="w-3.5 h-3.5 text-primary" />
+                      {sale.profile.full_name}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             <Badge
@@ -114,8 +138,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="px-6 py-5 space-y-5">
 
-            {/* ── CUSTOMER + PAYMENT INFO ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* ── CUSTOMER + CASHIER + PAYMENT INFO ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Cliente */}
               <div className="rounded-2xl border border-border/30 bg-muted/20 p-4 space-y-3">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -142,7 +166,39 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
                   {sale.customer?.email && (
                     <div>
                       <p className="text-[10px] text-muted-foreground">Email</p>
-                      <p className="text-sm font-semibold text-foreground mt-0.5 truncate">{sale.customer.email}</p>
+                      <p className="text-sm font-semibold text-foreground mt-0.5 truncate" title={sale.customer.email}>{sale.customer.email}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Facturado por */}
+              <div className="rounded-2xl border border-border/30 bg-muted/20 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  <UserCheck className="w-3 h-3 text-primary" />
+                  Facturado Por
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Usuario / Cajero</p>
+                    <p className="text-sm font-bold text-foreground mt-0.5">
+                      {sale.profile?.full_name || 'Sistema'}
+                    </p>
+                  </div>
+                  {sale.profile?.role && (
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Rol</p>
+                      <Badge variant="outline" className="mt-0.5 font-bold border-primary/20 text-primary bg-primary/5 px-2 py-0.5 text-[10px]">
+                        {roleLabel(sale.profile.role)}
+                      </Badge>
+                    </div>
+                  )}
+                  {sale.profile?.email && (
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Email</p>
+                      <p className="text-sm font-semibold text-foreground mt-0.5 truncate" title={sale.profile.email}>
+                        {sale.profile.email}
+                      </p>
                     </div>
                   )}
                 </div>

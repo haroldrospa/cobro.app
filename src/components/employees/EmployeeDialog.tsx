@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 import {
     Dialog,
@@ -38,7 +38,7 @@ const employeeSchema = z.object({
     full_name: z.string().min(2, 'El nombre es muy corto'),
     email: z.string().email('Correo inválido'),
     password: z.string().optional(),
-    role: z.enum(['admin', 'manager', 'cashier', 'kitchen', 'delivery']),
+    role: z.enum(['admin', 'manager', 'cashier', 'kitchen', 'delivery', 'accountant']),
     is_active: z.boolean().default(true),
     credit_limit: z.coerce.number().min(0).optional(),
     cedula: z.string().optional(),
@@ -53,6 +53,7 @@ interface EmployeeDialogProps {
 export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogProps) {
     const { mutate: manageEmployee, isPending } = useManageEmployee();
     const { data: customers = [] } = useCustomers();
+    const [showPassword, setShowPassword] = useState(false);
 
     const form = useForm<z.infer<typeof employeeSchema>>({
         resolver: zodResolver(employeeSchema),
@@ -68,11 +69,12 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
     });
 
     useEffect(() => {
+        setShowPassword(false);
         if (employee) {
             form.reset({
                 full_name: employee.full_name,
                 email: employee.email,
-                role: (['staff', 'cashier'].includes(employee.role)) ? 'cashier' : (['kitchen', 'delivery'].includes(employee.role) ? employee.role as any : employee.role),
+                role: (['staff', 'cashier'].includes(employee.role)) ? 'cashier' : (['kitchen', 'delivery', 'accountant'].includes(employee.role) ? employee.role as any : employee.role),
                 is_active: employee.is_active,
                 password: '',
                 credit_limit: employee.credit_limit || 0,
@@ -200,6 +202,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                                             <SelectContent>
                                                 <SelectItem value="manager">Gerente (Acceso Total)</SelectItem>
                                                 <SelectItem value="cashier">Cajero (Solo POS y Clientes)</SelectItem>
+                                                <SelectItem value="accountant">Contador (Solo Contabilidad, Reportes y Facturas)</SelectItem>
                                                 <SelectItem value="kitchen">Cocinero (Solo Pantalla Cocina)</SelectItem>
                                                 <SelectItem value="delivery">Delivery (Solo Pedidos Delivery)</SelectItem>
                                                 <SelectItem value="admin">Administrador</SelectItem>
@@ -233,7 +236,27 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                                     <FormItem>
                                         <FormLabel>{employee ? 'Nueva Contraseña (Opcional)' : 'Contraseña'}</FormLabel>
                                         <FormControl>
-                                            <Input type="password" placeholder="******" {...field} />
+                                            <div className="relative">
+                                                <Input 
+                                                    type={showPassword ? 'text' : 'password'} 
+                                                    placeholder="******" 
+                                                    className="pr-10 font-mono" 
+                                                    {...field} 
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors rounded-md focus:outline-none"
+                                                    tabIndex={-1}
+                                                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                                                >
+                                                    {showPassword ? (
+                                                        <EyeOff className="h-4 w-4" />
+                                                    ) : (
+                                                        <Eye className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </FormControl>
                                         {employee && <FormDescription>Dejar en blanco para mantener la actual</FormDescription>}
                                         <FormMessage />

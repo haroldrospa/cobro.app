@@ -8,7 +8,7 @@ export interface Employee {
     id: string;
     email: string;
     full_name: string;
-    role: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery';
+    role: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery' | 'accountant';
     is_active: boolean;
     created_at: string;
     base_salary?: number;
@@ -118,7 +118,7 @@ interface ManageEmployeePayload {
     fullName?: string;
     email?: string;
     password?: string;
-    role?: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery';
+    role?: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery' | 'accountant';
     isActive?: boolean;
     cedula?: string;
 }

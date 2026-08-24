@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { getSessionSafe } from '@/lib/authSession';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -90,8 +91,10 @@ const Auth = () => {
 
   useEffect(() => {
     let redirected = false;
+    let mounted = true;
+
     const handleRedirect = (session: any) => {
-      if (session && !redirected) {
+      if (session && !redirected && mounted) {
         redirected = true;
         navigate('/app', { replace: true });
       }
@@ -105,16 +108,22 @@ const Auth = () => {
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const isRecovery = window.location.hash.includes('type=recovery') || 
-                         window.location.href.includes('recovery') || 
-                         window.location.search.includes('type=recovery');
-      if (session && !isRecovery && authView !== 'update-password') {
-        handleRedirect(session);
-      }
-    });
+    const isRecovery = window.location.hash.includes('type=recovery') || 
+                       window.location.href.includes('recovery') || 
+                       window.location.search.includes('type=recovery');
 
-    return () => subscription.unsubscribe();
+    if (!isRecovery && authView !== 'update-password') {
+      getSessionSafe().then((session) => {
+        if (session && mounted) {
+          handleRedirect(session);
+        }
+      }).catch(() => {});
+    }
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate, authView]);
 
   useEffect(() => {
@@ -152,34 +161,47 @@ const Auth = () => {
 
     setLoading(true);
 
-    try {
-      localStorage.removeItem('sb-hkzgxdmnvyoviwketxva-auth-token');
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPass,
+      });
 
       if (error) {
         throw error;
       }
 
-      if (data.session) {
-        navigate('/app');
+      if (data?.session) {
+        navigate('/app', { replace: true });
       }
     } catch (error: any) {
+      const isAbort = error?.name === 'AbortError' || error?.message?.includes('aborted');
+      if (isAbort) {
+        const activeSession = await getSessionSafe();
+        if (activeSession) {
+          navigate('/app', { replace: true });
+          return;
+        }
+      }
+
       console.error('Login error:', error);
       setLoading(false);
 
-      let errorMessage = error.message;
+      let errorMessage = error?.message;
       let errorTitle = 'Error al iniciar sesión';
 
-      if (error.message?.includes('Failed to fetch') ||
-        error.message?.includes('NetworkError') ||
-        error.message?.includes('fetch') ||
-        error.name === 'AuthRetryableFetchError') {
+      if (error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('NetworkError') ||
+        error?.message?.includes('fetch') ||
+        error?.name === 'AuthRetryableFetchError') {
         errorTitle = 'Error de conexión';
-        errorMessage = `No se puede conectar con el servidor. Por favor, verifica la configuración de URLs en Supabase Dashboard → Authentication → URL Configuration`;
+        errorMessage = `No se puede conectar con el servidor. Por favor, verifica tu conexión a internet.`;
       } else if (errorMessage === 'Invalid login credentials') {
         errorMessage = 'Credenciales inválidas. Verifica tu email y contraseña.';
-      } else if (error.name === 'AbortError') {
+      } else if (isAbort) {
         errorMessage = 'La conexión fue interrumpida. Por favor intenta de nuevo.';
       }
 

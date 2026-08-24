@@ -36,47 +36,52 @@ export const useShopperProfile = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             setLoading(true);
-            const { data: { session } } = await shopperSupabase.auth.getSession();
+            try {
+                const { data: { session } } = await shopperSupabase.auth.getSession();
 
-            if (session?.user) {
-                const { data, error } = await shopperSupabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .maybeSingle();
+                if (session?.user) {
+                    const { data, error } = await shopperSupabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .maybeSingle();
 
-                if (data && !error) {
-                    const p: ShopperProfile = {
-                        name: data.full_name || '',
-                        phone: data.phone || '',
-                        email: data.email || '',
-                        cedula: data.cedula || '',
-                        address: data.delivery_address || data.address || '',
-                        deliveryLat: data.delivery_lat ?? null,
-                        deliveryLng: data.delivery_lng ?? null,
-                        locationLabel: data.delivery_location_label || '',
-                        locationUrl: data.delivery_lat && data.delivery_lng
-                            ? `https://www.google.com/maps?q=${data.delivery_lat},${data.delivery_lng}`
-                            : '',
-                        notes: data.delivery_notes || '',
-                    };
-                    setProfile(p);
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-                    setLoading(false);
-                    return;
+                    if (data && !error) {
+                        const p: ShopperProfile = {
+                            name: data.full_name || '',
+                            phone: data.phone || '',
+                            email: data.email || '',
+                            cedula: data.cedula || '',
+                            address: data.delivery_address || data.address || '',
+                            deliveryLat: data.delivery_lat ?? null,
+                            deliveryLng: data.delivery_lng ?? null,
+                            locationLabel: data.delivery_location_label || '',
+                            locationUrl: data.delivery_lat && data.delivery_lng
+                                ? `https://www.google.com/maps?q=${data.delivery_lat},${data.delivery_lng}`
+                                : '',
+                            notes: data.delivery_notes || '',
+                        };
+                        setProfile(p);
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+                        setLoading(false);
+                        return;
+                    }
                 }
-            }
 
-            // Fallback to localStorage
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                try {
-                    setProfile(JSON.parse(saved));
-                } catch (e) {
-                    console.error('Error parsing shopper profile', e);
+                // Fallback to localStorage
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        setProfile(JSON.parse(saved));
+                    } catch (e) {
+                        console.error('Error parsing shopper profile', e);
+                    }
                 }
+            } catch (err) {
+                console.warn('[useShopperProfile] fetchProfile error:', err);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         fetchProfile();

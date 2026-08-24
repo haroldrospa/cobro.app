@@ -73,6 +73,15 @@ export const MobileBottomNav: React.FC = () => {
     if (isDelivery) return [{ name: 'Delivery', href: '/delivery', icon: Bike }];
 
     const isStaff = profile?.role === 'staff' || profile?.role === 'cashier';
+    const isAccountant = profile?.role === 'accountant';
+
+    if (isAccountant) {
+      return [
+        { name: 'Contabilidad', href: '/accounting', icon: FileText },
+        { name: 'Reportes', href: '/reports', icon: BarChart },
+        { name: 'Facturas', href: '/invoices', icon: FileText },
+      ];
+    }
 
     if (isStaff) {
       return [
@@ -94,7 +103,8 @@ export const MobileBottomNav: React.FC = () => {
   // Items del menú "Más"
   const moreItems = React.useMemo(() => {
     const isStaff = profile?.role === 'staff' || profile?.role === 'cashier';
-    if (isStaff) return [];
+    const isAccountant = profile?.role === 'accountant';
+    if (isStaff || isAccountant) return [];
 
     return [
       ...(hasDelivery ? [{ name: 'Delivery', href: '/delivery', icon: Bike }] : []),

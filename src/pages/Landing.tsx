@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,10 +16,8 @@ import {
 } from "lucide-react";
 import cobroLogo from '@/assets/cobro-logo-dark.png';
 import heroBg from '@/assets/hero-bg-uploaded.jpg';
-
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getSessionSafe } from "@/lib/authSession";
 
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -28,11 +26,11 @@ const Landing = () => {
 
   // Redirigir automáticamente si ya hay sesión activa
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getSessionSafe().then((session) => {
       if (session) {
         navigate('/app', { replace: true });
       }
-    });
+    }).catch(() => {});
   }, [navigate]);
 
   const fadeIn = {

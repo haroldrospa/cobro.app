@@ -23,13 +23,14 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const { data: categories = [], isLoading: isLoadingCategories, refetch: refetchCategories } = useCategories();
   const { data: products = [], isLoading: isLoadingProducts, refetch: refetchProducts } = useProductsOffline();
 
-  const isLoading = isLoadingCustomers || isLoadingCategories || isLoadingProducts;
+  const isLoading = !!storeId && (isLoadingCustomers || isLoadingCategories || isLoadingProducts);
 
   const refreshMasterData = useCallback(() => {
+    if (!storeId) return;
     refetchCustomers();
     refetchCategories();
     refetchProducts();
-  }, [refetchCustomers, refetchCategories, refetchProducts]);
+  }, [storeId, refetchCustomers, refetchCategories, refetchProducts]);
 
   // Escuchar eventos de sincronización para actualizar los datos automáticamente al terminar el sync
   React.useEffect(() => {

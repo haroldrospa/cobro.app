@@ -394,14 +394,28 @@ const POSContent: React.FC = () => {
 
   const isInvoiceLimitReached = hasReachedLimit('invoices', monthlySalesCount);
 
+  // Map de ofertas por producto O(1) para evitar filtrado O(N) en cada render del carrito
+  const offersByProductId = React.useMemo(() => {
+    const map = new Map<string, typeof activeOffers>();
+    for (let i = 0; i < activeOffers.length; i++) {
+      const o = activeOffers[i];
+      if (!o.product_id) continue;
+      const existing = map.get(o.product_id) || [];
+      existing.push(o);
+      map.set(o.product_id, existing);
+    }
+    return map;
+  }, [activeOffers]);
+
   // Calcular ofertas automáticamente
   const cartWithOffers = React.useMemo(() => {
+    if (!cart.length) return [];
     return cart.map(item => {
-      // Buscar ofertas para este producto
-      const productOffers = activeOffers.filter(o => o.product_id === item.id);
+      // Buscar ofertas para este producto en O(1)
+      const productOffers = offersByProductId.get(item.id);
 
       // Si hay ofertas, calcular el mejor precio
-      if (productOffers.length > 0) {
+      if (productOffers && productOffers.length > 0) {
         // Usamos item.originalPrice si existe (para no aplicar oferta sobre oferta), o item.price
         const basePrice = item.originalPrice || item.price;
         const { appliedOffer, finalPrice, pricePerUnit, savings } = calculateBestOffer(item.quantity, basePrice, productOffers);
@@ -433,7 +447,7 @@ const POSContent: React.FC = () => {
       }
       return item;
     });
-  }, [cart, activeOffers]);
+  }, [cart, offersByProductId]);
 
   const totals = React.useMemo(() => calculateTotals(cartWithOffers, globalDiscount), [cartWithOffers, globalDiscount]);
 
@@ -485,21 +499,13 @@ const POSContent: React.FC = () => {
         }
 
         setCartLoaded(true);
-
-        const hasOrder = savedCartData.orderMetadata;
-        toast({
-          title: hasOrder ? "Orden restaurada" : "Carrito restaurado",
-          description: hasOrder
-            ? `${savedCartData.orderMetadata!.orderNumber} - ${savedCartData.items.length} productos`
-            : `Se cargaron ${savedCartData.items.length} productos del carrito guardado.`,
-        });
       } else {
         setCartLoaded(true);
       }
     } else if (!isLoadingSavedCart && !cartLoaded) {
       setCartLoaded(true);
     }
-  }, [savedCartData, cartLoaded, isLoadingSavedCart, toast]);
+  }, [savedCartData, cartLoaded, isLoadingSavedCart]);
 
   // Automatically clear active order reference if the cart becomes empty
   useEffect(() => {
@@ -826,43 +832,88 @@ const POSContent: React.FC = () => {
       const capturedCurrentWebOrderId = currentWebOrderId;
       const capturedCurrentOrderSource = currentOrderSource;
       const capturedCustomerName = selectedCustomerData?.name || 'Venta Directa';
+      const capturedOrderNumber = currentOrderInfo?.orderNumber;
+
+      // Declare storeId BEFORE the async block so the cache purge can access it
+      const capturedStoreId = store?.id;
 
       // Background: Handle kitchen order and order status updates
       (async () => {
         try {
-          if (capturedCurrentWebOrderId) {
+          // UUID validator helper
+          const isUuid = (str: string | null | undefined): boolean => {
+            if (!str) return false;
+            return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+          };
+
+          let targetOrderId: string | null = isUuid(capturedCurrentWebOrderId) ? capturedCurrentWebOrderId!.trim() : null;
+
+          // Fallback: If currentWebOrderId was invalid/corrupted or missing, find order ID by order_number
+          if (!targetOrderId && capturedOrderNumber && capturedStoreId) {
+            const { data: foundOrder } = await supabase
+              .from('open_orders')
+              .select('id')
+              .eq('order_number', capturedOrderNumber)
+              .eq('store_id', capturedStoreId)
+              .maybeSingle();
+
+            if (foundOrder?.id) {
+              targetOrderId = foundOrder.id;
+            }
+          }
+
+          if (targetOrderId) {
             // Read current kitchen status BEFORE updating — never regress a completed order
             const { data: existingOrder } = await supabase
               .from('open_orders')
               .select('order_status')
-              .eq('id', capturedCurrentWebOrderId)
+              .eq('id', targetOrderId)
               .maybeSingle();
 
-            // Only mark as 'preparing' if it hasn't been completed yet by the kitchen
+            // Valid order_status values: 'pending','confirmed','preparing','shipped','completed','paid','ready'
+            // 'delivered' is NOT a valid DB value — use 'completed' instead for non-kitchen stores
             const kitchenAlreadyDone = existingOrder?.order_status === 'completed'
-              || existingOrder?.order_status === 'delivered'
-              || existingOrder?.order_status === 'shipped';
+              || existingOrder?.order_status === 'shipped'
+              || existingOrder?.order_status === 'paid'
+              || existingOrder?.order_status === 'ready';
 
-            // Determination of the new status:
-            // For companies without kitchen (stores/supermarkets), we mark it as delivered/closed.
-            // For restaurants, we ensure it enters/remains in the kitchen cycle.
             let nextStatus = existingOrder?.order_status || 'preparing';
             if (skipKitchenStep) {
-              nextStatus = 'delivered';
+              // For stores/supermarkets without a kitchen, mark the order as completed
+              nextStatus = 'completed';
             } else if (!kitchenAlreadyDone) {
               nextStatus = 'preparing';
             }
 
-            await supabase
+            const { error: updateError } = await supabase
               .from('open_orders')
               .update({
-                payment_status: capturedPaymentMethod === 'credit' ? 'pending' : 'paid',
+                payment_status: 'paid',
                 order_status: nextStatus,
                 updated_at: new Date().toISOString()
               })
-              .eq('id', capturedCurrentWebOrderId);
+              .eq('id', targetOrderId);
+
+            if (updateError) {
+              console.error('❌ Error actualizando open_orders tras el cobro:', updateError);
+            } else {
+              console.log(`✅ Orden ${targetOrderId} marcada como pagada / estado: ${nextStatus}`);
+            }
+
+            // Immediately purge from query cache so it disappears from OpenAccountsDialog
+            const removeBilled = (old: any[] | undefined) => {
+              if (!old) return [];
+              return old.filter((o: any) =>
+                String(o.id) !== String(targetOrderId) &&
+                String(o.order_number) !== String(capturedOrderNumber)
+              );
+            };
+            if (capturedStoreId) {
+              queryClient.setQueryData(['pos-open-orders', capturedStoreId], removeBilled);
+            }
+            queryClient.setQueryData(['pos-open-orders'], removeBilled);
           } else if (!skipKitchenStep) {
-            // For direct sales, create a temporary "preparing" order for the kitchen
+            // For direct sales (no saved order), create a temporary "preparing" order for the kitchen
             const { data: orderNumber } = await supabase.rpc('generate_order_number', { order_source: 'pos' });
             const orderId = crypto.randomUUID();
 
@@ -878,7 +929,7 @@ const POSContent: React.FC = () => {
               total: finalTotal,
               source: 'pos',
               notes: orderTypeTags[capturedPosOrderType],
-              store_id: store?.id,
+              store_id: capturedStoreId,
               profile_id: profile?.id
             });
 
@@ -915,17 +966,14 @@ const POSContent: React.FC = () => {
           }
 
           // Invalidate relevant queries globally
-          const storeId = store?.id;
-
-          // Invalidate specific store queries
-          if (storeId) {
-            queryClient.invalidateQueries({ queryKey: ['web-orders', storeId] });
-            queryClient.invalidateQueries({ queryKey: ['pos-open-orders', storeId] });
-            queryClient.invalidateQueries({ queryKey: ['kitchen-orders', storeId] });
-            queryClient.invalidateQueries({ queryKey: ['web-orders-count', storeId] });
+          if (capturedStoreId) {
+            queryClient.invalidateQueries({ queryKey: ['web-orders', capturedStoreId] });
+            queryClient.invalidateQueries({ queryKey: ['pos-open-orders', capturedStoreId] });
+            queryClient.invalidateQueries({ queryKey: ['kitchen-orders', capturedStoreId] });
+            queryClient.invalidateQueries({ queryKey: ['web-orders-count', capturedStoreId] });
           }
 
-          // Force global invalidation as fallback to ensure the UI refreshes
+          // Force global invalidation as fallback
           queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
           queryClient.invalidateQueries({ queryKey: ['web-orders'] });
         } catch (err) {
@@ -959,11 +1007,6 @@ const POSContent: React.FC = () => {
         setCurrentOrderInfo({ orderNumber, customerName, notes });
       }
       setCurrentOrderSource(source || 'pos');
-
-      toast({
-        title: "Pedido cargado",
-        description: `${orderNumber || 'Pedido'} - ${customerName || 'Cliente'} (${items.length} productos)`,
-      });
       return;
     }
 
@@ -989,11 +1032,6 @@ const POSContent: React.FC = () => {
     if (order.customer_id) {
       setSelectedCustomer(order.customer_id);
     }
-
-    toast({
-      title: "Pedido cargado",
-      description: `${order.order_number || 'Pedido'} - ${order.customer_name || 'Cliente'}`,
-    });
   };
 
   // Save existing order directly without dialog
@@ -1369,6 +1407,14 @@ const POSContent: React.FC = () => {
     if (profile?.role === 'delivery') {
       return [
         { name: 'Pedidos Delivery', href: '/delivery', icon: Bike },
+      ];
+    }
+
+    if (profile?.role === 'accountant') {
+      return [
+        { name: 'Contabilidad', href: '/accounting', icon: FileText },
+        { name: 'Reportes', href: '/reports', icon: BarChart },
+        { name: 'Facturas', href: '/invoices', icon: FileText },
       ];
     }
 

@@ -5,30 +5,35 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 
-// Custom fetch to automatically handle 401 Unauthorized errors caused by expired/invalid user JWTs.
+// Custom fetch to gracefully handle fetch requests and 401 fallbacks without corrupting auth tokens
 const customFetch: typeof fetch = async (url, options) => {
-  const response = await fetch(url, options);
+  try {
+    const response = await fetch(url, options);
 
-  if (response.status === 401 && options?.headers) {
-    const headers = new Headers(options.headers);
-    const authHeader = headers.get('Authorization');
-    const anonBearer = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+    if (response.status === 401 && options?.headers) {
+      const urlStr = typeof url === 'string' ? url : (url as any)?.url || '';
+      const isAuthEndpoint = urlStr.includes('/auth/v1/');
 
-    if (authHeader && authHeader !== anonBearer) {
-      console.warn('⚠️ [Supabase Client] 401 Unauthorized detected due to expired user session. Clearing stale auth token...');
-      
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-          localStorage.removeItem(key);
+      if (!isAuthEndpoint) {
+        const headers = new Headers(options.headers);
+        const authHeader = headers.get('Authorization');
+        const anonBearer = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+
+        if (authHeader && authHeader !== anonBearer) {
+          headers.set('Authorization', anonBearer);
+          try {
+            return await fetch(url, { ...options, headers });
+          } catch {
+            return response;
+          }
         }
-      });
-
-      headers.set('Authorization', anonBearer);
-      return fetch(url, { ...options, headers });
+      }
     }
-  }
 
-  return response;
+    return response;
+  } catch (err: any) {
+    throw err;
+  }
 };
 
 // Import the supabase client like this:

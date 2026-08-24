@@ -325,10 +325,15 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
   const [focusedIndex, setFocusedIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchTermRef = useRef(searchTerm);
+  // Flag: true when the useEffect barcode auto-add already fired for the current term,
+  // so the Enter keydown handler knows NOT to add again (preventing quantity doubling).
+  const barcodeAutoAddedRef = useRef(false);
 
   // Keep ref in sync
   useEffect(() => {
     searchTermRef.current = searchTerm;
+    // Reset the flag whenever the search term changes so a new scan can trigger auto-add
+    barcodeAutoAddedRef.current = false;
   }, [searchTerm]);
 
   // Exponer método de foco al padre
@@ -381,6 +386,38 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       .trim();
   }, []);
 
+  // O(1) Barcode & Internal Code Map for instant scanning & search
+  const barcodeMap = useMemo(() => {
+    const map = new Map<string, { product: Product; bundle?: any }>();
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      if (p.barcode) {
+        const norm = normalizeText(p.barcode);
+        if (norm && !map.has(norm)) {
+          map.set(norm, { product: p });
+        }
+      }
+      if (p.internal_code) {
+        const norm = normalizeText(p.internal_code);
+        if (norm && !map.has(norm)) {
+          map.set(norm, { product: p });
+        }
+      }
+      if (p.barcodes && Array.isArray(p.barcodes)) {
+        for (let j = 0; j < p.barcodes.length; j++) {
+          const b = p.barcodes[j];
+          if (b.barcode) {
+            const norm = normalizeText(b.barcode);
+            if (norm && !map.has(norm)) {
+              map.set(norm, { product: p, bundle: b });
+            }
+          }
+        }
+      }
+    }
+    return map;
+  }, [products, normalizeText]);
+
   // Pre-normalize products for faster searching (eliminate repeated toLowerCase calls)
   const normalizedProducts = useMemo(() => {
     return products.map(p => ({
@@ -404,12 +441,12 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     if (mode === 'classic' && !rawTerm) return [];
 
     // Catalog mode or while searching: Show results
-    if (!rawTerm) return normalizedProducts.slice(0, 100);
+    if (!rawTerm) return normalizedProducts.slice(0, 60);
 
     const normTerm = normalizeText(rawTerm);
     const searchWords = normTerm.split(/\s+/).filter(Boolean);
 
-    if (searchWords.length === 0) return normalizedProducts.slice(0, 100);
+    if (searchWords.length === 0) return normalizedProducts.slice(0, 60);
 
     // Scoring and filtering products by relevance
     const scoredProducts = normalizedProducts
@@ -504,7 +541,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
         : null,
     }));
 
-    return withBundles.slice(0, 100);
+    return withBundles.slice(0, 60);
   }, [normalizedProducts, debouncedSearchTerm, searchType, mode, normalizeText]);
 
   // Reset focused index when search results change
@@ -512,37 +549,36 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     setFocusedIndex(0);
   }, [debouncedSearchTerm, filteredProducts.length]);
 
-  // Auto-select
+  // Instant Auto-select on exact Barcode scan without waiting for debounce
+  // NOTE: sets barcodeAutoAddedRef so the Enter keydown handler won't double-add.
   useEffect(() => {
-    const search = debouncedSearchTerm.trim().toLowerCase();
-    if (!search || filteredProducts.length !== 1) return;
+    const search = searchTerm.trim();
+    if (!search) return;
 
-    const product = filteredProducts[0];
-    const isPrimaryExact = product._barcode_lower === search;
-    const bundleMatch = product.barcodes?.find(b => b.barcode.toLowerCase() === search);
-    const isBundleExact = !!(bundleMatch && ((Number(bundleMatch.quantity) || 1) > 1 || (Number(bundleMatch.discount_value) || 0) > 0));
-    
-    if (isPrimaryExact || isBundleExact) {
-      const isLikelyBarcode = /^\d{8,}$/.test(search);
-      if (isLikelyBarcode) {
-        const qty = bundleMatch ? (Number(bundleMatch.quantity) || 1) : 1;
-        const discount = bundleMatch ? (Number(bundleMatch.discount_value) || 0) : 0;
-        const type = bundleMatch?.discount_type || 'percentage';
-        let finalPrice = product.price;
-        
-        if (discount > 0) {
-          if (type === 'percentage') {
-            finalPrice = product.price * (1 - discount / 100);
-          } else {
-            finalPrice = product.price - (discount / qty);
-          }
+    const norm = normalizeText(search);
+    const directMatch = barcodeMap.get(norm);
+
+    if (directMatch && /^\d{4,}$/.test(norm)) {
+      const { product, bundle } = directMatch;
+      const qty = bundle ? (Number(bundle.quantity) || 1) : 1;
+      const discount = bundle ? (Number(bundle.discount_value) || 0) : 0;
+      const type = bundle?.discount_type || 'percentage';
+      let finalPrice = product.price;
+
+      if (discount > 0) {
+        if (type === 'percentage') {
+          finalPrice = product.price * (1 - discount / 100);
+        } else {
+          finalPrice = product.price - (discount / qty);
         }
-        
-        onAddToCart(product, qty, finalPrice);
-        setSearchTerm('');
       }
+
+      barcodeAutoAddedRef.current = true;
+      onAddToCart(product, qty, finalPrice);
+      setSearchTerm('');
+      if (searchInputRef.current) searchInputRef.current.value = '';
     }
-  }, [debouncedSearchTerm, filteredProducts, onAddToCart, setSearchTerm]);
+  }, [searchTerm, barcodeMap, onAddToCart, setSearchTerm, normalizeText]);
 
   const handleSearchTypeChange = useCallback((newType: SearchType) => {
     setSearchType(newType);
@@ -710,13 +746,22 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       e.preventDefault();
       setFocusedIndex(prev => Math.max(prev - 1, 0));
     } else if (e.key === 'Enter') {
-      const search = searchTerm.toLowerCase().trim();
-      if (!search) return;
+      e.preventDefault();
+      const rawSearch = (searchTermRef.current || searchInputRef.current?.value || '').trim();
+      if (!rawSearch) return;
 
-      if (addByExactCode(searchTerm).found) return;
+      // Si el useEffect de auto-escaneo ya agrego este codigo, no lo agregues
+      // de nuevo aqui - evita duplicar la cantidad (ver barcodeAutoAddedRef).
+      if (barcodeAutoAddedRef.current) {
+        barcodeAutoAddedRef.current = false;
+        return;
+      }
+
+      if (addByExactCode(rawSearch).found) return;
 
       if (filteredProducts.length > 0) {
-        handleProductSelect(filteredProducts[focusedIndex]);
+        const targetProduct = filteredProducts[focusedIndex] || filteredProducts[0];
+        handleProductSelect(targetProduct, (targetProduct as any)._matchedBundle);
       }
     }
   };

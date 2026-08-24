@@ -37,6 +37,11 @@ export const useOnlineStatus = () => {
     return isOnline;
 };
 
+// Helper de ordenamiento alfabético determinista y estable
+const sortProductsByName = (items: Product[]): Product[] => {
+    return [...items].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+};
+
 // Control de sincronización global
 const syncInProgress = new Set<string>();
 const lastSyncTimestamp = new Map<string, number>();
@@ -95,14 +100,23 @@ export const useProductsOffline = () => {
                     clearTimeout(timer);
                     chunk = result.data;
                     chunkError = result.error;
-                } catch (e) {
+                } catch (e: any) {
                     clearTimeout(timer);
-                    console.log('📦 Background sync: timeout o error en página', from, e);
+                    if (e?.name === 'AbortError' || e?.message?.includes('aborted')) {
+                        console.log('📦 Background sync abortado');
+                    } else {
+                        console.log('📦 Background sync: timeout o error en página', from, e);
+                    }
                     break;
                 }
 
-                if (chunkError) throw chunkError;
-                if (!chunk) throw new Error('No chunk data');
+                if (chunkError) {
+                    if (chunkError?.name === 'AbortError' || chunkError?.message?.includes('aborted')) {
+                        break;
+                    }
+                    throw chunkError;
+                }
+                if (!chunk) break;
 
                 allData = [...allData, ...chunk];
                 from += step;
@@ -111,7 +125,7 @@ export const useProductsOffline = () => {
 
             if (allData.length === 0) return;
 
-            const filtered = allData.filter((p: any) => p.store_id === sid) as Product[];
+            const filtered = sortProductsByName(allData.filter((p: any) => p.store_id === sid) as Product[]);
 
             // Guardar en IndexedDB usando BULK (Alto rendimiento)
             await offlineDB.putBulk(OfflineStore.PRODUCTS, filtered);
@@ -135,9 +149,9 @@ export const useProductsOffline = () => {
         queryFn: async () => {
             if (!storeId) return [];
 
-            // 1. SIEMPRE intentar IndexedDB primero → carga instantánea
+            // 1. SIEMPRE intentar IndexedDB primero → carga instantánea y ordenada
             const cached = await offlineDB.getAll<Product>(OfflineStore.PRODUCTS);
-            const localProducts = cached.filter(p => (p as any).store_id === storeId);
+            const localProducts = sortProductsByName(cached.filter(p => (p as any).store_id === storeId));
 
             if (localProducts.length > 0) {
                 console.log(`📦 ${localProducts.length} productos desde IndexedDB (instant) — sync en background`);
@@ -322,7 +336,9 @@ export const useCreateProductOffline = () => {
                 updated_at: new Date().toISOString(),
             };
 
-            queryClient.setQueryData(['products', 'offline', storeId], (old: any) => [...(old || []), optimisticProduct]);
+            queryClient.setQueryData(['products', 'offline', storeId], (old: any) => 
+                sortProductsByName([...(old || []), optimisticProduct])
+            );
             return { previousProducts };
         },
         onError: (err, newProduct, context) => {
@@ -470,7 +486,7 @@ export const useUpdateProductOffline = () => {
             }
 
             queryClient.setQueryData(['products', 'offline', storeId], (old: Product[]) => 
-                old?.map(p => {
+                sortProductsByName((old || []).map(p => {
                     if (p.id === updatedProduct.id) {
                         return {
                             ...p,
@@ -479,7 +495,7 @@ export const useUpdateProductOffline = () => {
                         };
                     }
                     return p;
-                })
+                }))
             );
             return { previousProducts };
         },
@@ -540,7 +556,7 @@ export const useDeleteProductOffline = () => {
             const previousProducts = queryClient.getQueryData<Product[]>(['products', 'offline', storeId]);
             
             queryClient.setQueryData(['products', 'offline', storeId], (old: Product[]) => 
-                old?.filter(p => p.id !== id)
+                sortProductsByName((old || []).filter(p => p.id !== id))
             );
             return { previousProducts };
         },

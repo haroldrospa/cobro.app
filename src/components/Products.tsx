@@ -1,5 +1,5 @@
 import { useState, useRef, FC, ChangeEvent, useEffect, useMemo, useCallback, memo } from 'react';
-import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History } from 'lucide-react';
+import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History, FolderCog } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import { ActiveOffersSheet } from '@/components/products/ActiveOffersSheet';
 import { PrintLabelsDialog } from '@/components/products/PrintLabelsDialog';
 import { ImportProductsDialog } from '@/components/products/ImportProductsDialog';
 import { RestaurantInventoryControl } from '@/components/products/RestaurantInventoryControl';
+import { ManageCategoriesDialog } from '@/components/product-form/ManageCategoriesDialog';
 import ProductForm from './ProductForm';
 import { LimitReachedDialog } from './subscription/PlanRestrictions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,6 +43,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
@@ -128,6 +130,7 @@ const Products: FC = () => {
   const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [importData, setImportData] = useState<any[]>([]);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   
   const { data: products = [], isLoading, isFetching } = useProductsOffline();
   const { data: categories = [] } = useCategories();
@@ -301,6 +304,31 @@ const Products: FC = () => {
       toast({
         title: "Error al actualizar",
         description: "No se pudieron guardar los cambios en el producto.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleQuickCategoryChange = async (product: Product, newCategoryId: string | null) => {
+    if (product.category_id === newCategoryId || (!product.category_id && !newCategoryId)) {
+      return;
+    }
+    try {
+      await updateProduct.mutateAsync({
+        ...product,
+        category_id: newCategoryId,
+        reason: 'Cambio rápido de categoría'
+      });
+      const selectedCat = categories.find(c => c.id === newCategoryId);
+      toast({
+        title: "Categoría actualizada",
+        description: `"${product.name}" asignado a "${selectedCat?.name || 'Sin categoría'}".`,
+      });
+    } catch (err: any) {
+      console.error("Error cambiando categoría:", err);
+      toast({
+        title: "Error al actualizar",
+        description: err?.message || "No se pudo cambiar la categoría.",
         variant: "destructive"
       });
     }
@@ -743,8 +771,85 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     }
   };
 
-  // Cálculos detallados del valor del inventario — memoizados para evitar recalcular en cada render
-  const inventoryStats = useMemo(() => products.reduce((acc, product) => {
+  const currentCategoryName = useMemo(() => {
+    if (selectedCategory === 'all') return null;
+    if (selectedCategory === 'uncategorized') return 'Sin categoría';
+    const found = categories.find(c => c.id === selectedCategory);
+    return found ? found.name : null;
+  }, [selectedCategory, categories]);
+
+  // Productos filtrados por búsqueda y categoría (sin aplicar showLowStockOnly)
+  const baseFilteredProducts = useMemo(() => {
+    return products.filter(product => {
+      // Filtro por categoría
+      if (selectedCategory === 'uncategorized') {
+        if (product.category_id) {
+          return false;
+        }
+      } else if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
+        return false;
+      }
+
+      // Si no hay término de búsqueda, mostrar todos (con filtro de categoría aplicado)
+      if (!debouncedSearchTerm.trim()) {
+        return true;
+      }
+
+      // Filtro según tipo de búsqueda
+      const searchLower = debouncedSearchTerm.toLowerCase().trim();
+
+      switch (searchType) {
+        case 'all': {
+          const nameMatch = product.name && product.name.toLowerCase().includes(searchLower);
+          const idMatch = product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
+          const categoryMatch = product.category?.name && product.category.name.toLowerCase().includes(searchLower);
+          const allBarcodes = [
+            product.barcode?.toLowerCase(),
+            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
+          ].filter(Boolean) as string[];
+          const barcodeMatch = allBarcodes.some(b => b.includes(searchLower));
+          
+          return nameMatch || idMatch || categoryMatch || barcodeMatch;
+        }
+        case 'name':
+          return product.name && product.name.toLowerCase().includes(searchLower);
+        case 'id':
+          return product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
+        case 'barcode': {
+          const allBarcodes = [
+            product.barcode?.toLowerCase(),
+            ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
+          ].filter(Boolean) as string[];
+          return allBarcodes.some(b => b.includes(searchLower));
+        }
+        case 'category':
+          return product.category?.name && product.category.name.toLowerCase().includes(searchLower);
+        default:
+          return true;
+      }
+    });
+  }, [products, selectedCategory, debouncedSearchTerm, searchType]);
+
+  // Contar productos con stock bajo dentro del conjunto filtrado actual
+  const lowStockProducts = useMemo(() => baseFilteredProducts.filter(p => {
+    // Excluir productos que no controlan inventario
+    if (p.track_inventory === false) return false;
+
+    const currentStock = p.stock || 0;
+    const minStock = p.min_stock || 0;
+    // Solo alertar si el producto controla inventario Y tiene stock bajo
+    return currentStock <= minStock;
+  }), [baseFilteredProducts]);
+  const lowStockCount = lowStockProducts.length;
+
+  // Lista final mostrada en pantalla ordenada alfabéticamente
+  const filteredProducts = useMemo(() => {
+    const list = showLowStockOnly ? lowStockProducts : baseFilteredProducts;
+    return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+  }, [baseFilteredProducts, lowStockProducts, showLowStockOnly]);
+
+  // Cálculos detallados del valor del inventario — calculados dinámicamente según el filtro activo
+  const inventoryStats = useMemo(() => filteredProducts.reduce((acc, product) => {
     let costWithoutTax = product.cost || 0;
     let costWithTax = product.cost || 0;
     const stock = Number(product.stock || 0);
@@ -767,19 +872,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     acc.valorEnPrecio += price * stock;
 
     return acc;
-  }, { costoSinImpuesto: 0, costoConImpuesto: 0, valorEnPrecio: 0 }), [products]);
-
-  // Contar productos con stock bajo — memoizado
-  const lowStockProducts = useMemo(() => products.filter(p => {
-    // Excluir productos que no controlan inventario
-    if (p.track_inventory === false) return false;
-
-    const currentStock = p.stock || 0;
-    const minStock = p.min_stock || 0;
-    // Solo alertar si el producto controla inventario Y tiene stock bajo
-    return currentStock <= minStock;
-  }), [products]);
-  const lowStockCount = lowStockProducts.length;
+  }, { costoSinImpuesto: 0, costoConImpuesto: 0, valorEnPrecio: 0 }), [filteredProducts]);
 
   // Función para descargar planilla de ejemplo
   const handleDownloadTemplate = async () => {
@@ -1170,57 +1263,6 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     }
   };
 
-  // filteredProducts memoizado — solo recalcula cuando cambian los filtros (búsqueda con debounce)
-  const filteredProducts = useMemo(() => products.filter(product => {
-    // Filtro por stock bajo
-    if (showLowStockOnly && !((product.stock || 0) <= (product.min_stock || 0))) {
-      return false;
-    }
-
-    // Filtro por categoría
-    if (selectedCategory !== 'all' && product.category_id !== selectedCategory) {
-      return false;
-    }
-
-    // Si no hay término de búsqueda, mostrar todos (con filtro de categoría aplicado)
-    if (!debouncedSearchTerm.trim()) {
-      return true;
-    }
-
-    // Filtro según tipo de búsqueda
-    const searchLower = debouncedSearchTerm.toLowerCase().trim();
-
-    switch (searchType) {
-      case 'all': {
-        const nameMatch = product.name && product.name.toLowerCase().includes(searchLower);
-        const idMatch = product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
-        const categoryMatch = product.category?.name && product.category.name.toLowerCase().includes(searchLower);
-        const allBarcodes = [
-          product.barcode?.toLowerCase(),
-          ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
-        ].filter(Boolean) as string[];
-        const barcodeMatch = allBarcodes.some(b => b.includes(searchLower));
-        
-        return nameMatch || idMatch || categoryMatch || barcodeMatch;
-      }
-      case 'name':
-        return product.name && product.name.toLowerCase().includes(searchLower);
-      case 'id':
-        return product.internal_code && product.internal_code.toLowerCase().includes(searchLower);
-      case 'barcode': {
-        const allBarcodes = [
-          product.barcode?.toLowerCase(),
-          ...(product.barcodes?.map(b => b.barcode.toLowerCase()) ?? []),
-        ].filter(Boolean) as string[];
-        return allBarcodes.some(b => b.includes(searchLower));
-      }
-      case 'category':
-        return product.category?.name && product.category.name.toLowerCase().includes(searchLower);
-      default:
-        return true;
-    }
-  }), [products, showLowStockOnly, selectedCategory, debouncedSearchTerm, searchType]);
-
   // Reset pagination when filters change (usar debouncedSearchTerm para consistencia con el filtro)
   useEffect(() => {
     setVisibleCount(50);
@@ -1548,8 +1590,15 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors duration-500">
                 <DollarSign className="h-6 w-6 text-emerald-500" />
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Previsión de Venta</p>
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Previsión de Venta</p>
+                  {currentCategoryName && (
+                    <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
+                      {currentCategoryName}
+                    </span>
+                  )}
+                </div>
                 <p className="text-3xl font-black tracking-tighter text-emerald-500 flex items-baseline gap-0.5">
                   <span className="text-xl font-bold opacity-80">$</span>
                   {inventoryStats.valorEnPrecio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1582,9 +1631,18 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors duration-500">
                 <Package className="h-6 w-6 text-blue-500" />
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Total Productos</p>
-                <p className="text-4xl font-black tracking-tighter text-blue-500">{products.length}</p>
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
+                    Total Productos
+                  </p>
+                  {currentCategoryName && (
+                    <span className="text-[9px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
+                      {currentCategoryName}
+                    </span>
+                  )}
+                </div>
+                <p className="text-4xl font-black tracking-tighter text-blue-500">{filteredProducts.length}</p>
               </div>
             </div>
           </CardContent>
@@ -1607,9 +1665,16 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                   <AlertTriangle className={`h-6 w-6 text-destructive ${showLowStockOnly ? 'animate-pulse' : ''}`} />
                 </div>
                 <div className="space-y-1 min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 truncate">
-                    Stock Bajo {showLowStockOnly && <span className="text-destructive font-bold ml-1">(Filtrado)</span>}
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 truncate">
+                      Stock Bajo {showLowStockOnly && <span className="text-destructive font-bold ml-1">(Filtrado)</span>}
+                    </p>
+                    {currentCategoryName && !showLowStockOnly && (
+                      <span className="text-[9px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
+                        {currentCategoryName}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-4xl font-black tracking-tighter text-destructive">{lowStockCount}</p>
                 </div>
               </div>
@@ -1712,6 +1777,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las categorías</SelectItem>
+                  <SelectItem value="uncategorized">Sin categoría</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
@@ -1758,8 +1824,99 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
                 <div className="flex-1 min-w-0 space-y-2 w-full text-center sm:text-left">
                   <div className="flex flex-col gap-2">
                     <h3 className="font-bold text-base sm:text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2" title={product.name}>{product.name}</h3>
-                    <div className="flex flex-wrap justify-center sm:justify-start gap-1.5">
-                      <Badge variant="secondary" className="bg-secondary/60 hover:bg-secondary/80 text-[10px] px-2 py-0.5 font-medium transition-colors">{product.category?.name || 'Sin categoría'}</Badge>
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 items-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="group/cat inline-flex items-center gap-1.5 bg-muted/60 hover:bg-muted text-foreground text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all border border-border/50 hover:border-border cursor-pointer shadow-xs focus:outline-none"
+                            title="Haz clic para cambiar categoría rápidamente"
+                          >
+                            <Tag className="h-3 w-3 text-muted-foreground group-hover/cat:text-primary transition-colors shrink-0" />
+                            <span className="truncate max-w-[130px] sm:max-w-[180px]">
+                              {product.category?.name || 'Sin categoría'}
+                            </span>
+                            <ChevronDown className="h-3 w-3 opacity-40 group-hover/cat:opacity-100 transition-opacity shrink-0" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-64 p-2 rounded-2xl bg-card border border-border shadow-2xl z-50">
+                          <div className="flex items-center justify-between px-2 py-1 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                              Categoría
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsManageCategoriesOpen(true);
+                              }}
+                              className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer focus:outline-none"
+                              title="Administrar y modificar categorías"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Modificar
+                            </button>
+                          </div>
+                          <div className="max-h-56 overflow-y-auto overflow-x-hidden space-y-0.5 pr-0.5">
+                            <DropdownMenuItem
+                              onClick={() => handleQuickCategoryChange(product, null)}
+                              className={cn(
+                                "flex items-center justify-between text-xs px-2.5 py-2 rounded-xl cursor-pointer transition-colors focus:bg-muted/80",
+                                !product.category_id 
+                                  ? "bg-muted/60 text-foreground font-semibold" 
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              <span className="flex items-center gap-2 truncate">
+                                <span className={cn(
+                                  "h-2 w-2 rounded-full shrink-0",
+                                  !product.category_id ? "bg-primary" : "bg-muted-foreground/30"
+                                )} />
+                                <span className={!product.category_id ? "text-primary truncate" : "truncate"}>Sin categoría</span>
+                              </span>
+                              {!product.category_id && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />}
+                            </DropdownMenuItem>
+
+                            {categories.length > 0 && <DropdownMenuSeparator className="my-1 opacity-50" />}
+
+                            {categories.map((cat) => {
+                              const isSelected = product.category_id === cat.id;
+                              return (
+                                <DropdownMenuItem
+                                  key={cat.id}
+                                  onClick={() => handleQuickCategoryChange(product, cat.id)}
+                                  className={cn(
+                                    "flex items-center justify-between text-xs px-2.5 py-2 rounded-xl cursor-pointer transition-colors focus:bg-muted/80",
+                                    isSelected 
+                                      ? "bg-muted/60 text-foreground font-semibold" 
+                                      : "text-muted-foreground hover:text-foreground"
+                                  )}
+                                >
+                                  <span className="flex items-center gap-2 truncate min-w-0">
+                                    <span className={cn(
+                                      "h-2 w-2 rounded-full shrink-0",
+                                      isSelected ? "bg-primary" : "bg-muted-foreground/30"
+                                    )} />
+                                    <span className={cn("truncate", isSelected ? "text-primary font-semibold" : "")}>
+                                      {cat.name}
+                                    </span>
+                                  </span>
+                                  {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />}
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </div>
+
+                          <DropdownMenuSeparator className="my-1.5 opacity-50" />
+                          <DropdownMenuItem
+                            onSelect={() => setIsManageCategoriesOpen(true)}
+                            className="flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 rounded-xl cursor-pointer text-primary bg-primary/5 hover:bg-primary/10 font-semibold transition-colors mt-0.5"
+                          >
+                            <FolderCog className="h-3.5 w-3.5" />
+                            <span>Modificar / Crear categorías</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       {product.track_inventory === false ? (
                         <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 text-[10px] px-2 py-0.5 font-medium">Sin stock</Badge>
                       ) : ((product.stock || 0) <= (product.min_stock || 0)) && (
@@ -3067,6 +3224,12 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal: Gestionar y Modificar Categorías */}
+      <ManageCategoriesDialog
+        open={isManageCategoriesOpen}
+        onOpenChange={setIsManageCategoriesOpen}
+      />
     </div >
   );
 };

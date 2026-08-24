@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,8 +53,21 @@ import {
   Tag,
   BadgeDollarSign,
   Percent,
+  Search,
+  Building2,
+  ShieldCheck,
+  Receipt,
+  Layers,
+  CreditCard,
+  Landmark,
+  CheckCircle2,
+  Sparkles,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
+  Loader2,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { useSales, Sale } from '@/hooks/useSalesManagement';
@@ -66,6 +79,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { useEmployees } from '@/hooks/useEmployees';
 import { useAllCustomersBalances } from '@/hooks/useCustomerBalance';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -73,6 +87,8 @@ import autoTable from 'jspdf-autotable';
 // falta para simplemente ver reportes, solo al exportar a Excel.
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
+import { supabase } from '@/integrations/supabase/client';
 import appLogo from '@/assets/cobro-logo.png';
 
 // --- CONFIGURATION ---
@@ -81,9 +97,7 @@ const REPORT_TYPES = [
   { id: 'sales-daily', label: 'Ventas Diarias', icon: CalendarDays, description: 'Evolución de ventas día por día' },
   { id: 'sales-hourly', label: 'Ventas por Hora', icon: Clock, description: 'Análisis de horas pico' },
   { id: 'products-sold', label: 'Productos Vendidos', icon: Package, description: 'Ranking de productos más vendidos' },
-  { id: 'sales-b01', label: 'Facturas B01 (Crédito Fiscal)', icon: FileText, description: 'Reporte de comprobantes fiscales B01' },
-  { id: 'sales-b02', label: 'Facturas B02 (Consumo Final)', icon: FileText, description: 'Reporte de comprobantes fiscales B02' },
-  { id: 'all-invoices', label: 'Reporte de Facturas', icon: FileSpreadsheet, description: 'Listado general de todas las facturas (B01 y B02)' },
+  { id: 'all-invoices', label: 'Facturas y Comprobantes', icon: FileSpreadsheet, description: 'Listado y exportación de todas las facturas y tipos de comprobantes' },
   { id: 'closings', label: 'Cierres de Caja', icon: Wallet, description: 'Historial de sesiones y cierres de caja' },
   { id: 'receivables', label: 'Cuentas por Cobrar', icon: Users, description: 'Clientes con deudas pendientes' },
   { id: 'inventory', label: 'Inventario Valorizado', icon: Package, description: 'Valoración de stock actual' },
@@ -96,9 +110,11 @@ const COLORS = ['hsl(var(--accent))', 'hsl(var(--secondary))', 'hsl(var(--muted)
 const Reports = () => {
   const { toast } = useToast();
   const [activeReport, setActiveReport] = useState('dashboard');
+  
+  // Default to today (el día actual) for instant performance
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date()
+    from: startOfDay(new Date()),
+    to: endOfDay(new Date())
   });
 
   // Filter States
@@ -106,17 +122,47 @@ const Reports = () => {
   const [filterPaymentMethod, setFilterPaymentMethod] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterUser, setFilterUser] = useState('all');
+  const [filterInvoiceType, setFilterInvoiceType] = useState('all');
+  const [invoiceTableSearch, setInvoiceTableSearch] = useState('');
 
-  const { data: sales = [], isFetching: isFetchingSales } = useSales({
+  // Pagination for high performance on large datasets
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  // Quick Date Presets Helper
+  const setDatePreset = (preset: 'today' | 'yesterday' | 'week' | 'month' | 'last30') => {
+    const now = new Date();
+    if (preset === 'today') {
+      setDateRange({ from: startOfDay(now), to: endOfDay(now) });
+    } else if (preset === 'yesterday') {
+      const yest = subDays(now, 1);
+      setDateRange({ from: startOfDay(yest), to: endOfDay(yest) });
+    } else if (preset === 'week') {
+      setDateRange({ from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfDay(now) });
+    } else if (preset === 'month') {
+      setDateRange({ from: startOfMonth(now), to: endOfDay(now) });
+    } else if (preset === 'last30') {
+      setDateRange({ from: startOfDay(subDays(now, 30)), to: endOfDay(now) });
+    }
+  };
+
+  // Auto-reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterInvoiceType, invoiceTableSearch, filterCustomer, filterPaymentMethod, dateRange]);
+
+  const needsItems = activeReport === 'products-sold' || activeReport === 'profit';
+  const { data: sales = [], isFetching: isFetchingSales, isLoading: isLoadingSales } = useSales({
     dateFrom: dateRange?.from,
     dateTo: dateRange?.to,
-    includeItems: true
+    includeItems: needsItems
   });
   const { data: products = [] } = useProducts();
   const { data: customers = [] } = useCustomers();
   const { data: closings = [] } = useDailyClosings();
   const { data: movements = [] } = useCashMovements(undefined);
   const { data: categories = [] } = useCategories();
+  const { data: invoiceTypes = [] } = useInvoiceTypes();
 
   const { data: employees = [] } = useEmployees();
   const { data: customerBalancesInfo } = useAllCustomersBalances();
@@ -175,9 +221,12 @@ const Reports = () => {
     setFilterPaymentMethod('all');
     setFilterCategory('all');
     setFilterUser('all');
+    setFilterInvoiceType('all');
+    setInvoiceTableSearch('');
+    setCurrentPage(1);
     setDateRange({
-      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      to: new Date()
+      from: startOfDay(new Date()),
+      to: endOfDay(new Date())
     });
   };
 
@@ -225,22 +274,90 @@ const Reports = () => {
     });
   }, [sales, dateRange, filterCustomer, filterPaymentMethod, filterUser, filterCategory, productsMap]);
 
-  const isB01Invoice = (s: Sale) => {
-    const code = s.invoice_type?.code?.toUpperCase();
+  const getSaleInvoiceTypeCode = (s: Sale): string => {
+    if (s.invoice_type?.code) return s.invoice_type.code.toUpperCase();
     const invNum = (s.invoice_number || '').toUpperCase();
-    return code === 'B01' || code === '01' || invNum.startsWith('B01') || invNum.startsWith('E31');
+    if (invNum.startsWith('E31') || invNum.startsWith('B01')) return 'B01';
+    if (invNum.startsWith('E32') || invNum.startsWith('B02')) return 'B02';
+    if (invNum.startsWith('E33') || invNum.startsWith('B03')) return 'B03';
+    if (invNum.startsWith('E34') || invNum.startsWith('B04')) return 'B04';
+    if (invNum.startsWith('E44') || invNum.startsWith('B14')) return 'B14';
+    if (invNum.startsWith('E45') || invNum.startsWith('B15')) return 'B15';
+    if (invNum.startsWith('E46') || invNum.startsWith('B16')) return 'B16';
+    return s.invoice_type_id || 'B02';
+  };
+
+  const getSaleInvoiceTypeName = (s: Sale): string => {
+    if (s.invoice_type?.name) return s.invoice_type.name;
+    const code = getSaleInvoiceTypeCode(s);
+    if (code === 'B01' || code === 'E31') return 'Crédito Fiscal';
+    if (code === 'B02' || code === 'E32') return 'Consumo Final';
+    if (code === 'B03' || code === 'E33') return 'Nota de Débito';
+    if (code === 'B04' || code === 'E34') return 'Nota de Crédito';
+    if (code === 'B14' || code === 'E44') return 'Regímenes Especiales';
+    if (code === 'B15' || code === 'E45') return 'Gubernamental';
+    if (code === 'B16' || code === 'E46') return 'Exportación';
+    return 'Factura';
+  };
+
+  const isB01Invoice = (s: Sale) => {
+    const code = getSaleInvoiceTypeCode(s);
+    return code === 'B01' || code === 'E31';
   };
 
   const isB02Invoice = (s: Sale) => {
-    const code = s.invoice_type?.code?.toUpperCase();
-    const invNum = (s.invoice_number || '').toUpperCase();
-    return code === 'B02' || code === '02' || invNum.startsWith('B02') || invNum.startsWith('E32');
+    const code = getSaleInvoiceTypeCode(s);
+    return code === 'B02' || code === 'E32';
   };
 
   const salesB01 = useMemo(() => filteredSales.filter(isB01Invoice), [filteredSales]);
   const salesB02 = useMemo(() => filteredSales.filter(isB02Invoice), [filteredSales]);
-  const allInvoices = useMemo(() => filteredSales.filter(s => isB01Invoice(s) || isB02Invoice(s))
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()), [filteredSales]);
+
+  const allInvoices = useMemo(() => {
+    let list = filteredSales;
+    if (filterInvoiceType !== 'all') {
+      list = list.filter(s => {
+        const code = getSaleInvoiceTypeCode(s);
+        const invTypeObj = invoiceTypes.find(t => t.id === filterInvoiceType || t.code === filterInvoiceType);
+        const targetCode = (invTypeObj?.code || filterInvoiceType).toUpperCase();
+        return code === targetCode || s.invoice_type_id === filterInvoiceType || (s.invoice_type?.code?.toUpperCase() === targetCode);
+      });
+    }
+    if (invoiceTableSearch.trim()) {
+      const q = invoiceTableSearch.toLowerCase().trim();
+      list = list.filter(s => {
+        const num = (s.invoice_number || '').toLowerCase();
+        const client = (s.customer?.name || '').toLowerCase();
+        const rnc = (s.customer?.rnc || '').toLowerCase();
+        const method = (s.payment_method || '').toLowerCase();
+        const code = getSaleInvoiceTypeCode(s).toLowerCase();
+        const typeName = getSaleInvoiceTypeName(s).toLowerCase();
+        return num.includes(q) || client.includes(q) || rnc.includes(q) || method.includes(q) || code.includes(q) || typeName.includes(q);
+      });
+    }
+    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [filteredSales, filterInvoiceType, invoiceTableSearch, invoiceTypes]);
+
+  const invoiceTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: filteredSales.length };
+    filteredSales.forEach(s => {
+      const code = getSaleInvoiceTypeCode(s);
+      counts[code] = (counts[code] || 0) + 1;
+    });
+    return counts;
+  }, [filteredSales]);
+
+  const availableInvoiceTypeKeys = useMemo(() => {
+    const types = new Set<string>();
+    filteredSales.forEach(s => {
+      types.add(getSaleInvoiceTypeCode(s));
+    });
+    if (types.size === 0) {
+      types.add('B01');
+      types.add('B02');
+    }
+    return Array.from(types).sort();
+  }, [filteredSales]);
 
   // New: Daily Sales Aggregation
   const dailySalesData = useMemo(() => {
@@ -513,19 +630,21 @@ const Reports = () => {
       } else if (activeReport === 'sales-hourly') {
         head = [['Hora', 'Cant. Transacciones', 'Total Ventas']];
         body = hourlySalesData.map(d => [d.label, d.count.toString(), `$${d.total.toLocaleString()}`]);
-      } else if (activeReport === 'sales-b01') {
-        head = [['Fecha', 'NCF', 'Cliente', 'RNC', 'Total', 'Impuesto']];
-        body = salesB01.map(s => [format(new Date(s.created_at), 'dd/MM/yyyy'), s.invoice_number || 'N/A', s.customer?.name || 'Consumidor', s.customer?.rnc || 'N/A', `$${s.total.toLocaleString()}`, `$${s.tax_total.toLocaleString()}`]);
-      } else if (activeReport === 'sales-b02') {
-        head = [['Fecha', 'NCF', 'Cliente', 'Total']];
-        body = salesB02.map(s => [format(new Date(s.created_at), 'dd/MM/yyyy'), s.invoice_number || 'N/A', s.customer?.name || 'Consumidor', `$${s.total.toLocaleString()}`]);
-      } else if (activeReport === 'all-invoices') {
-        head = [['Fecha', 'NCF', 'Cliente', 'RNC', 'Total', 'Impuesto']];
-        body = allInvoices.map(s => [format(new Date(s.created_at), 'dd/MM/yyyy'), s.invoice_number || 'N/A', s.customer?.name || 'Consumidor', s.customer?.rnc || 'N/A', `$${s.total.toLocaleString()}`, `$${s.tax_total.toLocaleString()}`]);
+      } else if (activeReport === 'all-invoices' || activeReport === 'sales-b01' || activeReport === 'sales-b02') {
+        head = [['Fecha', 'NCF', 'Tipo', 'Cliente', 'RNC / Cédula', 'ITBIS', 'Total']];
+        body = allInvoices.map(s => [
+          format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
+          s.invoice_number || 'N/A',
+          `${getSaleInvoiceTypeCode(s)} - ${getSaleInvoiceTypeName(s)}`,
+          s.customer?.name || 'Consumidor Final',
+          s.customer?.rnc || '-',
+          `$${(s.tax_total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          `$${s.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        ]);
         // Add summary row to PDF
         const totalSum = allInvoices.reduce((sum, s) => sum + s.total, 0);
         const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
-        body.push(['', '', '', 'TOTAL GENERAL', `$${totalSum.toLocaleString()}`, `$${totalTax.toLocaleString()}`]);
+        body.push(['', '', '', '', 'TOTAL GENERAL', `$${totalTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, `$${totalSum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]);
       } else if (activeReport === 'closings') {
         head = [['Apertura', 'Cierre', 'Usuario', 'Esperado', 'Real', 'Diferencia']];
         body = filteredClosings.map(c => [format(new Date(c.created_at), 'dd/MM/yyyy HH:mm'), c.closing_time ? format(new Date(c.closing_time), 'dd/MM/yyyy HH:mm') : 'ABIERTO', c.profile?.full_name || 'N/A', `$${(c.expected_cash || 0).toLocaleString()}`, `$${(c.actual_cash || 0).toLocaleString()}`, `$${(c.difference || 0).toLocaleString()}`]);
@@ -859,7 +978,27 @@ const Reports = () => {
   };
 
   // --- SINGLE INVOICE ACTIONS ---
-  const generateInvoicePDF = (sale: Sale, returnBlob = false): any => {
+  // --- SINGLE INVOICE ACTIONS ---
+  const generateInvoicePDF = async (sale: Sale, returnBlob = false): Promise<any> => {
+    let items = sale.sale_items || [];
+    if (items.length === 0 && sale.id) {
+      try {
+        const { data } = await supabase
+          .from('sale_items')
+          .select(`
+            id,
+            quantity,
+            unit_price,
+            total,
+            product:products(name)
+          `)
+          .eq('sale_id', sale.id);
+        if (data) items = data as any;
+      } catch (e) {
+        console.error('Error fetching items for invoice PDF:', e);
+      }
+    }
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
 
@@ -885,12 +1024,12 @@ const Reports = () => {
 
     // Items Table
     const head = [['Cant.', 'Descripción', 'Precio', 'Total']];
-    const body = sale.sale_items?.map(item => [
+    const body = items.map(item => [
       item.quantity.toString(),
       item.product?.name || 'Producto',
       `$${item.unit_price.toLocaleString()}`,
       `$${item.total.toLocaleString()}`
-    ]) || [];
+    ]);
 
     autoTable(doc, {
       startY: 75,
@@ -929,8 +1068,8 @@ const Reports = () => {
     }
   };
 
-  const handlePrintInvoice = (sale: Sale) => {
-    const pdfBlob = generateInvoicePDF(sale, true);
+  const handlePrintInvoice = async (sale: Sale) => {
+    const pdfBlob = await generateInvoicePDF(sale, true);
     const pdfUrl = URL.createObjectURL(pdfBlob);
     const printWindow = window.open(pdfUrl);
     if (printWindow) {
@@ -1167,35 +1306,34 @@ const Reports = () => {
         Transacciones: d.count,
         Total_Ventas: d.total
       }));
-    } else if (activeReport === 'sales-b01') {
-      data = salesB01.map(s => ({
-        Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
-        NCF: s.invoice_number,
-        Cliente: s.customer?.name || 'Consumidor Final',
-        RNC: s.customer?.rnc || 'N/A',
-        Impuesto: s.tax_total,
-        Total: s.total
-      }));
-    } else if (activeReport === 'sales-b02') {
-      data = salesB02.map(s => ({
-        Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
-        NCF: s.invoice_number,
-        Cliente: s.customer?.name || 'Consumidor Final',
-        Total: s.total
-      }));
-    } else if (activeReport === 'all-invoices') {
+    } else if (activeReport === 'all-invoices' || activeReport === 'sales-b01' || activeReport === 'sales-b02') {
       data = allInvoices.map(s => ({
         Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
-        NCF: s.invoice_number,
+        NCF: s.invoice_number || 'S/N',
+        Codigo_Tipo: getSaleInvoiceTypeCode(s),
+        Tipo_Comprobante: getSaleInvoiceTypeName(s),
         Cliente: s.customer?.name || 'Consumidor Final',
-        RNC: s.customer?.rnc || 'N/A',
-        Impuesto: s.tax_total,
+        RNC_Cedula: s.customer?.rnc || 'N/A',
+        Metodo_Pago: s.payment_method ? s.payment_method.toUpperCase() : 'EFECTIVO',
+        Estado: s.status === 'completed' || s.payment_status === 'paid' ? 'PAGADA' : (s.status ? s.status.toUpperCase() : 'PENDIENTE'),
+        ITBIS: s.tax_total || 0,
         Total: s.total
       }));
       const totalSum = allInvoices.reduce((sum, s) => sum + s.total, 0);
+      const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
       data.push({
-        Fecha: '', NCF: '', Cliente: '', RNC: 'TOTAL GENERAL', Impuesto: '', Total: totalSum
+        Fecha: '',
+        NCF: '',
+        Codigo_Tipo: '',
+        Tipo_Comprobante: '',
+        Cliente: '',
+        RNC_Cedula: 'TOTAL GENERAL',
+        Metodo_Pago: '',
+        Estado: '',
+        ITBIS: totalTax,
+        Total: totalSum
       });
+      fileName = filterInvoiceType !== 'all' ? `reporte-facturas-${filterInvoiceType}` : `reporte-todas-las-facturas`;
     } else if (activeReport === 'closings') {
       data = filteredClosings.map(c => ({
         Apertura: format(new Date(c.created_at), 'dd/MM/yyyy HH:mm'),
@@ -1340,128 +1478,335 @@ const Reports = () => {
   // --- RENDER CONTENT AREA ---
   const renderContent = () => {
     switch (activeReport) {
-      case 'dashboard':
+      case 'dashboard': {
+        const totalSalesSum = filteredSales.reduce((a, b) => a + b.total, 0);
+        const avgTicket = filteredSales.length > 0 ? (totalSalesSum / filteredSales.length) : 0;
+        const totalReceivables = receivables.reduce((a, c) => a + (c.credit_used || 0), 0);
+        const maxDaySale = dailySalesData.reduce((max, d) => (d.total > (max?.total || 0) ? d : max), dailySalesData[0] || null);
+        const avgDaily = dailySalesData.length > 0 ? (totalSalesSum / dailySalesData.length) : 0;
+
         return (
           <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Ventas Totales</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold">${filteredSales.reduce((a, b) => a + b.total, 0).toLocaleString()}</div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">{filteredSales.length} transacciones</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Ticket Promedio</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold">
-                    ${filteredSales.length > 0 ? (filteredSales.reduce((a, b) => a + b.total, 0) / filteredSales.length).toFixed(2) : 0}
+            {/* KPI Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Ventas Totales */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ventas Totales</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <DollarSign className="h-4 w-4" />
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Crédito Pendiente</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold text-orange-600">${receivables.reduce((a, c) => a + (c.credit_used || 0), 0).toLocaleString()}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium">Utilidad Estimada</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-                  <div className="text-lg md:text-2xl font-bold text-green-600">${profitData.profit.toLocaleString()}</div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">{profitData.margin.toFixed(1)}% Margen</p>
-                </CardContent>
-              </Card>
+                </div>
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${totalSalesSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span>{filteredSales.length} transacciones</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Ticket Promedio */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ticket Promedio</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <ShoppingCart className="h-4 w-4" />
+                  </div>
+                </div>
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Promedio por cliente
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Crédito Pendiente */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Crédito Pendiente</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <Users className="h-4 w-4" />
+                  </div>
+                </div>
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${totalReceivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Cuentas por cobrar activas
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Utilidad Estimada */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Utilidad Estimada</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                </div>
+                {isFetchingSales && filteredSales.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      {profitData.margin.toFixed(1)}% Margen de ganancia
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <Card>
-              <CardHeader><CardTitle>Tendencia de Ventas (Últimos Días)</CardTitle></CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailySalesData}>
-                    <defs>
-                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <RechartsTooltip
-                      formatter={(value) => `$${Number(value).toLocaleString()}`}
-                      contentStyle={{ backgroundColor: 'white', color: 'black', border: '1px solid #ccc', borderRadius: '4px' }}
-                      itemStyle={{ color: 'black' }}
-                      labelStyle={{ color: '#666' }}
-                    />
-                    <Area type="monotone" dataKey="total" stroke="#8884d8" fillOpacity={1} fill="url(#colorSales)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+            {/* High-End Modern Chart Card */}
+            <Card className="rounded-2xl border border-border/60 shadow-2xs overflow-hidden bg-card/80 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-4 border-b border-border/40">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground border border-border/40">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base sm:text-lg font-black tracking-tight text-foreground">
+                        Tendencia de Ventas
+                      </CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground font-medium mt-0.5">
+                        Evolución de ingresos y volumen diario en el período
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  {/* Header Metrics Badges */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {maxDaySale && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/50 text-xs font-medium">
+                        <span className="text-[11px] text-muted-foreground font-semibold">Pico:</span>
+                        <span className="font-mono font-black text-foreground">{maxDaySale.date}</span>
+                        <span className="font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[11px]">
+                          ${maxDaySale.total >= 1000 ? `${(maxDaySale.total / 1000).toFixed(1)}k` : maxDaySale.total.toFixed(0)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/50 text-xs font-medium">
+                      <span className="text-[11px] text-muted-foreground font-semibold">Promedio:</span>
+                      <span className="font-mono font-black text-foreground">
+                        ${(avgDaily >= 1000 ? `${(avgDaily / 1000).toFixed(1)}k` : avgDaily.toFixed(0))}/día
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 pt-6">
+                <div className="h-[320px] sm:h-[360px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={dailySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="dashboardSalesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
+                          <stop offset="60%" stopColor="#10b981" stopOpacity={0.10} />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.00} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickLine={false}
+                        axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        interval={dailySalesData.length > 20 ? 3 : dailySalesData.length > 10 ? 1 : 0}
+                        dy={8}
+                      />
+                      <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
+                        dx={-4}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3.5 rounded-2xl shadow-2xl space-y-2 min-w-[180px]">
+                                <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-1.5">
+                                  <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                                    <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                                    {d.date}
+                                  </span>
+                                  <Badge variant="secondary" className="text-[10px] font-black px-1.5 py-0.2">
+                                    {d.count} {d.count === 1 ? 'venta' : 'ventas'}
+                                  </Badge>
+                                </div>
+                                <div className="pt-0.5">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Facturado</p>
+                                  <p className="text-xl font-black text-emerald-500 font-mono">
+                                    ${Number(d.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                                {d.count > 0 && (
+                                  <p className="text-[10px] text-muted-foreground border-t border-border/30 pt-1.5 flex items-center justify-between">
+                                    <span>Ticket promedio:</span>
+                                    <span className="font-bold text-foreground font-mono">
+                                      ${(d.total / d.count).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="total" 
+                        stroke="#10b981" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#dashboardSalesGradient)" 
+                        activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 3, fill: '#ffffff' }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
         );
+      }
 
       case 'sales-daily':
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ventas Diarias</CardTitle>
-                <CardDescription>Resumen de ventas agrupadas por día.</CardDescription>
+            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                    <CalendarDays className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-black tracking-tight">Ventas Diarias</CardTitle>
+                    <CardDescription className="text-xs">Resumen de ventas agrupadas y ordenadas por día</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <div className="h-[300px] w-full mb-6">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailySalesData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <RechartsTooltip
-                        cursor={{ fill: 'transparent' }}
-                        formatter={(value) => `$${Number(value).toLocaleString()}`}
-                        contentStyle={{ backgroundColor: 'white', color: 'black', border: '1px solid #ccc', borderRadius: '4px' }}
-                        itemStyle={{ color: 'black' }}
-                        labelStyle={{ color: '#666' }}
+                    <BarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickLine={false}
+                        axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        interval={dailySalesData.length > 20 ? 3 : dailySalesData.length > 10 ? 1 : 0}
+                        dy={8}
                       />
-                      <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
+                      <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
+                        dx={-4}
+                      />
+                      <RechartsTooltip
+                        cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3.5 rounded-2xl shadow-2xl space-y-1.5 min-w-[180px]">
+                                <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5 border-b border-border/40 pb-1">
+                                  <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                                  {d.date}
+                                </p>
+                                <div>
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Vendido</p>
+                                  <p className="text-lg font-black text-emerald-500 font-mono">
+                                    ${Number(d.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                                  Transacciones: <span className="font-bold text-foreground font-mono">{d.count}</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} barSize={28} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="overflow-x-auto w-full">
+                <div className="overflow-x-auto w-full rounded-xl border border-border/50">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/30">
                       <TableRow>
-                        <TableHead className="whitespace-nowrap">Fecha</TableHead>
-                        <TableHead className="text-center whitespace-nowrap">Transacciones</TableHead>
-                        <TableHead className="text-right whitespace-nowrap">Total Vendido</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap px-4 py-3">Fecha</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-center whitespace-nowrap px-3 py-3">Transacciones</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-right whitespace-nowrap px-4 py-3">Total Vendido</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dailySalesData.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center py-6">No hay datos en este rango.</TableCell></TableRow> :
+                      {dailySalesData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-xs">
+                            No hay datos en este rango de fechas.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
                         dailySalesData.map((d, i) => (
                           <TableRow 
                             key={i} 
-                            className="cursor-pointer hover:bg-muted/60 transition-colors"
+                            className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/30"
                             onClick={() => setSelectedDailySalesDate(d.key)}
                           >
-                            <TableCell className="font-medium whitespace-nowrap">{d.date}</TableCell>
-                            <TableCell className="text-center">{d.count}</TableCell>
-                            <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">${d.total.toLocaleString()}</TableCell>
+                            <TableCell className="font-semibold text-xs whitespace-nowrap px-4 py-3">{d.date}</TableCell>
+                            <TableCell className="text-center text-xs whitespace-nowrap px-3 py-3 font-mono">
+                              <Badge variant="secondary" className="font-bold text-[10px]">{d.count}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-black font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap px-4 py-3 text-xs sm:text-sm">
+                              ${d.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </TableCell>
                           </TableRow>
-                        ))}
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1473,25 +1818,79 @@ const Reports = () => {
       case 'sales-hourly':
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card>
-              <CardHeader className="p-4 sm:p-6 pb-2">
-                <CardTitle>Ventas por Hora</CardTitle>
-                <CardDescription>Identifica tus horas pico de mayor venta.</CardDescription>
+            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-black tracking-tight">Ventas por Hora</CardTitle>
+                    <CardDescription className="text-xs">Identifica las horas pico de mayor afluencia y venta</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-                <div className="h-[250px] sm:h-[300px] w-full mb-6">
+              <CardContent className="p-4 sm:p-6">
+                <div className="h-[260px] sm:h-[320px] w-full mb-6">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={hourlySalesData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="label" interval={2} />
-                      <YAxis />
-                      <RechartsTooltip
-                        formatter={(value) => `$${Number(value).toLocaleString()}`}
-                        contentStyle={{ backgroundColor: 'white', color: 'black', border: '1px solid #ccc', borderRadius: '4px' }}
-                        itemStyle={{ color: 'black' }}
-                        labelStyle={{ color: '#666' }}
+                    <AreaChart data={hourlySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="hourlySalesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
+                          <stop offset="60%" stopColor="#10b981" stopOpacity={0.10} />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.00} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                      <XAxis 
+                        dataKey="label" 
+                        interval={2} 
+                        tickLine={false}
+                        axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        dy={8}
                       />
-                      <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
+                      <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }}
+                        tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`}
+                        dx={-4}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3.5 rounded-2xl shadow-2xl space-y-1.5 min-w-[180px]">
+                                <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5 border-b border-border/40 pb-1">
+                                  <Clock className="h-3.5 w-3.5 text-indigo-500" />
+                                  {d.label}
+                                </p>
+                                <div>
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Total en esta hora</p>
+                                  <p className="text-lg font-black text-indigo-400 font-mono">
+                                    ${Number(d.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                                  Transacciones: <span className="font-bold text-foreground font-mono">{d.count}</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="total" 
+                        stroke="#6366f1" 
+                        strokeWidth={2.5}
+                        fill="url(#hourlySalesGradient)" 
+                        fillOpacity={1} 
+                        activeDot={{ r: 6, stroke: '#6366f1', strokeWidth: 3, fill: '#ffffff' }}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -1528,79 +1927,451 @@ const Reports = () => {
 
       case 'sales-b01':
       case 'sales-b02':
-      case 'all-invoices':
-        const currentList = activeReport === 'sales-b01' ? salesB01 :
-          activeReport === 'sales-b02' ? salesB02 : allInvoices;
+      case 'all-invoices': {
+        // Calculate totals for the footer & cards
+        const totalAmount = allInvoices.reduce((sum, s) => sum + s.total, 0);
+        const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
+        const subtotalAmount = totalAmount - totalTax;
+        const avgTicket = allInvoices.length > 0 ? (totalAmount / allInvoices.length) : 0;
 
-        const title = activeReport === 'sales-b01' ? 'Facturas con Valor Fiscal (B01)' :
-          activeReport === 'sales-b02' ? 'Facturas de Consumo (B02)' : 'Reporte General de Facturas';
-
-        // Calculate totals for the footer
-        const totalAmount = currentList.reduce((sum, s) => sum + s.total, 0);
-        const totalTax = currentList.reduce((sum, s) => sum + (s.tax_total || 0), 0);
+        // Pagination slice
+        const totalPages = Math.max(1, Math.ceil(allInvoices.length / pageSize));
+        const startIndex = (currentPage - 1) * pageSize;
+        const paginatedInvoices = pageSize >= 99999 ? allInvoices : allInvoices.slice(startIndex, startIndex + pageSize);
 
         return (
-          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader className="p-4 sm:p-6 pb-2">
-              <CardTitle>{title}</CardTitle>
-              <CardDescription>Mostrando {currentList.length} comprobantes emitidos en el periodo.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-              <div className="overflow-x-auto w-full">
-                <Table className="border-collapse min-w-full">
-                  <TableHeader>
-                    <TableRow className="border-b border-border/40 hover:bg-transparent">
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">Fecha</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 whitespace-nowrap">NCF</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 min-w-[140px]">Cliente</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 hidden sm:table-cell whitespace-nowrap">RNC/Cédula</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right hidden sm:table-cell whitespace-nowrap">ITBIS</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-right whitespace-nowrap">Total</TableHead>
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-transparent py-3 text-center whitespace-nowrap">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentList.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No se encontraron facturas de este tipo.</TableCell></TableRow> :
-                      currentList.map(s => (
-                        <TableRow key={s.id} onClick={() => setSelectedSale(s)} className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/20 group">
-                          <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{format(new Date(s.created_at), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell className="py-3 text-xs font-mono text-muted-foreground tracking-tight whitespace-nowrap">{s.invoice_number}</TableCell>
-                          <TableCell className="py-3 text-xs sm:text-sm font-semibold max-w-[150px] sm:max-w-none truncate" title={s.customer?.name || 'Consumidor Final'}>
-                            {s.customer?.name || 'Consumidor Final'}
-                          </TableCell>
-                          <TableCell className="py-3 text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap">{s.customer?.rnc || '-'}</TableCell>
-                          <TableCell className="py-3 text-right text-xs sm:text-sm text-muted-foreground hidden sm:table-cell whitespace-nowrap">${(s.tax_total || 0).toLocaleString()}</TableCell>
-                          <TableCell className="py-3 text-right text-xs sm:text-sm font-bold whitespace-nowrap">${s.total.toLocaleString()}</TableCell>
-                          <TableCell className="py-3 text-center whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
-                                <Mail className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
-                                <Download className="h-4 w-4" />
-                              </Button>
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* KPI Summary Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Total Facturado */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Facturado</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <BadgeDollarSign className="h-4 w-4" />
+                  </div>
+                </div>
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span>{allInvoices.length} {allInvoices.length === 1 ? 'factura emitida' : 'facturas emitidas'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 2: ITBIS Liquidado */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total ITBIS (18%)</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <Tag className="h-4 w-4" />
+                  </div>
+                </div>
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Impuesto fiscal liquidado
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 3: Subtotal Neto */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Subtotal Neto</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                </div>
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${subtotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Venta neta (base imponible)
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 4: Ticket Promedio */}
+              <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xs hover:border-primary/40 hover:bg-card transition-all group">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Promedio / Factura</span>
+                  <div className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-border/40">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                </div>
+                {isFetchingSales && allInvoices.length === 0 ? (
+                  <div className="space-y-2 mt-3">
+                    <div className="h-8 w-36 bg-muted/50 rounded-xl animate-pulse" />
+                    <div className="h-3 w-24 bg-muted/30 rounded-md animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground font-mono">
+                      ${avgTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-medium">
+                      Ticket promedio por venta
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Invoices Table Card */}
+            <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md">
+              <CardHeader className="p-4 sm:p-6 pb-4 border-b border-border/40 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                        <FileSpreadsheet className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base sm:text-lg font-black tracking-tight">Facturas y Comprobantes Fiscales</CardTitle>
+                        <CardDescription className="text-xs">
+                          {isFetchingSales && allInvoices.length === 0 ? (
+                            'Consultando comprobantes del período...'
+                          ) : (
+                            `${allInvoices.length} ${allInvoices.length === 1 ? 'comprobante registrado' : 'comprobantes registrados'} en este periodo`
+                          )}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative w-full md:w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por NCF, cliente, RNC..."
+                      value={invoiceTableSearch}
+                      onChange={(e) => setInvoiceTableSearch(e.target.value)}
+                      className="pl-9 h-9 text-xs rounded-xl bg-muted/40 border-border/60 focus:bg-background transition-colors"
+                    />
+                    {invoiceTableSearch && (
+                      <button
+                        onClick={() => setInvoiceTableSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sub-tabs: All, B01, B02, B04, etc. */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+                  {[
+                    { id: 'all', label: 'Todos los Comprobantes', icon: Layers },
+                    { id: 'b01', label: 'B01 - Crédito Fiscal', icon: CheckCircle2 },
+                    { id: 'b02', label: 'B02 - Consumo Final', icon: Receipt },
+                    { id: 'b04', label: 'B04 - Nota de Crédito', icon: RotateCcw },
+                    { id: 'b14', label: 'B14 - Régimen Especial', icon: Sparkles },
+                    { id: 'b15', label: 'B15 - Gubernamental', icon: Landmark }
+                  ].map(tab => {
+                    const Icon = tab.icon;
+                    const isSelected = filterInvoiceType === tab.id;
+                    const count = tab.id === 'all' 
+                      ? sales.length 
+                      : sales.filter(s => getSaleInvoiceTypeCode(s).toLowerCase() === tab.id || (tab.id === 'b01' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e31') || (tab.id === 'b02' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e32') || (tab.id === 'b04' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e34')).length;
+
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setFilterInvoiceType(tab.id)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0",
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                            : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{tab.label}</span>
+                        <span className={cn(
+                          "ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold",
+                          isSelected
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-0 relative">
+                {isFetchingSales && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-primary/20 overflow-hidden z-20">
+                    <div className="h-full bg-primary animate-pulse w-full" />
+                  </div>
+                )}
+                <div className="overflow-x-auto w-full">
+                  <Table className="border-collapse min-w-full">
+                    <TableHeader className="bg-muted/30 sticky top-0 z-10 border-b border-border/50">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap">Fecha</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 whitespace-nowrap">NCF / Número</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 whitespace-nowrap">Tipo</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 min-w-[150px]">Cliente</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 hidden sm:table-cell whitespace-nowrap">RNC / Cédula</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 text-center hidden md:table-cell whitespace-nowrap">Método</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 text-right hidden sm:table-cell whitespace-nowrap">ITBIS (18%)</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap">Total</TableHead>
+                        <TableHead className="text-[11px] font-black uppercase tracking-wider text-muted-foreground py-3.5 px-3 text-center whitespace-nowrap">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isFetchingSales && allInvoices.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-20 text-muted-foreground">
+                            <div className="flex flex-col items-center justify-center gap-3">
+                              <div className="p-4 rounded-2xl bg-primary/10 text-primary border border-primary/30">
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                              </div>
+                              <p className="font-bold text-sm text-foreground">Consultando comprobantes fiscales...</p>
+                              <p className="text-xs text-muted-foreground max-w-sm">
+                                Cargando las facturas del período seleccionado desde la base de datos.
+                              </p>
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
-                    }
-                  </TableBody>
-                  <TableFooter className="bg-transparent border-t border-border/50">
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={4} className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-4">Total General</TableCell>
-                      <TableCell className="text-right text-sm font-semibold text-muted-foreground hidden sm:table-cell whitespace-nowrap">${totalTax.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-base sm:text-lg font-black text-primary whitespace-nowrap">${totalAmount.toLocaleString()}</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                      ) : allInvoices.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
+                            <div className="flex flex-col items-center justify-center gap-3">
+                              <div className="p-4 rounded-2xl bg-muted/40 text-muted-foreground border border-border/50">
+                                <Receipt className="h-8 w-8 stroke-1" />
+                              </div>
+                              <p className="font-bold text-sm text-foreground">No se encontraron facturas en este periodo</p>
+                              <p className="text-xs text-muted-foreground max-w-sm">
+                                Modifica el rango de fechas en la parte superior o limpia los filtros activos para ver los comprobantes emitidos.
+                              </p>
+                              {(filterInvoiceType !== 'all' || invoiceTableSearch || filterCustomer !== 'all' || filterPaymentMethod !== 'all') && (
+                                <Button size="sm" variant="outline" onClick={clearFilters} className="mt-2 rounded-xl text-xs gap-1.5 font-bold">
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Limpiar Filtros
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        paginatedInvoices.map(s => {
+                          const typeCode = getSaleInvoiceTypeCode(s);
+                          const typeName = getSaleInvoiceTypeName(s);
+                          const isB01 = typeCode === 'B01' || typeCode === 'E31';
+                          const isB02 = typeCode === 'B02' || typeCode === 'E32';
+                          const isB04 = typeCode === 'B04' || typeCode === 'E34';
+
+                          return (
+                            <TableRow 
+                              key={s.id} 
+                              onClick={() => setSelectedSale(s)} 
+                              className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/30 group"
+                            >
+                              <TableCell className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap font-medium">
+                                {format(new Date(s.created_at), 'dd/MM/yy HH:mm', { locale: es })}
+                              </TableCell>
+                              <TableCell className="py-3 px-3 whitespace-nowrap">
+                                <span className="font-mono text-xs font-bold text-foreground bg-muted/60 px-2 py-1 rounded-md border border-border/40 tracking-tight">
+                                  {s.invoice_number || 'S/N'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-3 px-3 whitespace-nowrap">
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "text-[10px] font-bold px-2.5 py-0.5 rounded-md",
+                                    isB01 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" :
+                                    isB02 ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" :
+                                    isB04 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" :
+                                    "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                  )}
+                                >
+                                  {typeCode} - {typeName}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-3 px-3 text-xs font-semibold max-w-[160px] sm:max-w-none truncate text-foreground" title={s.customer?.name || 'Consumidor Final'}>
+                                {s.customer?.name || 'Consumidor Final'}
+                              </TableCell>
+                              <TableCell className="py-3 px-3 text-xs font-mono text-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                                {s.customer?.rnc ? (
+                                  <span className="bg-muted/40 px-1.5 py-0.5 rounded border border-border/30">{s.customer.rnc}</span>
+                                ) : (
+                                  '-'
+                                )}
+                              </TableCell>
+                              <TableCell className="py-3 px-3 text-center hidden md:table-cell whitespace-nowrap">
+                                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                  {s.payment_method === 'cash' ? '💵 Efectivo' :
+                                   s.payment_method === 'credit' ? '⏳ Crédito' :
+                                   s.payment_method === 'card' ? '💳 Tarjeta' :
+                                   s.payment_method === 'transfer' ? '🏦 Transfer.' :
+                                   s.payment_method || 'Efectivo'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-3 px-3 text-right text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap font-medium">
+                                ${(s.tax_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </TableCell>
+                              <TableCell className="py-3 px-4 text-right text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap font-mono">
+                                ${s.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </TableCell>
+                              <TableCell className="py-3 px-3 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1 opacity-75 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={() => setSelectedActionSale(s)} title="Opciones de Impresión">
+                                    <Printer className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors" onClick={() => handleEmailInvoice(s)} title="Enviar por Email">
+                                    <Mail className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => generateInvoicePDF(s)} title="Descargar PDF">
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                    <TableFooter className="bg-muted/40 border-t-2 border-border/70">
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={6} className="text-right text-xs font-black uppercase tracking-wider text-muted-foreground py-4 px-4 hidden sm:table-cell">
+                          TOTAL GENERAL ({allInvoices.length} {allInvoices.length === 1 ? 'Factura' : 'Facturas'})
+                        </TableCell>
+                        <TableCell colSpan={3} className="text-right text-xs font-black uppercase tracking-wider text-muted-foreground py-4 px-4 sm:hidden">
+                          TOTAL GENERAL
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-black text-cyan-600 dark:text-cyan-400 hidden sm:table-cell whitespace-nowrap px-3 font-mono">
+                          ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap px-4 font-mono">
+                          ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+
+                {/* --- MODERN PAGINATION CONTROLS --- */}
+                {allInvoices.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-card/60 border-t border-border/40 text-xs">
+                    {/* Rows per page selector */}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span>Mostrar</span>
+                      <Select 
+                        value={String(pageSize)} 
+                        onValueChange={(val) => {
+                          setPageSize(Number(val));
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-20 text-xs font-bold bg-muted/30 border-border/40 rounded-lg">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                          <SelectItem value="250">250</SelectItem>
+                          <SelectItem value="999999">Todos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span>de <strong className="text-foreground font-mono">{allInvoices.length}</strong> facturas</span>
+                    </div>
+
+                    {/* Showing Range */}
+                    <div className="text-muted-foreground text-center font-medium">
+                      Mostrando <strong className="text-foreground font-mono">{startIndex + 1}</strong> - <strong className="text-foreground font-mono">{Math.min(startIndex + pageSize, allInvoices.length)}</strong>
+                    </div>
+
+                    {/* Page Navigation Buttons */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        title="Primera página"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        title="Página anterior"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+
+                      <span className="px-3 py-1 rounded-lg bg-muted/40 font-mono font-bold text-xs border border-border/40">
+                        {currentPage} / {totalPages}
+                      </span>
+
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        title="Página siguiente"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg border-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        title="Última página"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         );
+      }
 
       case 'closings':
         return (
@@ -1768,25 +2539,32 @@ const Reports = () => {
 
       case 'profit':
         return (
-          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <CardHeader>
-              <CardTitle>Análisis de Rentabilidad</CardTitle>
-              <CardDescription>Calculado base Ventas Netas - Costo de Productos vendidos.</CardDescription>
+          <Card className="rounded-2xl border border-border/70 shadow-xs overflow-hidden bg-card/90 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <CardHeader className="p-4 sm:p-6 pb-3 border-b border-border/40">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-base sm:text-lg font-black tracking-tight">Análisis de Rentabilidad</CardTitle>
+                  <CardDescription className="text-xs">Calculado en base a Ventas Netas - Costo de Productos vendidos</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="text-center p-4 border rounded-lg">
-                  <p className="text-muted-foreground mb-2">Ingresos por Ventas</p>
-                  <p className="text-2xl font-bold text-primary">${profitData.totalRevenue.toLocaleString()}</p>
+            <CardContent className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="p-5 border border-border/60 rounded-2xl bg-card/80 shadow-2xs">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Ingresos por Ventas</p>
+                  <p className="text-2xl font-black text-foreground font-mono">${profitData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <p className="text-muted-foreground mb-2">Costo de Mercancía</p>
-                  <p className="text-2xl font-bold text-red-600">${profitData.totalCost.toLocaleString()}</p>
+                <div className="p-5 border border-border/60 rounded-2xl bg-card/80 shadow-2xs">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Costo de Mercancía</p>
+                  <p className="text-2xl font-black text-foreground font-mono">${profitData.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="text-center p-4 border rounded-lg bg-accent/10">
-                  <p className="text-muted-foreground mb-2">Utilidad Bruta</p>
-                  <p className="text-3xl font-bold text-green-600">${profitData.profit.toLocaleString()}</p>
-                  <p className="text-sm font-semibold text-green-700 mt-1">{profitData.margin.toFixed(2)}% Margen</p>
+                <div className="p-5 border border-border/60 rounded-2xl bg-card/80 shadow-2xs">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Utilidad Bruta</p>
+                  <p className="text-2xl font-black text-foreground font-mono">${profitData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-xs font-bold text-primary mt-1">{profitData.margin.toFixed(2)}% Margen de ganancia</p>
                 </div>
               </div>
               <div className="h-[300px] w-full">
@@ -1795,15 +2573,29 @@ const Reports = () => {
                     { name: 'Ingresos', value: profitData.totalRevenue },
                     { name: 'Costos', value: profitData.totalCost },
                     { name: 'Utilidad', value: profitData.profit }
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
-                    <Bar dataKey="value" fill="hsl(var(--primary))">
-                      <Cell fill="#3b82f6" />
-                      <Cell fill="#ef4444" />
-                      <Cell fill="#22c55e" />
+                  ]} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
+                    <XAxis dataKey="name" tickLine={false} axisLine={{ stroke: 'currentColor', opacity: 0.15 }} tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }} dy={8} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.7 }} tickFormatter={(v) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v}`} dx={-4} />
+                    <RechartsTooltip
+                      cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const d = payload[0];
+                          return (
+                            <div className="bg-popover/95 backdrop-blur-xl border border-border/80 p-3 rounded-xl shadow-2xl space-y-1 min-w-[150px]">
+                              <p className="text-xs font-bold text-foreground">{d.payload.name}</p>
+                              <p className="text-base font-black font-mono text-primary">${Number(d.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={44}>
+                      <Cell fill="#64748b" />
+                      <Cell fill="#94a3b8" />
+                      <Cell fill="#10b981" />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -2108,14 +2900,14 @@ const Reports = () => {
             </div>
 
             {/* Compact Action Buttons */}
-            <div className="flex items-center gap-1 shrink-0 bg-muted/20 p-1 rounded-xl border border-border/40">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10 rounded-lg" onClick={() => generatePDF()} title="Descargar PDF">
+            <div className="flex items-center gap-0.5 shrink-0 bg-muted/40 p-0.5 rounded-xl border border-border/50">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg" onClick={() => generatePDF()} title="Descargar PDF">
                 <FileText className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-600 hover:bg-emerald-500/10 rounded-lg" onClick={() => generateExcel()} title="Descargar Excel">
-                <FileSpreadsheet className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg" onClick={() => generateExcel()} title="Descargar Excel">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-blue-600 hover:bg-blue-500/10 rounded-lg" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
                 <Mail className="h-4 w-4" />
               </Button>
             </div>
@@ -2145,44 +2937,83 @@ const Reports = () => {
           </div>
 
           {/* Date Picker & Quick Filters */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex-1">
-              <DateRangePicker
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
+          <div className="space-y-2">
+            {/* Quick Date Presets on Mobile */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+              <button
+                type="button"
+                onClick={() => setDatePreset('today')}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-all border",
+                  dateRange?.from && isSameDay(dateRange.from, new Date()) && dateRange?.to && isSameDay(dateRange.to, new Date())
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/30 border-border/40 text-muted-foreground"
+                )}
+              >
+                Hoy (Actual)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDatePreset('yesterday')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 bg-muted/30 border border-border/40 text-muted-foreground"
+              >
+                Ayer
+              </button>
+              <button
+                type="button"
+                onClick={() => setDatePreset('week')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 bg-muted/30 border border-border/40 text-muted-foreground"
+              >
+                Esta Semana
+              </button>
+              <button
+                type="button"
+                onClick={() => setDatePreset('month')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 bg-muted/30 border border-border/40 text-muted-foreground"
+              >
+                Este Mes
+              </button>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Select value={filterCustomer} onValueChange={setFilterCustomer}>
-                <SelectTrigger className="h-9 flex-1 sm:w-36 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
-                  <SelectValue placeholder="Cliente" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">Todos los Clientes</SelectItem>
-                  {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
 
-              <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
-                <SelectTrigger className="h-9 flex-1 sm:w-32 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
-                  <SelectValue placeholder="Método" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">Todos los Métodos</SelectItem>
-                  {uniquePaymentMethods.map(m => (
-                    <SelectItem key={m} value={m}>{m.toUpperCase()}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1">
+                <DateRangePicker
+                  dateRange={dateRange}
+                  onDateRangeChange={setDateRange}
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Select value={filterCustomer} onValueChange={setFilterCustomer}>
+                  <SelectTrigger className="h-9 flex-1 sm:w-36 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
+                    <SelectValue placeholder="Cliente" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Todos los Clientes</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all') && (
-                <Button variant="ghost" size="icon" onClick={clearFilters} className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" title="Limpiar Filtros">
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              )}
+                <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
+                  <SelectTrigger className="h-9 flex-1 sm:w-32 text-xs font-bold bg-muted/20 border-border/40 rounded-xl">
+                    <SelectValue placeholder="Método" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Todos los Métodos</SelectItem>
+                    {uniquePaymentMethods.map(m => (
+                      <SelectItem key={m} value={m}>{m.toUpperCase()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all' || filterInvoiceType !== 'all') && (
+                  <Button variant="ghost" size="icon" onClick={clearFilters} className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" title="Limpiar Filtros">
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2205,10 +3036,15 @@ const Reports = () => {
                 <h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground">
                   {REPORT_TYPES.find(r => r.id === activeReport)?.label}
                 </h1>
-                {isFetchingSales && (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full animate-pulse border border-primary/20">
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    Actualizando
+                {isFetchingSales ? (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/15 px-3 py-1 rounded-full border border-primary/30 shadow-xs animate-pulse">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                    <span>Actualizando datos...</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground bg-muted/40 px-2.5 py-0.5 rounded-full border border-border/40">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                    <span>Al día</span>
                   </span>
                 )}
               </div>
@@ -2219,6 +3055,47 @@ const Reports = () => {
 
             {/* Actions & Filters Row */}
             <div className="flex flex-wrap items-center gap-2.5 max-w-full min-w-0">
+              {/* Quick Presets on Desktop */}
+              <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-xl border border-border/50">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('today')}
+                  className={cn(
+                    "h-8 px-2.5 text-xs font-bold rounded-lg transition-all",
+                    dateRange?.from && isSameDay(dateRange.from, new Date()) && dateRange?.to && isSameDay(dateRange.to, new Date())
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Hoy (Actual)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('yesterday')}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                >
+                  Ayer
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('week')}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                >
+                  Esta Semana
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDatePreset('month')}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                >
+                  Este Mes
+                </Button>
+              </div>
+
               {/* Date Range Picker */}
               <DateRangePicker
                 dateRange={dateRange}
@@ -2253,7 +3130,7 @@ const Reports = () => {
                   </SelectContent>
                 </Select>
 
-                {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all') && (
+                {(filterCustomer !== 'all' || filterPaymentMethod !== 'all' || filterCategory !== 'all' || filterUser !== 'all' || filterInvoiceType !== 'all') && (
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 px-2 text-[10px] font-bold text-destructive hover:bg-destructive/10 rounded-md">
                     Limpiar
                   </Button>
@@ -2261,17 +3138,35 @@ const Reports = () => {
               </div>
 
               {/* Export Action Buttons */}
-              <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50">
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg gap-1.5 transition-all" onClick={() => generatePDF()} title="Descargar PDF">
-                  <FileText className="h-3.5 w-3.5 text-red-500 shrink-0" />
+              <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-xl border border-border/50">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg gap-1.5 transition-all" 
+                  onClick={() => generatePDF()} 
+                  title="Descargar Reporte PDF"
+                >
+                  <FileText className="h-3.5 w-3.5 shrink-0" />
                   <span>PDF</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg gap-1.5 transition-all" onClick={() => generateExcel()} title="Descargar Excel">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg gap-1.5 transition-all" 
+                  onClick={() => generateExcel()} 
+                  title="Descargar Reporte Excel"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                   <span>Excel</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-semibold text-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg gap-1.5 transition-all" onClick={() => setIsEmailDialogOpen(true)} title="Enviar por Correo">
-                  <Mail className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-background/80 rounded-lg gap-1.5 transition-all" 
+                  onClick={() => setIsEmailDialogOpen(true)} 
+                  title="Enviar Reporte por Email"
+                >
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
                   <span>Email</span>
                 </Button>
               </div>
