@@ -103,3 +103,29 @@ Según lo que maneja el sistema (vía Supabase), como mínimo hay que declarar:
 Confirma en el propio formulario de Play Console si cada dato se comparte con
 terceros, si es opcional, y si los usuarios pueden pedir que se borre — todo
 eso solo lo puedes responder tú desde la consola.
+
+## Tipo de cuenta: Personal vs. Organización
+
+Al registrarte en Play Console eligiendo **Organización** piden un número
+**D-U-N-S** (identificador de negocio de Dun & Bradstreet) — gratis pero
+puede tardar días/semanas en asignarse.
+
+Si el registro es a tu nombre (no a nombre de una empresa constituida), usa
+**Personal** en su lugar: no pide D-U-N-S, solo verificación de identidad
+(cédula/pasaporte). El nombre público que ven los usuarios en la ficha
+("Developer name") se configura aparte y no tiene que ser tu nombre legal.
+
+Contrapartida de elegir Personal: si la cuenta se creó a partir del 13 de
+noviembre de 2023 (aplica a cualquier cuenta nueva), Google exige completar
+una prueba cerrada (*closed testing*) con **al menos 12 testers** que
+acepten la invitación y mantengan la app instalada de forma continua
+durante **14 días** antes de poder pasar la app a producción/público. Desde
+2026 Google también verifica que esos testers realmente usen la app, no
+solo que la instalen. Las cuentas de Organización están exentas de este
+requisito.
+
+Con un negocio pequeño/solo, conviene arrancar **ya** con la cuenta
+Personal y la prueba cerrada de 12 testers — ese es el paso que más tiempo
+de calendario consume (14 días mínimo), y corre en paralelo mientras se
+resuelve todo lo demás de esta lista (capturas, cuenta demo, cuestionario
+de datos).

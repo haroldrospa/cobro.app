@@ -1,0 +1,82 @@
+definitions:
+  cache:
+    ios: &ios_cache
+      cache_paths:
+        - $HOME/Library/Caches/CocoaPods
+        - ios/App/Pods
+
+workflows:
+  # ─────────────────────────────────────────────────────────────────────
+  # Build de iOS en la nube (no requiere Mac local) — sube automáticamente
+  # a TestFlight. Pensado para correr manualmente desde el dashboard de
+  # Codemagic mientras no haya CI por push configurado.
+  #
+  # Setup una sola vez en el dashboard de Codemagic (nada de esto va en
+  # este archivo ni en el repo):
+  #   1. Team settings → Code signing identities → App Store Connect →
+  #      subir la API key (.p8) generada en App Store Connect
+  #      (Users and Access → Integrations → App Store Connect API,
+  #      acceso "App Manager"). Nombrarla "cobroapp_appstore" para que
+  #      coincida con el `integrations.app_store_connect` de abajo (o
+  #      cambiar el nombre acá para que coincida con el que uses).
+  #   2. Conectar este repo (GitHub/GitLab/Bitbucket) como app nueva en
+  #      Codemagic y seleccionar "codemagic.yaml" como config.
+  #   3. Reemplazar APP_STORE_APPLE_ID abajo por el ID numérico real de la
+  #      app en App Store Connect (aparece en App Information → Apple ID,
+  #      solo existe después de crear la ficha de la app ahí).
+  # ─────────────────────────────────────────────────────────────────────
+  ios-release:
+    name: iOS Release (Capacitor → TestFlight)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: cobroapp_appstore
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.cobro.app
+      vars:
+        APP_STORE_APPLE_ID: 0000000000 # TODO: reemplazar tras crear la app en App Store Connect
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: 20.11.0
+      xcode: latest
+      cocoapods: default
+    cache:
+      <<: *ios_cache
+    scripts:
+      - name: Instalar dependencias npm
+        script: npm ci
+      - name: Compilar el frontend (Vite)
+        script: npm run build
+      - name: Sincronizar Capacitor (copia dist/ al proyecto iOS)
+        script: npx cap sync ios
+      - name: Instalar dependencias de CocoaPods
+        script: |
+          cd ios/App && pod install
+      - name: Configurar firma automática del proyecto Xcode
+        script: xcode-project use-profiles
+      - name: Compilar el .ipa firmado
+        script: |
+          cd $CM_BUILD_DIR
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - haroldrospa@gmail.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Dejar en false hasta que la ficha de App Store Connect (capturas,
+        # descripción, cuestionario de privacidad) esté completa. Cuando
+        # esté todo listo, cambiar a true para enviar automáticamente a
+        # revisión de Apple en cada build.
+        submit_to_app_store: false

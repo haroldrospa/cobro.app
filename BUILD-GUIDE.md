@@ -59,6 +59,52 @@ Contenido de la ficha de la tienda listo en
 
 ---
 
+## 🍎 iOS
+
+No hay Mac en esta máquina (Windows), y Xcode solo corre en macOS — así que
+el build de iOS se hace en la nube con **Codemagic**
+(https://codemagic.io), sin necesitar comprar ni prestar una Mac.
+
+Ya está scaffoldeado en `ios/` (`npx cap add ios`, hecho una vez — de ahí
+en adelante solo hace falta `npx cap sync ios` tras cada cambio del lado
+web) y el workflow de build vive en [`codemagic.yaml`](codemagic.yaml) en
+la raíz del repo.
+
+⚠️ **El escáner de código de barras (cámara) y la impresión térmica por
+Bluetooth son plugins nativos escritos solo en Kotlin/Android** — no existe
+todavía su equivalente en Swift para iOS. El código ya oculta esas
+opciones fuera de Android (`isAndroidNative()` en `src/utils/platform.ts`),
+así que el build de iOS no se rompe, simplemente sale sin esas dos
+funciones hasta que alguien las implemente nativamente en Swift. Ver el
+aviso al inicio de [`docs/APP_STORE_LISTING.md`](docs/APP_STORE_LISTING.md).
+
+### Setup único (antes del primer build)
+
+1. Inscribirse en **Apple Developer Program** (developer.apple.com,
+   USD $99/año) — usar tipo de cuenta **Individual**, no Organización, para
+   no necesitar un número D-U-N-S.
+2. En App Store Connect, crear la ficha de la app (`com.cobro.app`) y
+   copiar el **Apple ID** numérico que le asigna (App Information → Apple
+   ID) — va en `APP_STORE_APPLE_ID` dentro de `codemagic.yaml`.
+3. Generar una API key en App Store Connect (Users and Access →
+   Integrations → App Store Connect API, acceso "App Manager") y subirla
+   en Codemagic (Team settings → Code signing identities → App Store
+   Connect) con el nombre `cobroapp_appstore` (o el que se use — debe
+   coincidir con `integrations.app_store_connect` en `codemagic.yaml`).
+4. Conectar este repositorio como app nueva en Codemagic y decirle que use
+   `codemagic.yaml` del repo.
+
+### Build de release (sube automáticamente a TestFlight)
+
+Se dispara desde el dashboard de Codemagic (workflow `ios-release`), no
+desde esta máquina — Codemagic compila en una Mac suya, firma con la API
+key configurada arriba, y publica el `.ipa` en TestFlight.
+
+Contenido de la ficha de la tienda listo en
+[`docs/APP_STORE_LISTING.md`](docs/APP_STORE_LISTING.md).
+
+---
+
 ## 🪟 Windows EXE
 
 ### Paso 1: Generar Icono .ico
@@ -110,6 +156,15 @@ npm run electron:build
 - [ ] AAB probado (pista de prueba interna en Play Console, o instalando vía
       `bundletool`)
 
+**iOS**
+- [ ] Inscrito en Apple Developer Program (cuenta Individual)
+- [ ] App creada en App Store Connect, `APP_STORE_APPLE_ID` copiado a
+      `codemagic.yaml`
+- [ ] API key de App Store Connect subida a Codemagic
+- [ ] Repo conectado en Codemagic, workflow `ios-release` corrido sin
+      errores
+- [ ] Build probado desde TestFlight
+
 **Windows (Electron)**
 - [ ] Icono .ico generado
 - [ ] `./build-windows.sh` ejecutado
@@ -117,4 +172,7 @@ npm run electron:build
 
 ---
 
-**Tiempo estimado total**: 30-45 minutos (primera vez)
+**Tiempo estimado total**: 30-45 minutos (primera vez, con Android y Windows
+ya listos). iOS depende de tiempos externos: aprobación de Apple Developer
+Program (horas a pocos días) y tiempo de build en Codemagic (~10-20 min por
+build, dentro del free tier para uso ocasional).
