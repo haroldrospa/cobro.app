@@ -66,14 +66,17 @@ computadoras y como app web instalable (PWA).
 
 ## Gráficos requeridos por Play Console
 
-- Icono de app 512×512: usar `build-assets/icons/app-icon.png` (verificar que
-  cumpla el tamaño exacto exigido; si no, exportarlo a 512×512 sin
-  transparencia).
-- Feature graphic 1024×500: **pendiente de crear**, no existe todavía en el
-  repo.
-- Al menos 2 capturas de pantalla de teléfono (recomendado 4–8): **pendiente
-  de tomar** — se pueden generar corriendo la app (`npm run dev` o el APK) y
-  capturando el POS, el listado de productos, un reporte y el checkout.
+- Icono de app 512×512: `build-assets/icons/playstore-icon-512.png` — ✅ listo.
+- Feature graphic 1024×500: `build-assets/icons/playstore-feature-graphic.png`
+  — ✅ listo.
+- Capturas de pantalla de teléfono: ✅ 5 listas en `Capturas/` (todas dentro
+  de los límites de Play Console — 320–3840px, relación de aspecto ≤2:1):
+  `POS.png`, `Panel de control.png`, `Carrito.png`, `Finaliza venta.png`,
+  `Clientes (redactado).png`. Esta carpeta no está en git (sin trackear) —
+  son datos de la tienda real del usuario, la versión de "Clientes" ya tiene
+  tapados el nombre, RNC, cantidad de clientes y deuda total antes de
+  redactarla. **No usar** `Facturas Pendientes.png` (el original sin
+  redactar) ni `POS_store.png` (duplicado de `POS.png`).
 
 ## Enlaces legales (ya están publicados y en producción)
 
