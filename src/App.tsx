@@ -47,6 +47,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Refunds = lazy(() => import("./pages/legal/Refunds"));
+const AccountDeletion = lazy(() => import("./pages/legal/AccountDeletion"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -195,6 +196,7 @@ const App = () => {
               <Route path="/terminos" element={<Terms />} />
               <Route path="/privacidad" element={<Privacy />} />
               <Route path="/reembolsos" element={<Refunds />} />
+              <Route path="/eliminar-cuenta" element={<AccountDeletion />} />
 
               {/* Full-screen protected routes - NO Layout header */}
               <Route
