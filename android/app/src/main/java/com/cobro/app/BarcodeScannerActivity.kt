@@ -2,7 +2,12 @@ package com.cobro.app
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.Gravity
+import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -19,8 +24,16 @@ import java.util.concurrent.Executors
 /**
  * BarcodeScannerActivity — Escáner de códigos de barras usando ML Kit + CameraX.
  *
- * Se lanza desde JavaScriptBridge.scanBarcode() o scanQRCode().
- * Al leer un código, retorna el resultado vía setResult() y finaliza.
+ * Se lanza desde el plugin Capacitor "BarcodeScanner"
+ * (ver plugins/BarcodeScannerPlugin.kt), llamado desde JS vía
+ * src/utils/barcodeScanner.ts. Al leer un código, retorna el resultado vía
+ * setResult() y finaliza.
+ *
+ * Ventana flotante chica (no pantalla completa) — ver
+ * res/values/styles.xml:AppTheme.ScannerFloating y configureFloatingWindow()
+ * más abajo. La resolución real que analiza ML Kit no depende del tamaño en
+ * pantalla del PreviewView — CameraX le sigue pasando frames a resolución
+ * completa del sensor aunque la ventana se vea chica.
  */
 class BarcodeScannerActivity : ComponentActivity() {
 
@@ -36,12 +49,72 @@ class BarcodeScannerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Layout simple con PreviewView a pantalla completa
-        val previewView = PreviewView(this)
-        setContentView(previewView)
+        val previewView = PreviewView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        // Botón chico para cancelar sin depender del botón atrás del sistema
+        // (tocar fuera del recuadro también cancela, ver setFinishOnTouchOutside).
+        val closeButton = TextView(this).apply {
+            text = "✕"
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#66000000"))
+            }
+            layoutParams = FrameLayout.LayoutParams(dp(30), dp(30)).apply {
+                gravity = Gravity.TOP or Gravity.END
+                topMargin = dp(8)
+                marginEnd = dp(8)
+            }
+            setOnClickListener { finish() } // sin setResult previo → RESULT_CANCELED
+        }
+
+        val root = FrameLayout(this).apply {
+            addView(previewView)
+            addView(closeButton)
+        }
+        setContentView(root)
+
+        // IMPORTANTE: llamar a window.setLayout/setGravity aquí mismo (antes
+        // de que la ventana quede adjunta al WindowManager) no "pega" — el
+        // propio framework pisa esos WindowManager.LayoutParams en su primer
+        // paso de layout. post{} lo aplica un frame después, ya con la
+        // ventana adjunta, que es cuando realmente se respeta.
+        root.post { configureFloatingWindow() }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         startCamera(previewView)
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    /** Encoge y posiciona la ventana de la Activity como un recuadro flotante
+     *  cerca de arriba, en vez de dejarla a pantalla completa (theme
+     *  AppTheme.ScannerFloating en el manifest habilita que pueda flotar). */
+    private fun configureFloatingWindow() {
+        val dm = resources.displayMetrics
+        val widthPx = (dm.widthPixels * 0.92).toInt()
+        val heightPx = (dm.heightPixels * 0.42).toInt()
+
+        window.apply {
+            setLayout(widthPx, heightPx)
+            setGravity(Gravity.TOP)
+            setBackgroundDrawable(
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(16).toFloat()
+                    setColor(Color.parseColor("#0F0F1A"))
+                }
+            )
+            attributes = attributes.apply { y = (dm.heightPixels * 0.16).toInt() }
+        }
+        setFinishOnTouchOutside(true)
     }
 
     private fun startCamera(previewView: PreviewView) {

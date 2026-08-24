@@ -14,8 +14,15 @@ import JsBarcode from 'jsbarcode';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { PrinterSelectionDialog } from './PrinterSelectionDialog';
 import { generateCleanInvoiceHTML } from '@/utils/generateCleanInvoiceHTML';
+import {
+  isAndroidNative,
+  thermalPaperWidthMm,
+  buildTicketFromInvoice,
+  printTicket as printBluetoothTicket,
+  getPrinterStatus,
+  fetchImageAsBase64,
+} from '@/utils/bluetoothPrinter';
 import appLogo from '@/assets/cobro-logo.png';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 
@@ -154,8 +161,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const [emailAddress, setEmailAddress] = useState('');
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
-  const [showPrinterSelection, setShowPrinterSelection] = useState(false);
-  const [invoiceContentForPrint, setInvoiceContentForPrint] = useState<string>('');
   const [whatsAppPhone, setWhatsAppPhone] = useState('');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
@@ -635,8 +640,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   `;
   };
 
-  // NEW: Function to generate clean, black & white invoice using Settings preview design
-  const generateCleanInvoiceHTMLWrapper = () => {
+  // Datos compartidos de la factura/empresa — usados tanto por la plantilla
+  // HTML (impresión navegador / PDF) como por el ticket nativo Bluetooth,
+  // para no recalcularlos dos veces.
+  const buildInvoiceAndCompanyData = () => {
     const items = saleData.items || [];
     const taxRate = parseFloat(storeSettings?.default_tax_rate?.toString() || '18');
     const taxAmount = items.reduce((sum, item) => sum + (item.tax_amount || 0), 0) || (saleData.total - (saleData.total / (1 + taxRate / 100)));
@@ -645,229 +652,78 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     // Generate barcode if needed
     const barcodeDataUrl = printSettings.showBarcode ? generateBarcode(invoiceNumber) : undefined;
 
-    return generateCleanInvoiceHTML(
-      {
-        name: dbCompanyInfo.name || 'Mi Empresa',
-        logo: dbCompanyInfo.logo,
-        logoSize: dbCompanyInfo.logoInvoiceSize || dbCompanyInfo.logoSize || 64,
-        rnc: dbCompanyInfo.rnc,
-        phone: dbCompanyInfo.phone,
-        address: dbCompanyInfo.address,
-        pageMargin: printSettings.pageMargin || '0mm',
-        containerPadding: printSettings.containerPadding || '4px',
-        logoMarginBottom: printSettings.logoMarginBottom || '6px',
-        fontSize: printSettings.fontSize,
-        paperSize: printSettings.paperSize || '80mm',
-      },
-      {
-        invoiceNumber: invoiceNumber,
-        invoicePrefix: storeSettings?.invoice_prefix || 'FAC-',
-        date: new Date(),
-        items: items.map(item => ({
-          name: item.name || item.product?.name || 'Producto',
-          quantity: item.quantity || 1,
-          price: item.price || 0,
-          total: item.total || (item.quantity * item.price) || 0,
-          comment: item.comment,
-        })),
-        subtotal: subtotalAmount,
-        tax: taxAmount,
-        taxRate: taxRate,
-        total: saleData.total,
-        currency: storeSettings?.currency || 'DOP',
-        paymentTerms: storeSettings?.payment_terms?.toString(),
-        footerText: storeSettings?.invoice_footer_text,
-        showBarcode: isElectronic ? false : (printSettings.showBarcode || false),
-        barcodeDataUrl: barcodeDataUrl,
-        loyaltyPointsEarned: saleData.loyaltyPointsEarned,
-        loyaltyPoints: saleData.loyaltyPoints,
-        customerName: saleData.customer?.name,
-        customerRnc: saleData.customer?.rnc,
-        customerPhone: saleData.customer?.phone,
-        customerAddress: saleData.customer?.address,
-        cashierName: (saleData as any).cashier_name || (saleData as any).profile?.full_name || (saleData as any).user?.full_name,
-        paymentMethod: (saleData as any).paymentMethod || (saleData as any).payment_method || 'Efectivo',
-        amountPaid: (saleData as any).cashReceived || (saleData as any).cash_received || (saleData as any).amountPaid || saleData.total,
-        change: (saleData as any).change || 0,
-        isElectronic: isElectronic,
-        encf: saleData.encf,
-        securityCode: securityCode,
-        signatureDate: signatureDate,
-        qrCodeUrl: saleData.qrcode_url,
-      }
-    );
-  };
-
-
-
-  const handlePrinterTypeSelected = async (type: 'usb' | 'bluetooth' | 'browser' | 'system') => {
-    // CHANGED: Now ALL types use HTML for exact preview match
-    // Use browser print with new robust print handler
-    const { handlePrint, injectPrintStyles, markContentAsPrintable } = await import('@/utils/printHandler');
-
-    // Ensure styles are injected
-    injectPrintStyles();
-
-    // Determine format from settings
-    let format: '80mm' | '58mm' | 'A4' = '80mm';
-    if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
-      format = '58mm'; // Mapped to 58mm class
-    } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
-      format = 'A4';
-    }
-
-    // Use the NEW clean invoice design (matches Settings preview EXACTLY)
-    const htmlContent = generateCleanInvoiceHTMLWrapper();
-
-    // Create a dedicated print container
-    let printContainer = document.getElementById('temp-print-container');
-    if (!printContainer) {
-      printContainer = document.createElement('div');
-      printContainer.id = 'temp-print-container';
-      document.body.appendChild(printContainer);
-    }
-
-    // Inject the generated HTML
-    printContainer.innerHTML = htmlContent;
-
-    // Mark as printable
-    markContentAsPrintable('temp-print-container');
-
-    try {
-      await handlePrint(format);
-    } finally {
-      // Clean up
-      if (printContainer.parentNode) {
-        printContainer.parentNode.removeChild(printContainer);
-      }
-    }
-  };
-
-  const executeBrowserPrint = async () => {
-    // Use company info from the database hook (dbCompanyInfo)
-    const companyInfo = dbCompanyInfo;
-
-    // Generate barcode for invoice number
-    const barcodeDataUrl = generateBarcode(invoiceNumber);
-
-    // Function to create and print content using the UNIFIED clean design
-    const createPrintContent = (logoDataUrl: string) => {
-      // We ignore logoDataUrl argument here because generateCleanInvoiceHTMLWrapper 
-      // already uses the logo from dbCompanyInfo internally.
-      // This ensures exact consistency with the other print methods.
-      return generateCleanInvoiceHTMLWrapper();
+    const companyData = {
+      name: dbCompanyInfo.name || 'Mi Empresa',
+      logo: dbCompanyInfo.logo,
+      logoSize: dbCompanyInfo.logoInvoiceSize || dbCompanyInfo.logoSize || 64,
+      rnc: dbCompanyInfo.rnc,
+      phone: dbCompanyInfo.phone,
+      address: dbCompanyInfo.address,
+      pageMargin: printSettings.pageMargin || '0mm',
+      containerPadding: printSettings.containerPadding || '4px',
+      logoMarginBottom: printSettings.logoMarginBottom || '6px',
+      fontSize: printSettings.fontSize,
+      paperSize: printSettings.paperSize || '80mm',
     };
 
-    // Function to execute print using iframe (more reliable than popup)
-    const printWithIframe = (content: string) => {
-      return new Promise<void>((resolve, reject) => {
-        try {
-          // Create hidden iframe
-          const iframe = document.createElement('iframe');
-          iframe.style.position = 'absolute';
-          iframe.style.width = '0';
-          iframe.style.height = '0';
-          iframe.style.border = 'none';
-          iframe.style.left = '-9999px';
-          document.body.appendChild(iframe);
-
-          const iframeDoc = iframe.contentWindow?.document;
-          if (!iframeDoc) {
-            throw new Error('No se pudo crear el documento de impresión');
-          }
-
-          iframeDoc.open();
-          iframeDoc.write(content);
-          iframeDoc.close();
-
-          // Wait for content and all images to load then print
-          iframe.onload = async () => {
-            try {
-              const iframeDoc = iframe.contentWindow?.document;
-              const images = iframeDoc?.querySelectorAll('img') || [];
-              const imagePromises = Array.from(images).map((img) => {
-                if (img.complete) return Promise.resolve();
-                return new Promise((resolve) => {
-                  img.onload = resolve;
-                  img.onerror = resolve; // Resolve even on error
-                });
-              });
-
-              // Await image loading with a timeout of 2.5 seconds
-              await Promise.race([
-                Promise.all(imagePromises),
-                new Promise(resolve => setTimeout(resolve, 2500))
-              ]);
-            } catch (err) {
-              console.warn("Could not pre-load iframe images:", err);
-            }
-
-            setTimeout(() => {
-              try {
-                iframe.contentWindow?.focus();
-                iframe.contentWindow?.print();
-
-                // Clean up after print dialog closes
-                setTimeout(() => {
-                  document.body.removeChild(iframe);
-                  resolve();
-                }, 1000);
-              } catch (printError) {
-                console.error('Error during print:', printError);
-                document.body.removeChild(iframe);
-                reject(printError);
-              }
-            }, 300);
-          };
-        } catch (error) {
-          reject(error);
-        }
-      });
+    const invoiceData = {
+      invoiceNumber: invoiceNumber,
+      invoicePrefix: storeSettings?.invoice_prefix || 'FAC-',
+      date: new Date(),
+      items: items.map(item => ({
+        name: item.name || item.product?.name || 'Producto',
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        total: item.total || (item.quantity * item.price) || 0,
+        comment: item.comment,
+      })),
+      subtotal: subtotalAmount,
+      tax: taxAmount,
+      taxRate: taxRate,
+      total: saleData.total,
+      currency: storeSettings?.currency || 'DOP',
+      paymentTerms: storeSettings?.payment_terms?.toString(),
+      footerText: storeSettings?.invoice_footer_text,
+      showBarcode: isElectronic ? false : (printSettings.showBarcode || false),
+      barcodeDataUrl: barcodeDataUrl,
+      loyaltyPointsEarned: saleData.loyaltyPointsEarned,
+      loyaltyPoints: saleData.loyaltyPoints,
+      customerName: saleData.customer?.name,
+      customerRnc: saleData.customer?.rnc,
+      customerPhone: saleData.customer?.phone,
+      customerAddress: saleData.customer?.address,
+      cashierName: (saleData as any).cashier_name || (saleData as any).profile?.full_name || (saleData as any).user?.full_name,
+      paymentMethod: (saleData as any).paymentMethod || (saleData as any).payment_method || 'Efectivo',
+      amountPaid: (saleData as any).cashReceived || (saleData as any).cash_received || (saleData as any).amountPaid || saleData.total,
+      change: (saleData as any).change || 0,
+      isElectronic: isElectronic,
+      encf: saleData.encf,
+      securityCode: securityCode,
+      signatureDate: signatureDate,
+      qrCodeUrl: saleData.qrcode_url,
     };
 
-    try {
-      toast({
-        title: "Preparando impresión",
-        description: "Se está preparando la factura para imprimir...",
-      });
-
-      // Use live dbCompanyInfo from the hook
-      const companyInfo = dbCompanyInfo;
-
-      if (companyInfo.logo) {
-        // Pre-load image to ensure it works
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => resolve(); // Continue without logo if it fails
-          img.src = companyInfo.logo;
-        });
-
-        await printWithIframe(createPrintContent(companyInfo.logo));
-      } else {
-        await printWithIframe(createPrintContent(''));
-      }
-
-      toast({
-        title: "Impresión enviada",
-        description: "La factura fue enviada a la impresora",
-      });
-    } catch (error: any) {
-      console.error('Error printing:', error);
-      toast({
-        title: "Error de impresión",
-        description: error.message || "No se pudo imprimir la factura. Intenta de nuevo.",
-        variant: "destructive",
-      });
-    }
+    return { companyData, invoiceData };
   };
+
+  // NEW: Function to generate clean, black & white invoice using Settings preview design
+  const generateCleanInvoiceHTMLWrapper = () => {
+    const { companyData, invoiceData } = buildInvoiceAndCompanyData();
+    return generateCleanInvoiceHTML(companyData, invoiceData);
+  };
+
+
 
   const handlePrintDirect = async () => {
-    // SIMPLIFIED APPROACH: Close this dialog and open browser print dialog directly
-    // The browser will remember the last selected printer
+    // En Android, imprimir directo a la impresora térmica Bluetooth
+    // conectada al dispositivo (ver src/utils/bluetoothPrinter.ts).
+    if (isAndroidNative()) {
+      await handleBluetoothPrint();
+      return;
+    }
 
-    // Close the options dialog immediately
+    // Web/Electron: se mantiene el flujo existente de impresión del
+    // navegador. The browser will remember the last selected printer.
     onClose();
 
     // Brief delay to ensure dialog closes smoothly
@@ -1346,83 +1202,77 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     }
   };
 
-  const handleThermalPrint = async () => {
+  // Imprime a la impresora térmica Bluetooth conectada al dispositivo,
+  // usando el plugin nativo (ver src/utils/bluetoothPrinter.ts). Solo se usa
+  // en Android — llamado desde handlePrintDirect.
+  const handleBluetoothPrint = async () => {
+    setPrintStatus('printing');
     try {
-      const { thermalPrinter } = await import('@/utils/thermalPrinter');
+      const status = await getPrinterStatus();
+      if (!status.address) {
+        toast({
+          title: "Sin impresora configurada",
+          description: "Ve a Ajustes → Impresora Térmica para emparejar una impresora Bluetooth.",
+          variant: "destructive",
+        });
+        setPrintStatus('error');
+        return;
+      }
 
-      // Removed blocking check to allow auto-reconnect logic inside printInvoice
-      // if (!thermalPrinter.isConnected()) { ... }
+      const { companyData, invoiceData } = buildInvoiceAndCompanyData();
+      const paperWidthMm = thermalPaperWidthMm(companyData.paperSize);
+      if (!paperWidthMm) {
+        // A4/Carta no es un formato de impresora térmica Bluetooth.
+        toast({
+          title: "Formato no compatible con impresora térmica",
+          description: "El tamaño de papel configurado (A4/Carta) no aplica a Bluetooth. Usa 'Generar PDF' para ese formato.",
+          variant: "destructive",
+        });
+        setPrintStatus('error');
+        return;
+      }
 
       toast({
         title: "Imprimiendo...",
-        description: "Enviando factura a la impresora térmica",
+        description: `Enviando factura a ${status.printerName || 'la impresora térmica'}`,
       });
 
-      // Use live database data
-      const companyInfo = dbCompanyInfo;
-      const thermalPrintSettings = printSettings;
+      const ticket = buildTicketFromInvoice(companyData, invoiceData, paperWidthMm);
 
-      // Calculate totals from items correctly
-      const calculatedSubtotal = saleData.items.reduce((sum: number, item: any) => {
-        const itemPrice = item.price || 0;
-        const itemQty = item.quantity || 0;
-        return sum + (itemPrice * itemQty);
-      }, 0);
-
-      const calculatedTax = saleData.items.reduce((sum: number, item: any) => {
-        const itemTax = item.tax || 0;
-        const itemQty = item.quantity || 0;
-        return sum + (itemTax * itemQty);
-      }, 0);
-
-      // Prepare invoice data with properly formatted items
-      const invoiceData = {
-        companyInfo,
-        invoiceNumber,
-        // Map items to ensure they have the expected structure
-        items: saleData.items.map((item: any) => ({
-          name: item.name || 'Producto',
-          quantity: item.quantity || 1,
-          price: item.price || 0,
-          total: item.total || (item.price * item.quantity)
-        })),
-        subtotal: calculatedSubtotal,
-        tax: calculatedTax,
-        total: saleData.total,
-        customer: saleData.customer,
-        paymentMethod: saleData.paymentMethod,
-        change: saleData.change,
-        isElectronic: isElectronic,
-        encf: saleData.encf,
-        securityCode: securityCode,
-        signatureDate: signatureDate,
-        qrcodeUrl: saleData.qrcode_url,
-      };
-
-      // Print to thermal printer - ensure we map PaperSize to what the thermal printer supports
-      const printerWidth = (thermalPrintSettings.paperSize === '58mm' ? '58mm' : '80mm') as '80mm' | '58mm';
-      const result = await thermalPrinter.printInvoice(invoiceData, printerWidth);
-
-      if (result.success) {
-        toast({
-          title: "Impresión exitosa",
-          description: "La factura se imprimió correctamente",
-        });
-        onClose();
-      } else {
-        toast({
-          title: "Error al imprimir",
-          description: result.error || "Error desconocido",
-          variant: "destructive",
-        });
+      // Ticket de TEXTO nativo ESC/POS (no imagen completa) — a 58mm la
+      // impresora tiene muy poca resolución real (~168 DPI) y cualquier
+      // texto renderizado como bitmap sale borroso al convertirlo a
+      // blanco/negro, aunque se ajusten tamaños/dithering; se probó a
+      // fondo y el resultado nunca igualó la nitidez de la fuente propia
+      // de la impresora. El texto nativo, en cambio, es nítido a
+      // cualquier resolución y es el que ya estaba afinado para no
+      // desperdiciar papel. Los recuadros con bordes reales de la vista
+      // previa web quedan fuera de este camino (se simulan con líneas
+      // "=" y "-"); el logo sí sigue siendo una imagen, que es la única
+      // parte que consistentemente salió bien.
+      if (companyData.logo) {
+        const logoBase64 = await fetchImageAsBase64(companyData.logo);
+        if (logoBase64) {
+          ticket.logoBase64 = logoBase64;
+        }
       }
-    } catch (error: any) {
-      console.error('Error printing to thermal printer:', error);
+
+      await printBluetoothTicket(ticket);
+
       toast({
-        title: "Error",
-        description: error.message || "Error al imprimir en impresora térmica",
+        title: "Impresión exitosa",
+        description: "La factura se envió a la impresora térmica",
+      });
+      setPrintStatus('success');
+      onClose();
+    } catch (error: any) {
+      console.error('Error printing to Bluetooth thermal printer:', error);
+      toast({
+        title: "Error al imprimir",
+        description: error.message || "No se pudo conectar con la impresora térmica",
         variant: "destructive",
       });
+      setPrintStatus('error');
     }
   };
 
@@ -1529,13 +1379,21 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                   } : handlePrintDirect}
                   className="w-full justify-start h-auto py-2 px-3 hover:bg-transparent"
                   variant="ghost"
-                  disabled={isElectronic && !saleData.qrcode_url}
+                  disabled={(isElectronic && !saleData.qrcode_url) || printStatus === 'printing'}
                 >
                   <div className="p-1.5 rounded-md bg-green-500/10 group-hover:bg-green-500/20 transition-colors shrink-0">
-                    <Printer className="h-4 w-4 text-green-500" />
+                    {printStatus === 'printing' ? (
+                      <Loader2 className="h-4 w-4 text-green-500 animate-spin" />
+                    ) : (
+                      <Printer className="h-4 w-4 text-green-500" />
+                    )}
                   </div>
                   <span className="ml-2 font-semibold text-sm">
-                    {isElectronic && !saleData.qrcode_url ? 'Firmando con DGII...' : 'Imprimir directamente (Navegador)'}
+                    {isElectronic && !saleData.qrcode_url
+                      ? 'Firmando con DGII...'
+                      : printStatus === 'printing'
+                        ? 'Imprimiendo...'
+                        : isAndroidNative() ? 'Imprimir en impresora térmica' : 'Imprimir directamente (Navegador)'}
                   </span>
                 </Button>
               </Card>
@@ -1673,21 +1531,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-
-      <PrinterSelectionDialog
-        isOpen={showPrinterSelection}
-        onClose={() => setShowPrinterSelection(false)}
-        onPrinterSelected={handlePrinterTypeSelected}
-        invoiceContent={invoiceContentForPrint}
-        saleData={{
-          total: saleData.total,
-          items: saleData.items,
-          paymentMethod: saleData.paymentMethod,
-          change: saleData.change,
-          customer: saleData.customer,
-          invoiceNumber: invoiceNumber,
-        }}
-      />
     </>
   );
 };

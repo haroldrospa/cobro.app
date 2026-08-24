@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { POSSearchProvider, usePOSSearch } from '@/contexts/POSSearchContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,8 @@ import { cn } from '@/lib/utils';
 import CartSummary from './pos/CartSummary';
 import PaymentSummary from './pos/PaymentSummary';
 import PaymentDialog from './pos/PaymentDialog';
-import PrintOptionsDialog from './pos/PrintOptionsDialog';
+// Lazy: arrastra jsPDF + html2canvas, y solo hace falta al terminar una venta
+const PrintOptionsDialog = lazy(() => import('./pos/PrintOptionsDialog'));
 import ProductSearchList from './pos/ProductSearchList';
 import WebSalesDialog from './pos/WebSalesDialog';
 import OpenAccountsDialog from './pos/OpenAccountsDialog';
@@ -42,7 +43,8 @@ import CloseDayDialog from './pos/CloseDayDialog';
 import OpenRegisterDialog from './pos/OpenRegisterDialog';
 import { useActiveSession } from '@/hooks/useCashSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import CustomerCreditDialog from './customers/CustomerCreditDialog';
+// Lazy: arrastra jsPDF, y solo hace falta al abrir un estado de cuenta a crédito
+const CustomerCreditDialog = lazy(() => import('./customers/CustomerCreditDialog'));
 import { LimitReachedDialog } from './subscription/PlanRestrictions';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -1713,11 +1715,13 @@ const POSContent: React.FC = () => {
         />
 
         {saleData && (
-          <PrintOptionsDialog
-            isOpen={showPrintOptionsDialog}
-            onClose={() => setShowPrintOptionsDialog(false)}
-            saleData={saleData}
-          />
+          <Suspense fallback={null}>
+            <PrintOptionsDialog
+              isOpen={showPrintOptionsDialog}
+              onClose={() => setShowPrintOptionsDialog(false)}
+              saleData={saleData}
+            />
+          </Suspense>
         )}
 
         <WebSalesDialog
@@ -1869,11 +1873,13 @@ const POSContent: React.FC = () => {
         </Dialog>
 
         {selectedCustomerForDebt && (
-          <CustomerCreditDialog
-            customer={selectedCustomerForDebt}
-            open={!!selectedCustomerForDebt}
-            onOpenChange={(open) => !open && setSelectedCustomerForDebt(null)}
-          />
+          <Suspense fallback={null}>
+            <CustomerCreditDialog
+              customer={selectedCustomerForDebt}
+              open={!!selectedCustomerForDebt}
+              onOpenChange={(open) => !open && setSelectedCustomerForDebt(null)}
+            />
+          </Suspense>
         )}
 
         <OpenRegisterDialog
@@ -2097,11 +2103,13 @@ const POSContent: React.FC = () => {
 
         {
           saleData && (
-            <PrintOptionsDialog
-              isOpen={showPrintOptionsDialog}
-              onClose={() => setShowPrintOptionsDialog(false)}
-              saleData={saleData}
-            />
+            <Suspense fallback={null}>
+              <PrintOptionsDialog
+                isOpen={showPrintOptionsDialog}
+                onClose={() => setShowPrintOptionsDialog(false)}
+                saleData={saleData}
+              />
+            </Suspense>
           )
         }
 
@@ -2252,11 +2260,13 @@ const POSContent: React.FC = () => {
         </Dialog>
 
         {selectedCustomerForDebt && (
-          <CustomerCreditDialog
-            customer={selectedCustomerForDebt}
-            open={!!selectedCustomerForDebt}
-            onOpenChange={(open) => !open && setSelectedCustomerForDebt(null)}
-          />
+          <Suspense fallback={null}>
+            <CustomerCreditDialog
+              customer={selectedCustomerForDebt}
+              open={!!selectedCustomerForDebt}
+              onOpenChange={(open) => !open && setSelectedCustomerForDebt(null)}
+            />
+          </Suspense>
         )}
 
         <OpenRegisterDialog
@@ -2493,22 +2503,23 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             <MenuIcon className="h-6 w-6" />
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-background border-t border-zinc-800/80 p-4 pb-12 rounded-t-[2.5rem] shadow-2xl">
-          <DrawerHeader className="border-b border-white/[0.04] pb-4.5 mb-4">
-            <DrawerTitle className="text-lg font-black text-white flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
-                <div className="bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 h-10 w-10 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0 border border-emerald-400/20">
-                  <Layers className="h-5.5 w-5.5 text-white" />
+        <DrawerContent className="bg-zinc-950 border-t border-white/[0.06] p-4 pb-10 rounded-t-3xl">
+          <DrawerHeader className="border-b border-white/[0.06] pb-4 mb-4 px-0">
+            <DrawerTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-500 h-9 w-9 rounded-xl flex items-center justify-center shrink-0">
+                  <Layers className="h-4.5 w-4.5 text-zinc-950" />
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-sm font-black tracking-tight text-white leading-none mb-1">Menú Principal</span>
-                  <span className="text-[10px] font-bold text-zinc-500 leading-none tracking-wide">{userName || 'Harold Rosado'}</span>
+                  <span className="text-sm font-semibold text-white leading-none mb-1">Menú</span>
+                  <span className="text-[11px] text-zinc-500 leading-none">{userName || 'Harold Rosado'}</span>
                 </div>
               </div>
             </DrawerTitle>
           </DrawerHeader>
-          <div className="flex flex-col gap-1 overflow-y-auto max-h-[65vh] px-1 py-1 no-scrollbar">
+          <div className="flex flex-col gap-0 overflow-y-auto max-h-[65vh] px-0.5 py-0.5 no-scrollbar">
             {/* General Navigation */}
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 px-1 mb-2 block">Navegación</span>
             {navigationItems.map(item => {
               const Icon = item.icon;
               return (
@@ -2516,43 +2527,33 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   <Button
                     variant="ghost"
                     onClick={() => onNavigate(item.href)}
-                    className="w-full h-16 justify-between px-4 rounded-[1.5rem] bg-zinc-900/20 hover:bg-zinc-900/40 border border-white/[0.03] hover:border-emerald-500/20 group transition-all duration-300 mb-3.5 shadow-md shadow-black/10 active:scale-[0.98]"
+                    className="w-full h-14 justify-between px-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] group transition-colors mb-2 active:scale-[0.99]"
                   >
-                    <div className="flex items-center min-w-0">
-                      <div className="bg-zinc-900/60 group-hover:bg-emerald-500/10 p-2.5 rounded-xl mr-3.5 transition-all duration-300 border border-white/[0.02] group-hover:border-emerald-500/20 shrink-0">
-                        <Icon className="h-5 w-5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+                    <div className="flex items-center min-w-0 gap-3">
+                      <div className="bg-white/[0.04] group-hover:bg-emerald-500/10 p-2 rounded-lg transition-colors border border-white/[0.05] group-hover:border-emerald-500/20 shrink-0">
+                        <Icon className="h-4 w-4 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
                       </div>
-                      <div className="text-left min-w-0">
-                        <span className="font-bold text-zinc-500 group-hover:text-emerald-400/80 transition-colors uppercase tracking-[0.15em] text-[8px] block">Panel Principal</span>
-                        <span className="text-xs font-black text-zinc-200 group-hover:text-white transition-colors truncate">{item.name}</span>
-                      </div>
+                      <span className="text-[13px] font-medium text-zinc-200 group-hover:text-white transition-colors truncate">{item.name}</span>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+                    <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0" />
                   </Button>
                 </DrawerClose>
               );
             })}
- 
+
             {/* MODO DEL POS Segmented Control */}
-            <div className="flex flex-col gap-2 p-3.5 rounded-[1.5rem] bg-zinc-900/20 border border-white/[0.03] mb-3.5 shadow-md shadow-black/10">
-              <div className="flex items-center justify-between px-0.5">
-                <div className="flex flex-col text-left">
-                  <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.15em]">Modo del POS</span>
-                  <span className="text-xs font-black text-zinc-100">
-                    {layoutMode === 'classic' ? 'Búsqueda de Productos' : 'Catálogo Visual'}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 bg-zinc-950/80 p-1 rounded-xl border border-white/[0.04] gap-1">
+            <div className="flex flex-col gap-2.5 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] mb-2 mt-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Modo del POS</span>
+              <div className="grid grid-cols-2 bg-black/30 p-1 rounded-lg gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => onLayoutModeChange?.('classic')}
                   className={cn(
-                    "h-8.5 text-xs font-bold rounded-lg transition-all duration-300",
-                    layoutMode === 'classic' 
-                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/10 font-black" 
-                      : "text-zinc-500 hover:text-zinc-300"
+                    "h-8.5 text-xs font-medium rounded-md transition-colors",
+                    layoutMode === 'classic'
+                      ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
+                      : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                   )}
                 >
                   Búsqueda
@@ -2562,38 +2563,31 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   variant="ghost"
                   onClick={() => onLayoutModeChange?.('catalog')}
                   className={cn(
-                    "h-8.5 text-xs font-bold rounded-lg transition-all duration-300",
-                    layoutMode === 'catalog' 
-                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/10 font-black" 
-                      : "text-zinc-500 hover:text-zinc-300"
+                    "h-8.5 text-xs font-medium rounded-md transition-colors",
+                    layoutMode === 'catalog'
+                      ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
+                      : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                   )}
                 >
                   Catálogo
                 </Button>
               </div>
             </div>
- 
+
             {/* View Mode (List/Grid) for Catalog */}
             {layoutMode === 'catalog' && (
-              <div className="flex flex-col gap-2 p-3.5 rounded-[1.5rem] bg-zinc-900/20 border border-white/[0.03] mb-3.5 transition-all duration-300 shadow-md shadow-black/10">
-                <div className="flex items-center justify-between px-0.5">
-                  <div className="flex flex-col text-left">
-                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.15em]">Vista de Catálogo</span>
-                    <span className="text-xs font-black text-zinc-100">
-                      {viewMode === 'list' ? 'Lista Detallada' : 'Cuadricula de Fotos'}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 bg-zinc-950/80 p-1 rounded-xl border border-white/[0.04] gap-1">
+              <div className="flex flex-col gap-2.5 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] mb-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Vista de Catálogo</span>
+                <div className="grid grid-cols-2 bg-black/30 p-1 rounded-lg gap-1">
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => onViewModeChange?.('list')}
                     className={cn(
-                      "h-8.5 text-xs font-bold rounded-lg transition-all duration-300",
-                      viewMode === 'list' 
-                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/10 font-black" 
-                        : "text-zinc-500 hover:text-zinc-300"
+                      "h-8.5 text-xs font-medium rounded-md transition-colors",
+                      viewMode === 'list'
+                        ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                     )}
                   >
                     Lista
@@ -2603,10 +2597,10 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                     variant="ghost"
                     onClick={() => onViewModeChange?.('grid')}
                     className={cn(
-                      "h-8.5 text-xs font-bold rounded-lg transition-all duration-300",
-                      viewMode === 'grid' 
-                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/10 font-black" 
-                        : "text-zinc-500 hover:text-zinc-300"
+                      "h-8.5 text-xs font-medium rounded-md transition-colors",
+                      viewMode === 'grid'
+                        ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                     )}
                   >
                     Cuadros
@@ -2614,113 +2608,59 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                 </div>
               </div>
             )}
- 
+
             {/* Caja Operations Grid */}
-            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 px-1 mb-3.5 mt-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Operaciones de Caja
-            </div>
-            <div className="grid grid-cols-2 gap-3.5 mb-6">
-              {/* Opción A: Ventas del Día grande arriba */}
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 px-1 mb-2 mt-3 block">Caja</span>
+            <div className="flex flex-col gap-2 mb-2">
+              {/* Ventas del Día — única acción con acento de color, el resto queda neutro */}
               <DrawerClose asChild>
                 <Button
                   variant="ghost"
                   onClick={onDailySales}
-                  className="col-span-2 h-20 flex flex-row items-center gap-4 px-5 rounded-[1.5rem] bg-zinc-900/40 hover:bg-zinc-900/60 border border-white/[0.03] hover:border-blue-500/30 hover:bg-blue-500/[0.01] shadow-lg shadow-black/25 group transition-all duration-300 active:scale-[0.98]"
+                  className="h-14 flex flex-row items-center gap-3 px-3.5 rounded-xl bg-emerald-500/[0.06] hover:bg-emerald-500/10 border border-emerald-500/20 group transition-colors active:scale-[0.99]"
                 >
-                  <div className="p-3 rounded-2xl transition-all duration-300 border flex items-center justify-center shrink-0 bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                    <Receipt className="h-6 w-6 text-blue-400" />
+                  <div className="p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <Receipt className="h-4 w-4 text-emerald-400" />
                   </div>
-                  <div className="flex flex-col text-left">
-                    <span className="text-[8px] font-extrabold text-zinc-500 uppercase tracking-[0.12em] leading-none mb-1">Operación Principal</span>
-                    <span className="font-bold text-zinc-100 group-hover:text-white transition-colors text-sm">
-                      Ventas del Día
-                    </span>
-                  </div>
+                  <span className="text-[13px] font-medium text-zinc-100 group-hover:text-white transition-colors">
+                    Ventas del Día
+                  </span>
                 </Button>
               </DrawerClose>
 
-              {/* Las otras 4 opciones organizadas en 2x2 */}
-              {[
-                { 
-                  icon: RefreshCcw, 
-                  label: 'Devoluciones', 
-                  action: onRefund, 
-                  color: 'text-orange-400', 
-                  bg: 'bg-orange-500/10 border-orange-500/20 group-hover:bg-orange-500/20 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.3)]',
-                  btnStyle: 'hover:border-orange-500/30 hover:bg-orange-500/[0.01]'
-                },
-                { 
-                  icon: HandCoins, 
-                  label: 'Movimientos', 
-                  action: onCashMovements, 
-                  color: 'text-emerald-400', 
-                  bg: 'bg-emerald-500/10 border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]',
-                  btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.01]'
-                },
-                { 
-                  icon: DollarSign, 
-                  label: 'Cobros Deudas', 
-                  action: onDebtSelect, 
-                  color: 'text-amber-400', 
-                  bg: 'bg-amber-500/10 border-amber-500/20 group-hover:bg-amber-500/20 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]',
-                  btnStyle: 'hover:border-amber-500/30 hover:bg-amber-500/[0.01]',
-                  isDebt: true
-                },
-                activeSession
-                  ? { 
-                      icon: Lock, 
-                      label: 'Cierre de Caja', 
-                      action: onCloseDay, 
-                      color: 'text-rose-400', 
-                      bg: 'bg-rose-500/10 border-rose-500/20 group-hover:bg-rose-500/20 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.3)]',
-                      btnStyle: 'hover:border-rose-500/30 hover:bg-rose-500/[0.01]'
-                    }
-                  : { 
-                      icon: Unlock, 
-                      label: 'Abrir Caja', 
-                      action: onOpenRegister, 
-                      color: 'text-emerald-400', 
-                      bg: 'bg-emerald-500/10 border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]',
-                      btnStyle: 'hover:border-emerald-500/30 hover:bg-emerald-500/[0.01]'
-                    },
-              ].map((item, idx) => (
-                <DrawerClose asChild key={idx}>
-                  <Button
-                    variant="ghost"
-                    onClick={item.action}
-                    className={cn(
-                      "!flex !flex-col items-center justify-center p-3 rounded-[1.5rem] bg-zinc-900/40 hover:bg-zinc-900/60 border border-white/[0.03] shadow-lg shadow-black/25 group transition-all duration-300 active:scale-[0.97] h-24 w-full",
-                      item.btnStyle
-                    )}
-                  >
-                    <div className={cn(
-                      "p-2.5 rounded-xl transition-all duration-300 border flex items-center justify-center shrink-0 mb-2",
-                      item.bg
-                    )}>
-                      <item.icon className={cn("h-5 w-5", item.color)} />
-                    </div>
-                    <div className="flex flex-col items-center text-center">
-                      {item.isDebt && (
-                        <span className="text-[8px] font-bold text-amber-500/80 uppercase tracking-wider leading-none mb-1">Créditos</span>
-                      )}
-                      <span className="font-bold text-zinc-200 group-hover:text-white transition-colors text-[11px] tracking-wide">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { icon: RefreshCcw, label: 'Devoluciones', action: onRefund },
+                  { icon: HandCoins, label: 'Movimientos', action: onCashMovements },
+                  { icon: DollarSign, label: 'Cobros Deudas', action: onDebtSelect, isDebt: true },
+                  activeSession
+                    ? { icon: Lock, label: 'Cierre de Caja', action: onCloseDay }
+                    : { icon: Unlock, label: 'Abrir Caja', action: onOpenRegister },
+                ].map((item, idx) => (
+                  <DrawerClose asChild key={idx}>
+                    <Button
+                      variant="ghost"
+                      onClick={item.action}
+                      className="!flex !flex-col items-center justify-center gap-2 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] group transition-colors active:scale-[0.98] h-20 w-full"
+                    >
+                      <item.icon className="h-4.5 w-4.5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+                      <span className="font-medium text-zinc-300 group-hover:text-white transition-colors text-[11px] text-center leading-tight">
                         {item.label}
                       </span>
-                    </div>
-                  </Button>
-                </DrawerClose>
-              ))}
+                    </Button>
+                  </DrawerClose>
+                ))}
+              </div>
             </div>
- 
+
             {/* Logout Button */}
-            <div className="px-1 mt-3">
+            <div className="mt-1">
               <Button
                 onClick={onLogout}
                 variant="ghost"
-                className="w-full h-14 bg-gradient-to-r from-rose-500/10 via-red-500/5 to-rose-500/10 hover:from-rose-500/20 hover:via-red-500/15 hover:to-rose-500/20 text-rose-400 hover:text-rose-300 font-extrabold rounded-[1.5rem] border border-rose-500/20 hover:border-rose-500/40 shadow-lg shadow-rose-950/20 transition-all duration-300 uppercase tracking-widest text-[10px] sm:text-xs flex items-center justify-center gap-2 active:scale-[0.98]"
+                className="w-full h-12 bg-transparent hover:bg-red-500/10 text-red-400/80 hover:text-red-400 font-medium rounded-xl border border-red-500/20 transition-colors text-xs flex items-center justify-center gap-2 active:scale-[0.99]"
               >
-                <LogOut className="h-4.5 w-4.5 animate-pulse" />
+                <LogOut className="h-4 w-4" />
                 Cerrar Sesión
               </Button>
             </div>

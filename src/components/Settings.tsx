@@ -21,6 +21,7 @@ import { useStoreSettings, PaymentMethod } from '@/hooks/useStoreSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { ThermalPrinterDialog } from '@/components/settings/ThermalPrinterDialog';
+import { isAndroidNative } from '@/utils/platform';
 import { PrintSettingsDialog } from '@/components/settings/PrintSettingsDialog';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 import { EvolutionQRDialog } from '@/components/settings/EvolutionQRDialog';
@@ -802,15 +803,21 @@ const Settings = () => {
 
   // Thermal printer functions
   const handleConnectThermalPrinter = async () => {
-    const { thermalPrinter } = await import('@/utils/thermalPrinter');
+    // La app nativa de Android usa el plugin Bluetooth nativo (ver
+    // ThermalPrinterDialog.tsx / bluetoothPrinter.ts), no Web Serial API —
+    // que ni siquiera existe dentro de un WebView. Ese chequeo era el bug:
+    // siempre fallaba acá adentro y el diálogo nunca llegaba a abrirse.
+    if (!isAndroidNative()) {
+      const { thermalPrinter } = await import('@/utils/thermalPrinter');
 
-    if (!thermalPrinter.isSupported()) {
-      toast({
-        title: "No soportado",
-        description: "Tu navegador no soporta Web Serial API. Usa Chrome, Edge u Opera.",
-        variant: "destructive",
-      });
-      return;
+      if (!thermalPrinter.isSupported()) {
+        toast({
+          title: "No soportado",
+          description: "Tu navegador no soporta Web Serial API. Usa Chrome, Edge u Opera.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setShowPrinterDialog(true);
@@ -3343,13 +3350,21 @@ const Settings = () => {
                         <p className="text-sm">
                           <strong>Requisitos para impresión térmica directa:</strong>
                         </p>
-                        <ul className="text-sm space-y-1 list-disc list-inside">
-                          <li className="font-semibold">Impresora térmica ESC/POS de recibos (58mm o 80mm)</li>
-                          <li>Cable USB físico (NO Bluetooth, NO WiFi)</li>
-                          <li>Impresora encendida antes de conectar</li>
-                          <li>Navegador Chrome, Edge u Opera</li>
-                          <li>HTTPS o localhost para pruebas</li>
-                        </ul>
+                        {isAndroidNative() ? (
+                          <ul className="text-sm space-y-1 list-disc list-inside">
+                            <li className="font-semibold">Impresora térmica ESC/POS de recibos (58mm o 80mm)</li>
+                            <li>Emparejada por Bluetooth en Ajustes de Android (antes de conectar acá)</li>
+                            <li>Impresora encendida y a la vista</li>
+                          </ul>
+                        ) : (
+                          <ul className="text-sm space-y-1 list-disc list-inside">
+                            <li className="font-semibold">Impresora térmica ESC/POS de recibos (58mm o 80mm)</li>
+                            <li>Cable USB físico (NO Bluetooth, NO WiFi)</li>
+                            <li>Impresora encendida antes de conectar</li>
+                            <li>Navegador Chrome, Edge u Opera</li>
+                            <li>HTTPS o localhost para pruebas</li>
+                          </ul>
+                        )}
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3 mt-2">
                           <p className="text-xs text-blue-600 dark:text-blue-400">
                             ℹ️ <span className="font-semibold">Tipos de impresoras:</span>
@@ -3359,11 +3374,13 @@ const Settings = () => {
                             <li><strong>Impresoras normales (láser, inkjet, PostScript):</strong> Usa "Imprimir directamente" en el POS en su lugar</li>
                           </ul>
                         </div>
-                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3 mt-2">
-                          <p className="text-xs text-yellow-600 dark:text-yellow-500">
-                            ⚠️ <span className="font-semibold">Si ves puertos Bluetooth:</span> Significa que no hay impresoras térmicas USB conectadas. Las impresoras normales (láser, inkjet) NO aparecerán aquí.
-                          </p>
-                        </div>
+                        {!isAndroidNative() && (
+                          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3 mt-2">
+                            <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                              ⚠️ <span className="font-semibold">Si ves puertos Bluetooth:</span> Significa que no hay impresoras térmicas USB conectadas. Las impresoras normales (láser, inkjet) NO aparecerán aquí.
+                            </p>
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground mt-2">
                           💡 Marcas de impresoras térmicas compatibles: Epson TM-series, Star TSP, Citizen CT-S, Bixolon SRP, Rongta, Xprinter.
                         </p>

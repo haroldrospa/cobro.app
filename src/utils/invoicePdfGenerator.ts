@@ -1,5 +1,6 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF/autotable (~500KB juntos) se importan dinámicamente dentro de cada
+// función — este módulo se importa desde varios diálogos del POS solo por
+// sus tipos, y no queremos arrastrar esas libs a cada uno de ellos.
 
 export interface InvoiceItem {
     name: string;
@@ -46,6 +47,8 @@ export interface CompanyInfo {
 }
 
 export const generateProfessionalPDF = async (companyInfo: CompanyInfo, saleData: SaleData, invoiceNumber: string) => {
+    const { jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
@@ -292,7 +295,8 @@ export const generateProfessionalPDF = async (companyInfo: CompanyInfo, saleData
     return doc;
 };
 
-export const generatePreCheckPDF = (companyInfo: CompanyInfo, order: any, paperSize: string = '80mm') => {
+export const generatePreCheckPDF = async (companyInfo: CompanyInfo, order: any, paperSize: string = '80mm') => {
+    const { jsPDF } = await import('jspdf');
     // Detect paper settings
     const isSmall = paperSize === '58mm' || paperSize === '58mm';
     const width = isSmall ? 58 : 80;

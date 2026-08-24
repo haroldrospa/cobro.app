@@ -261,10 +261,10 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     setOrderToDelete(orderId);
   };
 
-  const handlePrint = (e: React.MouseEvent, order: any) => {
+  const handlePrint = async (e: React.MouseEvent, order: any) => {
     e.stopPropagation();
     try {
-      const doc = generatePreCheckPDF(companyInfo, order, printSettings.paperSize);
+      const doc = await generatePreCheckPDF(companyInfo, order, printSettings.paperSize);
       const pdfBlob = doc.output('blob');
       window.open(URL.createObjectURL(pdfBlob), '_blank');
     } catch (error) {

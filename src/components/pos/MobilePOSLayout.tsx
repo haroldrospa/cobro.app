@@ -118,7 +118,11 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
             <div className="w-16" /> {/* spacer */}
           </header>
           <div className="flex-1 overflow-y-auto">
-            {paymentComponent}
+            {/* Solo se monta cuando está realmente abierta — antes se
+                renderizaba SIEMPRE (solo oculta con CSS transform para el
+                slide-in), así que cada cambio de carrito la re-renderizaba
+                entera aunque el usuario ni la estuviera viendo. */}
+            {isPaymentOpen && paymentComponent}
           </div>
         </div>
       </div>

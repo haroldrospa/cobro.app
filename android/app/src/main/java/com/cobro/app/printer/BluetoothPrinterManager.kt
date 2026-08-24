@@ -15,7 +15,6 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -50,7 +49,6 @@ class BluetoothPrinterManager private constructor(private val context: Context) 
 
         // Máximo de intentos de reconexión automática
         private const val MAX_RECONNECT_ATTEMPTS = 3
-        private const val RECONNECT_DELAY_MS = 2000L
 
         @Volatile
         private var instance: BluetoothPrinterManager? = null
@@ -157,45 +155,56 @@ class BluetoothPrinterManager private constructor(private val context: Context) 
     /**
      * Conecta a una impresora por dirección MAC.
      */
-    @SuppressLint("MissingPermission")
     fun connectByAddress(address: String, callback: (Boolean, String?) -> Unit) {
         scope.launch {
-            try {
-                // Cerrar conexión anterior
-                closeSocket()
+            val (success, error) = doConnect(address)
+            callback(success, error)
+        }
+    }
 
-                val device = bluetoothAdapter?.getRemoteDevice(address)
-                    ?: run {
-                        callback(false, "Dispositivo no encontrado: $address")
-                        return@launch
-                    }
+    /**
+     * Lógica de conexión real, como suspend function — la usa tanto
+     * connectByAddress (callback público) como sendBytes (reintento interno
+     * tras un envío fallido, ver más abajo). Antes esto vivía solo dentro de
+     * connectByAddress con callback, y ensureConnected() intentaba
+     * reutilizarlo lanzando OTRA corrutina con scope.launch y leyendo el
+     * resultado de inmediato — como esa corrutina corre en paralelo, casi
+     * siempre devolvía "false" antes de que la conexión real terminara. Con
+     * suspend function directa ese bug de concurrencia desaparece solo.
+     */
+    @SuppressLint("MissingPermission")
+    private suspend fun doConnect(address: String): Pair<Boolean, String?> {
+        return try {
+            closeSocket()
 
-                _status = PrinterStatus.CONNECTING
+            val device = bluetoothAdapter?.getRemoteDevice(address)
+                ?: return false to "Dispositivo no encontrado: $address"
 
-                val newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
-                bluetoothAdapter?.cancelDiscovery()
+            _status = PrinterStatus.CONNECTING
 
-                newSocket.connect()
+            val newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
+            bluetoothAdapter?.cancelDiscovery()
 
-                socket = newSocket
-                outputStream = newSocket.outputStream
-                currentDevice = device
-                _status = PrinterStatus.CONNECTED
-                reconnectAttempts = 0
+            newSocket.connect()
 
-                Log.d(TAG, "✅ Conectado a: ${device.name} ($address)")
-                callback(true, null)
+            socket = newSocket
+            outputStream = newSocket.outputStream
+            currentDevice = device
+            _status = PrinterStatus.CONNECTED
+            reconnectAttempts = 0
 
-            } catch (e: IOException) {
-                Log.e(TAG, "❌ Error conectando: ${e.message}")
-                _status = PrinterStatus.ERROR
-                closeSocket()
-                callback(false, "No se pudo conectar: ${e.message}")
-            } catch (e: SecurityException) {
-                Log.e(TAG, "❌ Permiso Bluetooth denegado: ${e.message}")
-                _status = PrinterStatus.ERROR
-                callback(false, "Permiso Bluetooth requerido")
-            }
+            Log.d(TAG, "✅ Conectado a: ${device.name} ($address)")
+            true to null
+
+        } catch (e: IOException) {
+            Log.e(TAG, "❌ Error conectando: ${e.message}")
+            _status = PrinterStatus.ERROR
+            closeSocket()
+            false to "No se pudo conectar: ${e.message}"
+        } catch (e: SecurityException) {
+            Log.e(TAG, "❌ Permiso Bluetooth denegado: ${e.message}")
+            _status = PrinterStatus.ERROR
+            false to "Permiso Bluetooth requerido"
         }
     }
 
@@ -230,49 +239,46 @@ class BluetoothPrinterManager private constructor(private val context: Context) 
         socket = null
     }
 
-    /**
-     * Verifica si la conexión está activa y reconecta si es necesario.
-     */
-    private suspend fun ensureConnected(): Boolean {
-        if (_status == PrinterStatus.CONNECTED && socket?.isConnected == true) return true
-
-        val address = getDefaultPrinterAddress() ?: currentDevice?.address ?: return false
-        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-            _status = PrinterStatus.ERROR
-            return false
-        }
-
-        reconnectAttempts++
-        Log.d(TAG, "🔄 Reconectando (intento $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)...")
-        delay(RECONNECT_DELAY_MS)
-
-        var connected = false
-        connectByAddress(address) { success, _ -> connected = success }
-        return connected
-    }
-
     // ═══════════════════════════════════════════════════════════
     //  IMPRESIÓN
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Envía bytes directamente a la impresora.
+     * Envía bytes directamente a la impresora. Si falla, reconecta una vez
+     * y reintenta antes de rendirse — muchas impresoras térmicas ESC/POS
+     * baratas cierran la conexión Bluetooth del otro lado después de cada
+     * trabajo (o tras un rato inactivas), y `BluetoothSocket.isConnected`
+     * en el lado local no siempre se entera a tiempo: el socket se ve
+     * "conectado" hasta que de verdad se intenta escribir, momento en el
+     * que falla con IOException ("Broken pipe" / "socket might closed").
      */
     private suspend fun sendBytes(data: ByteArray): Boolean {
         return withContext(Dispatchers.IO) {
-            try {
-                val stream = outputStream ?: run {
-                    if (!ensureConnected()) return@withContext false
-                    outputStream ?: return@withContext false
-                }
-                stream.write(data)
-                stream.flush()
-                true
-            } catch (e: IOException) {
-                Log.e(TAG, "Error enviando bytes: ${e.message}")
-                _status = PrinterStatus.ERROR
-                false
+            if (writeOnce(data)) return@withContext true
+
+            val address = currentDevice?.address ?: getDefaultPrinterAddress()
+            if (address != null && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++
+                Log.d(TAG, "🔄 Envío falló, reconectando y reintentando (intento $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)...")
+                val (reconnected, _) = doConnect(address)
+                if (reconnected) return@withContext writeOnce(data)
             }
+            false
+        }
+    }
+
+    /** Un solo intento de escritura, sin reconectar. */
+    private fun writeOnce(data: ByteArray): Boolean {
+        return try {
+            val stream = outputStream ?: return false
+            stream.write(data)
+            stream.flush()
+            true
+        } catch (e: IOException) {
+            Log.e(TAG, "Error enviando bytes: ${e.message}")
+            _status = PrinterStatus.ERROR
+            closeSocket()
+            false
         }
     }
 
@@ -287,169 +293,32 @@ class BluetoothPrinterManager private constructor(private val context: Context) 
      *   subtotal, tax, discount, total,
      *   paymentMethod, barcode, qrData
      * }
+     *
+     * Se compone íntegramente con texto ESC/POS (fuente propia de la
+     * impresora, nítida a cualquier resolución) — se probó también un
+     * camino de "imagen completa" (renderizar la vista previa web entera y
+     * mandarla como bitmap) para que el ticket impreso matcheara pixel a
+     * pixel la vista previa con cajas de bordes reales, pero a 58mm
+     * (~168 DPI reales) el texto chico salía consistentemente borroso al
+     * convertir a blanco/negro, sin importar cuánto se ajustaran tamaños o
+     * dithering — se descartó a pedido del usuario en favor de este
+     * camino de texto, que sí es nítido y aprovecha bien el papel. El logo
+     * es la excepción: sigue siendo una imagen (ver más abajo), la única
+     * parte que consistentemente salió bien con ese enfoque.
      */
     fun printTicket(ticket: JSONObject, callback: (Boolean, String?) -> Unit) {
         scope.launch {
             _status = PrinterStatus.PRINTING
             try {
-                val paperWidth = if (getPaperWidthMm() == 58)
+                // El ancho de papel puede venir en el propio ticket (para no
+                // quedar desincronizado de la config de la app: 58/80/A4/Carta);
+                // si no viene, se usa el guardado en SharedPreferences.
+                val paperWidthMm = ticket.optInt("paperWidthMm", getPaperWidthMm())
+                val paperWidth = if (paperWidthMm == 58)
                     EscPosEncoder.PaperWidth.MM_58 else EscPosEncoder.PaperWidth.MM_80
 
                 val encoder = EscPosEncoder(paperWidth).initialize()
-
-                // ── Logo (si existe en Base64) ──────────────────────
-                val logoBase64 = ticket.optString("logoBase64", "")
-                if (logoBase64.isNotEmpty()) {
-                    try {
-                        val logoBytes = Base64.decode(logoBase64, Base64.DEFAULT)
-                        val logoBitmap = BitmapFactory.decodeByteArray(logoBytes, 0, logoBytes.size)
-                        if (logoBitmap != null) {
-                            encoder.align(EscPosEncoder.Alignment.CENTER)
-                            encoder.image(logoBitmap)
-                            encoder.emptyLine()
-                        }
-                    } catch (_: Exception) {}
-                }
-
-                // ── Cabecera del negocio ─────────────────────────────
-                encoder
-                    .align(EscPosEncoder.Alignment.CENTER)
-                    .bold(true)
-                    .doubleSize(true)
-                    .line(ticket.optString("businessName", "CobroApp POS"))
-                    .doubleSize(false)
-                    .bold(false)
-
-                if (ticket.has("address")) {
-                    encoder.line(ticket.getString("address"))
-                }
-                if (ticket.has("rnc")) {
-                    encoder.line("RNC: ${ticket.getString("rnc")}")
-                }
-                if (ticket.has("phone")) {
-                    encoder.line("Tel: ${ticket.getString("phone")}")
-                }
-
-                encoder.emptyLine()
-
-                // ── Número de factura ────────────────────────────────
-                encoder
-                    .align(EscPosEncoder.Alignment.CENTER)
-                    .bold(true)
-                    .line("*** FACTURA ***")
-                    .bold(false)
-
-                // ── Datos de la transacción ──────────────────────────
-                encoder.align(EscPosEncoder.Alignment.LEFT)
-                encoder.separator()
-
-                val date = ticket.optString("date", "")
-                val time = ticket.optString("time", "")
-                if (date.isNotEmpty()) {
-                    encoder.twoColumns("Fecha:", "$date $time")
-                }
-                if (ticket.has("invoiceNumber")) {
-                    encoder.twoColumns("No. Factura:", ticket.getString("invoiceNumber"))
-                }
-                if (ticket.has("customer")) {
-                    encoder.twoColumns("Cliente:", ticket.getString("customer"))
-                }
-                if (ticket.has("cashier")) {
-                    encoder.twoColumns("Cajero:", ticket.getString("cashier"))
-                }
-
-                encoder.separator()
-
-                // ── Encabezado de productos ──────────────────────────
-                encoder.bold(true)
-                encoder.threeColumns("Cant", "Producto", "Precio")
-                encoder.bold(false)
-                encoder.separator('-')
-
-                // ── Items del ticket ─────────────────────────────────
-                val items = ticket.optJSONArray("items")
-                if (items != null) {
-                    for (i in 0 until items.length()) {
-                        val item = items.getJSONObject(i)
-                        val qty = item.optDouble("qty", 1.0)
-                        val name = item.optString("name", "")
-                        val price = item.optDouble("price", 0.0)
-                        val discount = item.optDouble("discount", 0.0)
-
-                        val qtyStr = if (qty == qty.toLong().toDouble()) qty.toLong().toString() else "%.2f".format(qty)
-                        val priceStr = formatCurrency(price)
-                        encoder.threeColumns(qtyStr, name, priceStr)
-
-                        if (discount > 0) {
-                            encoder.threeColumns("", "  Descuento:", "-${formatCurrency(discount)}")
-                        }
-                    }
-                }
-
-                // ── Totales ──────────────────────────────────────────
-                encoder.separator()
-
-                val subtotal = ticket.optDouble("subtotal", 0.0)
-                val tax = ticket.optDouble("tax", 0.0)
-                val discount = ticket.optDouble("discount", 0.0)
-                val total = ticket.optDouble("total", 0.0)
-
-                if (subtotal > 0) {
-                    encoder.twoColumns("Subtotal:", formatCurrency(subtotal))
-                }
-                if (tax > 0) {
-                    encoder.twoColumns("ITBIS (18%):", formatCurrency(tax))
-                }
-                if (discount > 0) {
-                    encoder.twoColumns("Descuento:", "-${formatCurrency(discount)}")
-                }
-
-                encoder.bold(true)
-                encoder.doubleSize(true)
-                encoder.align(EscPosEncoder.Alignment.CENTER)
-                encoder.line("Total: ${formatCurrency(total)}")
-                encoder.doubleSize(false)
-                encoder.bold(false)
-                encoder.align(EscPosEncoder.Alignment.LEFT)
-
-                // ── Método de pago ───────────────────────────────────
-                if (ticket.has("paymentMethod")) {
-                    encoder.separator()
-                    encoder.twoColumns("Pago:", ticket.getString("paymentMethod"))
-                    if (ticket.has("amountPaid")) {
-                        encoder.twoColumns("Recibido:", formatCurrency(ticket.getDouble("amountPaid")))
-                    }
-                    if (ticket.has("change")) {
-                        encoder.twoColumns("Cambio:", formatCurrency(ticket.getDouble("change")))
-                    }
-                }
-
-                encoder.emptyLine()
-
-                // ── Código QR ────────────────────────────────────────
-                val qrData = ticket.optString("qrData", "")
-                if (qrData.isNotEmpty()) {
-                    encoder.align(EscPosEncoder.Alignment.CENTER)
-                    encoder.qrCode(qrData, size = if (paperWidth == EscPosEncoder.PaperWidth.MM_58) 5 else 6)
-                }
-
-                // ── Código de barras ─────────────────────────────────
-                val barcode = ticket.optString("barcode", "")
-                if (barcode.isNotEmpty()) {
-                    encoder.align(EscPosEncoder.Alignment.CENTER)
-                    encoder.barcode128(barcode)
-                }
-
-                // ── Pie de página ────────────────────────────────────
-                encoder
-                    .align(EscPosEncoder.Alignment.CENTER)
-                    .emptyLine()
-                    .line("Gracias por su compra")
-                    .line("www.cobroapp.app")
-                    .emptyLine(2)
-
-                // ── Corte de papel ───────────────────────────────────
-                encoder.cut()
+                printComposedTextTicket(encoder, ticket, paperWidth)
 
                 // ── Enviar a la impresora ────────────────────────────
                 val success = sendBytes(encoder.build())
@@ -462,6 +331,217 @@ class BluetoothPrinterManager private constructor(private val context: Context) 
                 callback(false, e.message)
             }
         }
+    }
+
+    /**
+     * Compone el ticket línea por línea con comandos de texto ESC/POS
+     * (bordes simulados con "=", negrita, doble tamaño, etc.) — ver el
+     * comentario de printTicket() sobre por qué se usa texto nativo en vez
+     * de renderizar la vista previa como imagen.
+     */
+    private fun printComposedTextTicket(
+        encoder: EscPosEncoder,
+        ticket: JSONObject,
+        paperWidth: EscPosEncoder.PaperWidth
+    ) {
+        val lineWidth = paperWidth.charsPerLine
+
+        // ── Logo (si existe en Base64) ──────────────────────
+        val logoBase64 = ticket.optString("logoBase64", "")
+        if (logoBase64.isNotEmpty()) {
+            try {
+                val logoBytes = Base64.decode(logoBase64, Base64.DEFAULT)
+                val logoBitmap = BitmapFactory.decodeByteArray(logoBytes, 0, logoBytes.size)
+                if (logoBitmap != null) {
+                    encoder.align(EscPosEncoder.Alignment.CENTER)
+                    // Centrado, bien por debajo de ancho completo para que
+                    // no se vea desproporcionado — pero más grande que
+                    // antes (0.5) a pedido del usuario.
+                    encoder.image(logoBitmap, widthFraction = 0.65)
+                }
+            } catch (_: Exception) {}
+        }
+
+        // ── Cabecera del negocio ─────────────────────────────
+        encoder
+            .align(EscPosEncoder.Alignment.CENTER)
+            .bold(true)
+            .doubleSize(true)
+            .line(ticket.optString("businessName", "CobroApp POS"))
+            .doubleSize(false)
+            .bold(false)
+
+        if (ticket.has("address")) {
+            encoder.line(ticket.getString("address"))
+        }
+        if (ticket.has("rnc")) {
+            encoder.line("RNC: ${ticket.getString("rnc")}")
+        }
+        if (ticket.has("phone")) {
+            encoder.line("Tel: ${ticket.getString("phone")}")
+        }
+
+        // ── Caja de NCF / Comprobante — misma idea que la tarjeta
+        // con borde de la vista previa web (Ajustes > Facturación):
+        // electrónica vs regular cambia el rótulo, y más abajo
+        // decide QR vs código de barras. El ESC/POS no tiene bordes
+        // redondeados, así que se simula con una línea de "=".
+        val isElectronic = ticket.optBoolean("isElectronic", false)
+        val ncfLabel = if (isElectronic) "COMPROBANTE ELECTRONICO (e-NCF)" else "NCF / COMPROBANTE FISCAL"
+        val boxBorder = "=".repeat(lineWidth)
+        encoder.align(EscPosEncoder.Alignment.CENTER)
+        encoder.line(boxBorder)
+        encoder.bold(true)
+        encoder.line(ncfLabel)
+        if (ticket.has("invoiceNumber")) {
+            encoder.doubleSize(true)
+            encoder.line(ticket.getString("invoiceNumber"))
+            encoder.doubleSize(false)
+        }
+        encoder.bold(false)
+        encoder.line(boxBorder)
+
+        // ── Datos de la transacción ──────────────────────────
+        encoder.align(EscPosEncoder.Alignment.LEFT)
+
+        val date = ticket.optString("date", "")
+        val time = ticket.optString("time", "")
+        if (date.isNotEmpty()) {
+            encoder.twoColumns("Fecha:", "$date $time")
+        }
+        if (ticket.has("customer")) {
+            encoder.twoColumns("Cliente:", ticket.getString("customer"))
+        }
+        if (ticket.has("cashier")) {
+            encoder.twoColumns("Cajero:", ticket.getString("cashier"))
+        }
+
+        encoder.separator()
+
+        // ── Encabezado de productos: "Articulos/Cant." | "Total",
+        // igual que la vista previa (antes decía Cant/Producto/Precio
+        // en 3 columnas con el PRECIO UNITARIO — ahora el importe de
+        // la derecha es el TOTAL de la línea, y el precio unitario
+        // baja a una sublínea chica "qty x precio", como la
+        // insignia gris de la vista previa).
+        encoder.bold(true)
+        encoder.twoColumns("Articulos / Cant.", "Total")
+        encoder.bold(false)
+        encoder.separator('-')
+
+        // ── Items del ticket ─────────────────────────────────
+        val items = ticket.optJSONArray("items")
+        if (items != null) {
+            for (i in 0 until items.length()) {
+                val item = items.getJSONObject(i)
+                val qty = item.optDouble("qty", 1.0)
+                val name = item.optString("name", "")
+                val price = item.optDouble("price", 0.0)
+                // El total de línea viene precalculado desde la app
+                // (respeta descuentos por ítem); si no viene, qty×precio.
+                val lineTotal = item.optDouble("total", qty * price)
+                val discount = item.optDouble("discount", 0.0)
+
+                val qtyStr = if (qty == qty.toLong().toDouble()) qty.toLong().toString() else "%.2f".format(qty)
+
+                encoder.bold(true)
+                encoder.twoColumns(name, formatCurrency(lineTotal))
+                encoder.bold(false)
+                encoder.smallFont(true)
+                encoder.line("  $qtyStr x ${formatCurrency(price)}")
+                encoder.smallFont(false)
+
+                if (discount > 0) {
+                    encoder.twoColumns("  Descuento:", "-${formatCurrency(discount)}")
+                }
+            }
+        }
+
+        // ── Totales ──────────────────────────────────────────
+        encoder.separator()
+
+        val subtotal = ticket.optDouble("subtotal", 0.0)
+        val tax = ticket.optDouble("tax", 0.0)
+        val taxRatePercent = ticket.optDouble("taxRatePercent", 18.0)
+        val discount = ticket.optDouble("discount", 0.0)
+        val total = ticket.optDouble("total", 0.0)
+
+        if (subtotal > 0) {
+            encoder.twoColumns("Subtotal:", formatCurrency(subtotal))
+        }
+        if (tax > 0) {
+            val taxRateStr = if (taxRatePercent == taxRatePercent.toLong().toDouble())
+                taxRatePercent.toLong().toString() else "%.2f".format(taxRatePercent)
+            encoder.twoColumns("ITBIS ($taxRateStr%):", formatCurrency(tax))
+        }
+        if (discount > 0) {
+            encoder.twoColumns("Descuento:", "-${formatCurrency(discount)}")
+        }
+
+        // Barra de TOTAL en video invertido (fondo negro / texto
+        // blanco) — el equivalente ESC/POS de la barra negra de la
+        // vista previa. Si la impresora no soporta GS B, simplemente
+        // lo ignora y queda en negro sobre blanco normal (igual se
+        // ve bien por el bold + doble tamaño).
+        encoder.align(EscPosEncoder.Alignment.CENTER)
+        encoder.invert(true)
+        encoder.bold(true)
+        encoder.doubleSize(true)
+        encoder.line(" TOTAL ${formatCurrency(total)} ")
+        encoder.doubleSize(false)
+        encoder.bold(false)
+        encoder.invert(false)
+        encoder.align(EscPosEncoder.Alignment.LEFT)
+
+        // ── Método de pago ───────────────────────────────────
+        if (ticket.has("paymentMethod")) {
+            encoder.separator()
+            encoder.twoColumns("Pago:", ticket.getString("paymentMethod"))
+            if (ticket.has("amountPaid")) {
+                encoder.twoColumns("Recibido:", formatCurrency(ticket.getDouble("amountPaid")))
+            }
+            if (ticket.has("change")) {
+                encoder.twoColumns("Cambio:", formatCurrency(ticket.getDouble("change")))
+            }
+        }
+
+        // ── QR (electrónica, verificable por la DGII) o código de
+        // barras (NCF regular) — nunca los dos, mismo criterio que
+        // generateCleanInvoiceHTML.ts y la vista previa de Ajustes.
+        val qrData = ticket.optString("qrData", "")
+        val barcode = ticket.optString("barcode", "")
+        if (qrData.isNotEmpty()) {
+            encoder.align(EscPosEncoder.Alignment.CENTER)
+            encoder.qrCode(qrData, size = if (paperWidth == EscPosEncoder.PaperWidth.MM_58) 5 else 6)
+            encoder.smallFont(true)
+            encoder.line("Comprobante autorizado por la DGII")
+            encoder.smallFont(false)
+        } else if (barcode.isNotEmpty()) {
+            encoder.align(EscPosEncoder.Alignment.CENTER)
+            encoder.barcode128(barcode)
+        }
+
+        // ── Pie de página — texto configurable (Ajustes >
+        // Facturación > Texto de pie), con el mensaje genérico como
+        // respaldo si no hay uno configurado; términos de pago solo
+        // si están configurados, igual que en la vista previa.
+        encoder.align(EscPosEncoder.Alignment.CENTER)
+        val footerText = ticket.optString("footerText", "")
+        encoder.line(if (footerText.isNotEmpty()) footerText else "Gracias por su compra")
+
+        val paymentTermsDays = ticket.optString("paymentTermsDays", "")
+        if (paymentTermsDays.isNotEmpty()) {
+            encoder.smallFont(true)
+            encoder.line("Terminos de pago: $paymentTermsDays dias")
+            encoder.smallFont(false)
+        }
+
+        encoder.line("www.cobroapp.app")
+
+        // ── Corte de papel ─────────────────────────────────
+        // cut() ya avanza 4 líneas de margen antes de cortar (ver
+        // EscPosEncoder.cut) — no hace falta feed extra acá encima.
+        encoder.cut()
     }
 
     /**
@@ -517,7 +597,12 @@ class BluetoothPrinterManager private constructor(private val context: Context) 
     }
 
     private fun formatCurrency(amount: Double): String {
-        return "RD$\$${String.format("%,.2f", amount)}"
+        // OJO: "RD$\$${...}" (como estaba antes) imprime DOS signos de
+        // pesos — el primer $ ya es literal sin escapar (no le sigue letra
+        // ni "{"), así que el \$ de al lado agrega uno de más
+        // ("RD$$20.00" en vez de "RD$20.00", visible en tickets reales).
+        // Concatenar con + en vez de interpolar evita esa ambigüedad.
+        return "RD$" + String.format("%,.2f", amount)
     }
 }
 

@@ -69,7 +69,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+// xlsx (~275KB) se importa dinámicamente dentro de generateExcel() — no hace
+// falta para simplemente ver reportes, solo al exportar a Excel.
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import appLogo from '@/assets/cobro-logo.png';
@@ -1147,7 +1148,8 @@ const Reports = () => {
   };
 
   // --- GENERATE EXCEL ---
-  const generateExcel = () => {
+  const generateExcel = async () => {
+    const XLSX = await import('xlsx');
     const activeReportObj = REPORT_TYPES.find(r => r.id === activeReport);
     const title = activeReportObj?.label || 'Reporte';
     let data: any[] = [];

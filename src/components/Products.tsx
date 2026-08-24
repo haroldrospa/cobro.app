@@ -32,7 +32,8 @@ import { LimitReachedDialog } from './subscription/PlanRestrictions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import * as XLSX from 'xlsx';
+// xlsx (~275KB) se importa dinámicamente donde se usa — no hace falta para
+// simplemente ver/editar productos, solo al exportar/importar Excel.
 import { useQueryClient } from '@tanstack/react-query';
 import { useRecipeAvailability } from '@/hooks/useRecipeAvailability';
 import { supabase } from '@/integrations/supabase/client';
@@ -781,7 +782,8 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
   const lowStockCount = lowStockProducts.length;
 
   // Función para descargar planilla de ejemplo
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
+    const XLSX = await import('xlsx');
     const headers = [
       ['Nombre', 'Precio', 'Costo', 'Stock', 'Stock Mínimo', 'Código de Barras', 'Código Interno', 'Categoría', 'Estado', 'Impuesto(%)', 'Costo Incluye Impuesto'],
       ['Ejemplo Producto', '100.00', '80.00', '50', '10', '7441000000000', 'PROD001', 'General', 'active', '18', 'No']
@@ -889,6 +891,7 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     if (!file) return;
 
     try {
+      const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheetName = workbook.SheetNames[0];

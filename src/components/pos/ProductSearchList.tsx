@@ -9,9 +9,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Hash, Barcode, Tag, Package, Asterisk, Search, Settings2, LayoutGrid, List as ListIcon, ScanBarcode, RefreshCcw } from 'lucide-react';
 import { Product } from '@/hooks/useProducts';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import VariablePriceDialog from './VariablePriceDialog';
 import QuantityDialog from './QuantityDialog';
+import BarcodeScannerPanel, { ScanDetectResult } from './BarcodeScannerPanel';
 import { usePOSSearch } from '@/contexts/POSSearchContext';
 
 interface ProductSearchListProps {
@@ -117,40 +117,44 @@ const ProductItem = React.memo<ProductItemProps>(({
           </div>
         )}
 
-        {/* Stock Badges (Overlay on Image) */}
+        {/* Stock Badges (Overlay on Image) — sin backdrop-blur: se repiten por
+            cada tarjeta de la grilla y ya tienen fondo casi opaco (90%), el
+            blur no se nota pero sí cuesta caro recomponerlo en cada render
+            en GPUs débiles (medido: ~800ms de frame trabado al agregar al
+            carrito, que re-renderiza toda la grilla visible). */}
         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
           {(() => {
             if (hasRecipeStock) {
               if (avail <= 0) {
                 return (
-                  <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold backdrop-blur-md bg-destructive/90">
+                  <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-destructive/90">
                     Agotado
                   </Badge>
                 );
               }
               if (avail <= 5) {
                 return (
-                  <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 hover:bg-amber-600/90 text-white backdrop-blur-md border-0">
+                  <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 hover:bg-amber-600/90 text-white border-0">
                     {avail} disp.
                   </Badge>
                 );
               }
               return (
-                <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-emerald-600/90 hover:bg-emerald-700/90 text-white backdrop-blur-md border-0">
+                <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-emerald-600/90 hover:bg-emerald-700/90 text-white border-0">
                   {avail} disp.
                 </Badge>
               );
             }
             if (product.track_inventory !== false && product.stock <= 0) {
               return (
-                <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold backdrop-blur-md bg-destructive/90">
+                <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-destructive/90">
                   Agotado
                 </Badge>
               );
             }
             if (product.track_inventory !== false && product.stock < 10) {
               return (
-                <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 hover:bg-amber-600/90 text-white backdrop-blur-md border-0">
+                <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 hover:bg-amber-600/90 text-white border-0">
                   Quedan {product.stock}
                 </Badge>
               );
@@ -162,7 +166,7 @@ const ProductItem = React.memo<ProductItemProps>(({
         {/* Category Badge overlay (bottom left of image) - Only in Grid */}
         {viewMode === 'grid' && product.category?.name && (
           <div className="absolute bottom-2 left-2 max-w-[80%]">
-            <Badge variant="secondary" className="shadow-sm px-1.5 h-4 text-[9px] font-medium backdrop-blur-md bg-background/60 text-foreground/80 border-0 truncate max-w-full">
+            <Badge variant="secondary" className="shadow-sm px-1.5 h-4 text-[9px] font-medium bg-background/60 text-foreground/80 border-0 truncate max-w-full">
               {product.category.name}
             </Badge>
           </div>
@@ -595,6 +599,88 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     setSearchTerm('');
   }, [onAddToCart, setSearchTerm]);
 
+  // Busca una coincidencia EXACTA de código de barras (propio o de bundle) y
+  // agrega el producto al carrito. Compartido entre Enter, el diálogo de
+  // escaneo por cámara y el lector físico Sunmi — una sola lógica de match.
+  const addByExactCode = useCallback((rawCode: string): ScanDetectResult => {
+    const search = rawCode.toLowerCase().trim();
+    if (!search) return { found: false };
+
+    let matchedBundle: any = null;
+    let exactBarcodeMatch: Product | undefined = undefined;
+
+    for (const p of products) {
+      const extraMatch = p.barcodes?.find(b => b.barcode.toLowerCase() === search);
+      const q = extraMatch ? (Number(extraMatch.quantity) || 1) : 1;
+      const d = extraMatch ? (Number(extraMatch.discount_value) || 0) : 0;
+
+      if (extraMatch && (q > 1 || d > 0)) {
+        matchedBundle = extraMatch;
+        exactBarcodeMatch = p;
+        break;
+      }
+    }
+
+    if (!exactBarcodeMatch) {
+      exactBarcodeMatch = products.find(p => {
+        if (p.barcode && p.barcode.toLowerCase() === search) return true;
+        return p.barcodes?.some(b => b.barcode.toLowerCase() === search);
+      });
+
+      if (exactBarcodeMatch && !matchedBundle) {
+        matchedBundle = exactBarcodeMatch.barcodes?.find(b => b.barcode.toLowerCase() === search);
+      }
+    }
+
+    if (!exactBarcodeMatch) return { found: false };
+
+    if (matchedBundle) {
+      const qty = Number(matchedBundle.quantity) || 1;
+      const discount = Number(matchedBundle.discount_value) || 0;
+      const type = matchedBundle.discount_type || 'percentage';
+      let finalPrice = exactBarcodeMatch.price;
+
+      if (discount > 0) {
+        if (type === 'percentage') {
+          finalPrice = exactBarcodeMatch.price * (1 - discount / 100);
+        } else {
+          finalPrice = exactBarcodeMatch.price - (discount / qty);
+        }
+      }
+      onAddToCart(exactBarcodeMatch, qty, finalPrice);
+    } else {
+      handleProductSelect(exactBarcodeMatch);
+    }
+    setSearchTerm('');
+    return { found: true, productName: exactBarcodeMatch.name };
+  }, [products, onAddToCart, handleProductSelect, setSearchTerm]);
+
+  // Igual que addByExactCode, pero además refleja el código escaneado en la
+  // barra de búsqueda cuando no hay coincidencia — para que quede visible
+  // arriba aunque el producto no exista en el catálogo.
+  const handleScanDetect = useCallback((code: string): ScanDetectResult => {
+    const result = addByExactCode(code);
+    if (!result.found) {
+      setSearchTerm(code);
+    }
+    return result;
+  }, [addByExactCode, setSearchTerm]);
+
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  // Lector físico Sunmi: el nativo dispara este evento con el código leído.
+  useEffect(() => {
+    const handlePhysicalScan = (e: Event) => {
+      const code = (e as CustomEvent<{ code: string }>).detail?.code;
+      if (!code) return;
+      if (!addByExactCode(code).found) {
+        setSearchTerm(code);
+      }
+    };
+    window.addEventListener('cobro_barcode', handlePhysicalScan);
+    return () => window.removeEventListener('cobro_barcode', handlePhysicalScan);
+  }, [addByExactCode, setSearchTerm]);
+
   const handleVariableQuantityConfirm = useCallback((quantity: number) => {
     if (selectedVariableProduct) {
       (onAddToCart as any)(selectedVariableProduct, quantity);
@@ -627,53 +713,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       const search = searchTerm.toLowerCase().trim();
       if (!search) return;
 
-      let matchedBundle: any = null;
-      let exactBarcodeMatch: Product | undefined = undefined;
-
-      for (const p of products) {
-        const extraMatch = p.barcodes?.find(b => b.barcode.toLowerCase() === search);
-        const q = extraMatch ? (Number(extraMatch.quantity) || 1) : 1;
-        const d = extraMatch ? (Number(extraMatch.discount_value) || 0) : 0;
-        
-        if (extraMatch && (q > 1 || d > 0)) {
-          matchedBundle = extraMatch;
-          exactBarcodeMatch = p;
-          break;
-        }
-      }
-
-      if (!exactBarcodeMatch) {
-        exactBarcodeMatch = products.find(p => {
-          if (p.barcode && p.barcode.toLowerCase() === search) return true;
-          return p.barcodes?.some(b => b.barcode.toLowerCase() === search);
-        });
-        
-        if (exactBarcodeMatch && !matchedBundle) {
-          matchedBundle = exactBarcodeMatch.barcodes?.find(b => b.barcode.toLowerCase() === search);
-        }
-      }
-
-      if (exactBarcodeMatch) {
-        if (matchedBundle) {
-          const qty = Number(matchedBundle.quantity) || 1;
-          const discount = Number(matchedBundle.discount_value) || 0;
-          const type = matchedBundle.discount_type || 'percentage';
-          let finalPrice = exactBarcodeMatch.price;
-          
-          if (discount > 0) {
-            if (type === 'percentage') {
-              finalPrice = exactBarcodeMatch.price * (1 - discount / 100);
-            } else {
-              finalPrice = exactBarcodeMatch.price - (discount / qty);
-            }
-          }
-          onAddToCart(exactBarcodeMatch, qty, finalPrice);
-        } else {
-          handleProductSelect(exactBarcodeMatch);
-        }
-        setSearchTerm('');
-        return;
-      }
+      if (addByExactCode(searchTerm).found) return;
 
       if (filteredProducts.length > 0) {
         handleProductSelect(filteredProducts[focusedIndex]);
@@ -810,7 +850,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
               searchType === 'id' ? 'Buscar por código interno...' :
               'Buscar por categoría...'
             }
-            className="pl-10 pr-20 h-11 bg-background border-border/40 focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
+            className="pl-10 pr-28 h-11 bg-background border-border/40 focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -825,6 +865,16 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
             autoComplete="off"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              onClick={() => setIsScannerOpen(true)}
+              title="Escanear código de barras o QR"
+            >
+              <ScanBarcode className="h-4 w-4" />
+            </Button>
             {onRefresh && (
               <Button
                 type="button"
@@ -844,6 +894,12 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
             </div>
           </div>
         </div>
+
+        <BarcodeScannerPanel
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onDetect={handleScanDetect}
+        />
       </div>
 
       {/* Product List/Grid */}

@@ -1,5 +1,5 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF/autotable se importan dinámicamente dentro de generateCloseDayPDF —
+// solo hacen falta al cerrar caja, no en cada componente que usa este módulo.
 import { CompanyInfoForPrint } from '@/hooks/usePrintSettings';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -30,6 +30,8 @@ export interface CloseDayData {
 }
 
 export const generateCloseDayPDF = async (companyInfo: CompanyInfoForPrint, data: CloseDayData) => {
+    const { jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
