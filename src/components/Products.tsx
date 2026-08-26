@@ -1,5 +1,6 @@
 import { useState, useRef, FC, ChangeEvent, useEffect, useMemo, useCallback, memo } from 'react';
-import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History, FolderCog } from 'lucide-react';
+import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History, FolderCog, Key, Eye, EyeOff, CheckCircle2, XCircle, Settings2, ExternalLink } from 'lucide-react';
+import { resolveActiveAiApiKey, scanInvoiceStock, testGroqApiKey, cleanAiKey, AiApiKeyTestResult } from '@/utils/aiService';
 import {
   Dialog,
   DialogContent,
@@ -167,9 +168,18 @@ const Products: FC = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { settings: companySettings } = useCompanySettings();
-  const { settings: storeSettings } = useStoreSettings();
+  const { settings: storeSettings, updateSettings } = useStoreSettings();
   const { hasReachedLimit, getRemainingCount } = usePlanFeatures();
   const recipeAvailability = useRecipeAvailability();
+
+  // AI Stock & Key Configuration states
+  const [aiScanStatus, setAiScanStatus] = useState<string>('');
+  const [showAiKeyConfigDialog, setShowAiKeyConfigDialog] = useState(false);
+  const [aiKeyInput, setAiKeyInput] = useState('');
+  const [showAiKeyText, setShowAiKeyText] = useState(false);
+  const [isTestingAiKey, setIsTestingAiKey] = useState(false);
+  const [aiKeyTestResult, setAiKeyTestResult] = useState<AiApiKeyTestResult | null>(null);
+  const [isSavingAiKey, setIsSavingAiKey] = useState(false);
 
   // State to track inline edits for products assigned in AI Stock Loading modal
   const [editingProductMap, setEditingProductMap] = useState<Record<string, {
@@ -334,255 +344,78 @@ const Products: FC = () => {
     }
   };
 
-  const cleanKey = (key: string | null | undefined) => {
-    if (!key) return '';
-    return key.trim();
+  const handleTestAiKeyModal = async () => {
+    const cleaned = cleanAiKey(aiKeyInput);
+    if (!cleaned) {
+      toast({
+        title: "Clave Requerida",
+        description: "Introduce una clave de API de Groq para verificar.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsTestingAiKey(true);
+    setAiKeyTestResult(null);
+    try {
+      const res = await testGroqApiKey(cleaned);
+      setAiKeyTestResult(res);
+      if (res.success) {
+        toast({ title: "✅ Conexión Exitosa", description: res.message });
+      } else {
+        toast({ title: "❌ Error de Clave", description: res.message, variant: "destructive" });
+      }
+    } catch (e: any) {
+      setAiKeyTestResult({ success: false, message: e?.message || "Error al probar clave" });
+    } finally {
+      setIsTestingAiKey(false);
+    }
   };
 
-  const preprocessAIImage = async (file: File): Promise<string> => {
-    let processableFile = file;
-
-    if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
-      try {
-        const heic2anyModule = await import('heic2any');
-        const heic2anyFn = heic2anyModule.default || heic2anyModule;
-        const convertedBlob = await heic2anyFn({
-          blob: file,
-          toType: "image/jpeg",
-          quality: 0.6
-        });
-        const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-        processableFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), {
-          type: "image/jpeg"
-        });
-      } catch (err) {
-        console.error("Error converting HEIC:", err);
-        throw new Error("Error convirtiendo formato iPhone (HEIC).");
-      }
+  const handleSaveAiKeyModal = async () => {
+    setIsSavingAiKey(true);
+    try {
+      const cleaned = cleanAiKey(aiKeyInput);
+      await updateSettings({ ai_api_key: cleaned });
+      toast({
+        title: "Clave Guardada",
+        description: "La API Key de IA ha sido actualizada y ya está activa en toda la app."
+      });
+      setShowAiKeyConfigDialog(false);
+    } catch (e: any) {
+      toast({
+        title: "Error al guardar",
+        description: e?.message || "No se pudo guardar la clave.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingAiKey(false);
     }
-
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(processableFile);
-      
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const MAX_WIDTH = 1200; 
-        let width = img.width;
-        let height = img.height;
-        
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        if (!ctx) {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(processableFile);
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-        
-        if (dataUrl === 'data:,' || dataUrl.length < 100) {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(processableFile);
-        } else {
-          resolve(dataUrl);
-        }
-      };
-      
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
-        reader.readAsDataURL(processableFile);
-      };
-      
-      img.src = url;
-    });
   };
 
   const handleAIStockUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const userKey = cleanKey(storeSettings?.ai_api_key);
-    const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
-    const apiKey = userKey || systemKey;
+    const apiKey = resolveActiveAiApiKey(storeSettings);
 
     if (!apiKey) {
       toast({
-        title: "Requerido",
-        description: "Configura primero tu clave de Groq en la sección de Contabilidad.",
+        title: "Clave de IA Requerida",
+        description: "Configura primero tu clave de Groq para escanear facturas.",
         variant: "destructive"
       });
+      setAiKeyInput('');
+      setShowAiKeyConfigDialog(true);
+      if (aiFileInputRef.current) aiFileInputRef.current.value = '';
       return;
     }
 
     setIsAIScanning(true);
+    setAiScanStatus("Leyendo factura con Groq AI...");
     try {
-      const base64DataUrl = await preprocessAIImage(file);
-      const base64Data = base64DataUrl.split(',')[1];
-      const mimeType = base64DataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
-
-      const prompt = `Analiza esta factura e identifica los productos comprados/abastecidos. Extrae estrictamente una lista en formato JSON plano con un arreglo "items" y los totales de la factura.
-Cada item debe contener:
-- name (string, nombre del producto tal como aparece en la factura. IMPORTANTE: Si el nombre contiene comillas dobles, quítalas o escápalas con barra invertida para que el JSON sea válido)
-- quantity (número, cantidad de este producto tal como sale en la factura)
-- cost (número, precio o costo unitario que sale en la factura antes de impuestos)
-- unit (string, unidad de medida que sale en la factura al lado de la cantidad o en la columna de unidad, ej: "CAJA", "PAQUETE", "UNIDAD", "UND", o null si no se especifica)
-- tax_percentage (número, ITBIS o tasa de impuesto aplicable a este producto, por ejemplo: 18, 16, 0, etc.)
-
-Además, debes extraer los totales generales de la factura:
-- invoice_subtotal (número, el subtotal neto de la factura sin impuestos/ITBIS)
-- invoice_tax (número, el total de impuestos/ITBIS de la factura)
-- invoice_total (número, el importe neto o total general final de la factura incluyendo impuestos)
-
-Estructura requerida:
-{
-  "items": [
-    { "name": "Producto A", "quantity": 10, "cost": 42.5, "unit": "CAJA", "tax_percentage": 18 }
-  ],
-  "invoice_subtotal": 1406.8,
-  "invoice_tax": 253.22,
-  "invoice_total": 1660.02
-}
-Responde únicamente con el objeto JSON plano sin texto introductorio ni explicaciones.`;
-
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "qwen/qwen3.6-27b",
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: prompt },
-                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-              ]
-            }
-          ],
-          temperature: 0.1
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error en API Groq: ${response.status}`);
-      }
-
-      const resData = await response.json();
-      let content = resData.choices?.[0]?.message?.content;
-      if (!content) throw new Error("Respuesta vacía de Groq");
-
-      let clean = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-      if (clean.includes('<think>')) {
-        const braceIdx = clean.indexOf('{');
-        if (braceIdx !== -1) {
-          clean = clean.substring(braceIdx);
-        } else {
-          clean = clean.replace(/<think>[\s\S]*/gi, '').trim();
-        }
-      }
-      clean = clean.replace(/```json/gi, '').replace(/```/g, '').trim();
-      
-      const extractJSON = (str: string): string => {
-        const firstBrace = str.indexOf('{');
-        if (firstBrace === -1) return str;
-        let braceCount = 0;
-        let inString = false;
-        let escaped = false;
-        for (let i = firstBrace; i < str.length; i++) {
-          const char = str[i];
-          if (escaped) {
-            escaped = false;
-            continue;
-          }
-          if (char === '\\') {
-            escaped = true;
-            continue;
-          }
-          if (char === '"') {
-            inString = !inString;
-            continue;
-          }
-          if (!inString) {
-            if (char === '{') {
-              braceCount++;
-            } else if (char === '}') {
-              braceCount--;
-              if (braceCount === 0) {
-                return str.slice(firstBrace, i + 1);
-              }
-            }
-          }
-        }
-        const match = str.match(/\{[\s\S]*\}/);
-        return match ? match[0] : str;
-      };
-
-      clean = extractJSON(clean);
-      
-      // Sanitizar comas sobrantes antes de cierres (trailing commas)
-      clean = clean.replace(/,(\s*[\]}])/g, '$1');
-
-      let parsed;
-      try {
-        parsed = JSON.parse(clean);
-      } catch (err) {
-        console.warn("Fallo inicial al parsear JSON, intentando corregir comillas internas...", err);
-        try {
-          const sanitized = clean.replace(/"name"\s*:\s*"([^"]*)"/g, (match, p1) => {
-            const escaped = p1.replace(/"/g, "'");
-            return `"name": "${escaped}"`;
-          });
-          parsed = JSON.parse(sanitized);
-        } catch (innerErr) {
-          throw new Error("La factura fue procesada, pero el formato JSON devuelto contenía errores de formato. Por favor, intenta de nuevo con otra foto.");
-        }
-      }
-      const items = parsed.items || [];
-      const extractedSubtotal = Number(parsed.invoice_subtotal || 0);
-      const extractedTotal = Number(parsed.invoice_total || 0);
-
-      // Calcular la suma de subtotales extraídos
-      const sumSubtotals = items.reduce((acc: number, item: any) => acc + ((item.quantity || 1) * (item.cost || 0)), 0);
-
-      // Validar si la factura incluye impuestos o no
-      let isTaxInclusive = false;
-      let cleanSubtotal = extractedSubtotal;
-      let cleanTotal = extractedTotal;
-      if (cleanSubtotal > cleanTotal && cleanTotal > 0) {
-        cleanSubtotal = extractedTotal;
-        cleanTotal = extractedSubtotal;
-      }
-
-      if (cleanTotal > 0 && cleanSubtotal > 0) {
-        const diffToTotal = Math.abs(sumSubtotals - cleanTotal);
-        const diffToSubtotal = Math.abs(sumSubtotals - cleanSubtotal);
-        if (diffToTotal < diffToSubtotal) {
-          isTaxInclusive = true;
-        }
-      } else if (cleanTotal > 0) {
-        if (Math.abs(sumSubtotals - cleanTotal) < Math.abs(sumSubtotals * (1 + customTaxRate / 100) - cleanTotal)) {
-          isTaxInclusive = true;
-        }
-      }
+      const stockData = await scanInvoiceStock(file, apiKey, (msg) => setAiScanStatus(msg));
+      const items = stockData.items || [];
+      const isTaxInclusive = stockData.isTaxInclusive || false;
 
       setAiIsTaxInclusive(isTaxInclusive);
 
@@ -656,12 +489,13 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
     } catch (err: any) {
       console.error(err);
       toast({
-        title: "Error al escanear stock",
+        title: "Error al escanear stock con IA",
         description: err.message || "No se pudo procesar la imagen de la factura.",
         variant: "destructive"
       });
     } finally {
       setIsAIScanning(false);
+      setAiScanStatus('');
       if (aiFileInputRef.current) aiFileInputRef.current.value = '';
     }
   };
@@ -2380,6 +2214,61 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
             onChange={handleAIStockUpload}
           />
 
+          {/* AI Connection Status Banner */}
+          {extractedItems.length === 0 && !isAIScanning && (
+            (() => {
+              const activeAiKey = resolveActiveAiApiKey(storeSettings);
+              return activeAiKey ? (
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <div>
+                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">IA Conectada & Lista</p>
+                      <p className="text-[11px] text-muted-foreground">Modelo Groq Qwen 3.6 Vision activo para escanear facturas</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setAiKeyInput(storeSettings?.ai_api_key || '');
+                      setAiKeyTestResult(null);
+                      setShowAiKeyConfigDialog(true);
+                    }}
+                    className="h-8 text-xs font-semibold px-3 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  >
+                    <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                    Configurar Clave
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 gap-3 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-amber-600 dark:text-amber-400">Clave de IA no configurada</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Introduce tu API Key gratuita de Groq para poder leer facturas con IA automáticamente.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setAiKeyInput('');
+                      setAiKeyTestResult(null);
+                      setShowAiKeyConfigDialog(true);
+                    }}
+                    className="h-8 text-xs font-bold px-4 bg-amber-600 hover:bg-amber-700 text-white shrink-0 self-end sm:self-auto"
+                  >
+                    <Key className="h-3.5 w-3.5 mr-1.5" />
+                    Poner Clave de IA
+                  </Button>
+                </div>
+              );
+            })()
+          )}
+
           {extractedItems.length === 0 && !isAIScanning && (
             <div 
               onClick={() => aiFileInputRef.current?.click()}
@@ -2396,11 +2285,11 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
           )}
 
           {isAIScanning && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
               <h3 className="font-bold text-lg">Analizando Factura con IA...</h3>
-              <p className="text-sm text-muted-foreground mt-2">
-                Leyendo productos, cantidades, costos e impuestos de la imagen. Por favor espera.
+              <p className="text-sm text-muted-foreground max-w-md">
+                {aiScanStatus || "Leyendo productos, cantidades, costos e impuestos de la imagen. Por favor espera."}
               </p>
             </div>
           )}
@@ -3130,6 +3019,102 @@ Responde únicamente con el objeto JSON plano sin texto introductorio ni explica
               onSuccess={handleProductFormSuccess}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo Rápido de Configuración de Clave de IA */}
+      <Dialog open={showAiKeyConfigDialog} onOpenChange={setShowAiKeyConfigDialog}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Configurar Clave de IA (Groq)
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Introduce tu API Key para habilitar el escaneo automático con IA en Facturas y Stock.
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-xs font-bold">Groq API Key</label>
+              <div className="relative">
+                <Input
+                  type={showAiKeyText ? "text" : "password"}
+                  placeholder="gsk_..."
+                  value={aiKeyInput}
+                  onChange={(e) => {
+                    setAiKeyInput(e.target.value);
+                    if (aiKeyTestResult) setAiKeyTestResult(null);
+                  }}
+                  className="pr-10 font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAiKeyText(!showAiKeyText)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showAiKeyText ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Obtén tu clave gratuita en <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-primary underline font-semibold inline-flex items-center gap-0.5">console.groq.com <ExternalLink className="h-2.5 w-2.5" /></a>
+              </p>
+            </div>
+
+            {aiKeyTestResult && (
+              <div className={`p-3 rounded-xl text-xs font-semibold border flex items-start gap-2 ${
+                aiKeyTestResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-destructive/10 border-destructive/30 text-destructive'
+              }`}>
+                {aiKeyTestResult.success ? <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" /> : <XCircle className="h-4 w-4 shrink-0 mt-0.5" />}
+                <div>
+                  <p>{aiKeyTestResult.message}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex flex-row items-center justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isTestingAiKey || !aiKeyInput.trim()}
+              onClick={handleTestAiKeyModal}
+              className="text-xs"
+            >
+              {isTestingAiKey ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin text-primary" />
+                  Probando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  Verificar
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={isSavingAiKey || !aiKeyInput.trim()}
+              onClick={handleSaveAiKeyModal}
+              className="text-xs font-bold"
+            >
+              {isSavingAiKey ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5 mr-1" />
+                  Guardar Clave
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

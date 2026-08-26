@@ -28,6 +28,7 @@ import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { lookupRnc } from '@/lib/rncLookup';
+import { resolveActiveAiApiKey, scanInvoiceExpense, cleanAiKey, testGroqApiKey } from '@/utils/aiService';
 
 
 const CATEGORIES = [
@@ -486,17 +487,10 @@ function AccountingContent() {
     const [apiKeyInput, setApiKeyInput] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [isEditingKey, setIsEditingKey] = useState(false);
+    const [isTestingApiKey, setIsTestingApiKey] = useState(false);
 
-    const cleanKey = (key: string | null | undefined) => {
-        if (!key) return null;
-        const trimmed = key.trim();
-        if (trimmed === 'undefined' || trimmed === 'null' || trimmed === '') return null;
-        return trimmed;
-    };
-
-    const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
-    const userKey = cleanKey(storeSettings?.ai_api_key);
-    const isKeyConfigured = !!(systemKey || userKey);
+    const activeAiKey = resolveActiveAiApiKey(storeSettings);
+    const isKeyConfigured = !!activeAiKey;
 
     // Form State
     const [newExpense, setNewExpense] = useState<{
@@ -1320,242 +1314,6 @@ function AccountingContent() {
         });
     };
 
-    const preprocessImage = async (file: File): Promise<string> => {
-        let processableFile = file;
-
-        // Convert HEIC/HEIF to JPEG first
-        if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
-            console.log("Converting HEIC to JPEG...");
-            try {
-                const heic2anyModule = await import('heic2any');
-                const heic2anyFn = heic2anyModule.default || heic2anyModule;
-                const convertedBlob = await heic2anyFn({
-                    blob: file,
-                    toType: "image/jpeg",
-                    quality: 0.6
-                });
-                
-                const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-                processableFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), {
-                    type: "image/jpeg"
-                });
-            } catch (err) {
-                console.error("Error converting HEIC:", err);
-                throw new Error("Error convirtiendo formato iPhone (HEIC). Prueba tomando la foto de nuevo.");
-            }
-        }
-
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            const url = URL.createObjectURL(processableFile);
-            
-            img.onload = () => {
-                URL.revokeObjectURL(url);
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // Reducir resolución a 900px para economizar consumo de tokens de IA por factura (hasta 50% ahorro)
-                const MAX_WIDTH = 900; 
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-
-                if (!ctx) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.readAsDataURL(processableFile);
-                    return;
-                }
-
-                ctx.drawImage(img, 0, 0, width, height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-                
-                if (dataUrl === 'data:,' || dataUrl.length < 100) {
-                    // Fallback si el canvas falló silenciosamente (común en algunos móviles)
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.readAsDataURL(processableFile);
-                } else {
-                    resolve(dataUrl);
-                }
-            };
-            
-            img.onerror = () => {
-                URL.revokeObjectURL(url);
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
-                reader.readAsDataURL(processableFile);
-            };
-            
-            img.src = url;
-        });
-    };
-
-    const scanInvoice = async (file: File, apiKey: string, onStatusUpdate?: (msg: string) => void): Promise<any> => {
-        const base64DataUrl = await preprocessImage(file);
-        const base64Data = base64DataUrl.split(',')[1];
-        const mimeType = base64DataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
-
-        const prompt = `Analiza esta factura y extrae los siguientes datos en formato JSON strictly:
-- date (formato YYYY-MM-DD)
-- description (resumen breve del gasto)
-- amount (número, sin símbolos)
-- supplier_name (nombre comercial del proveedor)
-- invoice_number (NCF o número de referencia)
-- category (Una de: Inventario, Servicios Públicos, Alquiler, Nómina, Mantenimiento, Marketing, Impuestos, Otros)
-
-Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date": "2023-01-01", "description": "Compra de agua", "amount": 100, "supplier_name": "Agua Pura", "invoice_number": "B0100000001", "category": "Otros"}`;
-
-        const maxRetries = 5;
-        let attempt = 0;
-
-        while (attempt <= maxRetries) {
-            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${apiKey}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    model: "qwen/qwen3.6-27b",
-                    response_format: { type: "json_object" },
-                    messages: [
-                        {
-                            role: "user",
-                            content: [
-                                { type: "text", text: prompt },
-                                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-                            ]
-                        }
-                    ],
-                    temperature: 0.1
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                let content = data.choices?.[0]?.message?.content;
-                if (!content) throw new Error("No content received from Groq");
-                
-                // Eliminar bloques de pensamiento de modelos de razonamiento (<think>...</think>)
-                content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-                if (content.includes('<think>')) {
-                    const braceIdx = content.indexOf('{');
-                    if (braceIdx !== -1) {
-                        content = content.substring(braceIdx);
-                    } else {
-                        content = content.replace(/<think>[\s\S]*/gi, '').trim();
-                    }
-                }
-                content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
-                
-                // Extraer primer JSON equilibrado
-                const extractJSON = (str: string): string => {
-                    const firstBrace = str.indexOf('{');
-                    if (firstBrace === -1) return str;
-                    let braceCount = 0;
-                    let inString = false;
-                    let escaped = false;
-                    for (let i = firstBrace; i < str.length; i++) {
-                        const char = str[i];
-                        if (escaped) {
-                            escaped = false;
-                            continue;
-                        }
-                        if (char === '\\') {
-                            escaped = true;
-                            continue;
-                        }
-                        if (char === '"') {
-                            inString = !inString;
-                            continue;
-                        }
-                        if (!inString) {
-                            if (char === '{') {
-                                braceCount++;
-                            } else if (char === '}') {
-                                braceCount--;
-                                if (braceCount === 0) {
-                                    return str.slice(firstBrace, i + 1);
-                                }
-                            }
-                        }
-                    }
-                    const match = str.match(/\{[\s\S]*\}/);
-                    return match ? match[0] : str;
-                };
-
-                let clean = extractJSON(content);
-                // Sanitizar comas sobrantes antes de cierres (trailing commas)
-                clean = clean.replace(/,\s*([\]}])/g, '$1');
-
-                const firstBrace = clean.indexOf('{');
-                const lastBrace = clean.lastIndexOf('}');
-                if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-                    throw new Error("No se pudo extraer una estructura JSON válida de la respuesta de la IA.");
-                }
-                clean = clean.substring(firstBrace, lastBrace + 1);
-
-                try {
-                    return JSON.parse(clean);
-                } catch (parseErr) {
-                    console.warn("Fallo al parsear JSON devuelto por Groq:", parseErr, "Raw clean:", clean);
-                    try {
-                        const sanitized = clean.replace(/[\r\n\t]+/g, ' ');
-                        return JSON.parse(sanitized);
-                    } catch (secErr) {
-                        throw new Error("La respuesta de la IA no tenía un formato JSON válido. Por favor reintenta.");
-                    }
-                }
-            }
-
-            const errorData = await response.json().catch(() => ({}));
-            const errorMsg = JSON.stringify(errorData);
-
-            if (response.status === 429) {
-                let waitMs = Math.pow(2, attempt + 1) * 4000;
-                
-                // Extraer tiempo de espera con soporte para minutos y segundos (ej: 7m23.6s o 18.6s)
-                const minMatch = errorMsg.match(/try again in (?:(\d+)m)?\s*([\d\.]+)s?/i);
-                if (minMatch) {
-                    const minutes = parseFloat(minMatch[1] || '0');
-                    const seconds = parseFloat(minMatch[2] || '0');
-                    const totalSec = (minutes * 60) + seconds;
-                    if (!isNaN(totalSec) && totalSec > 0) {
-                        waitMs = Math.ceil((totalSec + 2) * 1000);
-                    }
-                }
-
-                // Detectar si se superó la cuota diaria verdaderamente (TPD / RPD o espera > 10 min)
-                const isDailyLimit = /tokens per day|TPD|requests per day|RPD/i.test(errorMsg) || waitMs > 600000;
-
-                if (isDailyLimit) {
-                    const waitMin = Math.ceil(waitMs / 60000);
-                    throw new Error(`Se agotó la cuota diaria gratuita de IA en Groq. Reintenta en ~${waitMin} min o introduce tu propia Groq API Key en Configuración.`);
-                }
-
-                if (attempt < maxRetries) {
-                    attempt++;
-                    const waitSec = Math.ceil(waitMs / 1000);
-                    onStatusUpdate?.(`Límite por minuto alcanzado (429). Esperando ${waitSec}s... (Intento ${attempt}/${maxRetries})`);
-
-                    await new Promise(resolve => setTimeout(resolve, waitMs));
-                    continue;
-                }
-            }
-
-            throw new Error(`Groq API Error: ${response.status} ${errorMsg}`);
-        }
-    };
-
     const saveExpenseToDb = async (data: any) => {
         const foundSupplier = suppliers.find(s => s.name.toLowerCase() === (data.supplier_name || '').trim().toLowerCase());
 
@@ -1666,12 +1424,10 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
     };
 
     const processQueueItems = async (itemsToProcess: QueueItem[]) => {
-        const userKey = cleanKey(storeSettings?.ai_api_key);
-        const systemKey = cleanKey(import.meta.env.VITE_GROQ_API_KEY);
-        const apiKey = userKey || systemKey;
+        const apiKey = resolveActiveAiApiKey(storeSettings);
 
         if (!apiKey) {
-            toast({ title: "Requerido", description: "Primero guarda tu API Key de Groq en la configuración de la ventana.", variant: "destructive" });
+            toast({ title: "Requerido", description: "Primero guarda tu API Key de Groq en la configuración.", variant: "destructive" });
             return;
         }
 
@@ -1693,7 +1449,7 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     }
 
                     console.log(`Scanning item ${item.file.name}...`);
-                    const data = await scanInvoice(item.file, apiKey, (statusMsg) => {
+                    const data = await scanInvoiceExpense(item.file, apiKey, (statusMsg) => {
                         setScanQueue(prev => prev.map(q => q.id === item.id ? { ...q, statusMessage: statusMsg } : q));
                     });
 
@@ -2863,14 +2619,14 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                             <p className="text-xs text-muted-foreground w-full">
                                 Introduce tu API key de Groq para usar el modelo Qwen 3.6 Vision y escanear tus facturas.
                             </p>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
+                            <div className="flex flex-wrap gap-2">
+                                <div className="relative flex-1 min-w-[200px]">
                                     <Input 
                                         type={showApiKey ? "text" : "password"} 
-                                        placeholder="Pegar código de Groq..." 
+                                        placeholder="Pegar código de Groq (gsk_...)..." 
                                         value={apiKeyInput}
                                         onChange={(e) => setApiKeyInput(e.target.value)}
-                                        className="pr-10"
+                                        className="pr-10 font-mono text-xs"
                                     />
                                     <button 
                                         type="button"
@@ -2880,6 +2636,30 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                         {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
                                 </div>
+                                <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    disabled={isTestingApiKey || !apiKeyInput.trim()}
+                                    onClick={async () => {
+                                        const cleaned = cleanAiKey(apiKeyInput);
+                                        if (!cleaned) return;
+                                        setIsTestingApiKey(true);
+                                        try {
+                                            const res = await testGroqApiKey(cleaned);
+                                            if (res.success) {
+                                                toast({ title: "✅ Conexión Exitosa", description: res.message });
+                                            } else {
+                                                toast({ title: "❌ Error", description: res.message, variant: "destructive" });
+                                            }
+                                        } catch (e: any) {
+                                            toast({ title: "Error", description: "No se pudo verificar la clave", variant: "destructive" });
+                                        } finally {
+                                            setIsTestingApiKey(false);
+                                        }
+                                    }}
+                                >
+                                    {isTestingApiKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Verificar"}
+                                </Button>
                                 <Button size="sm" onClick={() => {
                                     if (apiKeyInput.trim()) {
                                         updateSettings({ ai_api_key: apiKeyInput.trim() });

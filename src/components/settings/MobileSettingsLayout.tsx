@@ -13,7 +13,8 @@ import {
   ChevronRight,
   Bell,
   Receipt,
-  ChefHat
+  ChefHat,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -40,6 +41,7 @@ const settingsSections: SettingsSection[] = [
   { id: 'print', label: 'Impresión', icon: Printer, description: 'Configurar impresora' },
   { id: 'notifications', label: 'Notificaciones', icon: Bell, description: 'Sonidos y alertas' },
   { id: 'cocina', label: 'Cocina', icon: ChefHat, description: 'Umbrales y KDS' },
+  { id: 'ai', label: 'Inteligencia Artificial', icon: Sparkles, description: 'Claves de API y escaneo con IA' },
   { id: 'system', label: 'Sistema', icon: SettingsIcon, description: 'Idioma y apariencia' },
   { id: 'advanced', label: 'Avanzado', icon: Database, description: 'Datos y seguridad' },
   { id: 'subscription', label: 'Suscripción', icon: Receipt, description: 'Plan y facturación' },

@@ -29,6 +29,7 @@ import MobileSettingsLayout from '@/components/settings/MobileSettingsLayout';
 import SettingsStoreSection from '@/components/settings/SettingsStoreSection';
 import BannerSettingsSection from '@/components/settings/BannerSettingsSection';
 import StoreHoursSection from '@/components/settings/StoreHoursSection';
+import { AiSettingsSection } from '@/components/settings/AiSettingsSection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InvoiceSequenceInput } from '@/components/settings/InvoiceSequenceInput';
@@ -38,6 +39,7 @@ import {
   Building2,
   FileText,
   Calculator,
+  Sparkles,
   CreditCard,
   Package,
   Settings as SettingsIcon,
@@ -2057,6 +2059,21 @@ const Settings = () => {
     </div>
   );
 
+  const handleSaveAiApiKey = async (apiKey: string | null) => {
+    setSystemSettings(prev => ({ ...prev, aiApiKey: apiKey || '' }));
+    await updateStoreSettings({
+      ai_api_key: apiKey
+    });
+  };
+
+  const mobileAiSectionContent = (
+    <AiSettingsSection
+      initialApiKey={storeSettings?.ai_api_key || systemSettings.aiApiKey}
+      onSaveApiKey={handleSaveAiApiKey}
+      isLoading={isUpdatingStoreSettings}
+    />
+  );
+
   // Loading state
   if (storeLoading || companySettingsLoading || loadingSettings || sequencesLoading) {
     return (
@@ -2083,8 +2100,9 @@ const Settings = () => {
             products: mobileProductsSectionContent,
             print: mobilePrintSectionContent,
             notifications: mobileNotificationsSectionContent,
-            system: mobileSystemSectionContent,
             cocina: mobileKitchenSectionContent,
+            ai: mobileAiSectionContent,
+            system: mobileSystemSectionContent,
             advanced: mobileAdvancedSectionContent,
             subscription: mobileSubscriptionSectionContent,
           }}
@@ -2138,6 +2156,10 @@ const Settings = () => {
                 <TabsTrigger value="cocina" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Cocina KDS</TabsTrigger>
               )}
 
+              <TabsTrigger value="ai" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4" />
+                Inteligencia Artificial
+              </TabsTrigger>
               <TabsTrigger value="system" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Apariencia</TabsTrigger>
               <TabsTrigger value="advanced" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Avanzado</TabsTrigger>
               
@@ -4009,6 +4031,15 @@ const Settings = () => {
           );
         })()}
 
+        {/* AI & Vision Settings */}
+        <TabsContent value="ai" className="space-y-6 mt-0">
+          <AiSettingsSection
+            initialApiKey={storeSettings?.ai_api_key || systemSettings.aiApiKey}
+            onSaveApiKey={handleSaveAiApiKey}
+            isLoading={isUpdatingStoreSettings}
+          />
+        </TabsContent>
+
         {/* System Settings */}
         <TabsContent value="system" className="space-y-6 mt-0">
           <Card>
@@ -4050,44 +4081,6 @@ const Settings = () => {
                 <Button onClick={() => handleSaveSettings('sistema')} disabled={loading || isUpdatingStoreSettings}>
                   <Save className="mr-2 h-4 w-4" />
                   Guardar Configuración del Sistema
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-emerald-500/20 bg-emerald-500/5">
-              <CardHeader>
-                <CardTitle className="flex items-center text-emerald-600 dark:text-emerald-400">
-                  <Calculator className="mr-2 h-5 w-5" />
-                  Inteligencia Artificial (Groq)
-                </CardTitle>
-                <CardDescription>
-                  Configura la clave de API para el escaneo automático de facturas y gastos.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ai-api-key">Groq API Key</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="ai-api-key"
-                      type="password"
-                      placeholder="gsk_..."
-                      value={systemSettings.aiApiKey}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, aiApiKey: e.target.value })}
-                      className="bg-background border-emerald-500/20 focus-visible:ring-emerald-500"
-                    />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Esta clave se utiliza para procesar imágenes de facturas usando el modelo Qwen 3.6 Vision. Puedes obtener una clave gratuita en console.groq.com.
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => handleSaveSettings('sistema')} 
-                  disabled={loading || isUpdatingStoreSettings}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Guardar Clave de IA
                 </Button>
               </CardContent>
             </Card>
