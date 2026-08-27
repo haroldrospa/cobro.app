@@ -23,8 +23,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ThermalPrinterDialog } from '@/components/settings/ThermalPrinterDialog';
 import { isAndroidNative } from '@/utils/platform';
 import { PrintSettingsDialog } from '@/components/settings/PrintSettingsDialog';
-import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
-import { EvolutionQRDialog } from '@/components/settings/EvolutionQRDialog';
 import MobileSettingsLayout from '@/components/settings/MobileSettingsLayout';
 import SettingsStoreSection from '@/components/settings/SettingsStoreSection';
 import BannerSettingsSection from '@/components/settings/BannerSettingsSection';
@@ -81,15 +79,11 @@ import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { lookupRnc } from '@/lib/rncLookup';
 
 const Settings = () => {
-  const [qrConnectionStatus, setQrConnectionStatus] = useState<'disconnected' | 'connected' | 'checking'>('disconnected');
-  const [testWhatsAppPhone, setTestWhatsAppPhone] = useState('');
-  const [isTestingWhatsApp, setIsTestingWhatsApp] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme, scale, setScale } = useTheme();
   const isMobile = useIsMobile();
   const [mobileActiveSection, setMobileActiveSection] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [creatingStore, setCreatingStore] = useState(false);
   const [storeName, setStoreName] = useState('');
   const queryClient = useQueryClient();
@@ -3506,9 +3500,11 @@ const Settings = () => {
                     )}
                   </div>
                 )}
+              </div>
 
-                <Separator className="my-6" />
+              <Separator className="my-6" />
 
+              <div className="space-y-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="space-y-0.5">
                     <Label className="text-base text-primary">Notificaciones de Suscripción</Label>
@@ -3531,202 +3527,6 @@ const Settings = () => {
                     Este correo recibirá las notificaciones de nuevos pagos pendientes para revisión.
                   </p>
                 </div>
-
-                <Separator className="my-6" />
-
-                {/* Evolution API Settings */}
-                <div className="space-y-4">
-                  <h4 className="font-medium flex items-center">
-                    <span className="mr-2 text-emerald-500">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                    </span>
-                    WhatsApp Automático (Evolution API)
-                  </h4>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Habilitar Envío Automático</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Envía los mensajes de WhatsApp directamente sin abrir nuevas pestañas.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={storeSettings?.evolution_enabled ?? false}
-                      onCheckedChange={(checked) => updateStoreSettings({ evolution_enabled: checked })}
-                    />
-                  </div>
-
-                  {(storeSettings?.evolution_enabled ?? false) && (
-                    <div className="space-y-4 pl-4 border-l-2 border-emerald-500/20">
-                      <div className="space-y-2">
-                        <Label>URL de Evolution API</Label>
-                        <Input
-                          placeholder="ej: https://api.mi-evolution.com"
-                          value={storeSettings?.evolution_api_url || ''}
-                          onChange={(e) => updateStoreSettings({ evolution_api_url: e.target.value })}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Nombre de la Instancia</Label>
-                        <Input
-                          placeholder="ej: CobroApp"
-                          value={storeSettings?.evolution_instance_name || ''}
-                          onChange={(e) => updateStoreSettings({ evolution_instance_name: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Global API Key</Label>
-                        <Input
-                          type="password"
-                          placeholder="Tu API Key"
-                          value={storeSettings?.evolution_api_key || ''}
-                          onChange={(e) => updateStoreSettings({ evolution_api_key: e.target.value })}
-                        />
-                      </div>
-
-                      {storeSettings?.evolution_api_url && storeSettings?.evolution_instance_name && storeSettings?.evolution_api_key && (
-                        <div className="pt-2">
-                          <Button 
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
-                            onClick={() => setIsQRDialogOpen(true)}
-                          >
-                            <QrCode className="w-4 h-4 mr-2" />
-                            Escanear QR / Conectar WhatsApp
-                          </Button>
-                          <p className="text-[10px] text-zinc-500 text-center mt-2">
-                            Asegúrate de guardar los cambios antes de escanear el código QR.
-                          </p>
-
-                          {/* Sección de prueba */}
-                          <div className="mt-6 p-4 border border-zinc-800 rounded-lg bg-zinc-900/50 space-y-3">
-                            <Label className="text-sm font-medium text-zinc-300">Prueba de Envío (WhatsApp)</Label>
-                            <div className="flex gap-2">
-                              <Input 
-                                placeholder="Ej: 18091234567" 
-                                value={testWhatsAppPhone}
-                                onChange={(e) => setTestWhatsAppPhone(e.target.value)}
-                                className="flex-1"
-                              />
-                              <Button 
-                                onClick={async () => {
-                                  try {
-                                    toast({ title: 'Ejecutando diagnóstico...', description: 'Verificando estado de la instancia y número.' });
-                                    
-                                    let baseUrl = storeSettings.evolution_api_url!.endsWith('/') 
-                                      ? storeSettings.evolution_api_url!.slice(0, -1) 
-                                      : storeSettings.evolution_api_url!;
-                                      
-                                    if (!/^https?:\/\//i.test(baseUrl)) {
-                                      baseUrl = `https://${baseUrl}`;
-                                    }
-                                      
-                                    // 1. Connection State
-                                    const stateRes = await fetch(`${baseUrl}/instance/connectionState/${storeSettings.evolution_instance_name}`, {
-                                      headers: { 'apikey': storeSettings.evolution_api_key! }
-                                    });
-                                    const stateData = await stateRes.json();
-                                    console.log('Connection State:', stateData);
-                                    
-                                    // 2. Check Number
-                                    const numRes = await fetch(`${baseUrl}/chat/whatsappNumbers/${storeSettings.evolution_instance_name}`, {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json', 'apikey': storeSettings.evolution_api_key! },
-                                      body: JSON.stringify({ numbers: [`1${testWhatsAppPhone.replace(/\D/g, '')}`] })
-                                    });
-                                    const numData = await numRes.json();
-                                    console.log('WhatsApp Number Check:', numData);
-                                    
-                                    let diagnosis = `Estado: ${stateData?.instance?.state || stateData?.state || 'Desconocido'}. `;
-                                    if (Array.isArray(numData) && numData.length > 0) {
-                                      diagnosis += numData[0].exists ? 'El número SI existe en WhatsApp.' : 'El número NO existe en WhatsApp.';
-                                    } else {
-                                      diagnosis += 'No se pudo verificar el número.';
-                                    }
-                                    
-                                    toast({ title: 'Diagnóstico Completado', description: diagnosis });
-                                    
-                                  } catch (error: any) {
-                                    console.error('Error en diagnóstico:', error);
-                                    toast({ title: 'Error de Diagnóstico', description: error.message, variant: 'destructive' });
-                                  }
-                                }}
-                                disabled={!testWhatsAppPhone}
-                                className="bg-blue-600 hover:bg-blue-700"
-                              >
-                                Diagnosticar
-                              </Button>
-                              <Button
-                                disabled={!testWhatsAppPhone || isTestingWhatsApp}
-                                onClick={async () => {
-                                  setIsTestingWhatsApp(true);
-                                  toast({ title: 'Probando...', description: 'Enviando mensaje de prueba...' });
-                                  try {
-                                    try {
-                                      // Send format 1: Just the number with 1
-                                      await sendEvolutionWhatsAppMessage(
-                                        testWhatsAppPhone, 
-                                        'Prueba Formato 1 (Con 1): Si recibes esto, Evolution API usa este formato. 🎉', 
-                                        {
-                                          url: storeSettings.evolution_api_url!,
-                                          instanceName: storeSettings.evolution_instance_name!,
-                                          apiKey: storeSettings.evolution_api_key!
-                                        },
-                                        'format1'
-                                      );
-                                    } catch (e) { console.error(e) }
-
-                                  try {
-                                    // Send format 2: The number with 1 and @s.whatsapp.net
-                                    await sendEvolutionWhatsAppMessage(
-                                      testWhatsAppPhone, 
-                                      'Prueba Formato 2 (Con @s.whatsapp.net): Si recibes esto, Evolution API necesita el sufijo. 🎉', 
-                                      {
-                                        url: storeSettings.evolution_api_url!,
-                                        instanceName: storeSettings.evolution_instance_name!,
-                                        apiKey: storeSettings.evolution_api_key!
-                                      },
-                                      'format2'
-                                    );
-                                  } catch (e) { console.error(e) }
-
-                                  try {
-                                    // Send format 3: The number WITHOUT 1
-                                    await sendEvolutionWhatsAppMessage(
-                                      testWhatsAppPhone, 
-                                      'Prueba Formato 3 (Sin 1): Si recibes esto, Evolution API usa formato local. 🎉', 
-                                      {
-                                        url: storeSettings.evolution_api_url!,
-                                        instanceName: storeSettings.evolution_instance_name!,
-                                        apiKey: storeSettings.evolution_api_key!
-                                      },
-                                      'format3'
-                                    );
-                                  } catch (e) { console.error(e) }
-
-                                  toast({ title: '¡Éxito!', description: 'Se enviaron 3 formatos de prueba. Verifica cuál llegó a WhatsApp.', variant: 'default' });
-                                } catch (err: any) {
-                                  toast({ title: 'Error en la prueba', description: err.message, variant: 'destructive' });
-                                } finally {
-                                  setIsTestingWhatsApp(false);
-                                }
-                                }}
-                                className="bg-emerald-600 hover:bg-emerald-500 text-white"
-                              >
-                                {isTestingWhatsApp ? 'Enviando...' : 'Probar'}
-                              </Button>
-                            </div>
-                            <p className="text-[10px] text-zinc-500">
-                              Ingresa tu número de teléfono para enviar un mensaje de prueba y verificar que la conexión funciona.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
               </div>
             </CardContent>
           </Card>
@@ -4078,15 +3878,6 @@ const Settings = () => {
         onOpenChange={setShowPrinterDialog}
         onConnect={handlePrinterConnected}
       />
-      {storeSettings && (
-        <EvolutionQRDialog
-          isOpen={isQRDialogOpen}
-          onClose={() => setIsQRDialogOpen(false)}
-          apiUrl={storeSettings.evolution_api_url || ''}
-          apiKey={storeSettings.evolution_api_key || ''}
-          instanceName={storeSettings.evolution_instance_name || ''}
-        />
-      )}
     </div>
   );
 };
