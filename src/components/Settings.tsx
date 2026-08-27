@@ -1561,11 +1561,6 @@ const Settings = () => {
               <SelectItem value="carta">Carta</SelectItem>
             </SelectContent>
           </Select>
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3">
-            <p className="text-[10px] text-blue-600 dark:text-blue-400">
-              💡 <span className="font-semibold">Importante:</span> Esta configuración se aplica a "Imprimir directamente" en el POS.
-            </p>
-          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -1652,50 +1647,14 @@ const Settings = () => {
 
         <Separator />
 
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium flex items-center">
-            <Printer className="mr-2 h-4 w-4" />
-            Información del Formato
-          </h4>
-          <div className="bg-muted p-3 rounded-lg space-y-1">
-            {printSettings.paperSize === '80mm' && (
-              <>
-                <p className="text-[11px]"><strong>Ancho:</strong> 80mm (3.15")</p>
-                <p className="text-[11px]"><strong>Tipo:</strong> Térmica de 80mm</p>
-                <p className="text-[11px]"><strong>Método:</strong> Impresión directa</p>
-              </>
-            )}
-            {printSettings.paperSize === '58mm' && (
-              <>
-                <p className="text-[11px]"><strong>Ancho:</strong> 58mm (2")</p>
-                <p className="text-[11px]"><strong>Tipo:</strong> Térmica portátil</p>
-                <p className="text-[11px]"><strong>Método:</strong> Impresión directa</p>
-              </>
-            )}
-            {printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta' ? (
-              <>
-                <p className="text-[11px]"><strong>Documento:</strong> Formato completo</p>
-                <p className="text-[11px]"><strong>Tipo:</strong> Láser/Inyección</p>
-              </>
-            ) : null}
-          </div>
-        </div>
-
-        <Separator />
-
-        <h4 className="text-sm font-medium flex items-center">
-          <Printer className="mr-2 h-4 w-4" />
-          Impresora Térmica
-        </h4>
-
-        <div className="flex items-center justify-between p-4 bg-card border rounded-lg">
+        <div className="flex items-center justify-between p-3.5 bg-card border rounded-xl">
           <div>
             <p className="font-medium text-sm">Impresión Directa</p>
-            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
               {printSettings.thermalPrinterConnected ? (
                 <>
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  {printSettings.thermalPrinterName}
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-emerald-400">{printSettings.thermalPrinterName}</span>
                 </>
               ) : 'No conectada'}
             </p>
@@ -1707,42 +1666,35 @@ const Settings = () => {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex gap-2">
           <Button
             onClick={handleConnectThermalPrinter}
             variant="outline"
-            className="h-10 text-xs"
+            size="sm"
+            className="flex-1 h-9 text-xs"
           >
-            <Printer className="mr-2 h-4 w-4 text-primary" />
-            {printSettings.thermalPrinterConnected ? 'Cambiar' : 'Conectar'}
+            <Printer className="mr-1.5 h-3.5 w-3.5 text-primary" />
+            {printSettings.thermalPrinterConnected ? 'Cambiar Impresora' : 'Conectar Impresora'}
           </Button>
 
           {printSettings.thermalPrinterConnected && (
             <Button
               onClick={handleDisconnectThermalPrinter}
               variant="outline"
-              className="h-10 text-xs text-destructive border-destructive/20 hover:bg-destructive/10"
+              size="sm"
+              className="h-9 text-xs text-destructive border-destructive/20 hover:bg-destructive/10 px-3"
             >
               Desconectar
             </Button>
           )}
         </div>
 
-        <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg p-4 space-y-2">
-          <h5 className="text-xs font-semibold text-blue-700 dark:text-blue-400">Consejos</h5>
-          <ul className="text-[10px] space-y-1 text-muted-foreground list-disc pl-4">
-            <li>Realiza una prueba antes de usar en producción</li>
-            <li>Verifica si el tamaño coincide con tu impresora</li>
-            <li>Para térmicas, usa papel de calidad</li>
-          </ul>
-        </div>
-
-        <div className="flex gap-2 sticky bottom-0 bg-background/80 backdrop-blur-sm pt-4 pb-2">
+        <div className="flex gap-2 pt-2">
           <Button onClick={handleSavePrintSettings} disabled={loading || isUpdatingStoreSettings} className="flex-1">
             <Save className="mr-2 h-4 w-4" />
             Guardar
           </Button>
-          <Button onClick={handleTestPrint} variant="outline" title="Prueba por Navegador">
+          <Button onClick={handleTestPrint} variant="outline" title="Prueba de Impresión">
             <Printer className="h-4 w-4" />
           </Button>
         </div>
@@ -3078,31 +3030,28 @@ const Settings = () => {
         {/* Print Settings */}
         <TabsContent value="print" className="space-y-6 mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Printer className="mr-2 h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg">
+                <Printer className="mr-2 h-5 w-5 text-primary" />
                 Configuración de Impresión
               </CardTitle>
-              <CardDescription>
-                Configura el tamaño de papel para tus facturas y realiza pruebas de impresión
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="paper-size">Tamaño de Papel</Label>
+                  <Label htmlFor="paper-size" className="text-sm font-medium">Tamaño de Papel</Label>
                   <Select
                     value={printSettings.paperSize}
                     onValueChange={(value) => setPrintSettings({ ...printSettings, paperSize: value })}
                   >
-                    <SelectTrigger id="paper-size">
+                    <SelectTrigger id="paper-size" className="max-w-md">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="80mm">80mm (Impresora Térmica Estándar)</SelectItem>
-                      <SelectItem value="58mm">58mm (Impresora Térmica Pequeña)</SelectItem>
-                      <SelectItem value="A4">A4 (210 x 297 mm)</SelectItem>
-                      <SelectItem value="carta">Carta (8.5 x 11 in)</SelectItem>
+                      <SelectItem value="80mm">80mm (Térmica Estándar)</SelectItem>
+                      <SelectItem value="58mm">58mm (Térmica Pequeña)</SelectItem>
+                      <SelectItem value="A4">A4</SelectItem>
+                      <SelectItem value="carta">Carta</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -3110,17 +3059,12 @@ const Settings = () => {
                 <Separator />
 
                 {/* Thermal Printer Section */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <h4 className="font-medium flex items-center">
-                        <Printer className="mr-2 h-4 w-4" />
-                        Impresora Térmica (Impresión Directa)
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Conecta una impresora térmica ESC/POS para impresión sin diálogos
-                      </p>
-                    </div>
+                    <Label className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                      <Printer className="h-4 w-4 text-muted-foreground" />
+                      Impresión Directa
+                    </Label>
                     <Switch
                       checked={printSettings.useThermalPrinter}
                       onCheckedChange={(checked) => {
@@ -3131,75 +3075,32 @@ const Settings = () => {
                   </div>
 
                   {printSettings.thermalPrinterConnected ? (
-                    <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                          <span className="font-medium text-green-900 dark:text-green-100">
-                            Conectada: {printSettings.thermalPrinterName}
-                          </span>
-                        </div>
-                        <Button
-                          onClick={handleDisconnectThermalPrinter}
-                          variant="outline"
-                          size="sm"
-                          className="border-green-300 dark:border-green-700"
-                        >
-                          Desconectar
-                        </Button>
-                      </div>
-                      <p className="text-sm text-green-800 dark:text-green-200">
-                        Las facturas se imprimirán directamente sin diálogos del navegador
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="bg-muted p-4 rounded-lg space-y-2">
-                        <p className="text-sm">
-                          <strong>Requisitos para impresión térmica directa:</strong>
-                        </p>
-                        {isAndroidNative() ? (
-                          <ul className="text-sm space-y-1 list-disc list-inside">
-                            <li className="font-semibold">Impresora térmica ESC/POS de recibos (58mm o 80mm)</li>
-                            <li>Emparejada por Bluetooth en Ajustes de Android (antes de conectar acá)</li>
-                            <li>Impresora encendida y a la vista</li>
-                          </ul>
-                        ) : (
-                          <ul className="text-sm space-y-1 list-disc list-inside">
-                            <li className="font-semibold">Impresora térmica ESC/POS de recibos (58mm o 80mm)</li>
-                            <li>Cable USB físico (NO Bluetooth, NO WiFi)</li>
-                            <li>Impresora encendida antes de conectar</li>
-                            <li>Navegador Chrome, Edge u Opera</li>
-                            <li>HTTPS o localhost para pruebas</li>
-                          </ul>
-                        )}
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3 mt-2">
-                          <p className="text-xs text-blue-600 dark:text-blue-400">
-                            ℹ️ <span className="font-semibold">Tipos de impresoras:</span>
-                          </p>
-                          <ul className="text-xs text-blue-600 dark:text-blue-400 mt-1 space-y-1 list-disc list-inside ml-2">
-                            <li><strong>Impresoras térmicas ESC/POS:</strong> Impresoras pequeñas de recibos/tickets (compatibles con esta función)</li>
-                            <li><strong>Impresoras normales (láser, inkjet, PostScript):</strong> Usa "Imprimir directamente" en el POS en su lugar</li>
-                          </ul>
-                        </div>
-                        {!isAndroidNative() && (
-                          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3 mt-2">
-                            <p className="text-xs text-yellow-600 dark:text-yellow-500">
-                              ⚠️ <span className="font-semibold">Si ves puertos Bluetooth:</span> Significa que no hay impresoras térmicas USB conectadas. Las impresoras normales (láser, inkjet) NO aparecerán aquí.
-                            </p>
-                          </div>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-2">
-                          💡 Marcas de impresoras térmicas compatibles: Epson TM-series, Star TSP, Citizen CT-S, Bixolon SRP, Rongta, Xprinter.
-                        </p>
+                    <div className="flex items-center justify-between p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <span className="text-sm font-medium text-emerald-400">
+                          {printSettings.thermalPrinterName || 'Impresora Conectada'}
+                        </span>
                       </div>
                       <Button
-                        onClick={handleConnectThermalPrinter}
-                        variant="default"
-                        className="w-full"
+                        onClick={handleDisconnectThermalPrinter}
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-3"
                       >
-                        <Printer className="mr-2 h-4 w-4" />
-                        Conectar Impresora Térmica
+                        Desconectar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div>
+                      <Button
+                        onClick={handleConnectThermalPrinter}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Conectar Impresora
                       </Button>
                     </div>
                   )}
@@ -3207,28 +3108,15 @@ const Settings = () => {
 
                 <Separator />
 
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 pt-1">
                   <Button onClick={handleSavePrintSettings} disabled={loading || isUpdatingStoreSettings}>
                     <Save className="mr-2 h-4 w-4" />
                     Guardar Configuración
                   </Button>
                   <Button onClick={handleTestPrint} variant="outline">
                     <Printer className="mr-2 h-4 w-4" />
-                    Realizar Prueba de Impresión
+                    Prueba de Impresión
                   </Button>
-                </div>
-
-                <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 flex items-center">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Consejos para la Impresión
-                  </h4>
-                  <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                    <li>Realiza una prueba de impresión antes de usar en producción</li>
-                    <li>Verifica que el tamaño de papel coincida con tu impresora</li>
-                    <li>Para impresoras térmicas, usa papel térmico de calidad</li>
-                    <li>Configura tu navegador para imprimir sin encabezados ni pies de página</li>
-                  </ul>
                 </div>
               </div>
             </CardContent>
