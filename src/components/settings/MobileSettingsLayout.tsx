@@ -44,7 +44,6 @@ const settingsSections: SettingsSection[] = [
   { id: 'ai', label: 'Inteligencia Artificial', icon: Sparkles, description: 'Claves de API y escaneo con IA' },
   { id: 'system', label: 'Sistema', icon: SettingsIcon, description: 'Idioma y apariencia' },
   { id: 'advanced', label: 'Avanzado', icon: Database, description: 'Datos y seguridad' },
-  { id: 'subscription', label: 'Suscripción', icon: Receipt, description: 'Plan y facturación' },
 ];
 
 const MobileSettingsLayout: React.FC<MobileSettingsLayoutProps> = ({

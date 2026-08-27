@@ -76,7 +76,6 @@ import {
   Smartphone
 } from 'lucide-react';
 import { injectPrintStyles } from '@/utils/printHandler';
-import SubscriptionOverview from '@/components/subscription/SubscriptionOverview';
 import BillingMethodSection from '@/components/settings/BillingMethodSection';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { lookupRnc } from '@/lib/rncLookup';
@@ -2053,12 +2052,6 @@ const Settings = () => {
     </div>
   );
 
-  const mobileSubscriptionSectionContent = (
-    <div className="space-y-6">
-      <SubscriptionOverview />
-    </div>
-  );
-
   const handleSaveAiApiKey = async (apiKey: string | null) => {
     setSystemSettings(prev => ({ ...prev, aiApiKey: apiKey || '' }));
     await updateStoreSettings({
@@ -2104,7 +2097,6 @@ const Settings = () => {
             ai: mobileAiSectionContent,
             system: mobileSystemSectionContent,
             advanced: mobileAdvancedSectionContent,
-            subscription: mobileSubscriptionSectionContent,
           }}
         </MobileSettingsLayout>
         <ThermalPrinterDialog
@@ -2143,7 +2135,6 @@ const Settings = () => {
               
               <TabsTrigger value="store" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Mi Tienda</TabsTrigger>
               <TabsTrigger value="company" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Empresa</TabsTrigger>
-              <TabsTrigger value="subscription" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Suscripción</TabsTrigger>
               
               <TabsTrigger value="billing-method" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Método de Factura</TabsTrigger>
               <TabsTrigger value="invoices" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Preferencias</TabsTrigger>
@@ -2167,11 +2158,6 @@ const Settings = () => {
           </div>
 
           <div className="flex-1 w-full max-w-6xl min-w-0 mx-auto">
-            {/* Subscription Settings */}
-            <TabsContent value="subscription" className="mt-0">
-              <SubscriptionOverview />
-            </TabsContent>
-
             {/* Store Settings - Mi Tienda */}
             <TabsContent value="store" className="space-y-6 mt-0">
           {/* ── Módulos activos ── */}
