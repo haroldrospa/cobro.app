@@ -317,34 +317,39 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* Header pegado arriba con menú principal y banner de vencimiento adosado debajo */}
-      <header className="sticky top-0 w-full z-40 shadow-md bg-card border-b border-border flex flex-col">
-        <div className="flex items-center justify-between p-3">
-          <div className="flex items-center gap-3">
-            {/* Mobile view: simple page title */}
-            <span className="font-semibold text-lg px-3 md:hidden text-foreground">{getCurrentPageName()}</span>
+      <header className="sticky top-0 w-full z-40 shadow-xs bg-card/95 backdrop-blur-md border-b border-border flex flex-col">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 h-13 sm:h-16">
+          {/* Left: Page Title / Navigation */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Mobile View: Clean page title */}
+            <div className="flex items-center gap-2 md:hidden min-w-0">
+              <h1 className="font-extrabold text-base tracking-tight text-foreground truncate">
+                {getCurrentPageName()}
+              </h1>
+            </div>
 
             {/* Desktop view: Dropdown Navigation Menu */}
             <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 px-3 h-10">
-                    <Menu className="h-5 w-5" />
-                    <span className="font-semibold">{getCurrentPageName()}</span>
-                    <ChevronDown className="h-4 w-4 opacity-60" />
+                  <Button variant="ghost" className="flex items-center gap-2 px-3 h-10 hover:bg-muted/70 rounded-xl">
+                    <Menu className="h-4 w-4" />
+                    <span className="font-bold text-sm">{getCurrentPageName()}</span>
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto">
+                <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto rounded-xl shadow-xl p-1.5">
                   {navigation.map(item => {
                     const Icon = item.icon;
                     return (
-                      <DropdownMenuItem key={item.name} asChild>
+                      <DropdownMenuItem key={item.name} asChild className="rounded-lg">
                         <Link
                           to={item.href}
                           onMouseEnter={() => handlePrefetch(item.href)}
-                          className={`flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-accent text-accent-foreground' : ''
+                          className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-primary/10 text-primary font-bold' : ''
                             }`}
                         >
-                          <Icon className="h-4 w-4" />
+                          <Icon className="h-4 w-4 shrink-0" />
                           <span>{item.name}</span>
                         </Link>
                       </DropdownMenuItem>
@@ -353,9 +358,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={handleLogout}
-                    className="flex items-center gap-2 px-2 py-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-4 w-4 shrink-0" />
                     <span>Cerrar Sesión</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -363,23 +368,79 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* Right Side: Store Badge & User / Profile Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {profile && (
-              <div className="flex items-center gap-2 text-sm">
+              <>
+                {/* Store Pill */}
                 {companyName && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted/60 border border-border/60 text-foreground font-bold text-xs">
-                    <Store className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span className="max-w-[120px] sm:max-w-[200px] truncate">{companyName}</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs shadow-xs">
+                    <Store className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="max-w-[110px] sm:max-w-[180px] truncate">{companyName}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-1.5">
-                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="font-medium max-w-[80px] sm:max-w-[150px] truncate">{profile.full_name || profile.email}</span>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">
-                    ({settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : profile.user_number})
-                  </span>
-                </div>
-              </div>
+
+                {/* User Dropdown / Profile Avatar */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1.5 p-0.5 sm:px-2.5 sm:py-1 rounded-full bg-muted/60 hover:bg-muted border border-border/60 transition-all text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20">
+                      {/* Avatar Circle */}
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-black text-xs shadow-xs">
+                        {(profile.full_name || profile.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      
+                      {/* Name & RNC - Hidden on mobile to keep header clean and spacious */}
+                      <div className="hidden sm:flex flex-col text-left leading-tight pr-1">
+                        <span className="font-bold text-xs text-foreground max-w-[130px] lg:max-w-[160px] truncate">
+                          {profile.full_name || profile.email}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-medium">
+                          {settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : `Usuario #${profile.user_number || ''}`}
+                        </span>
+                      </div>
+                      <ChevronDown className="hidden sm:block h-3 w-3 text-muted-foreground opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 p-2 rounded-2xl shadow-2xl border-border/80">
+                    {/* User info card inside dropdown */}
+                    <div className="p-2.5 bg-muted/50 rounded-xl mb-1.5 border border-border/40">
+                      <div className="flex items-center gap-2.5 mb-1">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs shrink-0">
+                          {(profile.full_name || profile.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-foreground truncate">{profile.full_name || 'Usuario'}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{profile.email}</p>
+                        </div>
+                      </div>
+                      {(settings?.rnc || profile.rnc) && (
+                        <div className="mt-1.5 pt-1.5 border-t border-border/30 flex items-center justify-between text-[10px]">
+                          <span className="text-muted-foreground">RNC / Cédula:</span>
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{settings?.rnc || profile.rnc}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <DropdownMenuItem asChild className="rounded-xl">
+                      <Link to="/subscription" className="cursor-pointer text-xs font-semibold py-2">
+                        <User className="h-4 w-4 mr-2 text-primary" /> Mi Perfil y Plan
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="rounded-xl">
+                      <Link to="/settings" className="cursor-pointer text-xs font-semibold py-2">
+                        <Settings className="h-4 w-4 mr-2 text-primary" /> Configuración
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem
+                      onSelect={handleLogout}
+                      className="cursor-pointer text-xs font-bold py-2 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" /> Cerrar Sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             )}
             <PlanBadge />
             <div className="text-xs text-muted-foreground hidden lg:block">Desarrollado por Harold Rosado</div>
