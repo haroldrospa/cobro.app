@@ -2072,55 +2072,44 @@ const Settings = () => {
             <TabsContent value="store" className="space-y-6 mt-0">
           {/* ── Módulos activos ── */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <LayoutGrid className="h-5 w-5 text-primary" />
                 Módulos del Sistema
               </CardTitle>
-              <CardDescription>
-                Activa o desactiva páginas del menú de navegación
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {/* Delivery toggle */}
-              <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+              <div className="flex items-center justify-between p-3.5 rounded-xl border bg-card">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                    <Bike className="h-5 w-5 text-blue-400" />
+                  <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Bike className="h-4 w-4 text-blue-400" />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Página de Delivery</p>
-                    <p className="text-xs text-muted-foreground">Muestra la página de gestión de pedidos delivery en el menú</p>
-                  </div>
+                  <p className="font-medium text-sm">Delivery</p>
                 </div>
                 <Switch
                   checked={storeSettings?.use_delivery !== false}
                   onCheckedChange={async (checked) => {
                     await updateStoreSettings({ use_delivery: checked } as any);
-                    toast({ title: checked ? '✅ Delivery activado' : '🚫 Delivery desactivado', description: checked ? 'La página de Delivery aparece en el menú' : 'La página de Delivery fue ocultada del menú' });
+                    toast({ title: checked ? '✅ Delivery activado' : '🚫 Delivery desactivado' });
                   }}
                 />
               </div>
 
               {/* Kitchen toggle — functional, only shown for restaurant type */}
               {shopType === 'restaurant' && (
-                <div className={`flex items-center justify-between p-4 rounded-xl border bg-muted/30 transition-opacity ${storeSettings?.use_kitchen === false ? 'opacity-50' : ''}`}>
+                <div className={`flex items-center justify-between p-3.5 rounded-xl border bg-card transition-opacity ${storeSettings?.use_kitchen === false ? 'opacity-50' : ''}`}>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                      <ChefHat className="h-5 w-5 text-orange-400" />
+                    <div className="h-9 w-9 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                      <ChefHat className="h-4 w-4 text-orange-400" />
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">Pantalla de Cocina</p>
-                      <p className="text-xs text-muted-foreground">
-                        Activa la pantalla de cocina y el flujo de pedidos a cocina
-                      </p>
-                    </div>
+                    <p className="font-medium text-sm">Pantalla de Cocina (KDS)</p>
                   </div>
                   <Switch
                     checked={storeSettings?.use_kitchen !== false}
                     onCheckedChange={async (checked) => {
                       await updateStoreSettings({ use_kitchen: checked } as any);
-                      toast({ title: checked ? '✅ Cocina activada' : '🚫 Cocina desactivada', description: checked ? 'La Pantalla de Cocina aparece en el menú' : 'La Pantalla de Cocina fue ocultada del menú' });
+                      toast({ title: checked ? '✅ Cocina activada' : '🚫 Cocina desactivada' });
                     }}
                   />
                 </div>
@@ -2168,15 +2157,12 @@ const Settings = () => {
         <TabsContent value="company" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Building2 className="mr-2 h-5 w-5" />
+              <CardTitle className="flex items-center text-lg">
+                <Building2 className="mr-2 h-5 w-5 text-primary" />
                 Información de la Empresa
               </CardTitle>
-              <CardDescription>
-                Configura los datos de tu empresa que aparecerán en las facturas
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="company-name">Nombre de la Empresa</Label>
@@ -2191,7 +2177,7 @@ const Settings = () => {
                   <div className="relative flex items-center">
                     <Input
                       id="company-rnc"
-                      className="bg-zinc-900 border-zinc-800 text-white rounded-xl h-11 pr-12 w-full"
+                      className="pr-10"
                       value={companyInfo.rnc}
                       onChange={(e) => setCompanyInfo({ ...companyInfo, rnc: e.target.value })}
                     />
@@ -2199,7 +2185,7 @@ const Settings = () => {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 w-9 h-9 text-zinc-400 hover:text-white"
+                      className="absolute right-1 w-8 h-8 text-muted-foreground hover:text-foreground"
                       onClick={handleLookupCompanyRnc}
                       disabled={isLookingUpCompanyRnc || !companyInfo.rnc}
                       title="Buscar en DGII"
@@ -2225,7 +2211,7 @@ const Settings = () => {
                     onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="company-website">Sitio Web</Label>
                   <Input
                     id="company-website"
@@ -2234,33 +2220,33 @@ const Settings = () => {
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="company-address">Dirección</Label>
                 <Textarea
                   id="company-address"
                   value={companyInfo.address}
                   onChange={(e) => setCompanyInfo({ ...companyInfo, address: e.target.value })}
-                  rows={3}
+                  rows={2}
                 />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="company-description">Descripción de la Tienda (Acerca de nosotros)</Label>
                 <Textarea
                   id="company-description"
                   value={companyInfo.metaDescription}
                   onChange={(e) => setCompanyInfo({ ...companyInfo, metaDescription: e.target.value })}
-                  rows={3}
+                  rows={2}
                   placeholder="Ofrecemos productos de la más alta calidad..."
                 />
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center">
-                  Redes Sociales
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="social-facebook-desk">Facebook</Label>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Redes Sociales</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="social-facebook-desk" className="text-xs text-muted-foreground">Facebook</Label>
                     <Input
                       id="social-facebook-desk"
                       value={companyInfo.socialFacebook}
@@ -2268,8 +2254,8 @@ const Settings = () => {
                       placeholder="https://facebook.com/..."
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="social-instagram-desk">Instagram</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="social-instagram-desk" className="text-xs text-muted-foreground">Instagram</Label>
                     <Input
                       id="social-instagram-desk"
                       value={companyInfo.socialInstagram}
@@ -2277,8 +2263,8 @@ const Settings = () => {
                       placeholder="https://instagram.com/..."
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="social-twitter-desk">Twitter / X</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="social-twitter-desk" className="text-xs text-muted-foreground">Twitter / X</Label>
                     <Input
                       id="social-twitter-desk"
                       value={companyInfo.socialTwitter}
@@ -2288,56 +2274,20 @@ const Settings = () => {
                   </div>
                 </div>
               </div>
-              <div className="space-y-4">
+
+              <div className="space-y-3">
                 <Label>Logo de la Empresa</Label>
 
                 {logoPreview ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-center w-full max-w-xs p-4 border-2 border-dashed border-border rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-4 p-3 rounded-xl border bg-muted/20">
+                    <div className="flex items-center justify-center w-20 h-20 border rounded-lg bg-card p-2 shrink-0">
                       <img
                         src={logoPreview}
                         alt="Logo preview"
                         className="max-w-full max-h-full object-contain"
                       />
                     </div>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="logo-size">Tamaño en Factura (px)</Label>
-                          <Input
-                            id="logo-size"
-                            type="number"
-                            value={companyInfo.logoSize || 120}
-                            onChange={(e) => setCompanyInfo({ ...companyInfo, logoSize: parseInt(e.target.value) || 120 })}
-                            min="50"
-                            max="500"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="logo-cart-size">Tamaño en Carrito (px)</Label>
-                          <Input
-                            id="logo-cart-size"
-                            type="number"
-                            value={companyInfo.logoCartSize || 200}
-                            onChange={(e) => setCompanyInfo({ ...companyInfo, logoCartSize: parseInt(e.target.value) || 200 })}
-                            min="100"
-                            max="400"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="logo-summary-size">Tamaño en Resumen (px)</Label>
-                        <Input
-                          id="logo-summary-size"
-                          type="number"
-                          value={companyInfo.logoSummarySize || 64}
-                          onChange={(e) => setCompanyInfo({ ...companyInfo, logoSummarySize: parseInt(e.target.value) || 64 })}
-                          min="30"
-                          max="150"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         variant="outline"
@@ -2348,23 +2298,22 @@ const Settings = () => {
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
+                        className="text-destructive hover:bg-destructive/10"
                         onClick={handleRemoveLogo}
                       >
-                        Remover Logo
+                        Remover
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div
-                    className="flex flex-col items-center justify-center w-full max-w-xs h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="flex flex-col items-center justify-center w-full max-w-xs h-24 border-2 border-dashed border-border rounded-xl cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => document.getElementById('company-logo')?.click()}
                   >
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      Haz clic para subir el logo
-                    </p>
+                    <Upload className="h-5 w-5 text-muted-foreground mb-1" />
+                    <p className="text-xs text-muted-foreground">Subir Logo</p>
                   </div>
                 )}
 
@@ -2375,19 +2324,19 @@ const Settings = () => {
                   onChange={handleLogoUpload}
                   className="hidden"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Formatos soportados: JPG, PNG. Tamaño máximo: 2MB. Recomendado: 500px ancho (PNG).
-                </p>
                 {logoUploadError && (
-                  <p className="text-sm text-red-500 font-medium mt-1">
-                    Error: {logoUploadError}
+                  <p className="text-xs text-destructive font-medium mt-1">
+                    {logoUploadError}
                   </p>
                 )}
               </div>
-              <Button onClick={() => handleSaveSettings('empresa')} disabled={loading || isUpdating || isUploadingLogo}>
-                <Save className="mr-2 h-4 w-4" />
-                Guardar Información de la Empresa
-              </Button>
+
+              <div className="pt-2">
+                <Button onClick={() => handleSaveSettings('empresa')} disabled={loading || isUpdating || isUploadingLogo} className="gap-2">
+                  <Save className="h-4 w-4" />
+                  Guardar Información
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -2396,110 +2345,85 @@ const Settings = () => {
         <TabsContent value="billing-method" className="space-y-6 mt-0">
           <BillingMethodSection onModeChange={setLocalBillingMode} />
 
-            <Card>
-              <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Hash className="mr-2 h-5 w-5" />
-                    Secuencias de Facturas
-                  </CardTitle>
-                  <CardDescription>
-                    Configura y administra las secuencias numéricas para cada tipo de factura
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {sequencesLoading ? (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">Cargando secuencias...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {invoiceSequences
-                        ?.filter(seq => ['B01', 'B02', 'B03', 'B04', 'B14', 'B15', 'B16'].includes(seq.invoice_type_id))
-                        .map((sequence) => {
-                          const invoiceType = invoiceTypes?.find(type => type.id === sequence.invoice_type_id);
-                          const minNumber = maxInvoiceNumbers?.[sequence.invoice_type_id] || 0;
-                          
-                          const isElectronic = localBillingMode === 'e-ncf';
-                          let displayId = sequence.invoice_type_id;
-                          let displayName = invoiceType?.name;
-                          let displayDescription = invoiceType?.description;
-                          
-                          if (isElectronic) {
-                             switch (sequence.invoice_type_id) {
-                                case 'B01':
-                                   displayId = 'E31';
-                                   displayName = 'Crédito Fiscal Electrónico';
-                                   displayDescription = 'Factura con derecho a crédito fiscal (e-CF)';
-                                   break;
-                                case 'B02':
-                                   displayId = 'E32';
-                                   displayName = 'Consumidor Final Electrónico';
-                                   displayDescription = 'Factura para consumidor final (e-CF)';
-                                   break;
-                                case 'B03':
-                                   displayId = 'E33';
-                                   displayName = 'Nota de Débito Electrónica';
-                                   displayDescription = 'Nota de débito electrónica (e-CF)';
-                                   break;
-                                case 'B04':
-                                   displayId = 'E34';
-                                   displayName = 'Nota de Crédito Electrónica';
-                                   displayDescription = 'Nota de crédito electrónica (e-CF)';
-                                   break;
-                                case 'B14':
-                                   displayId = 'E44';
-                                   displayName = 'Régimen Especial Electrónico';
-                                   displayDescription = 'Comprobante para regímenes especiales (e-CF)';
-                                   break;
-                                case 'B15':
-                                   displayId = 'E45';
-                                   displayName = 'Gubernamental Electrónico';
-                                   displayDescription = 'Comprobante gubernamental (e-CF)';
-                                   break;
-                                case 'B16':
-                                   displayId = 'E46';
-                                   displayName = 'Exportación Electrónica';
-                                   displayDescription = 'Comprobante de exportación (e-CF)';
-                                   break;
-                             }
-                          }
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg">
+                <Hash className="mr-2 h-5 w-5 text-primary" />
+                Secuencias de Facturas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {sequencesLoading ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Cargando secuencias...
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {invoiceSequences
+                    ?.filter(seq => ['B01', 'B02', 'B03', 'B04', 'B14', 'B15', 'B16'].includes(seq.invoice_type_id))
+                    .map((sequence) => {
+                      const invoiceType = invoiceTypes?.find(type => type.id === sequence.invoice_type_id);
+                      
+                      const isElectronic = localBillingMode === 'e-ncf';
+                      let displayId = sequence.invoice_type_id;
+                      let displayName = invoiceType?.name;
+                      
+                      if (isElectronic) {
+                         switch (sequence.invoice_type_id) {
+                            case 'B01':
+                               displayId = 'E31';
+                               displayName = 'Crédito Fiscal Electrónico';
+                               break;
+                            case 'B02':
+                               displayId = 'E32';
+                               displayName = 'Consumidor Final Electrónico';
+                               break;
+                            case 'B03':
+                               displayId = 'E33';
+                               displayName = 'Nota de Débito Electrónica';
+                               break;
+                            case 'B04':
+                               displayId = 'E34';
+                               displayName = 'Nota de Crédito Electrónica';
+                               break;
+                            case 'B14':
+                               displayId = 'E44';
+                               displayName = 'Régimen Especial Electrónico';
+                               break;
+                            case 'B15':
+                               displayId = 'E45';
+                               displayName = 'Gubernamental Electrónico';
+                               break;
+                            case 'B16':
+                               displayId = 'E46';
+                               displayName = 'Exportación Electrónica';
+                               break;
+                         }
+                      }
 
-                          return (
-                            <div key={sequence.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-lg">{displayId}</span>
-                                  <span className="text-muted-foreground">-</span>
-                                  <span className="text-sm text-muted-foreground">{displayName}</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  {displayDescription}
-                                </p>
-                                {minNumber > 0 && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Última factura usada: {minNumber}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Próximo Número</Label>
-                                  <InvoiceSequenceInput
-                                    id={sequence.id}
-                                    invoiceTypeId={sequence.invoice_type_id}
-                                    currentNumber={sequence.current_number}
-                                    onUpdate={handleUpdateSequence}
-                                    isElectronic={isElectronic}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                      return (
+                        <div key={sequence.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border rounded-xl bg-card">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold font-mono text-sm text-primary">{displayId}</span>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-sm font-medium">{displayName}</span>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <InvoiceSequenceInput
+                              id={sequence.id}
+                              invoiceTypeId={sequence.invoice_type_id}
+                              currentNumber={sequence.current_number}
+                              onUpdate={handleUpdateSequence}
+                              isElectronic={isElectronic}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Invoice Settings */}
@@ -3523,124 +3447,120 @@ const Settings = () => {
         {/* System Settings */}
         <TabsContent value="system" className="space-y-6 mt-0">
           <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <SettingsIcon className="mr-2 h-5 w-5" />
-                  Configuración General
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Idioma</Label>
-                    <Select value={systemSettings.language} onValueChange={(value) => setSystemSettings({ ...systemSettings, language: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="es">Español</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Zona Horaria</Label>
-                    <Select value={systemSettings.timezone} onValueChange={(value) => setSystemSettings({ ...systemSettings, timezone: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="America/Santo_Domingo">Santo Domingo</SelectItem>
-                        <SelectItem value="America/New_York">New York</SelectItem>
-                        <SelectItem value="America/Los_Angeles">Los Angeles</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg">
+                <SettingsIcon className="mr-2 h-5 w-5 text-primary" />
+                Configuración General
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Idioma</Label>
+                  <Select value={systemSettings.language} onValueChange={(value) => setSystemSettings({ ...systemSettings, language: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="es">Español</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Zona Horaria</Label>
+                  <Select value={systemSettings.timezone} onValueChange={(value) => setSystemSettings({ ...systemSettings, timezone: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="America/Santo_Domingo">Santo Domingo</SelectItem>
+                      <SelectItem value="America/New_York">New York</SelectItem>
+                      <SelectItem value="America/Los_Angeles">Los Angeles</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-                <Button onClick={() => handleSaveSettings('sistema')} disabled={loading || isUpdatingStoreSettings}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Guardar Configuración del Sistema
+              <div className="pt-2">
+                <Button onClick={() => handleSaveSettings('sistema')} disabled={loading || isUpdatingStoreSettings} className="gap-2">
+                  <Save className="h-4 w-4" />
+                  Guardar Configuración
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Palette className="mr-2 h-5 w-5" />
-                  Apariencia
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Tema</Label>
-                  <Select
-                    value={theme === 'system' ? 'auto' : theme}
-                    onValueChange={(value) => {
-                      const newTheme = value === 'auto' ? 'system' : value as "light" | "dark";
-                      setTheme(newTheme);
-                      setSystemSettings({ ...systemSettings, theme: value });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dark">Oscuro</SelectItem>
-                      <SelectItem value="light">Claro</SelectItem>
-                      <SelectItem value="auto">Automático</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg">
+                <Palette className="mr-2 h-5 w-5 text-primary" />
+                Apariencia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <Label>Tema</Label>
+                <Select
+                  value={theme === 'system' ? 'auto' : theme}
+                  onValueChange={(value) => {
+                    const newTheme = value === 'auto' ? 'system' : value as "light" | "dark";
+                    setTheme(newTheme);
+                    setSystemSettings({ ...systemSettings, theme: value });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dark">Oscuro</SelectItem>
+                    <SelectItem value="light">Claro</SelectItem>
+                    <SelectItem value="auto">Automático</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-4 pt-2 pb-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Zoom / Tamaño del Sistema</Label>
-                    <span className="text-sm text-muted-foreground">{Math.round(scale * 100)}%</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs">A</span>
-                    <input
-                      type="range"
-                      min="0.7"
-                      max="1.3"
-                      step="0.05"
-                      value={scale}
-                      onChange={(e) => setScale(parseFloat(e.target.value))}
-                      className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
-                    />
-                    <span className="text-lg font-bold">A</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Ajusta el tamaño general de la interfaz para mayor comodidad.
-                  </p>
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label>Zoom / Tamaño del Sistema</Label>
+                  <span className="text-xs font-mono text-muted-foreground">{Math.round(scale * 100)}%</span>
                 </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs">A</span>
+                  <input
+                    type="range"
+                    min="0.7"
+                    max="1.3"
+                    step="0.05"
+                    value={scale}
+                    onChange={(e) => setScale(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
+                  />
+                  <span className="text-lg font-bold">A</span>
+                </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Columnas de Productos (Tablet/Móvil)</Label>
-                  <Select
-                    value={systemSettings.posLayoutGridCols}
-                    onValueChange={(value) => setSystemSettings({ ...systemSettings, posLayoutGridCols: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 Columna (Lista)</SelectItem>
-                      <SelectItem value="2">2 Columnas (Estándar)</SelectItem>
-                      <SelectItem value="3">3 Columnas (Tablet)</SelectItem>
-                      <SelectItem value="4">4 Columnas (Tablet Grande)</SelectItem>
-                      <SelectItem value="5">5 Columnas</SelectItem>
-                      <SelectItem value="6">6 Columnas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">
-                    Ajusta el tamaño de la cuadrícula de productos en dispositivos móviles y tablets.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              <div className="space-y-2">
+                <Label>Columnas de Productos (Tablet/Móvil)</Label>
+                <Select
+                  value={systemSettings.posLayoutGridCols}
+                  onValueChange={(value) => setSystemSettings({ ...systemSettings, posLayoutGridCols: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Columna (Lista)</SelectItem>
+                    <SelectItem value="2">2 Columnas (Estándar)</SelectItem>
+                    <SelectItem value="3">3 Columnas (Tablet)</SelectItem>
+                    <SelectItem value="4">4 Columnas (Tablet Grande)</SelectItem>
+                    <SelectItem value="5">5 Columnas</SelectItem>
+                    <SelectItem value="6">6 Columnas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Advanced Settings */}

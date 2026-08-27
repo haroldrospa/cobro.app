@@ -295,17 +295,13 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
           </div>
 
           {/* Tipo de Negocio / Rubro Comercial Section */}
-          <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/20 rounded-[2rem] space-y-6">
+          <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/20 rounded-[2rem] space-y-4">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">
               <Building2 className="h-4 w-4" />
               Tipo de Negocio
             </div>
-            
-            <p className="text-xs text-zinc-400 font-medium">
-              Selecciona el modelo principal de tu establecimiento para ajustar los módulos, la pantalla de cocina KDS y las opciones de adicionales del sistema.
-            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {BUSINESS_TYPES.map((bt) => {
                 const isSelected = (
                   (bt.id === 'restaurant' && (shopType === 'restaurant' || shopType === 'default' || !shopType)) ||
@@ -324,45 +320,28 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
                       }
                       toast({
                         title: `Tipo de negocio actualizado`,
-                        description: `Tu establecimiento ahora está configurado como ${bt.label}.`,
+                        description: `${bt.label}`,
                       });
                     }}
                     className={cn(
-                      "flex flex-col p-5 rounded-2xl border transition-all duration-300 text-left relative overflow-hidden group",
+                      "flex items-center justify-between p-4 rounded-xl border transition-all text-left",
                       isSelected 
-                        ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]" 
+                        ? "bg-emerald-500/10 border-emerald-500 shadow-sm" 
                         : "bg-zinc-950/40 border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/20"
                     )}
                   >
-                    <div className="flex items-center justify-between w-full mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{bt.emoji}</span>
-                        <h4 className={cn(
-                          "font-bold text-sm uppercase tracking-wider",
-                          isSelected ? "text-emerald-500" : "text-zinc-100"
-                        )}>
-                          {bt.label}
-                        </h4>
-                      </div>
-                      {isSelected && (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500 animate-in zoom-in duration-300" />
-                      )}
-                    </div>
-
-                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed mb-4 flex-1">
-                      {bt.description}
-                    </p>
-
-                    <div className="flex items-center justify-between w-full pt-3 border-t border-zinc-800/40">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">{bt.emoji}</span>
                       <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                        isSelected 
-                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                          : "bg-zinc-900 text-zinc-500 border-zinc-800"
+                        "font-bold text-sm",
+                        isSelected ? "text-emerald-400" : "text-zinc-200"
                       )}>
-                        {isSelected ? 'Activo' : 'Seleccionar'}
+                        {bt.label}
                       </span>
                     </div>
+                    {isSelected && (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    )}
                   </button>
                 );
               })}
@@ -370,17 +349,13 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
           </div>
 
           {/* Shop Theme Grid Section */}
-          <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/20 rounded-[2rem] space-y-6">
+          <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/20 rounded-[2rem] space-y-4">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">
               <Palette className="h-4 w-4" />
-              Estilo y Tema de tu Tienda Online
+              Tema de la Tienda Online
             </div>
-            
-            <p className="text-xs text-zinc-400 font-medium">
-              Personaliza el diseño visual y la paleta de colores de tu catálogo web para tus clientes.
-            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {THEME_OPTIONS.map((theme) => {
                 const isSelected = shopType === theme.id || (theme.id === 'default' && !['restaurant', 'fashion', 'supermarket', 'technology'].includes(shopType));
                 return (
@@ -392,46 +367,35 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
                       handleSaveSettings('tienda');
                     }}
                     className={cn(
-                      "flex flex-col p-5 rounded-2xl border transition-all duration-300 text-left relative overflow-hidden group",
+                      "flex items-center justify-between p-3.5 rounded-xl border transition-all text-left",
                       isSelected 
-                        ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]" 
+                        ? "bg-emerald-500/10 border-emerald-500 shadow-sm" 
                         : "bg-zinc-950/40 border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/20"
                     )}
                   >
-                    {/* Header: Emoji + Title */}
-                    <div className="flex items-center justify-between w-full mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{theme.emoji}</span>
-                        <h4 className={cn(
-                          "font-bold text-xs uppercase tracking-wider",
-                          isSelected ? "text-emerald-500" : "text-zinc-100"
-                        )}>
-                          {theme.label}
-                        </h4>
-                      </div>
-                      {isSelected && (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500 animate-in zoom-in duration-300" />
-                      )}
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">{theme.emoji}</span>
+                      <span className={cn(
+                        "font-semibold text-xs",
+                        isSelected ? "text-emerald-400" : "text-zinc-200"
+                      )}>
+                        {theme.label}
+                      </span>
                     </div>
 
-                    {/* Description */}
-                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed mb-4 flex-1">
-                      {theme.description}
-                    </p>
-
-                    {/* Color Swatches */}
-                    <div className="flex items-center justify-between w-full pt-3 border-t border-zinc-800/40">
-                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Colores</span>
+                    <div className="flex items-center gap-2">
                       <div className="flex gap-1">
                         {theme.colors.map((color, i) => (
                           <div 
                             key={i} 
-                            className="w-3.5 h-3.5 rounded-full border border-zinc-850 shadow-sm" 
+                            className="w-2.5 h-2.5 rounded-full border border-zinc-800" 
                             style={{ backgroundColor: color }}
-                            title={i === 0 ? 'Primario' : i === 1 ? 'Secundario' : 'Fondo'}
                           />
                         ))}
                       </div>
+                      {isSelected && (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                      )}
                     </div>
                   </button>
                 );
@@ -548,14 +512,11 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Store className="mr-2 h-5 w-5" />
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center text-lg">
+          <Store className="mr-2 h-5 w-5 text-primary" />
           Mi Tienda Online
         </CardTitle>
-        <CardDescription>
-          Comparte tu tienda con tus clientes para que puedan hacer pedidos
-        </CardDescription>
       </CardHeader>
       <CardContent>
         {content}

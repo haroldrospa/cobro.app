@@ -84,59 +84,48 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   }
 
   return (
-    <Card className="mb-6 border-blue-500/20 shadow-md">
-      <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b">
-        <CardTitle className="flex items-center text-blue-700 dark:text-blue-400">
-          <Server className="mr-2 h-5 w-5" />
-          Método de Facturación (DGII)
+    <Card className="mb-6">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center text-lg">
+          <Server className="mr-2 h-5 w-5 text-primary" />
+          Método de Facturación
         </CardTitle>
-        <CardDescription>
-          Elige cómo deseas reportar tus facturas a la DGII
-        </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6 space-y-6">
+      <CardContent className="space-y-6">
         <RadioGroup 
           value={billingMode} 
           onValueChange={(val) => setBillingMode(val as 'ncf' | 'e-ncf')}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-3"
         >
           <div 
-            className={`relative flex cursor-pointer rounded-lg border bg-white dark:bg-gray-950 p-4 shadow-sm focus:outline-none ${billingMode === 'ncf' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 dark:border-gray-800'}`}
+            className={`relative flex items-center cursor-pointer rounded-xl border p-4 transition-all ${billingMode === 'ncf' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:bg-muted/40'}`}
             onClick={() => setBillingMode('ncf')}
           >
             <div className="flex w-full items-center justify-between">
-              <div className="flex items-center">
-                <div className="text-sm">
-                  <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">
-                    <RadioGroupItem value="ncf" id="ncf" className="sr-only" />
-                    <FileText className="h-5 w-5 text-gray-500" />
-                    Facturación Fiscal (NCF)
-                  </div>
-                  <div className="text-gray-500 dark:text-gray-400">
-                    <p className="mt-1">Gestión tradicional con talonarios asignados por la DGII.</p>
-                  </div>
-                </div>
+              <div className="flex items-center gap-3">
+                <RadioGroupItem value="ncf" id="ncf" className="sr-only" />
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <span className="font-medium text-sm">Facturación Fiscal (NCF)</span>
               </div>
+              {billingMode === 'ncf' && (
+                <div className="h-2 w-2 rounded-full bg-primary" />
+              )}
             </div>
           </div>
 
           <div 
-            className={`relative flex cursor-pointer rounded-lg border bg-white dark:bg-gray-950 p-4 shadow-sm focus:outline-none ${billingMode === 'e-ncf' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 dark:border-gray-800'}`}
+            className={`relative flex items-center cursor-pointer rounded-xl border p-4 transition-all ${billingMode === 'e-ncf' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:bg-muted/40'}`}
             onClick={() => setBillingMode('e-ncf')}
           >
             <div className="flex w-full items-center justify-between">
-              <div className="flex items-center">
-                <div className="text-sm">
-                  <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">
-                    <RadioGroupItem value="e-ncf" id="e-ncf" className="sr-only" />
-                    <Globe className="h-5 w-5 text-blue-500" />
-                    Facturación Electrónica (e-CF)
-                  </div>
-                  <div className="text-gray-500 dark:text-gray-400">
-                    <p className="mt-1">Integración automatizada con Alanube para comprobantes electrónicos.</p>
-                  </div>
-                </div>
+              <div className="flex items-center gap-3">
+                <RadioGroupItem value="e-ncf" id="e-ncf" className="sr-only" />
+                <Globe className="h-5 w-5 text-primary" />
+                <span className="font-medium text-sm">Facturación Electrónica (e-CF)</span>
               </div>
+              {billingMode === 'e-ncf' && (
+                <div className="h-2 w-2 rounded-full bg-primary" />
+              )}
             </div>
           </div>
         </RadioGroup>
