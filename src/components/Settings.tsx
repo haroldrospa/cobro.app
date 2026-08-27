@@ -1547,40 +1547,6 @@ const Settings = () => {
     </div>
   );
 
-  const mobileProductsSectionContent = (
-    <div className="space-y-6">
-      <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-900 rounded-[2rem] space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold text-zinc-100 text-sm">Alertas de Stock Bajo</p>
-            <p className="text-xs text-zinc-500">Notificaciones cuando el stock esté bajo</p>
-          </div>
-          <Switch
-            checked={systemSettings.lowStockAlert}
-            onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, lowStockAlert: checked })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="stock-threshold" className="text-xs font-bold uppercase tracking-widest text-zinc-500 pl-1">Umbral de Stock Bajo</Label>
-          <Input
-            id="stock-threshold"
-            type="number"
-            className="bg-zinc-950/50 border-zinc-800 rounded-xl h-11"
-            value={systemSettings.lowStockThreshold}
-            onChange={(e) => setSystemSettings({ ...systemSettings, lowStockThreshold: e.target.value })}
-          />
-        </div>
-      </div>
-      <Button 
-        onClick={() => handleSaveSettings('productos')} 
-        disabled={loading || isUpdatingStoreSettings} 
-        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl h-12 font-bold shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all"
-      >
-        <Save className="mr-2 h-4 w-4" />
-        Guardar Cambios
-      </Button>
-    </div>
-  );
 
   const mobilePrintSectionContent = (
     <div className="space-y-6 pb-20">
@@ -2090,7 +2056,6 @@ const Settings = () => {
             company: mobileCompanySectionContent,
             invoices: mobileInvoicesSectionContent,
             payments: mobilePaymentsSectionContent,
-            products: mobileProductsSectionContent,
             print: mobilePrintSectionContent,
             notifications: mobileNotificationsSectionContent,
             cocina: mobileKitchenSectionContent,
@@ -2139,7 +2104,6 @@ const Settings = () => {
               <TabsTrigger value="billing-method" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Método de Factura</TabsTrigger>
               <TabsTrigger value="invoices" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Preferencias</TabsTrigger>
               <TabsTrigger value="payments" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Métodos de Pago</TabsTrigger>
-              <TabsTrigger value="products" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Productos</TabsTrigger>
               
               <TabsTrigger value="print" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Impresión</TabsTrigger>
               <TabsTrigger value="notifications" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Comunicaciones</TabsTrigger>
@@ -3112,164 +3076,6 @@ const Settings = () => {
               <Button onClick={() => handleSaveSettings('pagos')} disabled={loading || isUpdatingStoreSettings}>
                 <Save className="mr-2 h-4 w-4" />
                 Guardar Métodos de Pago
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Product Settings */}
-        <TabsContent value="products" className="space-y-6 mt-0">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Package className="mr-2 h-5 w-5" />
-                Configuración de Productos
-              </CardTitle>
-              <CardDescription>
-                Gestiona categorías y configuración de inventario
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Alertas de Stock Bajo</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Recibir notificaciones cuando el stock esté bajo
-                  </p>
-                </div>
-                <Switch
-                  checked={systemSettings.lowStockAlert}
-                  onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, lowStockAlert: checked })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="stock-threshold">Umbral de Stock Bajo</Label>
-                <Input
-                  id="stock-threshold"
-                  type="number"
-                  value={systemSettings.lowStockThreshold}
-                  onChange={(e) => setSystemSettings({ ...systemSettings, lowStockThreshold: e.target.value })}
-                  className="w-32"
-                />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h4 className="font-medium">Categorías de Productos</h4>
-                <div className="space-y-2">
-                  {categoriesLoading ? (
-                    <p className="text-sm text-muted-foreground">Cargando categorías...</p>
-                  ) : categories && categories.length > 0 ? (
-                    categories.map((category) => (
-                      <div key={category.id} className="flex items-center justify-between p-3 border rounded">
-                        <span>{category.name}</span>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setCategoryForm({ id: category.id, name: category.name, description: category.description || '' });
-                              setShowCategoryDialog(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={async () => {
-                              if (confirm('¿Estás seguro de eliminar esta categoría?')) {
-                                try {
-                                  await deleteCategoryMutation.mutateAsync(category.id);
-                                  toast({ title: "Categoría eliminada" });
-                                } catch (e) {
-                                  toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
-                                }
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No hay categorías configuradas.</p>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCategoryForm({ id: '', name: '', description: '' });
-                    setShowCategoryDialog(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Añadir Nueva Categoría
-                </Button>
-              </div>
-
-              {/* Category Management Dialog */}
-              <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{categoryForm.id ? 'Editar Categoría' : 'Nueva Categoría'}</DialogTitle>
-                    <DialogDescription>
-                      Ingresa los detalles de la categoría para tus productos.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="cat-name">Nombre</Label>
-                      <Input
-                        id="cat-name"
-                        value={categoryForm.name}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                        placeholder="Ej: Bebidas, Snacks..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cat-desc">Descripción (Opcional)</Label>
-                      <Input
-                        id="cat-desc"
-                        value={categoryForm.description}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                        placeholder="Breve descripción..."
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>Cancelar</Button>
-                    <Button
-                      onClick={async () => {
-                        if (!categoryForm.name) return;
-                        try {
-                          if (categoryForm.id) {
-                            await updateCategoryMutation.mutateAsync({ id: categoryForm.id, name: categoryForm.name, description: categoryForm.description });
-                            toast({ title: "Categoría actualizada" });
-                          } else {
-                            await createCategoryMutation.mutateAsync({ name: categoryForm.name, description: categoryForm.description });
-                            toast({ title: "Categoría creada" });
-                          }
-                          setShowCategoryDialog(false);
-                        } catch (e) {
-                          toast({ title: "Error", description: "Ocurrió un problema", variant: "destructive" });
-                        }
-                      }}
-                    >
-                      {categoryForm.id ? 'Actualizar' : 'Crear'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              <Button onClick={() => handleSaveSettings('productos')} disabled={loading || isUpdatingStoreSettings}>
-                <Save className="mr-2 h-4 w-4" />
-                Guardar Configuración de Productos
               </Button>
             </CardContent>
           </Card>

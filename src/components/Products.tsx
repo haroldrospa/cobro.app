@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { useDeleteAllProducts, Product } from '@/hooks/useProducts';
 import { cn } from "@/lib/utils";
 import { useProductsOffline, useDeleteProductOffline, useUpdateProductOffline, useCreateProductOffline } from '@/hooks/useProductsOffline';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { useToast } from '@/hooks/use-toast';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -29,6 +29,9 @@ import { PrintLabelsDialog } from '@/components/products/PrintLabelsDialog';
 import { ImportProductsDialog } from '@/components/products/ImportProductsDialog';
 import { RestaurantInventoryControl } from '@/components/products/RestaurantInventoryControl';
 import { ManageCategoriesDialog } from '@/components/product-form/ManageCategoriesDialog';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import ProductForm from './ProductForm';
 import { LimitReachedDialog } from './subscription/PlanRestrictions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,7 +53,7 @@ import {
 
 import { useInventoryMovementsOffline } from '@/hooks/useInventoryMovements';
 
-type ProductsTab = 'products' | 'inventory' | 'history';
+type ProductsTab = 'products' | 'inventory' | 'history' | 'settings';
 
 type SearchType = 'all' | 'name' | 'id' | 'barcode' | 'category';
 
@@ -134,11 +137,25 @@ const Products: FC = () => {
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   
   const { data: products = [], isLoading, isFetching } = useProductsOffline();
-  const { data: categories = [] } = useCategories();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const deleteProduct = useDeleteProductOffline();
   const updateProduct = useUpdateProductOffline();
   const createProduct = useCreateProductOffline();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
   const { data: movements = [], isLoading: isLoadingMovements } = useInventoryMovementsOffline();
+
+  // Estados de configuración de productos
+  const [lowStockAlert, setLowStockAlert] = useState<boolean>(false);
+  const [lowStockThreshold, setLowStockThreshold] = useState<string>('10');
+  const [isSavingProductSettings, setIsSavingProductSettings] = useState(false);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [categoryForm, setCategoryForm] = useState<{ id: string; name: string; description: string }>({
+    id: '',
+    name: '',
+    description: ''
+  });
 
   const filteredHistory = useMemo(() => {
     return movements.filter((mov: any) => {
@@ -171,6 +188,38 @@ const Products: FC = () => {
   const { settings: storeSettings, updateSettings } = useStoreSettings();
   const { hasReachedLimit, getRemainingCount } = usePlanFeatures();
   const recipeAvailability = useRecipeAvailability();
+
+  // Sincronizar ajustes de stock desde la base de datos
+  useEffect(() => {
+    if (storeSettings) {
+      setLowStockAlert(storeSettings.low_stock_alert ?? false);
+      setLowStockThreshold(storeSettings.low_stock_threshold != null ? String(storeSettings.low_stock_threshold) : '10');
+    }
+  }, [storeSettings?.low_stock_alert, storeSettings?.low_stock_threshold]);
+
+  const handleSaveProductSettings = async () => {
+    setIsSavingProductSettings(true);
+    try {
+      await updateSettings({
+        low_stock_alert: lowStockAlert,
+        low_stock_threshold: parseInt(lowStockThreshold, 10) || 10
+      });
+      toast({
+        title: "Configuración guardada",
+        description: "Se han actualizado las alertas y el umbral de stock bajo.",
+        className: "bg-green-50 text-green-900 border-green-200"
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error al guardar",
+        description: err.message || "No se pudo guardar la configuración.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingProductSettings(false);
+    }
+  };
 
   // AI Stock & Key Configuration states
   const [aiScanStatus, setAiScanStatus] = useState<string>('');
@@ -1323,6 +1372,11 @@ const Products: FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="rounded-2xl p-2 min-w-[200px]">
+              <DropdownMenuItem onSelect={() => setActiveTab('settings')} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <Settings2 className="mr-2 h-4 w-4" />
+                Configuración y Categorías
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleImportClick} disabled={isImporting} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
                 {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                 Importar CSV/Excel
@@ -1401,6 +1455,18 @@ const Products: FC = () => {
           >
             <History className="mr-2 h-3.5 w-3.5" />
             Historial de Cambios
+          </Button>
+          <Button
+            variant={activeTab === 'settings' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('settings')}
+            className={cn(
+              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
+              activeTab === 'settings' && "bg-background shadow-lg text-emerald-600 dark:text-emerald-400"
+            )}
+          >
+            <Settings2 className="mr-2 h-3.5 w-3.5" />
+            Configuración
           </Button>
         </div>
       </div>
@@ -2076,6 +2142,238 @@ const Products: FC = () => {
               </div>
             </Card>
           )}
+        </div>
+      )}
+
+      {/* ─── Pestaña: Configuración de Productos ─── */}
+      {activeTab === 'settings' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Card className="border border-border/50 bg-card/60 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
+            <CardHeader className="border-b border-border/40 pb-5">
+              <CardTitle className="flex items-center text-xl font-bold tracking-tight">
+                <Package className="mr-2.5 h-5 w-5 text-emerald-500" />
+                Configuración de Productos
+              </CardTitle>
+              <CardDescription>
+                Gestiona categorías y configuración de inventario
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              {/* Alertas de Stock Bajo */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/30">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold text-foreground">Alertas de Stock Bajo</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Recibir notificaciones cuando el stock esté bajo
+                  </p>
+                </div>
+                <Switch
+                  checked={lowStockAlert}
+                  onCheckedChange={setLowStockAlert}
+                />
+              </div>
+
+              {/* Umbral de Stock Bajo */}
+              <div className="space-y-2 p-4 rounded-2xl bg-muted/30 border border-border/30">
+                <Label htmlFor="stock-threshold" className="text-sm font-bold text-foreground">
+                  Umbral de Stock Bajo
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Cantidad mínima general para considerar que un producto tiene stock bajo
+                </p>
+                <Input
+                  id="stock-threshold"
+                  type="number"
+                  min="0"
+                  value={lowStockThreshold}
+                  onChange={(e) => setLowStockThreshold(e.target.value)}
+                  className="w-36 h-11 rounded-xl font-bold text-base"
+                />
+              </div>
+
+              <Separator className="my-2" />
+
+              {/* Categorías de Productos */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-base text-foreground">Categorías de Productos</h4>
+                    <p className="text-xs text-muted-foreground">Organiza tus productos por departamentos o tipos</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl font-bold text-xs"
+                    onClick={() => {
+                      setCategoryForm({ id: '', name: '', description: '' });
+                      setShowCategoryDialog(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Añadir Nueva Categoría
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {categoriesLoading ? (
+                    <div className="p-8 text-center text-sm text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                      Cargando categorías...
+                    </div>
+                  ) : categories && categories.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      {categories.map((category) => {
+                        const productCount = products.filter(p => p.category_id === category.id).length;
+                        return (
+                          <div
+                            key={category.id}
+                            className="flex items-center justify-between p-3.5 rounded-2xl bg-card border border-border/50 hover:border-border transition-all shadow-xs"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+                                <Tag className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-bold text-sm text-foreground block truncate">{category.name}</span>
+                                <span className="text-[11px] text-muted-foreground font-medium">
+                                  {productCount} producto{productCount !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9 px-3 rounded-xl text-xs font-semibold"
+                                onClick={() => {
+                                  setCategoryForm({ id: category.id, name: category.name, description: category.description || '' });
+                                  setShowCategoryDialog(true);
+                                }}
+                              >
+                                <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                Editar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  if (confirm(`¿Estás seguro de eliminar la categoría "${category.name}"? Los productos asignados quedarán como 'Sin categoría'.`)) {
+                                    try {
+                                      await deleteCategory.mutateAsync(category.id);
+                                      toast({ title: "Categoría eliminada", description: category.name });
+                                    } catch (e: any) {
+                                      toast({ title: "Error", description: e.message || "No se pudo eliminar", variant: "destructive" });
+                                    }
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground italic">
+                      No hay categorías configuradas aún.
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full rounded-2xl h-11 border-dashed font-bold text-xs"
+                  onClick={() => {
+                    setCategoryForm({ id: '', name: '', description: '' });
+                    setShowCategoryDialog(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Añadir Nueva Categoría
+                </Button>
+              </div>
+
+              {/* Botón Guardar */}
+              <div className="pt-4">
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 px-6 rounded-2xl shadow-lg shadow-emerald-600/20 gap-2 w-full sm:w-auto"
+                  onClick={handleSaveProductSettings}
+                  disabled={isSavingProductSettings}
+                >
+                  {isSavingProductSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Guardar Configuración de Productos
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Modal para crear/editar categoría */}
+          <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+            <DialogContent className="rounded-3xl max-w-md">
+              <DialogHeader>
+                <DialogTitle>{categoryForm.id ? 'Editar Categoría' : 'Nueva Categoría'}</DialogTitle>
+                <DialogDescription>
+                  Ingresa los detalles de la categoría para tus productos.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-3">
+                <div className="space-y-2">
+                  <Label htmlFor="prod-cat-name" className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
+                  <Input
+                    id="prod-cat-name"
+                    value={categoryForm.name}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                    placeholder="Ej: Bebidas, Snacks, Carnes..."
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="prod-cat-desc" className="text-xs font-bold uppercase text-muted-foreground">Descripción (Opcional)</Label>
+                  <Input
+                    id="prod-cat-desc"
+                    value={categoryForm.description}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                    placeholder="Breve descripción..."
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" className="rounded-xl" onClick={() => setShowCategoryDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl"
+                  onClick={async () => {
+                    if (!categoryForm.name.trim()) return;
+                    try {
+                      if (categoryForm.id) {
+                        await updateCategory.mutateAsync({
+                          id: categoryForm.id,
+                          name: categoryForm.name.trim(),
+                          description: categoryForm.description.trim()
+                        });
+                        toast({ title: "Categoría actualizada" });
+                      } else {
+                        await createCategory.mutateAsync({
+                          name: categoryForm.name.trim(),
+                          description: categoryForm.description.trim()
+                        });
+                        toast({ title: "Categoría creada" });
+                      }
+                      setShowCategoryDialog(false);
+                    } catch (e: any) {
+                      toast({ title: "Error", description: e.message || "Ocurrió un problema", variant: "destructive" });
+                    }
+                  }}
+                >
+                  Guardar Categoría
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 

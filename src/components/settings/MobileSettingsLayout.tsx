@@ -37,7 +37,6 @@ const settingsSections: SettingsSection[] = [
   { id: 'company', label: 'Empresa', icon: Building2, description: 'Información de la empresa' },
   { id: 'invoices', label: 'Facturas', icon: FileText, description: 'Numeración y formato' },
   { id: 'payments', label: 'Pagos', icon: CreditCard, description: 'Métodos de pago' },
-  { id: 'products', label: 'Productos', icon: Package, description: 'Inventario y categorías' },
   { id: 'print', label: 'Impresión', icon: Printer, description: 'Configurar impresora' },
   { id: 'notifications', label: 'Notificaciones', icon: Bell, description: 'Sonidos y alertas' },
   { id: 'cocina', label: 'Cocina', icon: ChefHat, description: 'Umbrales y KDS' },
