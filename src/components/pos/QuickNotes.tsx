@@ -221,20 +221,20 @@ const QuickNotesSection: React.FC = () => {
     };
 
     return (
-        <Card className="border-border/60 shadow-none bg-accent/20 overflow-hidden">
+        <Card className="border-border/60 shadow-none bg-accent/20 overflow-hidden w-full">
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-3 bg-accent/30 hover:bg-accent/40 transition-colors"
+                className="w-full flex items-center justify-between p-2.5 bg-accent/30 hover:bg-accent/40 transition-colors text-left"
             >
                 <div className="flex items-center gap-2">
-                    <StickyNote className="h-4 w-4 text-primary" />
+                    <StickyNote className="h-4 w-4 text-primary shrink-0" />
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notas y Pendientes de Pago</span>
                 </div>
-                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {isExpanded ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
             </button>
             
             {isExpanded && (
-                <CardContent className="p-3 space-y-3">
+                <CardContent className="p-2.5 space-y-2.5">
                     {/* Supplier selector row */}
                     <div className="pb-2 border-b border-border/30">
                         <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
@@ -291,40 +291,40 @@ const QuickNotesSection: React.FC = () => {
                         </Popover>
                     </div>
 
-                    {/* Note form row */}
-                    <div className="grid grid-cols-12 gap-2 pb-2 border-b border-border/40">
-                        <div className="col-span-4">
+                    {/* Note form row with flex layout to prevent grid blowout */}
+                    <div className="flex items-center gap-1.5 pb-2 border-b border-border/40">
+                        <div className="flex-1 min-w-0">
                             <Input
                                 placeholder="Concepto"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="h-8 text-xs bg-background"
+                                className="h-8 text-xs bg-background w-full"
                             />
                         </div>
-                        <div className="col-span-3">
+                        <div className="w-20 shrink-0">
                             <div className="relative">
-                                <span className="absolute left-2 top-1.5 text-muted-foreground/50 text-[10px]">$</span>
+                                <span className="absolute left-1.5 top-2 text-muted-foreground/50 text-[10px]">$</span>
                                 <Input
                                     type="number"
                                     placeholder="Monto"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
-                                    className="h-8 text-xs bg-background pl-4 pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="h-8 text-xs bg-background pl-3.5 pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full"
                                 />
                             </div>
                         </div>
-                        <div className="col-span-4">
+                        <div className="w-24 shrink-0">
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant={"outline"}
                                         className={cn(
-                                            "w-full h-8 text-xs justify-start text-left font-normal bg-background px-2",
+                                            "w-full h-8 text-xs justify-start text-left font-normal bg-background px-1.5",
                                             !date && "text-muted-foreground"
                                         )}
                                     >
-                                        <CalendarIcon className="mr-1 h-3 w-3" />
-                                        {date ? format(date, "dd/MM/yy", { locale: es }) : <span>Fecha</span>}
+                                        <CalendarIcon className="mr-1 h-3 w-3 shrink-0" />
+                                        <span className="truncate">{date ? format(date, "dd/MM/yy", { locale: es }) : "Fecha"}</span>
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
@@ -338,40 +338,39 @@ const QuickNotesSection: React.FC = () => {
                                 </PopoverContent>
                             </Popover>
                         </div>
-                        <div className="col-span-1">
-                            <Button 
-                                size="icon" 
-                                variant="default" 
-                                className="h-8 w-8" 
-                                onClick={handleAdd}
-                                disabled={isAdding || isLoading}
-                            >
-                                {isAdding ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                            </Button>
-                        </div>
+                        <Button 
+                            size="icon" 
+                            variant="default" 
+                            className="h-8 w-8 shrink-0 p-0" 
+                            onClick={handleAdd}
+                            disabled={isAdding || isLoading}
+                            title="Agregar pendiente"
+                        >
+                            {isAdding ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                        </Button>
                     </div>
 
-                    <ScrollArea className={notes.length > 0 || isLoading ? "h-32" : "h-0"}>
+                    <ScrollArea className={cn(notes.length > 0 || isLoading ? "h-32" : "h-0", "w-full pr-1.5")}>
                         {isLoading && (
-                            <div className="h-full flex items-center justify-center">
-                                <RefreshCcw className="h-6 w-6 animate-spin text-primary/30" />
+                            <div className="h-full flex items-center justify-center py-4">
+                                <RefreshCcw className="h-5 w-5 animate-spin text-primary/40" />
                             </div>
                         )}
-                        <div className="space-y-1.5">
+                        <div className="space-y-1.5 pr-0.5">
                             {notes.map((note) => {
                                 const today = format(new Date(), 'yyyy-MM-dd');
                                 const isToday = note.dueDate === today;
                                 const isOverdue = note.dueDate < today;
                                 return (
                                     <div key={note.id} className={cn(
-                                        "flex items-center justify-between group p-2 rounded-md border transition-all",
+                                        "flex items-center justify-between gap-1.5 p-2 rounded-md border transition-all w-full",
                                         isOverdue
                                             ? "bg-destructive/10 border-destructive/40"
                                             : isToday
                                             ? "bg-primary/10 border-primary/40"
                                             : "bg-background/50 border-border/30 hover:border-primary/30"
                                     )}>
-                                        <div className="flex flex-col gap-1 overflow-hidden min-w-0 flex-1">
+                                        <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 {isOverdue && (
                                                     <span className="text-[9px] font-black uppercase bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded shrink-0">VENCIDO</span>
@@ -381,24 +380,27 @@ const QuickNotesSection: React.FC = () => {
                                                 )}
                                                 <span className="text-xs font-bold text-foreground truncate">{note.name}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
-                                                <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {format(parseISO(note.dueDate), 'dd/MM/yyyy')}</span>
+                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 truncate">
+                                                <span className="flex items-center gap-1 shrink-0"><CalendarIcon className="h-2.5 w-2.5" /> {format(parseISO(note.dueDate), 'dd/MM/yyyy')}</span>
                                                 {note.supplier_name && (
-                                                    <span className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded font-medium">
-                                                        <Building2 className="h-2.5 w-2.5" />
-                                                        {note.supplier_name}
+                                                    <span className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded font-medium truncate">
+                                                        <Building2 className="h-2.5 w-2.5 shrink-0" />
+                                                        <span className="truncate">{note.supplier_name}</span>
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 ml-4 shrink-0">
-                                            <span className={cn("text-sm font-black", isOverdue ? "text-destructive" : "text-primary")}>${note.amount.toLocaleString()}</span>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <span className={cn("text-xs md:text-sm font-black whitespace-nowrap", isOverdue ? "text-destructive" : "text-primary")}>
+                                                ${note.amount.toLocaleString()}
+                                            </span>
                                             <Button 
                                                 size="icon" 
                                                 variant="ghost" 
-                                                className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 md:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
                                                 onClick={() => removeNote(note.id)}
                                                 disabled={isRemoving}
+                                                title="Eliminar"
                                             >
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
@@ -410,30 +412,30 @@ const QuickNotesSection: React.FC = () => {
                     </ScrollArea>
 
                     {notes.length > 0 && (
-                        <div className="pt-2 border-t border-border/40 space-y-1.5 px-1">
+                        <div className="pt-2 border-t border-border/40 space-y-1.5">
                             <div className={cn(
-                                "flex justify-between items-center px-2 py-1.5 rounded-md border transition-colors",
+                                "flex justify-between items-center px-2 py-1.5 rounded-md border transition-colors gap-2",
                                 todayTotal > 0 
                                     ? "bg-primary/10 border-primary/30" 
                                     : "bg-muted/50 border-border/20"
                             )}>
                                 <span className={cn(
-                                    "text-[10px] font-black uppercase tracking-tighter flex items-center gap-1",
+                                    "text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 truncate",
                                     todayTotal > 0 ? "text-primary" : "text-muted-foreground"
                                 )}>
-                                    <CalendarIcon className="h-3 w-3" /> Pagar Hoy / Vencido:
+                                    <CalendarIcon className="h-3 w-3 shrink-0" /> Pagar Hoy / Vencido:
                                 </span>
                                 <span className={cn(
-                                    "text-base font-black",
+                                    "text-sm md:text-base font-black whitespace-nowrap shrink-0",
                                     todayTotal > 0 ? "text-primary" : "text-muted-foreground"
                                 )}>
                                     ${todayTotal.toLocaleString()}
                                 </span>
                             </div>
                             
-                            <div className="flex justify-between items-center px-1">
-                                <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground/70">Monto Total General:</span>
-                                <span className="text-sm font-black text-foreground/70">
+                            <div className="flex justify-between items-center px-2 gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground/70 truncate">Monto Total General:</span>
+                                <span className="text-xs md:text-sm font-black text-foreground/70 whitespace-nowrap shrink-0">
                                     ${totalNotes.toLocaleString()}
                                 </span>
                             </div>

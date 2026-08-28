@@ -1,5 +1,23 @@
-import React, { useState } from 'react';
-import { Calculator, CreditCard, Plus, ChevronDown, ChevronUp, Percent, DollarSign, AlertCircle, Archive, StickyNote, Check, ChevronsUpDown, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Calculator, 
+  CreditCard, 
+  Plus, 
+  ChevronDown, 
+  ChevronUp, 
+  Percent, 
+  DollarSign, 
+  AlertCircle, 
+  Archive, 
+  StickyNote, 
+  Check, 
+  ChevronsUpDown, 
+  User, 
+  GripVertical, 
+  SlidersHorizontal, 
+  RotateCcw,
+  Star 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +37,9 @@ import { thermalPrinter } from '@/utils/thermalPrinter';
 import { useToast } from '@/hooks/use-toast';
 import LoyaltyPanel from './LoyaltyPanel';
 import QuickNotesSection, { useQuickNotes } from './QuickNotes';
+
+const DEFAULT_BLOCK_ORDER = ['invoice', 'loyalty', 'totals', 'notes'];
+const STORAGE_KEY = 'cobro_pos_payment_blocks_order';
 
 interface PaymentSummaryProps {
   totals: {
@@ -75,13 +96,100 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const [isInvoiceTypeOpen, setIsInvoiceTypeOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showNotesDialog, setShowNotesDialog] = useState(false);
+  const [showReorderDialog, setShowReorderDialog] = useState(false);
+  const [blockOrder, setBlockOrder] = useState<string[]>(DEFAULT_BLOCK_ORDER);
+  const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
+  const [dragOverBlock, setDragOverBlock] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  const { totalNotes } = useQuickNotes();
+  // Load saved block order from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Ensure all standard blocks are included
+          const valid = DEFAULT_BLOCK_ORDER.every(b => parsed.includes(b));
+          if (valid) {
+            setBlockOrder(parsed);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error loading block order:', e);
+    }
+  }, []);
 
+  const saveBlockOrder = (newOrder: string[]) => {
+    setBlockOrder(newOrder);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newOrder));
+    } catch (e) {
+      console.error('Error saving block order:', e);
+    }
+  };
+
+  const moveBlock = (id: string, direction: 'up' | 'down') => {
+    const currentIndex = blockOrder.indexOf(id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= blockOrder.length) return;
+
+    const newOrder = [...blockOrder];
+    const [moved] = newOrder.splice(currentIndex, 1);
+    newOrder.splice(targetIndex, 0, moved);
+    saveBlockOrder(newOrder);
+  };
+
+  const resetBlockOrder = () => {
+    saveBlockOrder(DEFAULT_BLOCK_ORDER);
+    toast({
+      title: "Orden restablecido",
+      description: "Los bloques han vuelto a su posición predeterminada.",
+    });
+  };
+
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedBlock(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (draggedBlock && draggedBlock !== id) {
+      setDragOverBlock(id);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedBlock || draggedBlock === targetId) {
+      setDraggedBlock(null);
+      setDragOverBlock(null);
+      return;
+    }
+    const fromIndex = blockOrder.indexOf(draggedBlock);
+    const toIndex = blockOrder.indexOf(targetId);
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const newOrder = [...blockOrder];
+      const [moved] = newOrder.splice(fromIndex, 1);
+      newOrder.splice(toIndex, 0, moved);
+      saveBlockOrder(newOrder);
+    }
+    setDraggedBlock(null);
+    setDragOverBlock(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedBlock(null);
+    setDragOverBlock(null);
+  };
+
+  const { totalNotes } = useQuickNotes();
   const { companyInfo } = usePrintSettings();
-  const companyLogo = companyInfo.logo || null;
-  const logoSummarySize = companyInfo.logoSummarySize;
   const { toast } = useToast();
 
   const mappedInvoiceTypes = React.useMemo(() => {
@@ -119,9 +227,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
     return true;
   }, [selectedType]);
 
-  const { data: customerBalance } = useCustomerBalance(selectedCustomer);
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
-
   const isCheckoutDisabled = cartLength === 0 || (requiresCustomer && !selectedCustomer);
 
   const handleCustomerAdded = (customerId: string) => {
@@ -168,208 +274,184 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  return (
-    <div className="bg-card border border-border rounded-lg p-1 md:p-4 h-fit md:h-full flex flex-col transition-all">
-      {/* Header con logo */}
-      <div className="flex flex-col items-center gap-1 mb-1 flex-shrink-0">
-        <div className="flex items-center gap-1 w-full justify-between">
-          <div className="flex items-center gap-1">
-            <Calculator className="h-3 w-3 md:h-3.5 md:w-3.5" />
-            <h2 className="text-[10px] md:text-xs font-bold">Resumen</h2>
+  const BLOCK_LABELS: Record<string, { label: string; icon: any }> = {
+    invoice: { label: 'Factura y Comprobante', icon: CreditCard },
+    loyalty: { label: 'Puntos de Lealtad', icon: Star },
+    totals: { label: 'Desglose y Total', icon: Calculator },
+    notes: { label: 'Notas y Pendientes', icon: StickyNote },
+  };
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 ml-2 text-muted-foreground hover:text-foreground"
-              onClick={handleOpenDrawer}
-              title="Abrir Caja (F9)"
-            >
-              <Archive className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-1">
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="h-6 w-6"
-              >
-                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </Button>
-            )}
-            {fullscreenButton && <div className="shrink-0">{fullscreenButton}</div>}
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido expandido */}
-      {/* Contenido expandido */}
-      {(!isMobile || isExpanded) && (
-        <div className="flex-1 overflow-y-auto min-h-0 pr-1 -mr-1 pb-2">
-          {/* Selección de tipo de factura */}
-          <Collapsible open={!isMobile || isInvoiceTypeOpen} onOpenChange={setIsInvoiceTypeOpen} className="mb-2 flex-shrink-0">
+  // Render individual block content
+  const renderBlockContent = (blockId: string) => {
+    switch (blockId) {
+      case 'invoice':
+        return (
+          <Collapsible open={!isMobile || isInvoiceTypeOpen} onOpenChange={setIsInvoiceTypeOpen} className="w-full">
             <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"
                 className="w-full justify-between p-1 h-6 lg:pointer-events-none hover:bg-accent/50"
               >
-                <label className="text-xs md:text-xs font-medium text-muted-foreground">Factura</label>
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" /> Factura
+                </label>
                 {isMobile && <ChevronDown className={`h-3 w-3 transition-transform ${isInvoiceTypeOpen ? 'rotate-180' : ''}`} />}
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-1 px-1">
-               <Select value={selectedInvoiceType} onValueChange={onInvoiceTypeChange}>
-                 <SelectTrigger className="h-7 text-xs w-full">
-                   <SelectValue placeholder="Seleccionar Factura" />
-                 </SelectTrigger>
-                 <SelectContent className="bg-popover border border-border z-50">
-                   {mappedInvoiceTypes
-                     .filter(type => !['B03', 'E33', 'B04', 'E34'].includes(type.code))
-                     .map((type) => (
-                       <SelectItem key={type.id} value={type.id} className="text-xs">
-                         {type.code} - {type.name}
-                       </SelectItem>
-                     ))}
-                 </SelectContent>
-               </Select>
+              <Select value={selectedInvoiceType} onValueChange={onInvoiceTypeChange}>
+                <SelectTrigger className="h-7 text-xs w-full">
+                  <SelectValue placeholder="Seleccionar Factura" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border border-border z-50">
+                  {mappedInvoiceTypes
+                    .filter(type => !['B03', 'E33', 'B04', 'E34'].includes(type.code))
+                    .map((type) => (
+                      <SelectItem key={type.id} value={type.id} className="text-xs">
+                        {type.code} - {type.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
 
-               {requiresCustomer && (
-                 <div className="mt-2 space-y-1.5 border border-primary/20 bg-primary/5 rounded-lg p-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                   <div className="flex items-center justify-between">
-                     <label className="text-[10px] uppercase font-bold tracking-wider text-primary">
-                       Cliente Requerido (Crédito Fiscal)
-                     </label>
-                     <Button
-                       variant="ghost"
-                       size="icon"
-                       className="h-5 w-5 text-primary hover:text-primary hover:bg-primary/10 rounded-full"
-                       onClick={() => setShowAddCustomer(true)}
-                       title="Agregar nuevo cliente"
-                     >
-                       <Plus className="h-3 w-3" />
-                     </Button>
-                   </div>
-                   <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
-                     <PopoverTrigger asChild>
-                       <Button
-                         variant="outline"
-                         role="combobox"
-                         aria-expanded={isCustomerOpen}
-                         className="w-full justify-between h-7 text-xs bg-background border-border font-normal"
-                       >
-                         {selectedCustomer ? (
-                           <span className="truncate">
-                             {(() => {
-                               const c = customers.find(c => c.id === selectedCustomer);
-                               return c ? `${c.name} ${c.rnc ? `(RNC: ${c.rnc})` : ''}` : "Seleccionar Cliente...";
-                             })()}
-                           </span>
-                         ) : (
-                           <span className="text-muted-foreground truncate">Seleccionar Cliente...</span>
-                         )}
-                         <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                       </Button>
-                     </PopoverTrigger>
-                        <PopoverContent 
-                        side="bottom" 
-                        sideOffset={6} 
-                        collisionPadding={12} 
-                        className="w-[calc(100vw-2.5rem)] sm:w-[300px] max-w-[340px] p-0 bg-zinc-950/98 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden" 
-                        align="start"
+              {requiresCustomer && (
+                <div className="mt-2 space-y-1.5 border border-primary/20 bg-primary/5 rounded-lg p-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] uppercase font-bold tracking-wider text-primary">
+                      Cliente Requerido (Crédito Fiscal)
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 text-primary hover:text-primary hover:bg-primary/10 rounded-full"
+                      onClick={() => setShowAddCustomer(true)}
+                      title="Agregar nuevo cliente"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={isCustomerOpen}
+                        className="w-full justify-between h-7 text-xs bg-background border-border font-normal"
                       >
-                        <Command className="bg-transparent border-none">
-                          <CommandInput 
-                            placeholder="Buscar por nombre o RNC..." 
-                            className="h-10 text-xs font-bold text-white placeholder:text-zinc-500 bg-zinc-900/80 border-b border-white/10" 
-                          />
-                          <CommandList className="max-h-[35vh] sm:max-h-[200px] overflow-y-auto p-1.5 scrollbar-thin">
-                            <CommandEmpty className="p-4 text-xs text-center text-zinc-400 font-bold uppercase tracking-widest">
-                              No se encontraron clientes
-                            </CommandEmpty>
-                            <CommandGroup>
-                              <CommandItem
-                                value="none-customer-item-placeholder"
-                                onSelect={() => {
-                                  onCustomerChange("");
-                                  setIsCustomerOpen(false);
-                                }}
-                                className={cn(
-                                  "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
-                                  !selectedCustomer 
-                                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
-                                    : "hover:bg-white/5 text-zinc-200 font-medium"
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <User className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                                  <span className="truncate">Seleccionar Cliente...</span>
-                                </div>
-                                {!selectedCustomer && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
-                              </CommandItem>
-                              {customers.map((c) => {
-                                const isSelected = selectedCustomer === c.id;
-                                return (
-                                  <CommandItem
-                                    key={c.id}
-                                    value={`${c.name} ${c.rnc || ''} ${c.id}`}
-                                    onSelect={() => {
-                                      onCustomerChange(c.id);
-                                      setIsCustomerOpen(false);
-                                    }}
-                                    className={cn(
-                                      "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
-                                      isSelected 
-                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
-                                        : "hover:bg-white/5 text-zinc-200 font-medium"
+                        {selectedCustomer ? (
+                          <span className="truncate">
+                            {(() => {
+                              const c = customers.find(c => c.id === selectedCustomer);
+                              return c ? `${c.name} ${c.rnc ? `(RNC: ${c.rnc})` : ''}` : "Seleccionar Cliente...";
+                            })()}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground truncate">Seleccionar Cliente...</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      side="bottom" 
+                      sideOffset={6} 
+                      collisionPadding={12} 
+                      className="w-[calc(100vw-2.5rem)] sm:w-[300px] max-w-[340px] p-0 bg-zinc-950/98 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden" 
+                      align="start"
+                    >
+                      <Command className="bg-transparent border-none">
+                        <CommandInput 
+                          placeholder="Buscar por nombre o RNC..." 
+                          className="h-10 text-xs font-bold text-white placeholder:text-zinc-500 bg-zinc-900/80 border-b border-white/10" 
+                        />
+                        <CommandList className="max-h-[35vh] sm:max-h-[200px] overflow-y-auto p-1.5 scrollbar-thin">
+                          <CommandEmpty className="p-4 text-xs text-center text-zinc-400 font-bold uppercase tracking-widest">
+                            No se encontraron clientes
+                          </CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="none-customer-item-placeholder"
+                              onSelect={() => {
+                                onCustomerChange("");
+                                setIsCustomerOpen(false);
+                              }}
+                              className={cn(
+                                "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
+                                !selectedCustomer 
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
+                                  : "hover:bg-white/5 text-zinc-200 font-medium"
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <User className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                                <span className="truncate">Seleccionar Cliente...</span>
+                              </div>
+                              {!selectedCustomer && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
+                            </CommandItem>
+                            {customers.map((c) => {
+                              const isSelected = selectedCustomer === c.id;
+                              return (
+                                <CommandItem
+                                  key={c.id}
+                                  value={`${c.name} ${c.rnc || ''} ${c.id}`}
+                                  onSelect={() => {
+                                    onCustomerChange(c.id);
+                                    setIsCustomerOpen(false);
+                                  }}
+                                  className={cn(
+                                    "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
+                                    isSelected 
+                                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
+                                      : "hover:bg-white/5 text-zinc-200 font-medium"
+                                  )}
+                                >
+                                  <div className="flex flex-col min-w-0 flex-1 pr-2 text-left">
+                                    <span className="truncate text-xs">{c.name}</span>
+                                    {c.rnc && (
+                                      <span className="text-[10px] font-mono text-zinc-400 font-semibold mt-0.5">
+                                        RNC: {c.rnc}
+                                      </span>
                                     )}
-                                  >
-                                    <div className="flex flex-col min-w-0 flex-1 pr-2 text-left">
-                                      <span className="truncate text-xs">{c.name}</span>
-                                      {c.rnc && (
-                                        <span className="text-[10px] font-mono text-zinc-400 font-semibold mt-0.5">
-                                          RNC: {c.rnc}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {isSelected && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
-                                  </CommandItem>
-                                );
-                              })}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                   </Popover>
-                   {selectedCustomerData && (
-                     <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 bg-background/50 p-1.5 rounded border border-border/50">
-                       <span className="font-semibold text-foreground">{selectedCustomerData.name}</span>
-                       {selectedCustomerData.rnc ? (
-                         <span className="text-primary font-mono font-semibold">RNC: {selectedCustomerData.rnc}</span>
-                       ) : (
-                         <span className="text-destructive font-semibold">⚠️ Sin RNC registrado</span>
-                       )}
-                     </div>
-                   )}
-                 </div>
-               )}
+                                  </div>
+                                  {isSelected && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {selectedCustomerData && (
+                    <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 bg-background/50 p-1.5 rounded border border-border/50">
+                      <span className="font-semibold text-foreground">{selectedCustomerData.name}</span>
+                      {selectedCustomerData.rnc ? (
+                        <span className="text-primary font-mono font-semibold">RNC: {selectedCustomerData.rnc}</span>
+                      ) : (
+                        <span className="text-destructive font-semibold">⚠️ Sin RNC registrado</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </CollapsibleContent>
           </Collapsible>
+        );
 
-          {/* Loyalty Panel */}
-          <div className="mb-2 flex-shrink-0">
-            <LoyaltyPanel
-              cartTotal={parseFloat(totals.total)}
-              onCustomerFound={onLoyaltyCustomerFound}
-              onLoyaltyPointsBalance={onLoyaltyPointsBalance}
-              onPointsRedeemed={onLoyaltyPointsRedeemed}
-              onClearRedemption={onLoyaltyClearRedemption}
-              redeemedPoints={loyaltyRedeemedPoints}
-            />
-          </div>
+      case 'loyalty':
+        return (
+          <LoyaltyPanel
+            cartTotal={parseFloat(totals.total)}
+            onCustomerFound={onLoyaltyCustomerFound}
+            onLoyaltyPointsBalance={onLoyaltyPointsBalance}
+            onPointsRedeemed={onLoyaltyPointsRedeemed}
+            onClearRedemption={onLoyaltyClearRedemption}
+            redeemedPoints={loyaltyRedeemedPoints}
+          />
+        );
 
-          {/* Totales */}
-          <div className="border border-border rounded-lg p-3 space-y-2 mb-3 flex-shrink-0">
+      case 'totals':
+        return (
+          <div className="border border-border rounded-lg p-3 space-y-2 w-full bg-card/40">
             <div className="flex justify-between text-base md:text-lg font-medium">
               <span>Subtotal:</span>
               <span className="font-semibold">${totals.subtotal}</span>
@@ -426,47 +508,224 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               <span>${totals.total}</span>
             </div>
           </div>
+        );
 
-          {/* Quick Notes Section Section - Conditional Display */}
-          {isClassicMode ? (
-            <div className="mb-4">
-              <QuickNotesSection />
-            </div>
-          ) : (
-            <div className="mb-4">
-              <Button
-                variant="outline"
-                className="w-full flex justify-between items-center group hover:border-primary/50 transition-all border-dashed"
-                onClick={() => setShowNotesDialog(true)}
-              >
-                <div className="flex items-center gap-2">
-                  <StickyNote className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notas y Pendientes</span>
+      case 'notes':
+        return isClassicMode ? (
+          <QuickNotesSection />
+        ) : (
+          <div>
+            <Button
+              variant="outline"
+              className="w-full flex justify-between items-center group hover:border-primary/50 transition-all border-dashed"
+              onClick={() => setShowNotesDialog(true)}
+            >
+              <div className="flex items-center gap-2">
+                <StickyNote className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notas y Pendientes</span>
+              </div>
+              {totalNotes > 0 && (
+                <span className="bg-primary/10 text-primary text-[10px] px-1.5 rounded-full font-black border border-primary/20">
+                  ${totalNotes.toLocaleString()}
+                </span>
+              )}
+            </Button>
+
+            <Dialog open={showNotesDialog} onOpenChange={setShowNotesDialog}>
+              <DialogContent className="sm:max-w-md bg-card">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <StickyNote className="h-5 w-5 text-primary" />
+                    Control de Notas y Pendientes
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="max-h-[80vh] overflow-y-auto">
+                  <QuickNotesSection />
                 </div>
-                {totalNotes > 0 && (
-                  <span className="bg-primary/10 text-primary text-[10px] px-1.5 rounded-full font-black border border-primary/20">
-                    ${totalNotes.toLocaleString()}
-                  </span>
-                )}
-              </Button>
+              </DialogContent>
+            </Dialog>
+          </div>
+        );
 
-              <Dialog open={showNotesDialog} onOpenChange={setShowNotesDialog}>
-                <DialogContent className="sm:max-w-md bg-card">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <StickyNote className="h-5 w-5 text-primary" />
-                      Control de Notas y Pendientes
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="max-h-[80vh] overflow-y-auto">
-                    <QuickNotesSection />
-                  </div>
-                </DialogContent>
-              </Dialog>
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-2 md:p-4 h-fit md:h-full flex flex-col transition-all">
+      {/* Header con herramientas */}
+      <div className="flex flex-col items-center gap-1 mb-2 flex-shrink-0">
+        <div className="flex items-center gap-1 w-full justify-between">
+          <div className="flex items-center gap-1">
+            <Calculator className="h-3 w-3 md:h-3.5 md:w-3.5" />
+            <h2 className="text-[10px] md:text-xs font-bold">Resumen</h2>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 ml-1 text-muted-foreground hover:text-foreground"
+              onClick={handleOpenDrawer}
+              title="Abrir Caja (F9)"
+            >
+              <Archive className="h-3.5 w-3.5" />
+            </Button>
+
+            {/* Reorganizar bloques button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              onClick={() => setShowReorderDialog(true)}
+              title="Reorganizar bloques del resumen"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-1">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="h-6 w-6"
+              >
+                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </Button>
+            )}
+            {fullscreenButton && <div className="shrink-0">{fullscreenButton}</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido expandido con bloques reorganizables */}
+      {(!isMobile || isExpanded) && (
+        <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-2 space-y-2.5 scrollbar-thin">
+          {blockOrder.map((blockId, index) => (
+            <div
+              key={blockId}
+              draggable
+              onDragStart={(e) => handleDragStart(e, blockId)}
+              onDragOver={(e) => handleDragOver(e, blockId)}
+              onDrop={(e) => handleDrop(e, blockId)}
+              onDragEnd={handleDragEnd}
+              className={cn(
+                "relative group/block transition-all duration-150 rounded-lg",
+                dragOverBlock === blockId && "ring-2 ring-primary ring-offset-2 scale-[1.01] bg-accent/20",
+                draggedBlock === blockId && "opacity-40"
+              )}
+            >
+              {/* Floating reorder handles visible on hover */}
+              <div className="opacity-0 group-hover/block:opacity-100 transition-opacity absolute -top-2.5 right-2 z-20 bg-background/95 backdrop-blur border border-border/80 shadow-md rounded-md px-1 py-0.5 flex items-center gap-0.5 text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveBlock(blockId, 'up');
+                  }}
+                  disabled={index === 0}
+                  className="hover:text-foreground p-0.5 disabled:opacity-20 transition-colors"
+                  title="Mover arriba"
+                >
+                  <ChevronUp className="h-3 w-3" />
+                </button>
+                <div 
+                  className="cursor-grab active:cursor-grabbing p-0.5 hover:text-foreground text-muted-foreground/80 flex items-center" 
+                  title="Arrastrar para reordenar bloque"
+                >
+                  <GripVertical className="h-3 w-3" />
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveBlock(blockId, 'down');
+                  }}
+                  disabled={index === blockOrder.length - 1}
+                  className="hover:text-foreground p-0.5 disabled:opacity-20 transition-colors"
+                  title="Mover abajo"
+                >
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </div>
+
+              {renderBlockContent(blockId)}
             </div>
-          )}
+          ))}
         </div>
       )}
+
+      {/* Modal para reorganizar bloques */}
+      <Dialog open={showReorderDialog} onOpenChange={setShowReorderDialog}>
+        <DialogContent className="sm:max-w-xs bg-card p-4">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              Reorganizar Bloques
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Ajusta el orden de las secciones en el panel de cobro según tu comodidad:
+          </p>
+          <div className="space-y-1.5 my-2">
+            {blockOrder.map((blockId, idx) => {
+              const info = BLOCK_LABELS[blockId] || { label: blockId, icon: CreditCard };
+              const IconComp = info.icon;
+              return (
+                <div
+                  key={blockId}
+                  className="flex items-center justify-between p-2 rounded-md border border-border/70 bg-accent/20 text-xs"
+                >
+                  <div className="flex items-center gap-2 font-medium">
+                    <IconComp className="h-3.5 w-3.5 text-primary" />
+                    <span>{info.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      disabled={idx === 0}
+                      onClick={() => moveBlock(blockId, 'up')}
+                      title="Subir"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      disabled={idx === blockOrder.length - 1}
+                      onClick={() => moveBlock(blockId, 'down')}
+                      title="Bajar"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-border/50">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 gap-1"
+              onClick={resetBlockOrder}
+            >
+              <RotateCcw className="h-3 w-3" />
+              Restablecer
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => setShowReorderDialog(false)}
+            >
+              Listo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Botón de procesar venta - FUERA del scroll para que siempre sea visible */}
       {(!isMobile || isExpanded) && (
