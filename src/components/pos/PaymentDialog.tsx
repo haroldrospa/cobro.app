@@ -173,19 +173,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         >
           {/* Header & Total Area */}
           <div className="p-3.5 pb-0 flex-shrink-0">
-            <div className="flex justify-between items-center px-1">
-              <div className="flex items-center gap-2">
-                <div className="bg-primary/10 p-1.5 rounded-lg">
-                  <DollarSign className="h-4 w-4 text-primary" />
-                </div>
-                <DialogTitle className="text-base font-bold tracking-tight text-foreground">
-                  Cobrar
-                </DialogTitle>
-              </div>
-            </div>
+            <DialogTitle className="sr-only">
+              Cobrar
+            </DialogTitle>
             
             {/* Total a Pagar Card */}
-            <div className="mt-2.5 flex flex-col items-center justify-center bg-muted/40 border border-border/80 py-3 px-3 rounded-xl relative overflow-hidden">
+            <div className="flex flex-col items-center justify-center bg-muted/40 border border-border/80 py-3 px-3 rounded-xl relative overflow-hidden">
               <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">
                 Total a Pagar
               </span>
