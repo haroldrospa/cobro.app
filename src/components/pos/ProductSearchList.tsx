@@ -1026,6 +1026,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
 }), (prev, next) => {
   return (
     prev.products === next.products &&
+    prev.actionButton === next.actionButton &&
     prev.gridCols === next.gridCols &&
     prev.viewMode === next.viewMode &&
     prev.mode === next.mode &&

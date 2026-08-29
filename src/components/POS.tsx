@@ -2445,22 +2445,19 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         </div>
       </div>
 
-      <Button
-        variant="outline"
-        onClick={onSaveOrder}
-        size="sm"
-        className={cn(
-          "h-8 px-2.5 gap-1.5 rounded-lg border-border bg-background transition-all text-xs font-semibold shadow-xs",
-          cartLength > 0
-            ? "text-foreground hover:bg-accent hover:border-primary/40 cursor-pointer"
-            : "text-muted-foreground/60 opacity-60 cursor-not-allowed"
-        )}
-        disabled={cartLength === 0 || isSavingOrder}
-        title={cartLength === 0 ? "Agrega productos al carrito para guardar (F9)" : "Guardar Pedido (F9)"}
-      >
-        <Save className={cn("h-3.5 w-3.5", cartLength > 0 ? "text-primary" : "text-muted-foreground")} />
-        <span className="hidden lg:inline">{currentWebOrderId ? 'Actualizar' : 'Guardar'}</span>
-      </Button>
+      {cartLength > 0 && (
+        <Button
+          variant="outline"
+          onClick={onSaveOrder}
+          size="sm"
+          className="h-8 px-2.5 gap-1.5 rounded-lg border-border bg-background hover:bg-accent text-xs font-semibold text-foreground shadow-xs transition-all animate-in fade-in zoom-in-95 duration-100"
+          disabled={isSavingOrder}
+          title="Guardar Pedido (F9)"
+        >
+          <Save className="h-3.5 w-3.5 text-primary" />
+          <span className="hidden lg:inline">{currentWebOrderId ? 'Actualizar' : 'Guardar'}</span>
+        </Button>
+      )}
 
       <Button
         variant="outline"
