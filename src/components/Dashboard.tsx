@@ -998,7 +998,7 @@ const Dashboard: React.FC = () => {
                 <BarChart3 className="h-5 w-5 text-accent" />
                 Resumen de Ventas
               </CardTitle>
-              <TabsList className="grid w-full sm:w-[300px] grid-cols-3">
+              <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:w-[300px] sm:grid-cols-3">
                 <TabsTrigger value="weekly">Semanal</TabsTrigger>
                 <TabsTrigger value="monthly">Mensual</TabsTrigger>
                 <TabsTrigger value="calendar">Calendario</TabsTrigger>
@@ -1303,7 +1303,7 @@ const Dashboard: React.FC = () => {
 
       {/* Tabs para diferentes vistas */}
       <Tabs defaultValue="products" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-4">
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="hourly">Ventas por Hora</TabsTrigger>
           <TabsTrigger value="clients">Clientes</TabsTrigger>

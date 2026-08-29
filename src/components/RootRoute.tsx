@@ -1,23 +1,16 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
-const Landing = lazy(() => import('@/pages/Landing'));
-
 /**
- * Elemento de la ruta "/". Antes esto era directamente <Landing /> — lo que
- * significa que CUALQUIER carga de la app (incluida la app nativa Android,
- * que arranca en "/") primero descargaba y montaba toda la landing de
- * marketing (framer-motion + imagen hero de ~600KB) para un usuario que ya
- * tenía sesión iniciada, antes de que Landing.tsx recién ahí revisara la
- * sesión y redirigiera a /app. Eso solo (medido en logcat durante un cold
- * start real) se comía ~2 de los 4 segundos de arranque en la tablet.
- *
- * Acá se revisa la sesión PRIMERO, con un componente mínimo sin
- * dependencias pesadas — si ya hay sesión, redirige directo sin llegar a
- * importar Landing en absoluto. Si no hay sesión (primera vez / deslogueado),
- * recién ahí se carga la landing normal.
+ * Elemento de la ruta "/". Revisa la sesión con un componente mínimo sin
+ * dependencias pesadas y redirige siempre: a /app si hay sesión, a /auth
+ * si no la hay. Ya no se monta el Landing de marketing acá — la app nativa
+ * (que arranca en /pos, ver capacitor.config.ts) ya iba directo al login
+ * sin pasar por acá, y por pedido se unificó el mismo comportamiento para
+ * la raíz web. El componente Landing.tsx queda intacto por si se quiere
+ * volver a enrutar (ej. en una URL de marketing separada).
  */
 const RootRoute: React.FC = () => {
     const [checked, setChecked] = useState(false);
@@ -41,19 +34,7 @@ const RootRoute: React.FC = () => {
         );
     }
 
-    if (hasSession) {
-        return <Navigate to="/app" replace />;
-    }
-
-    return (
-        <Suspense fallback={
-            <div className="fixed inset-0 flex items-center justify-center bg-background z-[9999]">
-                <LoadingLogo />
-            </div>
-        }>
-            <Landing />
-        </Suspense>
-    );
+    return <Navigate to={hasSession ? '/app' : '/auth'} replace />;
 };
 
 export default RootRoute;

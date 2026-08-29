@@ -551,7 +551,7 @@ const UserSubscription = () => {
 
                             <Tabs defaultValue="card" className="w-full">
                                 <div className="px-5 pt-4">
-                                    <TabsList className="grid w-full grid-cols-3 h-11 bg-muted/50 p-1">
+                                    <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start h-11 bg-muted/50 p-1 sm:grid sm:grid-cols-3">
                                         <TabsTrigger value="card" className="flex items-center gap-2 text-xs">
                                             <CreditCard className="w-3.5 h-3.5" />
                                             Tarjeta

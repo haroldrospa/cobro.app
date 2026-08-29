@@ -123,10 +123,13 @@ export const MobileBottomNav: React.FC = () => {
 
   return (
     <>
-      {/* Overlay oscuro cuando el menú "Más" está abierto */}
+      {/* Overlay oscuro cuando el menú "Más" está abierto — se detiene arriba de la
+          barra de pestañas para que esta siga visible y se pueda tocar (ej. "POS")
+          sin tener que cerrar el menú primero. */}
       {moreOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden"
+          className="fixed inset-x-0 top-0 z-50 bg-black/60 backdrop-blur-xs md:hidden"
+          style={{ bottom: 'calc(96px + env(safe-area-inset-bottom))' }}
           onClick={() => {
             triggerHaptic('light');
             setMoreOpen(false);
@@ -134,14 +137,15 @@ export const MobileBottomNav: React.FC = () => {
         />
       )}
 
-      {/* Sheet "Más" que sube desde abajo */}
+      {/* Sheet "Más" — flota arriba de la barra de pestañas (no la tapa) */}
       <div
         className={cn(
-          'fixed bottom-0 left-0 right-0 z-40 md:hidden',
-          'bg-background border-t border-border/80 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.5)]',
-          'transition-transform duration-300 ease-out',
-          moreOpen ? 'translate-y-0' : 'translate-y-full pointer-events-none'
+          'fixed left-4 right-4 z-50 md:hidden',
+          'bg-background border border-border/80 rounded-[2rem] shadow-[0_-20px_40px_rgba(0,0,0,0.5)]',
+          'transition-transform duration-300 ease-out origin-bottom',
+          moreOpen ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-95 opacity-0 pointer-events-none'
         )}
+        style={{ bottom: 'calc(96px + env(safe-area-inset-bottom))' }}
       >
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-1">
@@ -161,7 +165,8 @@ export const MobileBottomNav: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-5 grid grid-cols-3 gap-4 max-h-[60dvh] overflow-y-auto" style={{ paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
+        <div className="p-5 max-h-[45dvh] overflow-y-auto no-scrollbar">
+        <div className="grid grid-cols-3 gap-4">
           {moreItems.map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
@@ -187,21 +192,20 @@ export const MobileBottomNav: React.FC = () => {
               </Link>
             );
           })}
+        </div>
 
-          {/* Botón cerrar sesión */}
+          {/* Botón cerrar sesión — separado del grid, ancho completo */}
           <button
             onClick={handleLogout}
-            className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-200 active:scale-[0.93] group h-22 select-none"
+            className="flex items-center justify-center gap-2.5 w-full mt-4 py-3.5 rounded-[1.25rem] border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-200 active:scale-[0.98] group select-none"
           >
-            <LogOut className="h-5.5 w-5.5 text-rose-400 group-hover:text-rose-300 transition-colors" />
-            <span className="text-[11px] font-bold text-center leading-tight text-rose-400 group-hover:text-rose-300 transition-colors">
+            <LogOut className="h-4.5 w-4.5 text-rose-400 group-hover:text-rose-300 transition-colors" />
+            <span className="text-sm font-bold text-rose-400 group-hover:text-rose-300 transition-colors">
               Salir
             </span>
           </button>
         </div>
-
-        {/* Safe area bottom padding */}
-        <div className="h-2 safe-area-bottom" />
+        <div className="h-4" />
       </div>
 
       {/* Barra de tabs inferior */}
@@ -218,7 +222,10 @@ export const MobileBottomNav: React.FC = () => {
               <Link
                 key={item.href}
                 to={item.href}
-                onClick={() => triggerHaptic('light')}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setMoreOpen(false);
+                }}
                 className={cn(
                   'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-200 active:scale-[0.92]',
                   isActive

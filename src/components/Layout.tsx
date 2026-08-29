@@ -372,9 +372,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {profile && (
               <>
-                {/* Store Pill */}
+                {/* Store Pill — sin recuadro/fondo, solo texto con acento */}
                 {companyName && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs shadow-xs">
+                  <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs">
                     <Store className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     <span className="max-w-[110px] sm:max-w-[180px] truncate">{companyName}</span>
                   </div>

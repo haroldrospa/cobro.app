@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Wifi, WifiOff, CloudUpload, CheckCircle2, AlertCircle, ShoppingCart, X, RefreshCw } from 'lucide-react';
+import { Wifi, WifiOff, CloudUpload, CheckCircle2, AlertCircle, X, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { offlineDB } from '@/lib/offlineDB';
 import { offlineSyncManager } from '@/lib/offlineSync';
@@ -14,7 +14,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useWebOrdersCount } from '@/hooks/useWebOrdersCount';
 import { playNotificationSound } from '@/utils/notificationSounds';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 export const OfflineIndicator: React.FC = () => {
     const location = useLocation();
@@ -29,7 +29,6 @@ export const OfflineIndicator: React.FC = () => {
     // NOTE: Don't show indicators on public pages, checked at render time to satisfy Rule of Hooks
 
     const isOnline = useOnlineStatus();
-    const navigate = useNavigate();
     const { toast } = useToast();
 
 
@@ -42,7 +41,6 @@ export const OfflineIndicator: React.FC = () => {
     // Web Order Count - Monitor changes
     const { data: webOrdersCount = 0 } = useWebOrdersCount();
     const [previousCount, setPreviousCount] = useState<number>(0);
-    const [lastWebOrder, setLastWebOrder] = useState<any>(null);
 
     // Show offline banner when connection drops, hide when restored
     useEffect(() => {
@@ -61,35 +59,17 @@ export const OfflineIndicator: React.FC = () => {
         if (webOrdersCount > previousCount && previousCount > 0) {
             console.log('🆕 New web order detected! Count changed from', previousCount, 'to', webOrdersCount);
 
-            // Play notification sound
+            // Play notification sound (sin toast/tarjeta emergente — solo el sonido; el
+            // contador de pedidos web en el botón "Web" del POS ya avisa visualmente)
             const soundEnabled = storeSettings?.web_order_sound_enabled ?? true;
             const soundType = (storeSettings?.web_order_sound_type as any) ?? 'chime';
             const soundVolume = storeSettings?.web_order_sound_volume ?? 0.7;
             playNotificationSound(soundType, soundEnabled, soundVolume);
-
-            // Show toast notification
-            toast({
-                title: "🛒 ¡Nuevo Pedido Web!",
-                description: `Tienes ${webOrdersCount} pedido${webOrdersCount > 1 ? 's' : ''} pendiente${webOrdersCount > 1 ? 's' : ''} por revisar`,
-                duration: 10000,
-            });
-
-            // Show visual notification
-            setLastWebOrder({
-                customer_name: 'Pedido Web',
-                total: 0,
-                order_number: `${webOrdersCount} pedido${webOrdersCount > 1 ? 's' : ''}`
-            });
-
-            // Auto hide after 10 seconds
-            setTimeout(() => {
-                setLastWebOrder(null);
-            }, 10000);
         }
 
         // Update previous count
         setPreviousCount(webOrdersCount);
-    }, [webOrdersCount, previousCount, storeSettings, toast]);
+    }, [webOrdersCount, previousCount, storeSettings]);
 
     useEffect(() => {
         if (isPublicPage) {
@@ -204,41 +184,6 @@ export const OfflineIndicator: React.FC = () => {
                 </div>
             )}
 
-            {/* Notifications Container - Independent from Indicator to prevent layout issues */}
-            <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2 pointer-events-none">
-
-                {lastWebOrder && (
-                    <div
-                        className="pointer-events-auto flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-blue-500/30 animate-in slide-in-from-left-4 fade-in duration-300 max-w-sm cursor-pointer hover:scale-105 transition-transform"
-                        onClick={() => {
-                            navigate('/pos');
-                            setLastWebOrder(null);
-                        }}
-                    >
-                        <div className="bg-blue-500/10 p-2.5 rounded-full ring-2 ring-blue-500/20 animate-pulse">
-                            <ShoppingCart className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="flex-1 min-w-0 mr-4">
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none mb-1">¡Nuevo Pedido Web!</h4>
-                            <p className="text-xs text-muted-foreground truncate font-medium">
-                                {lastWebOrder.order_number}
-                            </p>
-                            <p className="text-sm font-black text-primary mt-0.5">
-                                Haz clic para revisar
-                            </p>
-                        </div>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setLastWebOrder(null);
-                            }}
-                            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                )}
-            </div>
 
 
         </>

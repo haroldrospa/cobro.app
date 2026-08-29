@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
 
@@ -86,18 +86,26 @@ export function ThemeProvider({
         root.style.fontSize = `${scale * 100}%`;
     }, [scale]);
 
-    const value = {
+    // Memoizado — sin esto, `value` (y las dos funciones de adentro) eran
+    // literales nuevos en cada render de este provider, que envuelve TODA la
+    // app. Cualquier efecto/memo que use theme/setTheme como dependencia se
+    // invalidaba de más aunque el tema no hubiera cambiado.
+    const handleSetTheme = useCallback((newTheme: Theme) => {
+        safeSetItem(storageKey, newTheme)
+        setTheme(newTheme)
+    }, [storageKey])
+
+    const handleSetScale = useCallback((newScale: number) => {
+        safeSetItem(scaleStorageKey, String(newScale))
+        setScale(newScale)
+    }, [scaleStorageKey])
+
+    const value = useMemo(() => ({
         theme,
-        setTheme: (theme: Theme) => {
-            safeSetItem(storageKey, theme)
-            setTheme(theme)
-        },
+        setTheme: handleSetTheme,
         scale,
-        setScale: (scale: number) => {
-            safeSetItem(scaleStorageKey, String(scale))
-            setScale(scale)
-        }
-    }
+        setScale: handleSetScale
+    }), [theme, handleSetTheme, scale, handleSetScale])
 
     return (
         <ThemeProviderContext.Provider value={value}>

@@ -1323,26 +1323,22 @@ const Products: FC = () => {
   }
 
   return (
-    <div className="space-y-12 animate-fade-in pb-20">
-      {/* Centered Premium Header */}
-      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-8 py-6">
-        <div className="space-y-3">
-          <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.15em] leading-normal py-1">
+    <div className="space-y-5 animate-fade-in pb-20">
+      {/* Header */}
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-3 py-2">
+        <div>
+          <h1 className="text-xl font-black tracking-tight uppercase">
             Inventario
           </h1>
-          <div className="flex items-center justify-center gap-4 text-primary/80">
-            <div className="h-px w-10 bg-primary/30" />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em]">
-              Gestión de Catálogo y Stock
-            </p>
-            <div className="h-px w-10 bg-primary/30" />
-          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70 mt-0.5">
+            Gestión de Catálogo y Stock
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-3xl px-4">
           <Button
             size="lg"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wide text-xs h-10 px-5 rounded-xl gap-2 transition-all active:scale-95"
             onClick={() => {
               if (hasReachedLimit('products', products.length)) {
                 setShowLimitDialog(true);
@@ -1351,22 +1347,22 @@ const Products: FC = () => {
               }
             }}
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
             Nuevo Producto
           </Button>
 
           <Button
             size="lg"
-            className="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-blue-500/20 gap-3 transition-all active:scale-95"
+            className="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-bold uppercase tracking-wide text-xs h-10 px-5 rounded-xl gap-2 transition-all active:scale-95"
             onClick={() => setIsAIStockOpen(true)}
           >
-            <Sparkles className="h-5 w-5 text-blue-200" />
+            <Sparkles className="h-4 w-4 text-blue-200" />
             Stock con IA
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-14 px-6 rounded-2xl border-border/50 bg-muted/10 font-bold uppercase text-[10px] tracking-widest">
+              <Button variant="outline" className="h-10 px-4 rounded-xl border-border/50 bg-muted/10 font-bold uppercase text-[10px] tracking-widest">
                 <Upload className="mr-2 h-4 w-4" />
                 Acciones
               </Button>
@@ -1404,7 +1400,7 @@ const Products: FC = () => {
 
           <Button
             variant="outline"
-            className="h-14 w-14 rounded-2xl border-border/50 bg-muted/10"
+            className="h-10 w-10 rounded-xl border-border/50 bg-muted/10"
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['products'] });
               toast({ title: "Actualizando...", description: "Sincronizando inventario..." });
@@ -1416,14 +1412,14 @@ const Products: FC = () => {
       </div>
 
       {/* Centered Tab Selector */}
-      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] mb-6 px-2">
+      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] mb-1 px-2">
         <div className="flex items-center gap-1 p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm w-max mx-auto flex-nowrap">
           <Button
             variant={activeTab === 'products' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('products')}
             className={cn(
-              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
+              "rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shrink-0",
               activeTab === 'products' && "bg-background shadow-lg"
             )}
           >
@@ -1436,7 +1432,7 @@ const Products: FC = () => {
               size="sm"
               onClick={() => setActiveTab('inventory')}
               className={cn(
-                "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
+                "rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shrink-0",
                 activeTab === 'inventory' && "bg-background shadow-lg"
               )}
             >
@@ -1449,7 +1445,7 @@ const Products: FC = () => {
             size="sm"
             onClick={() => setActiveTab('history')}
             className={cn(
-              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
+              "rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shrink-0",
               activeTab === 'history' && "bg-background shadow-lg"
             )}
           >
@@ -1480,121 +1476,78 @@ const Products: FC = () => {
       {activeTab === 'products' && (
         <>
 
-      {/* Estadísticas del inventario */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {/* Estadísticas del inventario — compactas, una línea por tarjeta */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Valor del inventario */}
-        <Card className="bg-card/60 backdrop-blur-xl border border-border/50 hover:border-emerald-500/30 hover:bg-card/80 transition-all duration-500 overflow-hidden relative group rounded-3xl shadow-sm hover:shadow-emerald-500/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-          <CardContent className="p-6 relative z-10 flex flex-col justify-center h-full gap-5">
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors duration-500">
-                <DollarSign className="h-6 w-6 text-emerald-500" />
-              </div>
-              <div className="space-y-1 min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Previsión de Venta</p>
-                  {currentCategoryName && (
-                    <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
-                      {currentCategoryName}
-                    </span>
-                  )}
-                </div>
-                <p className="text-3xl font-black tracking-tighter text-emerald-500 flex items-baseline gap-0.5">
-                  <span className="text-xl font-bold opacity-80">$</span>
-                  {inventoryStats.valorEnPrecio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
+        <Card className="bg-card/60 border border-border/50 rounded-2xl">
+          <CardContent className="p-3.5 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+              <DollarSign className="h-4.5 w-4.5 text-emerald-500" />
             </div>
-            
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
-              <div>
-                <p className="text-[9px] uppercase font-bold text-muted-foreground/60 mb-1">Costo (Sin Imp)</p>
-                <p className="text-sm font-semibold opacity-90">
-                  ${inventoryStats.costoSinImpuesto.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div>
-                <p className="text-[9px] uppercase font-bold text-muted-foreground/60 mb-1">Costo (Con Imp)</p>
-                <p className="text-sm font-semibold opacity-90">
-                  ${inventoryStats.costoConImpuesto.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/80 truncate">Previsión de Venta</p>
+              <p className="text-xl font-black tracking-tight text-emerald-500 truncate">
+                ${inventoryStats.valorEnPrecio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[10px] text-muted-foreground/70 truncate">
+                Costo: ${inventoryStats.costoSinImpuesto.toLocaleString('es-DO', { maximumFractionDigits: 0 })} sin imp. · ${inventoryStats.costoConImpuesto.toLocaleString('es-DO', { maximumFractionDigits: 0 })} con imp.
+              </p>
             </div>
           </CardContent>
         </Card>
 
         {/* Total de productos */}
-        <Card className="bg-card/60 backdrop-blur-xl border border-border/50 hover:border-blue-500/30 hover:bg-card/80 transition-all duration-500 overflow-hidden relative group rounded-3xl shadow-sm hover:shadow-blue-500/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-          <CardContent className="p-6 relative z-10 flex flex-col justify-center h-full gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors duration-500">
-                <Package className="h-6 w-6 text-blue-500" />
-              </div>
-              <div className="space-y-1 min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
-                    Total Productos
-                  </p>
-                  {currentCategoryName && (
-                    <span className="text-[9px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
-                      {currentCategoryName}
-                    </span>
-                  )}
-                </div>
-                <p className="text-4xl font-black tracking-tighter text-blue-500">{filteredProducts.length}</p>
-              </div>
+        <Card className="bg-card/60 border border-border/50 rounded-2xl">
+          <CardContent className="p-3.5 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 shrink-0">
+              <Package className="h-4.5 w-4.5 text-blue-500" />
             </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/80 truncate">Total Productos</p>
+              <p className="text-xl font-black tracking-tight text-blue-500">{filteredProducts.length}</p>
+            </div>
+            {currentCategoryName && (
+              <span className="text-[9px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md truncate max-w-[90px] shrink-0">
+                {currentCategoryName}
+              </span>
+            )}
           </CardContent>
         </Card>
 
         {/* Productos con stock bajo */}
         <Card
-          className={`backdrop-blur-xl transition-all duration-500 overflow-hidden relative group rounded-3xl cursor-pointer shadow-sm ${
+          className={cn(
+            "rounded-2xl cursor-pointer transition-colors",
             showLowStockOnly
-            ? 'bg-destructive/10 border-destructive/30 ring-1 ring-destructive/50 shadow-[0_4px_20px_rgba(239,68,68,0.15)]'
-            : 'bg-card/60 border-border/50 hover:border-destructive/30 hover:bg-card/80 hover:shadow-destructive/10 border'
-          }`}
+              ? 'bg-destructive/10 border-destructive/30 ring-1 ring-destructive/50'
+              : 'bg-card/60 border-border/50 hover:border-destructive/30 border'
+          )}
           onClick={() => setShowLowStockOnly(!showLowStockOnly)}
         >
-          <div className={`absolute inset-0 bg-gradient-to-br from-destructive/10 via-transparent to-transparent transition-opacity duration-700 ${showLowStockOnly ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-          <CardContent className="p-6 relative z-10 flex flex-col justify-center h-full gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 flex-1">
-                <div className={`p-4 rounded-2xl border transition-colors duration-500 ${showLowStockOnly ? 'bg-destructive/20 border-destructive/30' : 'bg-destructive/10 border-destructive/20 group-hover:bg-destructive/20'}`}>
-                  <AlertTriangle className={`h-6 w-6 text-destructive ${showLowStockOnly ? 'animate-pulse' : ''}`} />
-                </div>
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 truncate">
-                      Stock Bajo {showLowStockOnly && <span className="text-destructive font-bold ml-1">(Filtrado)</span>}
-                    </p>
-                    {currentCategoryName && !showLowStockOnly && (
-                      <span className="text-[9px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
-                        {currentCategoryName}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-4xl font-black tracking-tighter text-destructive">{lowStockCount}</p>
-                </div>
-              </div>
-              {showLowStockOnly && lowStockCount > 0 && (
-                <div className="pl-4 border-l border-destructive/20 h-full flex items-center justify-center">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-xl border-destructive/30 bg-destructive/10 hover:bg-destructive hover:text-destructive-foreground transition-colors shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePrintShoppingList();
-                    }}
-                    title="Imprimir lista de compra"
-                  >
-                    <Printer className="h-5 w-5" />
-                  </Button>
-                </div>
-              )}
+          <CardContent className="p-3.5 flex items-center gap-3">
+            <div className={cn("p-2 rounded-xl border shrink-0", showLowStockOnly ? 'bg-destructive/20 border-destructive/30' : 'bg-destructive/10 border-destructive/20')}>
+              <AlertTriangle className={cn("h-4.5 w-4.5 text-destructive", showLowStockOnly && 'animate-pulse')} />
             </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/80 truncate">
+                Stock Bajo {showLowStockOnly && <span className="text-destructive">(Filtrado)</span>}
+              </p>
+              <p className="text-xl font-black tracking-tight text-destructive">{lowStockCount}</p>
+            </div>
+            {showLowStockOnly && lowStockCount > 0 && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg border-destructive/30 bg-destructive/10 hover:bg-destructive hover:text-destructive-foreground transition-colors shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrintShoppingList();
+                }}
+                title="Imprimir lista de compra"
+              >
+                <Printer className="h-4 w-4" />
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -1603,53 +1556,29 @@ const Products: FC = () => {
       <Card>
         <CardContent className="p-4">
           <div className="space-y-4">
-            {/* Botones de tipo de búsqueda */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-5">
-              <Button
-                variant={searchType === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSearchType('all')}
-                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
-              >
-                <Asterisk className="h-4 w-4" />
-                <span>Todo</span>
-              </Button>
-              <Button
-                variant={searchType === 'name' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSearchType('name')}
-                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
-              >
-                <Package className="h-4 w-4" />
-                <span>Nombre</span>
-              </Button>
-              <Button
-                variant={searchType === 'barcode' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSearchType('barcode')}
-                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
-              >
-                <Barcode className="h-4 w-4" />
-                <span>Código de barras</span>
-              </Button>
-              <Button
-                variant={searchType === 'id' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSearchType('id')}
-                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
-              >
-                <Hash className="h-4 w-4" />
-                <span>Código interno</span>
-              </Button>
-              <Button
-                variant={searchType === 'category' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSearchType('category')}
-                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2"
-              >
-                <Tag className="h-4 w-4" />
-                <span>Categoría</span>
-              </Button>
+            {/* Botones de tipo de búsqueda — chips planos, una sola fila con scroll horizontal */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+              {[
+                { value: 'all', icon: Asterisk, label: 'Todo' },
+                { value: 'name', icon: Package, label: 'Nombre' },
+                { value: 'barcode', icon: Barcode, label: 'Código de barras' },
+                { value: 'id', icon: Hash, label: 'Código interno' },
+                { value: 'category', icon: Tag, label: 'Categoría' },
+              ].map(({ value, icon: Icon, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setSearchType(value as typeof searchType)}
+                  className={cn(
+                    "shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
+                    searchType === value
+                      ? "bg-emerald-600 text-white"
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* Barra de búsqueda y filtro de categoría */}
@@ -1666,13 +1595,13 @@ const Products: FC = () => {
                   }
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-muted/50 border-transparent focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10"
                 />
               </div>
 
               {/* Filtro de categoría */}
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px] bg-muted/50 border-transparent focus:bg-background focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/10 data-[state=open]:bg-background data-[state=open]:border-emerald-500/40">
                   <SelectValue placeholder="Todas las categorías" />
                 </SelectTrigger>
                 <SelectContent>

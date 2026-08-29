@@ -59,7 +59,12 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [storeId, refreshMasterData]);
 
-  const contextValue = React.useMemo(() => ({
+  // Memoizado: sin esto, el objeto `value` se recreaba en CADA render de este
+  // provider (que envuelve toda la app) — cualquier componente que consuma
+  // useMasterData() (POS incluido) se re-renderizaba de más cada vez que
+  // llegaba un evento de sync/auth, aunque products/customers/categories no
+  // hubieran cambiado en absoluto.
+  const value = React.useMemo(() => ({
     customers,
     categories,
     products,
@@ -68,7 +73,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   }), [customers, categories, products, isLoading, refreshMasterData]);
 
   return (
-    <MasterDataContext.Provider value={contextValue}>
+    <MasterDataContext.Provider value={value}>
       {children}
     </MasterDataContext.Provider>
   );
