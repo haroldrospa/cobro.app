@@ -1287,19 +1287,26 @@ const POSContent: React.FC = () => {
     } finally {
       setIsSavingOrder(false);
     }
-  };
+  const cartRef = useRef(cart);
+  const currentWebOrderIdRef = useRef(currentWebOrderId);
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
+  useEffect(() => {
+    currentWebOrderIdRef.current = currentWebOrderId;
+  }, [currentWebOrderId]);
 
-  const handleSaveOrder = () => {
-    if (cart.length === 0) return;
+  const handleSaveOrder = useCallback(() => {
+    if (cartRef.current.length === 0) return;
 
     // If editing an existing order, save directly
-    if (currentWebOrderId) {
+    if (currentWebOrderIdRef.current) {
       saveExistingOrderDirectly();
     } else {
       // New order - show dialog
       setShowSaveOrderDialog(true);
     }
-  };
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1504,7 +1511,7 @@ const POSContent: React.FC = () => {
   }), [totals, total]);
 
   // --- MEMO CALLBACKS extracted for POSActionButtons ---
-  const memoHandleSaveOrder = useCallback(handleSaveOrder, [cart, currentWebOrderId, isSavingOrder]);
+  const memoHandleSaveOrder = handleSaveOrder;
   const memoHandleShowOpenAccounts = handleShowOpenAccounts;
   const memoHandleShowWebSales = handleShowWebSales;
   const memoHandleToggleFullscreen = handleToggleFullscreen;
@@ -1553,11 +1560,12 @@ const POSContent: React.FC = () => {
     );
   }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile, activeSession]);
 
+  const hasCartItems = cart.length > 0;
   // Action buttons as a stable React.memo component reference
   const actionButtons = useMemo(() => (
     <POSActionButtons
       profileName={profile?.full_name}
-      cartLength={cart.length}
+      hasItems={hasCartItems}
       isSavingOrder={isSavingOrder}
       currentWebOrderId={currentWebOrderId}
       webOrdersCount={webOrdersCount}
@@ -1567,7 +1575,7 @@ const POSContent: React.FC = () => {
       onShowWebSales={memoHandleShowWebSales}
       onToggleFullscreen={memoHandleToggleFullscreen}
     />
-  ), [profile?.full_name, cart.length, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
@@ -2412,7 +2420,7 @@ const POSContent: React.FC = () => {
 // Separated from POSContent to avoid re-rendering on every searchTerm/cart change
 interface POSActionButtonsProps {
   profileName?: string;
-  cartLength: number;
+  hasItems: boolean;
   isSavingOrder: boolean;
   currentWebOrderId: string | null;
   webOrdersCount: number;
@@ -2425,7 +2433,7 @@ interface POSActionButtonsProps {
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
   profileName,
-  cartLength,
+  hasItems,
   isSavingOrder,
   currentWebOrderId,
   webOrdersCount,
@@ -2445,7 +2453,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         </div>
       </div>
 
-      {cartLength > 0 && (
+      {hasItems && (
         <Button
           variant="outline"
           onClick={onSaveOrder}
