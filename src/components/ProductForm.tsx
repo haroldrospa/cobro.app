@@ -168,7 +168,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, prefilledValues, onC
     <>
       {/* Backdrop — clic afuera cierra (con confirmación si hay cambios) */}
       <div
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-40"
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
         onClick={handleBackdropClick}
       >
         {/* Stoppage propagation: clic dentro del Card NO cierra */}

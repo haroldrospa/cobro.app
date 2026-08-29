@@ -98,7 +98,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
 
                 <div className="px-6 pb-6">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 bg-white/5 p-1 rounded-2xl h-12 mb-6">
+                        <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start bg-white/5 p-1 rounded-2xl h-12 mb-6 sm:grid sm:grid-cols-2">
                             <TabsTrigger value="new" className="rounded-xl font-bold data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all flex items-center gap-2">
                                 <PlusIcon className="h-4 w-4" /> Nuevo Registro
                             </TabsTrigger>

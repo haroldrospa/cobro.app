@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { playNotificationSound, NotificationSoundType } from '@/utils/notificationSounds';
 
@@ -21,7 +20,6 @@ export const useWebOrderNotifications = ({
   soundVolume = 0.7,
   onNewOrder
 }: UseWebOrderNotificationsProps) => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Use a ref for the callback to avoid re-subscribing when the function identity changes
@@ -61,15 +59,8 @@ export const useWebOrderNotifications = ({
           if (payload.eventType === 'INSERT') {
             console.log('🆕 NEW Order received:', newOrder);
 
-            // Play notification sound
+            // Play notification sound (sin toast/popup — solo el sonido + el contador de pedidos web)
             playNotificationSound(soundType, soundEnabled, soundVolume);
-
-            // Show toast notification for new order
-            toast({
-              title: "🔔 ¡Nuevo Pedido Web!",
-              description: `Pedido ${newOrder.order_number} de ${newOrder.customer_name}`,
-              duration: 5000,
-            });
 
             // Optimistically update the count if it matches
             if (newOrder.source?.toLowerCase() === 'web') {
@@ -104,5 +95,5 @@ export const useWebOrderNotifications = ({
       console.log('🔕 Unsubscribing from web orders');
       supabase.removeChannel(channel);
     };
-  }, [storeId, enabled, soundEnabled, soundType, soundVolume, toast, queryClient]);
+  }, [storeId, enabled, soundEnabled, soundType, soundVolume, queryClient]);
 };

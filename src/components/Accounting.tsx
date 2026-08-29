@@ -3822,9 +3822,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                     </DialogHeader>
                     <div className="grid gap-4 py-2">
                         {/* RNC con búsqueda DGII */}
-                        <div className="grid grid-cols-4 items-center gap-3">
-                            <Label htmlFor="sup-rnc" className="text-right text-xs font-bold">RNC / Cédula</Label>
-                            <div className="col-span-3 relative flex items-center">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-1.5 sm:gap-3 sm:items-center">
+                            <Label htmlFor="sup-rnc" className="sm:text-right text-xs font-bold">RNC / Cédula</Label>
+                            <div className="sm:col-span-3 relative flex items-center">
                                 <Input
                                     id="sup-rnc"
                                     placeholder="000-00000-0"
@@ -3847,35 +3847,35 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         </div>
 
                         {/* Nombre */}
-                        <div className="grid grid-cols-4 items-center gap-3">
-                            <Label htmlFor="sup-name" className="text-right text-xs font-bold">Nombre *</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-1.5 sm:gap-3 sm:items-center">
+                            <Label htmlFor="sup-name" className="sm:text-right text-xs font-bold">Nombre *</Label>
                             <Input
                                 id="sup-name"
                                 placeholder="Ej. Distribuidora Banileja"
-                                className="col-span-3 h-9 rounded-xl text-sm"
+                                className="sm:col-span-3 h-9 rounded-xl text-sm"
                                 value={newSupplier.name || ''}
                                 onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
                             />
                         </div>
 
                         {/* Teléfono & Contacto */}
-                        <div className="grid grid-cols-4 items-center gap-3">
-                            <Label htmlFor="sup-phone" className="text-right text-xs font-bold">Teléfono</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-1.5 sm:gap-3 sm:items-center">
+                            <Label htmlFor="sup-phone" className="sm:text-right text-xs font-bold">Teléfono</Label>
                             <Input
                                 id="sup-phone"
                                 placeholder="Ej. 809-555-0199"
-                                className="col-span-3 h-9 rounded-xl text-sm"
+                                className="sm:col-span-3 h-9 rounded-xl text-sm"
                                 value={newSupplier.phone || ''}
                                 onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
                             />
                         </div>
 
-                        <div className="grid grid-cols-4 items-center gap-3">
-                            <Label htmlFor="sup-contact" className="text-right text-xs font-bold">Contacto / Email</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-1.5 sm:gap-3 sm:items-center">
+                            <Label htmlFor="sup-contact" className="sm:text-right text-xs font-bold">Contacto / Email</Label>
                             <Input
                                 id="sup-contact"
                                 placeholder="Persona de contacto o Email"
-                                className="col-span-3 h-9 rounded-xl text-sm"
+                                className="sm:col-span-3 h-9 rounded-xl text-sm"
                                 value={newSupplier.contact || ''}
                                 onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })}
                             />
@@ -3884,9 +3884,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                         <div className="my-1 border-t border-border/40" />
 
                         {/* Método de Pago Preferido */}
-                        <div className="grid grid-cols-4 items-center gap-3">
-                            <Label className="text-right text-xs font-bold">Pago Preferido</Label>
-                            <div className="col-span-3 flex gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-1.5 sm:gap-3 sm:items-center">
+                            <Label className="sm:text-right text-xs font-bold">Pago Preferido</Label>
+                            <div className="sm:col-span-3 flex gap-2">
                                 <Button
                                     type="button"
                                     variant={newSupplier.payment_method === 'transfer' ? 'default' : 'outline'}
@@ -3914,9 +3914,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 <Landmark className="h-3.5 w-3.5 text-primary" /> Datos Bancarios para Transferencia
                             </p>
 
-                            <div className="grid grid-cols-3 items-center gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 sm:items-center">
                                 <Label className="text-xs font-medium">Banco</Label>
-                                <div className="col-span-2">
+                                <div className="sm:col-span-2">
                                     <Input
                                         placeholder="Ej. Banco Popular, Banreservas, BHD"
                                         className="h-8 rounded-lg text-xs"
@@ -3926,9 +3926,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 items-center gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 sm:items-center">
                                 <Label className="text-xs font-medium">Número Cuenta</Label>
-                                <div className="col-span-2">
+                                <div className="sm:col-span-2">
                                     <Input
                                         placeholder="Ej. 123456789"
                                         className="h-8 rounded-lg text-xs font-mono"
@@ -3938,9 +3938,9 @@ Si algún dato no es visible, usa null. El JSON debe ser plano. Ejemplo: {"date"
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 items-center gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 sm:items-center">
                                 <Label className="text-xs font-medium">Tipo de Cuenta</Label>
-                                <div className="col-span-2">
+                                <div className="sm:col-span-2">
                                     <Select
                                         value={newSupplier.bank_account_type || 'ahorros'}
                                         onValueChange={(val) => setNewSupplier({ ...newSupplier, bank_account_type: val })}

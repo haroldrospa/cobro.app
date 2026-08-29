@@ -419,7 +419,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                 </div>
 
                 <Tabs defaultValue="close" className="w-full flex-1 flex flex-col overflow-hidden px-6 pb-6">
-                    <TabsList className="grid w-full grid-cols-2 bg-white/5 p-1 rounded-2xl h-12 mb-6">
+                    <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start bg-white/5 p-1 rounded-2xl h-12 mb-6 sm:grid sm:grid-cols-2">
                         <TabsTrigger value="close" className="rounded-xl font-bold data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
                             Cierre de Sesión
                         </TabsTrigger>

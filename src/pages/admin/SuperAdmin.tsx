@@ -702,7 +702,7 @@ const SuperAdmin = () => {
                     {/* SECCION PAGOS */}
 
                     <Tabs defaultValue="pending" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 mb-4">
+                        <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start mb-4 sm:grid sm:grid-cols-3">
                             <TabsTrigger value="pending" className="flex items-center gap-2">
                                 <AlertCircle className="h-4 w-4" />
                                 Pendientes ({reports?.filter(r => r.status === "pending").length || 0})

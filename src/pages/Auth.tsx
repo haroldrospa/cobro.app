@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
 import { z } from 'zod';
 import cobroLogo from '@/assets/cobro-logo-dark.png';
 
@@ -418,7 +418,7 @@ const Auth = () => {
   const inputCls = "pl-10 h-12 text-sm !bg-slate-950/40 !border-white/[0.08] text-white placeholder:text-slate-600 focus:!bg-slate-950/60 focus:!border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 focus-visible:ring-offset-0 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 transition-all rounded-xl";
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-tr from-[#121619] via-[#1a2228] to-[#252f36] text-white px-4 py-8 overflow-y-auto font-sans selection:bg-emerald-500/30">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-tr from-[#121619] via-[#1a2228] to-[#252f36] text-white px-4 py-8 overflow-y-auto overflow-x-hidden font-sans selection:bg-emerald-500/30">
       {/* Structured dotted grid pattern */}
       <div className="absolute inset-0 z-0 opacity-[0.2]" style={{
         backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1.5px, transparent 0)',
@@ -629,24 +629,17 @@ const Auth = () => {
                         className="flex items-center gap-2.5 cursor-pointer group select-none"
                         onClick={() => setRememberMe(!rememberMe)}
                       >
-                        <div className="relative">
-                          {/* Outer ring */}
-                          <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all duration-300 ease-out shadow-sm
-                            ${rememberMe 
-                              ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' 
-                              : 'bg-[#15171b] border-slate-700/60 group-hover:border-emerald-500/50'
-                            }`}
-                          >
-                            <Check 
-                              className={`w-3.5 h-3.5 text-slate-950 stroke-[4] transition-all duration-300
-                                ${rememberMe ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}
-                              `}
-                            />
-                          </div>
-                          {/* Ripple effect on check */}
-                          {rememberMe && (
-                            <div className="absolute inset-0 rounded-md ring-2 ring-emerald-500/30 animate-ping opacity-20 pointer-events-none" />
-                          )}
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors duration-200
+                          ${rememberMe
+                            ? 'bg-emerald-500 border-emerald-500'
+                            : 'bg-[#15171b] border-slate-700/60 group-hover:border-emerald-500/50'
+                          }`}
+                        >
+                          <Check
+                            className={`w-3.5 h-3.5 text-slate-950 stroke-[4] transition-opacity duration-200
+                              ${rememberMe ? 'opacity-100' : 'opacity-0'}
+                            `}
+                          />
                         </div>
                         <span className="text-[11.5px] text-slate-400 font-medium group-hover:text-slate-200 transition-colors">
                           Recordar sesión
@@ -666,7 +659,7 @@ const Auth = () => {
 
                   <Button
                     type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.2)] transition-all active:scale-[0.98] rounded-xl mt-6 text-sm"
+                    className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold transition-all active:scale-[0.98] rounded-xl mt-6 text-sm"
                     disabled={loading}
                   >
                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando sesión...</> : 'Continuar'}
@@ -1026,17 +1019,6 @@ const Auth = () => {
             </motion.div>
           </CardContent>
         </Card>
-
-        <div className="flex items-center justify-center mt-6">
-          <Button
-            variant="ghost"
-            className="text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs font-semibold rounded-lg px-4 py-2 group"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
-            Volver al inicio
-          </Button>
-        </div>
       </motion.div>
     </div>
   );

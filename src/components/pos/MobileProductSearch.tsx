@@ -96,13 +96,6 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     4: '75px'
   }[gridCols] || '140px';
 
-  const categories = React.useMemo(() => {
-    const names = products
-      .map(p => p.category?.name)
-      .filter((name): name is string => typeof name === 'string' && name.trim() !== '');
-    return ['Todos', ...Array.from(new Set(names))];
-  }, [products]);
-
   const normalizeText = React.useCallback((text: string) => {
     return (text || '')
       .normalize("NFD")
@@ -406,11 +399,11 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-emerald-500/60 hover:bg-emerald-500/10 hover:text-emerald-400 rounded-xl transition-all"
+                className="h-9 w-9 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 rounded-xl transition-colors"
                 onClick={onRefresh}
                 disabled={isLoading}
               >
-                <RefreshCcw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                <RefreshCcw className={cn("h-4 w-4", isLoading && "animate-spin text-emerald-500")} />
               </Button>
             )}
             <DropdownMenu>
@@ -435,14 +428,13 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
         </div>
 
         {/* Search Bar Row */}
-        <div className="relative w-full group">
-          <div className="absolute inset-0 bg-emerald-500/5 blur-xl group-focus-within:bg-emerald-500/15 transition-all rounded-2xl pointer-events-none" />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-500/40 transition-colors group-focus-within:text-emerald-500 z-10 pointer-events-none" />
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             ref={searchInputRef}
             type="text"
             placeholder="Escanear o buscar producto..."
-            className="pl-9 pr-11 h-10 bg-background border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all rounded-xl shadow-md font-bold text-xs tracking-tight placeholder:text-muted-foreground text-foreground w-full"
+            className="pl-9 pr-11 h-10 bg-muted/50 border-transparent focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10 transition-colors rounded-xl font-medium text-xs tracking-tight placeholder:text-muted-foreground text-foreground w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -452,7 +444,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 flex items-center justify-center rounded-lg text-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
             title="Escanear código de barras o QR"
           >
             <ScanBarcode className="h-4 w-4" />
@@ -465,23 +457,6 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
           onDetect={handleScanDetect}
         />
 
-        {/* Category Pills - Premium Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full -mx-3 px-3">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border whitespace-nowrap shrink-0",
-                selectedCategory === cat
-                  ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/20"
-                  : "bg-muted border-emerald-500/10 text-muted-foreground hover:border-emerald-500/30 hover:text-foreground"
-              )}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* ── PRODUCTS FEED ── */}
@@ -755,11 +730,19 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
         }
       }}
       className={cn(
-        "group text-left overflow-hidden border transition-all duration-300 shadow-sm relative flex",
-        cartQty > 0
-          ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] shadow-sm"
-          : "border-border/60 bg-card hover:border-emerald-500/20 hover:shadow-md",
-        viewMode === 'list' ? "rounded-xl flex-row h-16 items-center mx-1" : (gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col"),
+        "group text-left relative flex transition-colors duration-200",
+        viewMode === 'list'
+          ? cn(
+              "rounded-2xl flex-row h-[4.25rem] items-center",
+              cartQty > 0 ? "bg-emerald-500/[0.08] dark:bg-emerald-500/[0.12]" : "bg-muted/50 hover:bg-muted/80"
+            )
+          : cn(
+              "overflow-hidden border shadow-sm",
+              gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col",
+              cartQty > 0
+                ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08]"
+                : "border-border/60 bg-card hover:border-emerald-500/20 hover:shadow-md"
+            ),
         outOfStock && "opacity-40 grayscale pointer-events-none",
         canSelect && "cursor-pointer"
       )}
@@ -777,7 +760,7 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
       <div className={cn(
         "relative bg-muted overflow-hidden shrink-0 flex items-center justify-center",
         viewMode === 'list'
-          ? "w-12 h-12 rounded-lg my-auto ml-2 border border-border/40"
+          ? "w-12 h-12 rounded-xl ml-3"
           : "aspect-square w-full border-b border-border"
       )}>
         {product.image_url ? (
@@ -794,9 +777,9 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
           </div>
         )}
 
-        {/* Stock Badge - clean pill */}
-        {product.track_inventory !== false && (
-          <div className={viewMode === 'list' ? "absolute top-0.5 left-0.5 z-10" : "absolute top-1.5 left-1.5"}>
+        {/* Stock Badge - clean pill (solo en grid; en lista el stock va como texto junto al precio) */}
+        {product.track_inventory !== false && viewMode !== 'list' && (
+          <div className="absolute top-1.5 left-1.5">
             <span className={cn(
               // Sin backdrop-blur: esta insignia se repite en cada tarjeta
               // de la grilla (hasta 80 en pantalla) y el fondo ya es
@@ -826,9 +809,19 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
             {product.name}
           </h4>
           {viewMode === 'list' && (
-            <span className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight text-xs mt-0.5">
-              ${(product.price || 0).toLocaleString()}
-            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight text-xs">
+                ${(product.price || 0).toLocaleString()}
+              </span>
+              {product.track_inventory !== false && (
+                <span className={cn(
+                  "text-[10px] font-medium",
+                  (product.stock || 0) > 10 ? "text-muted-foreground/60" : "text-red-500/80"
+                )}>
+                  · {product.stock || 0} uds
+                </span>
+              )}
+            </div>
           )}
           {product.category?.name && gridCols < 4 && viewMode !== 'list' && (
             <p className="text-[8px] font-bold uppercase tracking-wider text-emerald-600/60 truncate">

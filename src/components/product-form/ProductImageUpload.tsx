@@ -356,7 +356,7 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         </div>
       ) : (
         <Tabs defaultValue="upload" className="mt-2">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-2">
             <TabsTrigger value="upload">
               <Upload className="h-4 w-4 mr-2" />
               Subir
