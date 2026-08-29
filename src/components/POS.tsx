@@ -2436,59 +2436,66 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
   onToggleFullscreen,
 }) {
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
-      <div className="hidden xl:flex flex-col items-end mr-1 pr-3 border-r border-border/50">
-        <span className="text-[9px] text-muted-foreground uppercase font-black tracking-tighter leading-none mb-0.5">Cajero(a)</span>
-        <span className="text-xs font-bold text-foreground truncate max-w-[140px] leading-none">{profileName || 'Usuario'}</span>
+    <div className="flex items-center gap-1.5">
+      <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/40 border border-border/40 mr-1">
+        <User className="h-3 w-3 text-muted-foreground" />
+        <div className="flex flex-col text-left">
+          <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-wider leading-none">Cajero</span>
+          <span className="text-[11px] font-bold text-foreground truncate max-w-[120px] leading-tight">{profileName || 'Usuario'}</span>
+        </div>
       </div>
 
       <Button
-        variant="ghost"
+        variant="outline"
         onClick={onSaveOrder}
         size="sm"
-        className="h-9 min-w-9 sm:h-10 sm:px-3 gap-2 rounded-full border border-transparent hover:border-border/50"
+        className="h-8 px-2.5 gap-1.5 rounded-lg border-border/40 bg-background hover:bg-accent text-xs font-medium text-muted-foreground hover:text-foreground shadow-none"
         disabled={cartLength === 0 || isSavingOrder}
         title="Guardar Pedido (F9)"
       >
-        <Save className="h-4 w-4 sm:h-5 sm:w-5" />
-        <span className="hidden lg:inline font-medium text-sm">{currentWebOrderId ? 'Actualizar' : 'Guardar'}</span>
+        <Save className="h-3.5 w-3.5" />
+        <span className="hidden lg:inline">{currentWebOrderId ? 'Actualizar' : 'Guardar'}</span>
       </Button>
 
       <Button
-        variant="ghost"
+        variant="outline"
         onClick={onOpenAccounts}
         size="sm"
-        className="h-9 min-w-9 sm:h-10 sm:px-3 gap-2 rounded-full border border-transparent hover:border-border/50"
+        className="h-8 px-2.5 gap-1.5 rounded-lg border-border/40 bg-background hover:bg-accent text-xs font-medium text-muted-foreground hover:text-foreground shadow-none"
         title="Ver Cuentas (F8)"
       >
-        <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5" />
-        <span className="hidden lg:inline font-medium text-sm">Cuentas</span>
+        <ClipboardList className="h-3.5 w-3.5" />
+        <span className="hidden lg:inline">Cuentas</span>
       </Button>
 
       <Button
-        variant="default"
+        variant="outline"
         onClick={onShowWebSales}
         size="sm"
-        className={`h-9 min-w-9 sm:h-10 sm:px-4 gap-2 rounded-full relative shadow-sm hover:shadow-md transition-all ${webOrdersCount > 0 ? 'bg-primary hover:bg-primary/90' : 'bg-primary/90 hover:bg-primary'}`}
+        className={`h-8 px-2.5 gap-1.5 rounded-lg relative font-bold text-xs transition-all shadow-none ${
+          webOrdersCount > 0 
+            ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' 
+            : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+        }`}
         title="Pedidos Web"
       >
-        <Store className="h-4 w-4 sm:h-5 sm:w-5" />
-        <span className="hidden md:inline font-bold text-sm">Web</span>
+        <Store className="h-3.5 w-3.5" />
+        <span className="hidden md:inline">Web</span>
         {webOrdersCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-in zoom-in duration-300 ring-2 ring-background">
+          <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] font-black rounded-full h-4 min-w-4 px-1 flex items-center justify-center ring-2 ring-background">
             {webOrdersCount > 9 ? '9+' : webOrdersCount}
           </span>
         )}
       </Button>
 
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         onClick={onToggleFullscreen}
-        className="hidden md:flex h-9 w-9 sm:h-10 sm:w-10 rounded-full text-muted-foreground hover:text-foreground items-center justify-center"
+        className="hidden md:flex h-8 w-8 rounded-lg border-border/40 bg-background text-muted-foreground hover:text-foreground hover:bg-accent shadow-none items-center justify-center shrink-0"
         title="Pantalla Completa"
       >
-        {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+        {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
       </Button>
     </div>
   );

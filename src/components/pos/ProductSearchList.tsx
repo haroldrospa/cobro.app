@@ -785,20 +785,22 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
           {menuButton}
 
           {/* Search Type Buttons */}
-          <div className="flex gap-1 bg-muted/50 p-1 rounded-lg overflow-x-auto scrollbar-hide shrink min-w-0">
+          <div className="flex items-center gap-0.5 bg-muted/40 p-0.5 rounded-lg border border-border/40 overflow-x-auto scrollbar-hide shrink min-w-0">
             {searchTypes.map(({ type, label, icon: Icon }) => (
               <Button
                 key={type}
-                variant={searchType === type ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
                 onClick={() => handleSearchTypeChange(type)}
                 className={cn(
-                  "h-8 px-2 lg:px-3 text-xs lg:text-sm gap-1.5 shrink-0 whitespace-nowrap",
-                  searchType === type && "bg-background shadow-sm text-foreground"
+                  "h-7 px-2 lg:px-2.5 text-xs gap-1.5 shrink-0 whitespace-nowrap rounded-md font-medium transition-all shadow-none",
+                  searchType === type 
+                    ? "bg-card text-foreground font-semibold shadow-xs border border-border/50" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
                 title={label}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3 w-3 opacity-70" />
                 <span className={cn(
                   "transition-all duration-200",
                   searchType === type ? "inline-block" : "hidden xl:inline-block"
@@ -812,8 +814,12 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
           {/* View Settings */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0">
-                <Settings2 className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 px-2.5 gap-1.5 shrink-0 rounded-lg border-border/40 bg-background hover:bg-accent text-xs font-medium text-muted-foreground hover:text-foreground shadow-none"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Vista</span>
               </Button>
             </DropdownMenuTrigger>
