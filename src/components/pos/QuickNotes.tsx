@@ -3,7 +3,6 @@ import { Plus, Trash2, Calendar as CalendarIcon, DollarSign, StickyNote, Chevron
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -350,66 +349,67 @@ const QuickNotesSection: React.FC = () => {
                         </Button>
                     </div>
 
-                    <ScrollArea className={cn(notes.length > 0 || isLoading ? "h-32" : "h-0", "w-full pr-1.5")}>
+                    <div className={cn(
+                        notes.length > 0 || isLoading ? "max-h-40 overflow-y-auto overflow-x-hidden" : "h-0 overflow-hidden",
+                        "w-full pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
+                    )}>
                         {isLoading && (
                             <div className="h-full flex items-center justify-center py-4">
                                 <RefreshCcw className="h-5 w-5 animate-spin text-primary/40" />
                             </div>
                         )}
-                        <div className="space-y-1.5 pr-0.5">
-                            {notes.map((note) => {
-                                const today = format(new Date(), 'yyyy-MM-dd');
-                                const isToday = note.dueDate === today;
-                                const isOverdue = note.dueDate < today;
-                                return (
-                                    <div key={note.id} className={cn(
-                                        "flex items-center justify-between gap-1.5 p-2 rounded-md border transition-all w-full",
-                                        isOverdue
-                                            ? "bg-destructive/10 border-destructive/40"
-                                            : isToday
-                                            ? "bg-primary/10 border-primary/40"
-                                            : "bg-background/50 border-border/30 hover:border-primary/30"
-                                    )}>
-                                        <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                {isOverdue && (
-                                                    <span className="text-[9px] font-black uppercase bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded shrink-0">VENCIDO</span>
-                                                )}
-                                                {isToday && !isOverdue && (
-                                                    <span className="text-[9px] font-black uppercase bg-primary text-primary-foreground px-1.5 py-0.5 rounded shrink-0">HOY</span>
-                                                )}
-                                                <span className="text-xs font-bold text-foreground truncate">{note.name}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 truncate">
-                                                <span className="flex items-center gap-1 shrink-0"><CalendarIcon className="h-2.5 w-2.5" /> {format(parseISO(note.dueDate), 'dd/MM/yyyy')}</span>
-                                                {note.supplier_name && (
-                                                    <span className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded font-medium truncate">
-                                                        <Building2 className="h-2.5 w-2.5 shrink-0" />
-                                                        <span className="truncate">{note.supplier_name}</span>
-                                                    </span>
-                                                )}
-                                            </div>
+                        {notes.map((note) => {
+                            const today = format(new Date(), 'yyyy-MM-dd');
+                            const isToday = note.dueDate === today;
+                            const isOverdue = note.dueDate < today;
+                            return (
+                                <div key={note.id} className={cn(
+                                    "flex items-center justify-between gap-1.5 p-2 rounded-md border transition-all w-full box-border",
+                                    isOverdue
+                                        ? "bg-destructive/10 border-destructive/40"
+                                        : isToday
+                                        ? "bg-primary/10 border-primary/40"
+                                        : "bg-background/50 border-border/30 hover:border-primary/30"
+                                )}>
+                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            {isOverdue && (
+                                                <span className="text-[9px] font-black uppercase bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded shrink-0">VENCIDO</span>
+                                            )}
+                                            {isToday && !isOverdue && (
+                                                <span className="text-[9px] font-black uppercase bg-primary text-primary-foreground px-1.5 py-0.5 rounded shrink-0">HOY</span>
+                                            )}
+                                            <span className="text-xs font-bold text-foreground truncate">{note.name}</span>
                                         </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <span className={cn("text-xs md:text-sm font-black whitespace-nowrap", isOverdue ? "text-destructive" : "text-primary")}>
-                                                ${note.amount.toLocaleString()}
-                                            </span>
-                                            <Button 
-                                                size="icon" 
-                                                variant="ghost" 
-                                                className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
-                                                onClick={() => removeNote(note.id)}
-                                                disabled={isRemoving}
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
+                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 min-w-0">
+                                            <span className="flex items-center gap-1 shrink-0"><CalendarIcon className="h-2.5 w-2.5" /> {format(parseISO(note.dueDate), 'dd/MM/yyyy')}</span>
+                                            {note.supplier_name && (
+                                                <span className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded font-medium min-w-0 truncate max-w-[120px]">
+                                                    <Building2 className="h-2.5 w-2.5 shrink-0" />
+                                                    <span className="truncate">{note.supplier_name}</span>
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </ScrollArea>
+                                    <div className="flex items-center gap-1 shrink-0 ml-1">
+                                        <span className={cn("text-xs md:text-sm font-black whitespace-nowrap", isOverdue ? "text-destructive" : "text-primary")}>
+                                            ${note.amount.toLocaleString()}
+                                        </span>
+                                        <Button 
+                                            size="icon" 
+                                            variant="ghost" 
+                                            className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                                            onClick={() => removeNote(note.id)}
+                                            disabled={isRemoving}
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
                     {notes.length > 0 && (
                         <div className="pt-2 border-t border-border/40 space-y-1.5">
