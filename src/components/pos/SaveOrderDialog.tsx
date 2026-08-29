@@ -331,16 +331,25 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
         return finalOrderResult;
       }
 
-      // Create new order with store_id
-      const { data: orderNumber, error: orderNumberError } = await supabase
-        .rpc('generate_order_number', { order_source: orderSource });
+      // Resolve store ID with fallbacks
+      const effectiveStoreId = userStore?.id || localStorage.getItem('cobro_last_store_id') || null;
 
-      if (orderNumberError) throw orderNumberError;
+      // Create new order with store_id
+      let orderNumberToUse = `ORD-${Date.now().toString().slice(-6)}`;
+      try {
+        const { data: orderNumber, error: orderNumberError } = await supabase
+          .rpc('generate_order_number', { order_source: orderSource });
+        if (!orderNumberError && orderNumber) {
+          orderNumberToUse = orderNumber;
+        }
+      } catch (err) {
+        console.warn('generate_order_number fallback applied:', err);
+      }
 
       const { data: order, error: orderError } = await supabase
         .from('open_orders')
         .insert({
-          order_number: orderNumber,
+          order_number: orderNumberToUse,
           customer_name: customerName || 'Cliente',
           customer_phone: customerPhone || null,
           customer_address: customerAddress || null,
@@ -355,7 +364,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
           order_status: isDelivery ? 'shipped' : 'preparing',
           payment_status: 'pending',
           profile_id: user?.id || null,
-          store_id: userStore?.id || null
+          store_id: effectiveStoreId
         })
         .select()
         .single();
@@ -417,11 +426,11 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
       onSaved();
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo guardar el pedido"
+        description: error?.message || "No se pudo guardar el pedido"
       });
       console.error('Error saving order:', error);
     }
