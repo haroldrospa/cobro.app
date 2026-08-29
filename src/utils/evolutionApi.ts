@@ -22,29 +22,79 @@ export const sendEvolutionWhatsAppMessage = async (
   }
 
   // Use Supabase Edge Function as proxy to avoid CORS restrictions when
-  // calling the Evolution API (Railway) directly from the browser.
-  const { data, error } = await supabase.functions.invoke('send-whatsapp', {
-    body: {
-      phone,
-      message,
-      evolutionUrl: config.url,
-      instanceName: config.instanceName,
-      apiKey: config.apiKey,
-      formatOverride,
-    },
-  });
+  // calling the Evolution API directly from the browser.
+  try {
+    const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+      body: {
+        phone,
+        message,
+        evolutionUrl: config.url,
+        instanceName: config.instanceName,
+        apiKey: config.apiKey,
+        formatOverride,
+      },
+    });
 
-  if (error) {
-    console.error('[Evolution API] Edge Function error:', error);
-    throw new Error(error.message || 'Error enviando mensaje de WhatsApp');
+    if (error) {
+      // Si la Edge Function no está desplegada en Supabase (404), intentar envío directo
+      const is404 = error.message?.includes('404') || error.message?.includes('non-2xx') || (error as any).status === 404;
+      if (is404) {
+        console.warn('[Evolution API] Edge function send-whatsapp no disponible (404), intentando llamada directa...');
+        return await sendDirectEvolutionMessage(phone, message, config);
+      }
+      console.error('[Evolution API] Edge Function error:', error);
+      throw new Error(error.message || 'Error enviando mensaje de WhatsApp');
+    }
+
+    if (!data?.success) {
+      const errMsg = data?.error || 'Respuesta inesperada del servidor';
+      console.error('[Evolution API] Server error:', errMsg);
+      throw new Error(errMsg);
+    }
+
+    console.log('[Evolution API] Message sent successfully via Edge Function');
+    return true;
+  } catch (err: any) {
+    if (err.message?.includes('404') || err.message?.includes('non-2xx')) {
+      return await sendDirectEvolutionMessage(phone, message, config);
+    }
+    throw err;
   }
+};
 
-  if (!data?.success) {
-    const errMsg = data?.error || 'Respuesta inesperada del servidor';
-    console.error('[Evolution API] Server error:', errMsg);
-    throw new Error(errMsg);
+const sendDirectEvolutionMessage = async (
+  phone: string,
+  message: string,
+  config: EvolutionApiConfig
+): Promise<boolean> => {
+  const cleanPhone = phone.replace(/\D/g, '');
+  const formattedPhone = cleanPhone.startsWith('1') ? cleanPhone : `1${cleanPhone}`;
+  const baseUrl = config.url.replace(/\/+$/, '');
+  const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.apiKey,
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        text: message,
+        delay: 1200,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Evolution API error (${res.status}): ${errText}`);
+    }
+
+    console.log('[Evolution API] Message sent directly');
+    return true;
+  } catch (err: any) {
+    console.error('[Evolution API] Error en envío directo:', err.message);
+    throw err;
   }
-
-  console.log('[Evolution API] Message sent successfully via Edge Function');
-  return true;
 };

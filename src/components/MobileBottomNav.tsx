@@ -17,7 +17,6 @@ import {
   User,
   Database,
   LogOut,
-  CloudUpload,
 } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';

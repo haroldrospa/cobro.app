@@ -143,6 +143,29 @@ export const useProductsOffline = () => {
         }
     }, [isOnline, queryClient]);
 
+    // Escuchar eventos de sincronización para actualizar el cache en caliente desde IndexedDB
+    React.useEffect(() => {
+        const handleOfflineUpdate = async () => {
+            if (!storeId) return;
+            try {
+                const cached = await offlineDB.getAll<Product>(OfflineStore.PRODUCTS);
+                const localProducts = sortProductsByName(cached.filter(p => (p as any).store_id === storeId));
+                if (localProducts.length > 0) {
+                    queryClient.setQueryData(['products', 'offline', storeId], localProducts);
+                }
+            } catch (err) {
+                console.warn('Error reading updated products from IndexedDB:', err);
+            }
+        };
+
+        window.addEventListener('cobro:offline-products-updated', handleOfflineUpdate);
+        window.addEventListener('cobro:sync-completed', handleOfflineUpdate);
+        return () => {
+            window.removeEventListener('cobro:offline-products-updated', handleOfflineUpdate);
+            window.removeEventListener('cobro:sync-completed', handleOfflineUpdate);
+        };
+    }, [storeId, queryClient]);
+
     const query = useQuery({
         queryKey: ['products', 'offline', storeId],
         enabled: !!storeId,
@@ -188,7 +211,7 @@ export const useProductsOffline = () => {
                         if (chunk.length < step) hasMore = false;
                     }
 
-                    const filtered = allData.filter((p: any) => p.store_id === storeId) as Product[];
+                    const filtered = sortProductsByName(allData.filter((p: any) => p.store_id === storeId) as Product[]);
                     if (filtered.length > 0) {
                         await offlineDB.putBulk(OfflineStore.PRODUCTS, filtered);
                     }
@@ -203,8 +226,10 @@ export const useProductsOffline = () => {
                 setTimeout(() => syncFromSupabase(storeId), 500);
             }
 
-            // Fallback: retornar lo que tengamos localmente en vez de colgar la UI con una excepción
-            return localProducts;
+            // Fallback: intentar leer de IndexedDB nuevamente por si sincronizó en paralelo
+            const fallbackCached = await offlineDB.getAll<Product>(OfflineStore.PRODUCTS);
+            const fallbackProducts = sortProductsByName(fallbackCached.filter(p => (p as any).store_id === storeId));
+            return fallbackProducts;
         },
         staleTime: 1000 * 60 * 2,    // 2 min — usar caché local pero verificar seguido
         gcTime: 1000 * 60 * 60 * 24, // 24 horas

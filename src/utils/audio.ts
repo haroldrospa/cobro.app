@@ -16,9 +16,9 @@ export const playTapSound = () => {
             audioCtx = new AudioContextClass();
         }
 
-        // Si el contexto está suspendido (políticas del navegador), reanudarlo
+        // Si el contexto está suspendido (políticas del navegador), reanudarlo de forma segura
         if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
+            audioCtx.resume().catch(() => {});
         }
 
         const osc = audioCtx.createOscillator();
