@@ -443,20 +443,20 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-0 overflow-hidden rounded-2xl shadow-2xl">
+      <DialogContent className="sm:max-w-md bg-card border border-border p-0 overflow-hidden rounded-2xl shadow-2xl">
         <div className="relative">
           {/* Header Area */}
-          <div className="bg-gradient-to-b from-green-500/10 to-transparent p-5 pb-2">
-            <DialogHeader>
-              <div className="flex items-center justify-between mb-2">
-                <div className="bg-green-500/20 p-1.5 rounded-lg w-fit">
-                  <Save className="h-4 w-4 text-green-500" />
+          <div className="p-4 sm:p-5 pb-3 border-b border-border/60">
+            <DialogHeader className="text-left space-y-1">
+              <div className="flex items-center justify-between mb-1">
+                <div className="bg-muted/80 text-foreground p-2 rounded-xl w-fit">
+                  <Save className="h-4 w-4 text-primary" />
                 </div>
               </div>
-              <DialogTitle className="text-lg font-bold text-white tracking-tight uppercase">
+              <DialogTitle className="text-base sm:text-lg font-bold text-foreground tracking-tight uppercase">
                 {isEditing ? 'Actualizar Pedido' : 'Guardar Pedido'}
               </DialogTitle>
-              <DialogDescription className="text-zinc-400 text-xs mt-0.5">
+              <DialogDescription className="text-muted-foreground text-xs">
                 {isEditing
                   ? `Actualizando pedido ${existingOrderNumber}`
                   : 'Guarda el pedido actual para cobrarlo después'}
@@ -464,49 +464,51 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
             </DialogHeader>
           </div>
 
-          <div className="p-5 pt-1 space-y-4">
+          <div className="p-4 sm:p-5 space-y-3.5 text-left">
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Cliente</Label>
+              <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground ml-0.5">Cliente</Label>
               <Popover open={isCustomerPopoverOpen} onOpenChange={setIsCustomerPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={isCustomerPopoverOpen}
-                    className="w-full justify-between bg-white/5 border-white/5 text-xs text-white hover:bg-white/10 hover:text-white rounded-xl h-10 focus:ring-green-500/50"
+                    className="w-full justify-between bg-background border-border text-xs text-foreground hover:bg-muted rounded-xl h-10 transition-colors"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <User className="h-4 w-4 shrink-0 text-green-500/60" />
-                      {selectedCustomerId 
-                        ? customers.find(c => c.id === selectedCustomerId)?.name 
-                        : customerName || "Seleccionar o escribir cliente..."}
+                      <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate font-medium">
+                        {selectedCustomerId 
+                          ? customers.find(c => c.id === selectedCustomerId)?.name 
+                          : customerName || "Seleccionar o escribir cliente..."}
+                      </span>
                     </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-zinc-500" />
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground opacity-60" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-zinc-950 border-white/10 rounded-xl shadow-2xl" align="start">
-                  <Command className="bg-transparent text-white">
-                    <CommandInput placeholder="Buscar cliente..." className="border-white/5 text-white" />
-                    <CommandList className="max-h-[160px] overflow-y-auto">
-                      <CommandEmpty className="text-zinc-500 text-xs py-4">No se encontró cliente.</CommandEmpty>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-popover border border-border rounded-xl shadow-xl z-[150]" align="start">
+                  <Command className="bg-transparent text-foreground">
+                    <CommandInput placeholder="Buscar cliente..." className="border-b border-border text-xs" />
+                    <CommandList className="max-h-[180px] overflow-y-auto p-1 scrollbar-thin">
+                      <CommandEmpty className="text-muted-foreground text-xs py-4 text-center">No se encontró cliente.</CommandEmpty>
                       <CommandGroup>
                         {customers.map((customer) => (
                           <CommandItem
                             key={customer.id}
                             value={`${customer.name} ${customer.phone || ''} ${customer.id}`}
                             onSelect={() => handleCustomerSelect(customer)}
-                            className="text-zinc-200 hover:bg-white/5 focus:bg-white/5 cursor-pointer rounded-lg py-2"
+                            className="text-foreground hover:bg-accent focus:bg-accent cursor-pointer rounded-lg py-2 text-xs"
                           >
                             <Check
                               className={cn(
-                                "mr-2 h-4 w-4 text-green-500",
+                                "mr-2 h-4 w-4 text-primary shrink-0",
                                 selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            <div className="flex flex-col">
-                              <span className="font-bold text-xs">{customer.name}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-xs truncate">{customer.name}</span>
                               {customer.phone && (
-                                <span className="text-[10px] text-zinc-500 mt-0.5">{customer.phone}</span>
+                                <span className="text-[10px] text-muted-foreground">{customer.phone}</span>
                               )}
                             </div>
                           </CommandItem>
@@ -520,39 +522,39 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
 
             {!selectedCustomerId && (
               <div className="space-y-1.5">
-                <Label htmlFor="customerName" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Nombre Manual</Label>
+                <Label htmlFor="customerName" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground ml-0.5">Nombre Manual</Label>
                 <Input
                   id="customerName"
                   placeholder="Nombre del cliente..."
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl h-10"
+                  className="bg-background border-border text-xs text-foreground placeholder:text-muted-foreground/60 rounded-xl h-10"
                   autoComplete="off"
                 />
               </div>
             )}
 
             {isDelivery && (
-              <div className="grid grid-cols-1 gap-4 border border-white/5 p-3 rounded-xl bg-white/5">
+              <div className="grid grid-cols-1 gap-3 border border-border/80 p-3 rounded-xl bg-muted/20">
                 <div className="space-y-1.5">
-                  <Label htmlFor="customerPhone" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Teléfono de Delivery</Label>
+                  <Label htmlFor="customerPhone" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground ml-0.5">Teléfono de Delivery</Label>
                   <Input
                     id="customerPhone"
                     placeholder="Ej: 809-555-0123"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl h-10"
+                    className="bg-background border-border text-xs text-foreground placeholder:text-muted-foreground/60 rounded-xl h-10"
                     autoComplete="off"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="customerAddress" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Ubicación / Dirección</Label>
+                  <Label htmlFor="customerAddress" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground ml-0.5">Ubicación / Dirección</Label>
                   <Textarea
                     id="customerAddress"
                     placeholder="Dirección completa del cliente..."
                     value={customerAddress}
                     onChange={(e) => setCustomerAddress(e.target.value)}
-                    className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl"
+                    className="bg-background border-border text-xs text-foreground placeholder:text-muted-foreground/60 rounded-xl resize-none"
                     rows={2}
                   />
                 </div>
@@ -560,28 +562,30 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="notes" className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Notas (opcional)</Label>
+              <Label htmlFor="notes" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground ml-0.5">Notas (opcional)</Label>
               <Textarea
                 id="notes"
                 placeholder="Notas adicionales..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="bg-white/5 border-white/5 text-xs text-white placeholder:text-zinc-600 focus-visible:ring-green-500/50 rounded-xl"
+                className="bg-background border-border text-xs text-foreground placeholder:text-muted-foreground/60 rounded-xl resize-none"
                 rows={3}
               />
             </div>
 
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-green-500/70">Productos en el carrito</span>
-              <span className="font-bold text-xs text-zinc-200">{cart.length} productos</span>
+            <div className="bg-muted/40 border border-border/60 rounded-xl p-3 flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Productos en el carrito</span>
+              <span className="font-bold text-xs text-foreground bg-background px-2.5 py-0.5 rounded-lg border border-border/60 shadow-xs">
+                {cart.length} {cart.length === 1 ? 'producto' : 'productos'}
+              </span>
             </div>
 
-            <DialogFooter className="flex flex-row gap-2.5 !mt-6">
+            <DialogFooter className="flex flex-row gap-2 pt-2 !mt-4 sm:justify-end">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={onClose}
-                className="flex-1 h-11 rounded-xl font-bold text-zinc-500 hover:text-zinc-100 hover:bg-white/5 text-sm"
+                className="flex-1 h-10 rounded-xl font-bold text-muted-foreground hover:text-foreground hover:bg-muted text-xs"
               >
                 Cancelar
               </Button>
@@ -589,12 +593,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
                 type="button"
                 onClick={handleSave}
                 disabled={saveOrderMutation.isPending || cart.length === 0}
-                className={cn(
-                  "flex-1 h-11 rounded-xl text-white font-bold shadow-md active:scale-95 transition-all text-sm gap-2", 
-                  isDelivery 
-                    ? "bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400" 
-                    : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400"
-                )}
+                className="flex-1 h-10 rounded-xl font-bold text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all gap-2"
               >
                 {isDelivery ? <Bike className="h-4 w-4" /> : <Save className="h-4 w-4" />}
                 {isDelivery ? 'Enviar Pedido' : (isEditing ? 'Actualizar' : 'Guardar') + ' Pedido'}

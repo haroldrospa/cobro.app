@@ -323,9 +323,9 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2 p-4 bg-green-500/5 border border-green-500/10 rounded-2xl">
-            <Label htmlFor="validation_code" className="text-[10px] uppercase font-black tracking-widest text-green-500/70 flex items-center gap-1.5 mb-2">
-              <ShieldCheck className="h-3 w-3" /> Código de Fidelidad
+          <div className="space-y-2 p-3 bg-muted/30 border border-border/60 rounded-xl">
+            <Label htmlFor="validation_code" className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Código de Fidelidad
             </Label>
             <div className="flex gap-2">
               <Input
@@ -333,12 +333,12 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 value={formData.validation_code}
                 onChange={(e) => setFormData({ ...formData, validation_code: e.target.value })}
                 placeholder="ABC-123"
-                className="h-10 bg-zinc-950/20 border-green-500/10 rounded-lg font-black text-green-500"
+                className="h-9 bg-background border-border rounded-lg font-mono font-bold text-foreground text-xs"
               />
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-lg border-green-500/20 text-[10px] font-black hover:bg-green-500/10 uppercase"
+                className="h-9 rounded-lg border-border text-[10px] font-bold uppercase hover:bg-muted"
                 onClick={() => {
                   const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                   setFormData({ ...formData, validation_code: randomCode });
@@ -349,25 +349,25 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2.5 pt-2">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
-              className="flex-1 h-14 rounded-2xl font-black text-zinc-500 hover:text-white"
+              className="flex-1 h-11 rounded-xl font-bold text-muted-foreground hover:text-foreground text-xs"
               disabled={createCustomer.isPending}
             >
-              CANCELAR
+              Cancelar
             </Button>
             <Button
               type="submit"
-              className="flex-[2] h-14 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 text-white font-black shadow-[0_0_20px_rgba(34,197,94,0.2)]"
+              className="flex-[2] h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs shadow-sm"
               disabled={createCustomer.isPending}
             >
               {createCustomer.isPending ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {createCustomer.isPending ? 'GUARDANDO...' : 'CREAR CLIENTE'}
+              {createCustomer.isPending ? 'Guardando...' : 'Crear Cliente'}
             </Button>
           </div>
         </form>

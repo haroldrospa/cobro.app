@@ -48,69 +48,65 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent hideCloseButton className="w-[calc(100%-1rem)] max-w-[400px] bg-zinc-950/95 backdrop-blur-2xl border-white/10 p-0 overflow-y-auto max-h-[90dvh] rounded-[2rem]">
+      <DialogContent hideCloseButton className="w-[calc(100%-1rem)] max-w-[380px] bg-card border border-border p-0 overflow-hidden rounded-2xl shadow-2xl">
         <div className="relative">
-          {/* Header Area with Subtle Gradient */}
-          <div className="bg-gradient-to-b from-green-500/10 to-transparent p-5 sm:p-6 pb-2">
-            <DialogHeader>
-              <div className="flex items-center justify-between mb-2">
-                <div className="bg-green-500/20 p-2 rounded-xl">
-                  <Package className="h-5 w-5 text-green-500" />
+          {/* Header Area */}
+          <div className="p-4 sm:p-5 pb-3 border-b border-border/60">
+            <DialogHeader className="text-left space-y-1">
+              <div className="flex items-center justify-between mb-1">
+                <div className="bg-muted/80 text-foreground p-2 rounded-xl">
+                  <Package className="h-4 w-4 text-primary" />
                 </div>
                 <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={onClose}
-                    className="h-8 w-8 rounded-full bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-400"
+                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <DialogTitle className="text-xl sm:text-2xl font-black text-white tracking-tight text-left">
+              <DialogTitle className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                 Ajustar Cantidad
               </DialogTitle>
-              <div className="mt-2 p-3 bg-white/5 rounded-2xl border border-white/5 text-left">
-                <p className="text-[10px] uppercase tracking-widest font-black text-green-500/70 mb-1">Producto</p>
-                <p className="font-bold text-zinc-200 line-clamp-1">{itemName}</p>
+              <div className="mt-2 p-2.5 bg-muted/40 rounded-xl border border-border/60 text-left">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-0.5">Producto</p>
+                <p className="font-semibold text-xs text-foreground line-clamp-1">{itemName}</p>
               </div>
             </DialogHeader>
           </div>
           
-          <form onSubmit={handleConfirm} className="p-4 sm:p-6 pt-2 space-y-4 sm:space-y-6">
-            <div className="space-y-4">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-green-500/5 blur-2xl group-focus-within:bg-green-500/10 transition-all rounded-full" />
-                <div className="relative bg-zinc-900/50 border border-white/5 rounded-[2rem] p-4 sm:p-6 text-center shadow-inner">
-                  <Label htmlFor="quantity-input" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 block mb-2">
-                    Ingresar Cantidad
-                  </Label>
-                  <Input
-                    id="quantity-input"
-                    ref={inputRef}
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*\.?[0-9]*"
-                    value={quantity}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                        setQuantity(val);
-                      }
-                    }}
-                    onFocus={(e) => {
-                      setTimeout(() => {
-                        e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                      }, 100);
-                    }}
-                    className="text-3xl sm:text-5xl font-black h-16 sm:h-20 text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-800"
-                    placeholder="0.000"
-                    autoComplete="off"
-                  />
-                  <div className="h-0.5 w-12 bg-green-500/40 mx-auto rounded-full mt-2" />
-                </div>
+          <form onSubmit={handleConfirm} className="p-4 sm:p-5 space-y-4">
+            <div className="space-y-3">
+              <div className="bg-muted/30 border border-border/70 rounded-2xl p-4 text-center shadow-inner">
+                <Label htmlFor="quantity-input" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1.5">
+                  Ingresar Cantidad
+                </Label>
+                <Input
+                  id="quantity-input"
+                  ref={inputRef}
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
+                  value={quantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                      setQuantity(val);
+                    }
+                  }}
+                  onFocus={(e) => {
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    }, 100);
+                  }}
+                  className="text-3xl sm:text-4xl font-black h-14 text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/30"
+                  placeholder="0.000"
+                  autoComplete="off"
+                />
               </div>
               
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 {[1, 2, 3, 5, 10, 20].map((quickVal) => (
                   <Button 
                     key={quickVal}
@@ -120,7 +116,7 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
                         setQuantity(quickVal.toString());
                         inputRef.current?.focus();
                     }}
-                    className="h-12 bg-zinc-900/30 border-white/5 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-500 font-black rounded-xl transition-all active:scale-95"
+                    className="h-10 bg-background border-border hover:bg-muted font-bold text-xs rounded-xl transition-all"
                   >
                     {quickVal}
                   </Button>
@@ -130,26 +126,27 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
                 type="button"
                 variant="ghost"
                 onClick={() => setQuantity('0')}
-                className="w-full h-10 text-destructive/70 hover:text-destructive hover:bg-destructive/5 font-black text-[10px] uppercase tracking-widest rounded-xl"
+                className="w-full h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 font-bold text-[10px] uppercase tracking-wider rounded-lg"
               >
                 Limpiar Valor
               </Button>
             </div>
 
-            <DialogFooter className="flex flex-row gap-3 !mt-8">
+            <DialogFooter className="flex flex-row gap-2 pt-2 !mt-4 sm:justify-end">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={onClose} 
-                className="flex-1 h-14 rounded-2xl font-black text-zinc-500 hover:text-zinc-100 hover:bg-white/5"
+                className="flex-1 h-10 rounded-xl font-bold text-muted-foreground hover:text-foreground hover:bg-muted text-xs"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
-                className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 text-white font-black shadow-lg shadow-green-500/20 active:scale-95 transition-all text-lg"
+                className="flex-1 h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs shadow-sm transition-all gap-1.5"
               >
-                Confirmar <ChevronRight className="ml-2 h-5 w-5" />
+                <span>Confirmar</span>
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </DialogFooter>
           </form>
