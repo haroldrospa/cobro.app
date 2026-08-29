@@ -36,23 +36,19 @@ export const sendEvolutionWhatsAppMessage = async (
     });
 
     if (error) {
-      // Si la Edge Function no está desplegada en Supabase (404), intentar envío directo
+      // Si la Edge Function no está disponible (404), intentar envío directo
       const is404 = error.message?.includes('404') || error.message?.includes('non-2xx') || (error as any).status === 404;
       if (is404) {
-        console.warn('[Evolution API] Edge function send-whatsapp no disponible (404), intentando llamada directa...');
         return await sendDirectEvolutionMessage(phone, message, config);
       }
-      console.error('[Evolution API] Edge Function error:', error);
       throw new Error(error.message || 'Error enviando mensaje de WhatsApp');
     }
 
     if (!data?.success) {
       const errMsg = data?.error || 'Respuesta inesperada del servidor';
-      console.error('[Evolution API] Server error:', errMsg);
       throw new Error(errMsg);
     }
 
-    console.log('[Evolution API] Message sent successfully via Edge Function');
     return true;
   } catch (err: any) {
     if (err.message?.includes('404') || err.message?.includes('non-2xx')) {
@@ -72,29 +68,23 @@ const sendDirectEvolutionMessage = async (
   const baseUrl = config.url.replace(/\/+$/, '');
   const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
 
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.apiKey,
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message,
-        delay: 1200,
-      }),
-    });
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': config.apiKey,
+    },
+    body: JSON.stringify({
+      number: formattedPhone,
+      text: message,
+      delay: 1200,
+    }),
+  });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Evolution API error (${res.status}): ${errText}`);
-    }
-
-    console.log('[Evolution API] Message sent directly');
-    return true;
-  } catch (err: any) {
-    console.error('[Evolution API] Error en envío directo:', err.message);
-    throw err;
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Evolution API (${res.status}): ${errText || 'Instancia no disponible'}`);
   }
+
+  return true;
 };

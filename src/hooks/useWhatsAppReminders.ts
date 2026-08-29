@@ -126,17 +126,21 @@ export const useWhatsAppReminders = () => {
             
             // Add a small delay between messages to avoid rate limiting
             await new Promise(resolve => setTimeout(resolve, 1500));
-          } catch (sendError) {
-            console.error(`Failed to send reminder for invoice ${sale.invoice_number}:`, sendError);
+          } catch (sendError: any) {
+            // Si la instancia no existe o no responde (404, Failed to fetch, etc.), pausar para no saturar la consola
+            const isUnreachable = sendError?.message?.includes('404') || 
+              sendError?.message?.includes('Failed to fetch') || 
+              sendError?.message?.includes('incompleta');
+            
+            if (isUnreachable) {
+              break;
+            }
           }
         }
 
         setProcessedCount(sentCount);
-        if (sentCount > 0) {
-          console.log(`Se enviaron ${sentCount} recordatorios de WhatsApp.`);
-        }
       } catch (err) {
-        console.error('Error in checkAndSendReminders:', err);
+        // Silent catch for background automated reminders
       }
     };
 
