@@ -59,14 +59,16 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [storeId, refreshMasterData]);
 
+  const contextValue = React.useMemo(() => ({
+    customers,
+    categories,
+    products,
+    isLoading,
+    refreshMasterData
+  }), [customers, categories, products, isLoading, refreshMasterData]);
+
   return (
-    <MasterDataContext.Provider value={{
-      customers,
-      categories,
-      products,
-      isLoading,
-      refreshMasterData
-    }}>
+    <MasterDataContext.Provider value={contextValue}>
       {children}
     </MasterDataContext.Provider>
   );

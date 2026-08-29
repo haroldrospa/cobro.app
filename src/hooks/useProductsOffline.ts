@@ -231,10 +231,10 @@ export const useProductsOffline = () => {
             const fallbackProducts = sortProductsByName(fallbackCached.filter(p => (p as any).store_id === storeId));
             return fallbackProducts;
         },
-        staleTime: 1000 * 60 * 2,    // 2 min — usar caché local pero verificar seguido
+        staleTime: 1000 * 60 * 5,    // 5 min — usar caché local pero verificar periódicamente
         gcTime: 1000 * 60 * 60 * 24, // 24 horas
-        refetchOnMount: true,        // Siempre refetchear al montar si está stale
-        refetchOnWindowFocus: true,  // Refetchear al volver a la pestaña
+        refetchOnMount: false,       // Usar cache de IndexedDB sin bloquear montaje
+        refetchOnWindowFocus: false, // Evitar bloqueos al cambiar de pestaña
     });
 
     return {
