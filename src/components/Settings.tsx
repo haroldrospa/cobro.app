@@ -77,6 +77,7 @@ import { injectPrintStyles } from '@/utils/printHandler';
 import BillingMethodSection from '@/components/settings/BillingMethodSection';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { lookupRnc } from '@/lib/rncLookup';
+import BankAccountsList from '@/components/pos/BankAccountsList';
 
 const Settings = () => {
   const { toast } = useToast();
@@ -1514,19 +1515,33 @@ const Settings = () => {
     <div className="space-y-6">
       <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-zinc-900 rounded-[2rem] space-y-4 text-left">
         {paymentMethods.map((method) => (
-          <div key={method.id} className="flex items-center justify-between p-2">
-            <div>
-              <h4 className="font-bold text-zinc-100 text-sm tracking-tight capitalize">{method.name}</h4>
-              <p className="text-[10px] text-zinc-500">Módulo de cobro activo</p>
+          <div key={method.id} className="p-3 rounded-2xl bg-zinc-800/40 border border-zinc-800/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-zinc-100 text-sm tracking-tight capitalize">{method.name}</h4>
+                <p className="text-[10px] text-zinc-500">Módulo de cobro activo</p>
+              </div>
+              <Switch
+                checked={method.enabled}
+                onCheckedChange={(checked) => {
+                  setPaymentMethods(prev => prev.map(m =>
+                    m.id === method.id ? { ...m, enabled: checked } : m
+                  ));
+                }}
+              />
             </div>
-            <Switch
-              checked={method.enabled}
-              onCheckedChange={(checked) => {
-                setPaymentMethods(prev => prev.map(m =>
-                  m.id === method.id ? { ...m, enabled: checked } : m
-                ));
-              }}
-            />
+            {(method.id === 'transfer' || method.id === 'bank') && method.enabled && (
+              <div className="pt-2 border-t border-zinc-700/40">
+                <BankAccountsList
+                  allowEdit={true}
+                  onAccountsChange={(accounts) => {
+                    setPaymentMethods(prev => prev.map(m =>
+                      (m.id === 'transfer' || m.id === 'bank') ? { ...m, bank_accounts: accounts } : m
+                    ));
+                  }}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -2938,6 +2953,18 @@ const Settings = () => {
                         <span className="text-sm text-muted-foreground">
                           Se aplicará al total de la factura
                         </span>
+                      </div>
+                    )}
+                    {(method.id === 'transfer' || method.id === 'bank') && method.enabled && (
+                      <div className="pt-3 border-t border-border/60">
+                        <BankAccountsList
+                          allowEdit={true}
+                          onAccountsChange={(accounts) => {
+                            setPaymentMethods(prev => prev.map(m =>
+                              (m.id === 'transfer' || m.id === 'bank') ? { ...m, bank_accounts: accounts } : m
+                            ));
+                          }}
+                        />
                       </div>
                     )}
                   </div>
