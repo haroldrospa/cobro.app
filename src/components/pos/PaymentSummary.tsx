@@ -93,6 +93,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
 }) => {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
   const [isInvoiceTypeOpen, setIsInvoiceTypeOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showNotesDialog, setShowNotesDialog] = useState(false);
@@ -101,6 +102,14 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
   const [dragOverBlock, setDragOverBlock] = useState<string | null>(null);
   const isMobile = useIsMobile();
+
+  const filteredCustomers = React.useMemo(() => {
+    if (!customerSearch) return customers.slice(0, 30);
+    const q = customerSearch.toLowerCase();
+    return customers
+      .filter(c => c.name?.toLowerCase().includes(q) || c.rnc?.includes(q) || c.phone?.includes(q))
+      .slice(0, 30);
+  }, [customers, customerSearch]);
 
   // Load saved block order from localStorage
   useEffect(() => {
@@ -355,16 +364,18 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                       side="bottom" 
                       sideOffset={6} 
                       collisionPadding={12} 
-                      className="w-[calc(100vw-2.5rem)] sm:w-[300px] max-w-[340px] p-0 bg-zinc-950/98 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden" 
+                      className="w-[calc(100vw-2.5rem)] sm:w-[300px] max-w-[340px] p-0 bg-popover border border-border rounded-xl shadow-2xl z-50 overflow-hidden" 
                       align="start"
                     >
                       <Command className="bg-transparent border-none">
                         <CommandInput 
                           placeholder="Buscar por nombre o RNC..." 
-                          className="h-10 text-xs font-bold text-white placeholder:text-zinc-500 bg-zinc-900/80 border-b border-white/10" 
+                          value={customerSearch}
+                          onValueChange={setCustomerSearch}
+                          className="h-10 text-xs font-bold text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
                         />
                         <CommandList className="max-h-[35vh] sm:max-h-[200px] overflow-y-auto p-1.5 scrollbar-thin">
-                          <CommandEmpty className="p-4 text-xs text-center text-zinc-400 font-bold uppercase tracking-widest">
+                          <CommandEmpty className="p-4 text-xs text-center text-muted-foreground font-bold uppercase tracking-widest">
                             No se encontraron clientes
                           </CommandEmpty>
                           <CommandGroup>
@@ -373,21 +384,22 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                               onSelect={() => {
                                 onCustomerChange("");
                                 setIsCustomerOpen(false);
+                                setCustomerSearch('');
                               }}
                               className={cn(
                                 "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
                                 !selectedCustomer 
-                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
-                                  : "hover:bg-white/5 text-zinc-200 font-medium"
+                                  ? "bg-primary/20 text-primary border border-primary/30 font-black" 
+                                  : "hover:bg-accent text-foreground font-medium"
                               )}
                             >
                               <div className="flex items-center gap-2">
                                 <User className="h-3.5 w-3.5 shrink-0 opacity-70" />
                                 <span className="truncate">Seleccionar Cliente...</span>
                               </div>
-                              {!selectedCustomer && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
+                              {!selectedCustomer && <Check className="h-4 w-4 text-primary shrink-0" />}
                             </CommandItem>
-                            {customers.map((c) => {
+                            {filteredCustomers.map((c) => {
                               const isSelected = selectedCustomer === c.id;
                               return (
                                 <CommandItem
@@ -396,23 +408,24 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                                   onSelect={() => {
                                     onCustomerChange(c.id);
                                     setIsCustomerOpen(false);
+                                    setCustomerSearch('');
                                   }}
                                   className={cn(
                                     "p-2.5 cursor-pointer rounded-xl mx-0.5 my-1 text-xs transition-all flex items-center justify-between",
                                     isSelected 
-                                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black" 
-                                      : "hover:bg-white/5 text-zinc-200 font-medium"
+                                      ? "bg-primary/20 text-primary border border-primary/30 font-black" 
+                                      : "hover:bg-accent text-foreground font-medium"
                                   )}
                                 >
                                   <div className="flex flex-col min-w-0 flex-1 pr-2 text-left">
                                     <span className="truncate text-xs">{c.name}</span>
                                     {c.rnc && (
-                                      <span className="text-[10px] font-mono text-zinc-400 font-semibold mt-0.5">
+                                      <span className="text-[10px] font-mono text-muted-foreground font-semibold mt-0.5">
                                         RNC: {c.rnc}
                                       </span>
                                     )}
                                   </div>
-                                  {isSelected && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
+                                  {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
                                 </CommandItem>
                               );
                             })}

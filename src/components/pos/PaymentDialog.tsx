@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import CreditInfo from './CreditInfo';
 import AddCustomerDialog from './AddCustomerDialog';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -474,30 +473,26 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   {paymentMethod === 'cash' && currentReceived >= 0 && (() => {
                     const actualChange = currentChange;
                     return (
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.98 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className={cn(
-                            "py-2.5 px-3 rounded-lg border transition-all flex items-center justify-between shadow-sm w-full mt-1.5",
-                            actualChange >= 0 ? "bg-muted/40 border-border" : "bg-amber-500/10 border-amber-500/20"
-                          )}
-                        >
-                          <span className={cn(
-                            "text-[10px] font-bold uppercase tracking-widest",
-                            actualChange >= 0 ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400"
-                          )}>
-                            {actualChange >= 0 ? "Cambio a devolver" : "Falta por Recibir"}
-                          </span>
-                          <span className={cn(
-                            "text-xl font-black tracking-tight flex items-baseline leading-none",
-                            actualChange >= 0 ? "text-primary" : "text-amber-600 dark:text-amber-400"
-                          )}>
-                            <span className="text-xs mr-0.5 text-inherit">RD$</span>
-                            {Math.abs(actualChange).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                          </span>
-                        </motion.div>
-                      </AnimatePresence>
+                      <div
+                        className={cn(
+                          "py-2.5 px-3 rounded-lg border transition-colors flex items-center justify-between shadow-sm w-full mt-1.5",
+                          actualChange >= 0 ? "bg-muted/40 border-border" : "bg-amber-500/10 border-amber-500/20"
+                        )}
+                      >
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase tracking-widest",
+                          actualChange >= 0 ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400"
+                        )}>
+                          {actualChange >= 0 ? "Cambio a devolver" : "Falta por Recibir"}
+                        </span>
+                        <span className={cn(
+                          "text-xl font-black tracking-tight flex items-baseline leading-none",
+                          actualChange >= 0 ? "text-primary" : "text-amber-600 dark:text-amber-400"
+                        )}>
+                          <span className="text-xs mr-0.5 text-inherit">RD$</span>
+                          {Math.abs(actualChange).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     );
                   })()}
                 </div>

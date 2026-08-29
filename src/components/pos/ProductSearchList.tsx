@@ -87,8 +87,7 @@ const ProductItem = React.memo<ProductItemProps>(({
     <Card
       ref={itemRef}
       className={cn(
-        "group cursor-pointer relative overflow-hidden border-border/40 bg-card/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/20 hover:bg-card",
-        "will-change-transform", // Hint for GPU acceleration
+        "group cursor-pointer relative overflow-hidden border-border/50 bg-card/60 transition-colors duration-150 hover:border-primary/40 hover:bg-card",
         isOutOfStock ? "opacity-75 grayscale-[0.5]" : "",
         viewMode === 'list' && "flex flex-row items-stretch h-20",
         isFocused && "ring-2 ring-primary border-primary bg-card shadow-md z-10"
@@ -100,14 +99,14 @@ const ProductItem = React.memo<ProductItemProps>(({
       <div className={cn(
         "relative flex items-center justify-center overflow-hidden shrink-0 bg-secondary/20",
         viewMode === 'list' ? "w-20 h-full" : "aspect-[4/3] w-full",
-        !product.image_url && "bg-gradient-to-br from-muted/30 via-muted/10 to-transparent"
+        !product.image_url && "bg-muted/20"
       )}>
         {product.image_url ? (
           <img
             src={product.image_url}
             alt={product.name}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 will-change-transform"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="flex items-center justify-center text-muted-foreground/20">

@@ -38,7 +38,6 @@ export const useSavedCart = () => {
     // Save locally immediately (takes <1ms, completely offline-capable)
     try {
       localStorage.setItem(cacheKey, JSON.stringify(cartData));
-      setSavedCartData(cartData);
     } catch (e) {
       console.error('Error writing cart to localStorage:', e);
     }
