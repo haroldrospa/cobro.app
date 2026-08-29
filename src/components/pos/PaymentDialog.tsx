@@ -8,6 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from '@/lib/utils';
 import CreditInfo from './CreditInfo';
 import AddCustomerDialog from './AddCustomerDialog';
+import BankAccountsList from './BankAccountsList';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
 
 interface PaymentDialogProps {
@@ -383,6 +384,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               </div>
             )}
 
+            {paymentMethod === 'transfer' && (
+              <div className="p-2.5 bg-muted/30 rounded-xl border border-border space-y-2 animate-in fade-in slide-in-from-top-1">
+                <BankAccountsList totalAmount={fullTotal} />
+              </div>
+            )}
+
             {(paymentMethod === 'cash' || paymentMethod === 'split') && (
               <div className="space-y-2.5 animate-in fade-in slide-in-from-top-1 flex flex-col justify-end flex-1">
                 {paymentMethod === 'split' && (
@@ -404,6 +411,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                         RD$ {Math.max(0, fullTotal - currentReceived).toFixed(2)}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'split' && splitMethod === 'transfer' && (
+                  <div className="p-2.5 bg-muted/30 rounded-xl border border-border space-y-2">
+                    <BankAccountsList totalAmount={Math.max(0, fullTotal - currentReceived)} />
                   </div>
                 )}
 

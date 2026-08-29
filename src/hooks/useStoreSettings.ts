@@ -3,12 +3,23 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserStore } from '@/hooks/useUserStore';
 
+export type BankAccount = {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  account_type?: 'ahorros' | 'corriente' | string;
+  holder_name?: string;
+  rnc_cedula?: string;
+  alias?: string;
+};
+
 export type PaymentMethod = {
   id: string;
   name: string;
   enabled: boolean;
   surcharge_percentage?: number;
-}
+  bank_accounts?: BankAccount[];
+};
 
 export type StoreSettings = {
   // Invoice Settings
@@ -24,6 +35,7 @@ export type StoreSettings = {
 
   // POS / Payments
   payment_methods: PaymentMethod[];
+  bank_accounts?: BankAccount[];
 
   // Products / Inventory
   low_stock_alert: boolean;
@@ -185,11 +197,18 @@ export const useStoreSettings = () => {
       pos_layout_grid_cols: 4
     };
 
+    const transferMethod = Array.isArray(cleanExistingSettings.payment_methods)
+      ? cleanExistingSettings.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')
+      : null;
+    const resolvedBankAccounts = cleanExistingSettings.bank_accounts || transferMethod?.bank_accounts || (localSettings as any)?.bank_accounts || [];
+
     const mergedSettings = { 
       ...uiDefaults,
+      bank_accounts: resolvedBankAccounts,
       ...cleanExistingSettings, 
       ...localSettings, 
-      ...userPersistedSettings 
+      ...userPersistedSettings,
+      bank_accounts: resolvedBankAccounts
     };
 
     if (!existingSettings) {
@@ -321,7 +340,8 @@ export const useStoreSettings = () => {
       'pos_view_mode', 'pos_layout_mode', 'pos_layout_grid_cols',
       'invoice_font_size', 'show_barcode', 'logo_width', 'business_hours',
       'use_delivery', 'use_kitchen', 'shop_type',
-      'meta_whatsapp_enabled', 'meta_whatsapp_phone_number_id', 'meta_whatsapp_access_token'
+      'meta_whatsapp_enabled', 'meta_whatsapp_phone_number_id', 'meta_whatsapp_access_token',
+      'bank_accounts'
     ];
     
     try {
@@ -389,8 +409,23 @@ export const useStoreSettings = () => {
         meta_whatsapp_enabled,
         meta_whatsapp_phone_number_id,
         meta_whatsapp_access_token,
+        bank_accounts,
         ...dbPayload
       } = newSettings as any;
+
+      // If bank_accounts are updated, embed them safely in payment_methods for database persistence
+      if (bank_accounts) {
+        const baseMethods = dbPayload.payment_methods || (settings as any)?.payment_methods || [
+          { id: 'cash', name: 'Efectivo', enabled: true },
+          { id: 'card', name: 'Tarjeta', enabled: true, surcharge_percentage: 0 },
+          { id: 'transfer', name: 'Transferencia', enabled: true },
+          { id: 'check', name: 'Cheque', enabled: true },
+          { id: 'credit', name: 'Crédito', enabled: true }
+        ];
+        dbPayload.payment_methods = baseMethods.map((m: any) =>
+          (m.id === 'transfer' || m.id === 'bank') ? { ...m, bank_accounts } : m
+        );
+      }
 
       if (Object.keys(dbPayload).length > 0) {
         const { error } = await supabase
