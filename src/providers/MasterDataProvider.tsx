@@ -36,28 +36,38 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     refetchProducts();
   }, [queryClient, refetchCustomers, refetchCategories, refetchProducts]);
 
-  // Escuchar eventos de sincronización para actualizar los datos automáticamente al terminar el sync
+  const refreshRef = React.useRef(refreshMasterData);
   React.useEffect(() => {
+    refreshRef.current = refreshMasterData;
+  }, [refreshMasterData]);
+
+  // Escuchar eventos de sincronización para actualizar los datos automáticamente al terminar el sync (con debounce)
+  React.useEffect(() => {
+    let timeout: NodeJS.Timeout;
     const handleSyncComplete = () => {
-      console.log('🔄 MasterDataProvider: Sync completed event received, refreshing master data...');
-      refreshMasterData();
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        refreshRef.current();
+      }, 500);
     };
 
     window.addEventListener('cobro:sync-completed', handleSyncComplete);
     window.addEventListener('cobro:offline-products-updated', handleSyncComplete);
     return () => {
+      clearTimeout(timeout);
       window.removeEventListener('cobro:sync-completed', handleSyncComplete);
       window.removeEventListener('cobro:offline-products-updated', handleSyncComplete);
     };
-  }, [refreshMasterData]);
+  }, []);
 
-  // Refrescar automáticamente cuando el storeId se resuelva para evitar condiciones de carrera al iniciar sesión
+  // Refrescar automáticamente solo cuando el storeId cambie
+  const lastStoreIdRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (storeId) {
-      console.log('🔄 MasterDataProvider: Store ID resolved, refreshing master data...', storeId);
-      refreshMasterData();
+    if (storeId && storeId !== lastStoreIdRef.current) {
+      lastStoreIdRef.current = storeId;
+      refreshRef.current();
     }
-  }, [storeId, refreshMasterData]);
+  }, [storeId]);
 
   // Memoizado: sin esto, el objeto `value` se recreaba en CADA render de este
   // provider (que envuelve toda la app) — cualquier componente que consuma

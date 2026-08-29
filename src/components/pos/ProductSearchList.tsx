@@ -504,7 +504,9 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     // Sort by score descending, then by name alphabetically
     scoredProducts.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
-      return a.product._name_norm.localeCompare(b.product._name_norm);
+      const nameA = a.product._name_norm;
+      const nameB = b.product._name_norm;
+      return nameA < nameB ? -1 : (nameA > nameB ? 1 : 0);
     });
 
     const sortedProducts = scoredProducts.map(item => item.product);
