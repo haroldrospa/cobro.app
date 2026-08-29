@@ -1023,7 +1023,17 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       />
     </div>
   );
-}));
+}), (prev, next) => {
+  return (
+    prev.products === next.products &&
+    prev.gridCols === next.gridCols &&
+    prev.viewMode === next.viewMode &&
+    prev.mode === next.mode &&
+    prev.isLoading === next.isLoading &&
+    prev.recipeAvailability === next.recipeAvailability &&
+    prev.userName === next.userName
+  );
+});
 
 ProductSearchList.displayName = 'ProductSearchList';
 
