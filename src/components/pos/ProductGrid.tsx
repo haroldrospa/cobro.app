@@ -53,7 +53,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onAddToCart }) => {
                 <Button
                   size="sm"
                   onClick={() => onAddToCart(product)}
-                  disabled={product.track_inventory !== false && product.stock <= 0}
                   className="h-8 w-8 p-0"
                 >
                   <Plus className="h-4 w-4" />

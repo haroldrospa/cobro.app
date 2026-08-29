@@ -745,23 +745,16 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
   onQuantityClick,
 }) {
   const outOfStock = product.track_inventory !== false && (product.stock || 0) <= 0;
-  const canSelect = !outOfStock;
 
   return (
     <div
-      onClick={() => {
-        if (canSelect) {
-          onSelect(product);
-        }
-      }}
+      onClick={() => onSelect(product)}
       className={cn(
-        "group text-left overflow-hidden border transition-all duration-300 shadow-sm relative flex",
+        "group text-left overflow-hidden border transition-all duration-300 shadow-sm relative flex cursor-pointer",
         cartQty > 0
           ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] shadow-sm"
           : "border-border/60 bg-card hover:border-emerald-500/20 hover:shadow-md",
-        viewMode === 'list' ? "rounded-xl flex-row h-16 items-center mx-1" : (gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col"),
-        outOfStock && "opacity-40 grayscale pointer-events-none",
-        canSelect && "cursor-pointer"
+        viewMode === 'list' ? "rounded-xl flex-row h-16 items-center mx-1" : (gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col")
       )}
     >
       {/* Quantity Badge - Only in Grid mode to avoid clutter in List mode */}

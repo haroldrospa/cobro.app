@@ -72,9 +72,7 @@ const ProductItem = React.memo<ProductItemProps>(({
     : (product.track_inventory !== false && product.stock <= 0);
 
   const handleClick = () => {
-    if (!isOutOfStock) {
-      onSelect(product, matchedBundle);
-    }
+    onSelect(product, matchedBundle);
   };
 
   // Scroll into view when focused
