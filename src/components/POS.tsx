@@ -1037,19 +1037,52 @@ const POSContent: React.FC = () => {
   // Save existing order directly without dialog
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
-  const saveExistingOrderDirectly = async () => {
-    if (!currentWebOrderId || cart.length === 0) return;
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+
+  const cartWithOffersRef = useRef(cartWithOffers);
+  cartWithOffersRef.current = cartWithOffers;
+
+  const currentWebOrderIdRef = useRef(currentWebOrderId);
+  currentWebOrderIdRef.current = currentWebOrderId;
+
+  const currentOrderInfoRef = useRef(currentOrderInfo);
+  currentOrderInfoRef.current = currentOrderInfo;
+
+  const currentOrderSourceRef = useRef(currentOrderSource);
+  currentOrderSourceRef.current = currentOrderSource;
+
+  const globalDiscountRef = useRef(globalDiscount);
+  globalDiscountRef.current = globalDiscount;
+
+  const posOrderTypeRef = useRef(posOrderType);
+  posOrderTypeRef.current = posOrderType;
+
+  const saveExistingOrderDirectly = useCallback(async () => {
+    const activeOrderId = currentWebOrderIdRef.current || currentWebOrderId;
+    const activeCart = (cartWithOffersRef.current && cartWithOffersRef.current.length > 0)
+      ? cartWithOffersRef.current
+      : ((cartRef.current && cartRef.current.length > 0) ? cartRef.current : cartWithOffers);
+
+    if (!activeOrderId || activeCart.length === 0) {
+      console.warn('saveExistingOrderDirectly: missing orderId or cart items', { activeOrderId, cartLength: activeCart.length });
+      return;
+    }
 
     setIsSavingOrder(true);
     try {
-      // Calcular los totales de forma directa (useMemo no se puede llamar dentro de una función asíncrona)
-      const totals = calculateTotals(cartWithOffers, globalDiscount);
+      const activeDiscount = globalDiscountRef.current || globalDiscount;
+      const totals = calculateTotals(activeCart, activeDiscount);
+      const activeOrderInfo = currentOrderInfoRef.current || currentOrderInfo;
+      const activeOrderSource = currentOrderSourceRef.current || currentOrderSource || 'pos';
+      const activePosOrderType = posOrderTypeRef.current || posOrderType;
+      const activeStore = userStore || store;
 
       // 1. Obtener estado actual e ítems actuales de la orden
       const { data: currentOrder, error: fetchError } = await supabase
         .from('open_orders')
         .select('order_status, notes, order_number, customer_name')
-        .eq('id', currentWebOrderId)
+        .eq('id', activeOrderId)
         .single();
 
       const isOrderMissing = !!fetchError || !currentOrder;
@@ -1058,7 +1091,7 @@ const POSContent: React.FC = () => {
         ? await supabase
             .from('open_order_items')
             .select('product_id, quantity')
-            .eq('order_id', currentWebOrderId)
+            .eq('order_id', activeOrderId)
         : { data: [] };
 
       const isReopened = !!(
@@ -1068,10 +1101,10 @@ const POSContent: React.FC = () => {
       );
 
       // 2. Calcular ítems delta (nuevos o con cantidad aumentada)
-      const deltaItems: typeof cartWithOffers = [];
+      const deltaItems: typeof activeCart = [];
       let hasNewOrModifiedItems = false;
 
-      cartWithOffers.forEach(item => {
+      activeCart.forEach(item => {
         const matchingOld = currentItems?.find(old => old.product_id === item.id);
         const oldQty = matchingOld ? matchingOld.quantity : 0;
         if (item.quantity > oldQty) {
@@ -1081,8 +1114,8 @@ const POSContent: React.FC = () => {
       });
 
       // 3. Determinar tipo de usuario para tag de tipo de orden
-      const orderTypeTag = orderTypeTags[posOrderType];
-      const rawNotes = (currentOrderInfo?.notes || '');
+      const orderTypeTag = orderTypeTags[activePosOrderType];
+      const rawNotes = (activeOrderInfo?.notes || '');
       const cleanNotes = rawNotes
         .replace(/\[COMER AQUÍ\]/g, '')
         .replace(/\[PARA LLEVAR\]/g, '')
@@ -1092,19 +1125,25 @@ const POSContent: React.FC = () => {
       const finalNotes = cleanNotes ? `${cleanNotes}\n${orderTypeTag}` : orderTypeTag;
 
       // 4. Preparar payload de actualización principal
-      const isDelivery = posOrderType === 'takeout' && (isStore || isSupermarket);
+      const isDelivery = activePosOrderType === 'takeout' && (isStore || isSupermarket);
 
-      let orderIdToUse = currentWebOrderId;
-      let orderNumberToUse = currentOrder?.order_number || currentOrderInfo?.orderNumber;
+      let orderIdToUse = activeOrderId;
+      let orderNumberToUse = currentOrder?.order_number || activeOrderInfo?.orderNumber;
 
       if (isOrderMissing) {
         // Generar un nuevo número de orden y crearla desde cero
-        const { data: orderNumber, error: orderNumberError } = await supabase
-          .rpc('generate_order_number', { order_source: currentOrderSource || 'pos' });
+        let generatedOrderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+        try {
+          const { data: orderNumber, error: orderNumberError } = await supabase
+            .rpc('generate_order_number', { order_source: activeOrderSource });
+          if (!orderNumberError && orderNumber) {
+            generatedOrderNumber = orderNumber;
+          }
+        } catch (e) {
+          console.warn('generate_order_number fallback:', e);
+        }
 
-        if (orderNumberError) throw orderNumberError;
-
-        orderNumberToUse = orderNumber;
+        orderNumberToUse = generatedOrderNumber;
         orderIdToUse = crypto.randomUUID();
 
         const { error: insertError } = await supabase
@@ -1112,24 +1151,24 @@ const POSContent: React.FC = () => {
           .insert({
             id: orderIdToUse,
             order_number: orderNumberToUse,
-            customer_name: currentOrderInfo?.customerName || 'Cliente',
+            customer_name: activeOrderInfo?.customerName || 'Cliente',
             payment_method: 'pending',
             subtotal: parseFloat(totals.subtotal),
             discount_total: parseFloat(totals.discount),
             tax_total: parseFloat(totals.tax),
             total: parseFloat(totals.total),
             notes: finalNotes,
-            source: currentOrderSource || 'pos',
+            source: activeOrderSource,
             order_status: isDelivery ? 'shipped' : 'preparing',
             payment_status: 'pending',
             profile_id: profile?.id || null,
-            store_id: store?.id || null
+            store_id: activeStore?.id || localStorage.getItem('cobro_last_store_id') || null
           });
 
         if (insertError) throw insertError;
       } else {
         const updatePayload: any = {
-          customer_name: currentOrderInfo?.customerName || 'Cliente',
+          customer_name: activeOrderInfo?.customerName || currentOrder?.customer_name || 'Cliente',
           subtotal: parseFloat(totals.subtotal),
           discount_total: parseFloat(totals.discount),
           tax_total: parseFloat(totals.tax),
@@ -1139,16 +1178,13 @@ const POSContent: React.FC = () => {
         };
 
         if (isDelivery) {
-          // Para supermercados/tiendas, el delivery va directo a despacho (no hay cocina)
           updatePayload.order_status = 'shipped';
         } else if (!isReopened) {
-          // Sigue en cocina: solo refrescamos el timer si hay productos nuevos/modificados
           updatePayload.order_status = 'preparing';
           if (hasNewOrModifiedItems) {
             updatePayload.created_at = new Date().toISOString();
           }
         } else {
-          // Ya estaba completada: conservamos el estado
           updatePayload.order_status = currentOrder.order_status;
         }
 
@@ -1156,7 +1192,7 @@ const POSContent: React.FC = () => {
         const { error: orderError } = await supabase
           .from('open_orders')
           .update(updatePayload)
-          .eq('id', currentWebOrderId);
+          .eq('id', activeOrderId);
 
         if (orderError) throw orderError;
       }
@@ -1169,7 +1205,9 @@ const POSContent: React.FC = () => {
 
       if (deleteError) throw deleteError;
 
-      const orderItems = cartWithOffers.map(item => {
+      const isUuid = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+
+      const orderItems = activeCart.map(item => {
         const taxRate = item.tax || 0.18;
         const itemTotalRaw = item.price * item.quantity;
         let subtotal, taxAmount, total;
@@ -1184,7 +1222,7 @@ const POSContent: React.FC = () => {
         }
         return {
           order_id: orderIdToUse,
-          product_id: item.id,
+          product_id: isUuid(item.id) ? item.id : null,
           product_name: item.comment ? `${item.name} (${item.comment})` : item.name,
           quantity: item.quantity,
           unit_price: item.price,
@@ -1202,60 +1240,55 @@ const POSContent: React.FC = () => {
 
       if (itemsError) throw itemsError;
 
-      // 7. Crear ticket delta en cocina si hay productos nuevos
-      if (hasNewOrModifiedItems && !isOrderMissing && currentOrder) {
-        const authRes = await supabase.auth.getUser();
-        const user = authRes?.data?.user;
-        const refOrderNumber = currentOrder.order_number;
-        const refCustomerName = currentOrder.customer_name || currentOrderInfo?.customerName || 'Cliente';
-        const deltaNotes = `[ACTUALIZADO]\nPedido actualizado de: ${refCustomerName} (#${refOrderNumber})\n${finalNotes}`;
+      // 7. Crear ticket delta en cocina si hay productos nuevos y el negocio usa cocina
+      if (hasNewOrModifiedItems && !isOrderMissing && currentOrder && !skipKitchenStep && !isStore && !isSupermarket) {
+        try {
+          const authRes = await supabase.auth.getUser();
+          const user = authRes?.data?.user;
+          const refOrderNumber = currentOrder.order_number;
+          const refCustomerName = currentOrder.customer_name || activeOrderInfo?.customerName || 'Cliente';
+          const deltaNotes = `[ACTUALIZADO]\nPedido actualizado de: ${refCustomerName} (#${refOrderNumber})\n${finalNotes}`;
 
-        const { data: deltaOrder, error: deltaOrderError } = await supabase
-          .from('open_orders')
-          .insert({
-            order_number: String(900000 + (Date.now() % 99999)),
-            customer_name: refCustomerName,
-            payment_method: 'pending',
-            subtotal: 0,
-            discount_total: 0,
-            tax_total: 0,
-            total: 0,
-            notes: deltaNotes,
-            source: 'pos',
-            order_status: 'preparing',
-            payment_status: 'paid',
-            profile_id: user?.id || null,
-            store_id: store?.id || null
-          })
-          .select()
-          .single();
-
-        if (deltaOrderError) {
-          console.error('Error creando ticket delta:', deltaOrderError);
-          throw deltaOrderError;
-        }
-
-        if (deltaOrder) {
-          const deltaOrderItems = deltaItems.map(item => {
-            const taxRate = item.tax || 0.18;
-            return {
-              order_id: deltaOrder.id,
-              product_id: item.id,
-              product_name: item.comment ? `${item.name} (${item.comment})` : item.name,
-              quantity: item.quantity,
-              unit_price: 0,
-              tax_percentage: taxRate * 100,
-              tax_amount: 0,
+          const { data: deltaOrder, error: deltaOrderError } = await supabase
+            .from('open_orders')
+            .insert({
+              order_number: String(900000 + (Date.now() % 99999)),
+              customer_name: refCustomerName,
+              payment_method: 'pending',
               subtotal: 0,
+              discount_total: 0,
+              tax_total: 0,
               total: 0,
-              cost_includes_tax: item.cost_includes_tax || false
-            };
-          });
-          const { error: deltaItemsError } = await supabase.from('open_order_items').insert(deltaOrderItems);
-          if (deltaItemsError) {
-            console.error('Error insertando items delta:', deltaItemsError);
-            throw deltaItemsError;
+              notes: deltaNotes,
+              source: 'pos',
+              order_status: 'preparing',
+              payment_status: 'paid',
+              profile_id: user?.id || null,
+              store_id: activeStore?.id || localStorage.getItem('cobro_last_store_id') || null
+            })
+            .select()
+            .single();
+
+          if (deltaOrder && !deltaOrderError) {
+            const deltaOrderItems = deltaItems.map(item => {
+              const taxRate = item.tax || 0.18;
+              return {
+                order_id: deltaOrder.id,
+                product_id: isUuid(item.id) ? item.id : null,
+                product_name: item.comment ? `${item.name} (${item.comment})` : item.name,
+                quantity: item.quantity,
+                unit_price: 0,
+                tax_percentage: taxRate * 100,
+                tax_amount: 0,
+                subtotal: 0,
+                total: 0,
+                cost_includes_tax: item.cost_includes_tax || false
+              };
+            });
+            await supabase.from('open_order_items').insert(deltaOrderItems);
           }
+        } catch (kitchenErr) {
+          console.warn('Error no crítico creando ticket delta de cocina:', kitchenErr);
         }
       }
 
@@ -1277,29 +1310,21 @@ const POSContent: React.FC = () => {
       setCurrentOrderInfo(null);
       setCurrentOrderSource('pos');
       setCurrentWebOrderId(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving order:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo guardar el pedido"
+        title: "Error al actualizar",
+        description: error?.message || "No se pudo actualizar el pedido"
       });
     } finally {
       setIsSavingOrder(false);
     }
-  };
-
-  const cartRef = useRef(cart);
-  const currentWebOrderIdRef = useRef(currentWebOrderId);
-  useEffect(() => {
-    cartRef.current = cart;
-  }, [cart]);
-  useEffect(() => {
-    currentWebOrderIdRef.current = currentWebOrderId;
-  }, [currentWebOrderId]);
+  }, [userStore, store, profile, orderTypeTags, isStore, isSupermarket, skipKitchenStep, queryClient, toast]);
 
   const handleSaveOrder = useCallback(() => {
-    if (cartRef.current.length === 0) return;
+    const currentCart = cartRef.current;
+    if (!currentCart || currentCart.length === 0) return;
 
     // If editing an existing order, save directly
     if (currentWebOrderIdRef.current) {
@@ -1308,7 +1333,7 @@ const POSContent: React.FC = () => {
       // New order - show dialog
       setShowSaveOrderDialog(true);
     }
-  }, []);
+  }, [saveExistingOrderDirectly]);
 
   // Keyboard shortcuts
   useEffect(() => {
