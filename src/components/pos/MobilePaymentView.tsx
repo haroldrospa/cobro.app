@@ -399,20 +399,20 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
           onClick={onCheckout}
           disabled={!canCheckout || isInvoiceLimitReached}
           className={cn(
-            "w-full h-14 sm:h-16 rounded-2xl text-base sm:text-lg font-black group transition-all relative overflow-hidden",
-            canCheckout 
-              ? "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-[0_0_40px_rgba(34,197,94,0.3)]" 
+            "w-full h-14 sm:h-16 rounded-2xl text-sm sm:text-base font-black group transition-all relative overflow-hidden",
+            canCheckout
+              ? "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-[0_0_40px_rgba(34,197,94,0.3)]"
               : "bg-muted text-muted-foreground border border-border"
           )}
         >
-          <div className="flex items-center justify-between w-full px-4">
-            <div className="flex items-center gap-2.5">
-              <CreditCard className="h-5.5 w-5.5" />
-              <span>FINALIZAR VENTA</span>
+          <div className="flex items-center justify-between w-full gap-2 px-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <CreditCard className="h-5 w-5 shrink-0" />
+              <span className="truncate">Finalizar</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl">${totals.total}</span>
-              <ArrowRight className="h-4.5 w-4.5 group-hover:translate-x-1 transition-transform" />
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-base sm:text-lg">${totals.total}</span>
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
         </Button>

@@ -106,16 +106,15 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
         aria-hidden={!isPaymentOpen}
       >
         <div className="h-full flex flex-col">
-          <header className="flex items-center justify-between p-3 border-b border-border/10 flex-shrink-0">
+          <header className="relative flex items-center p-3 border-b border-border/10 flex-shrink-0">
             <Button
               variant="ghost"
               onClick={() => setIsPaymentOpen(false)}
-              className="font-bold text-muted-foreground hover:text-foreground h-9 px-3"
+              className="font-bold text-muted-foreground hover:text-foreground h-9 px-3 shrink-0 relative z-10"
             >
               ← Volver
             </Button>
-            <h2 className="font-black text-base sm:text-lg">Finalizar Venta</h2>
-            <div className="w-16" /> {/* spacer */}
+            <h2 className="absolute inset-x-0 text-center font-black text-sm sm:text-base whitespace-nowrap pointer-events-none">Finalizar Venta</h2>
           </header>
           <div className="flex-1 overflow-y-auto">
             {/* Solo se monta cuando está realmente abierta — antes se
