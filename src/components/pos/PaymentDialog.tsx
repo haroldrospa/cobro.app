@@ -66,12 +66,28 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [includeDebt, setIncludeDebt] = useState(false);
   const [openCustomerPopover, setOpenCustomerPopover] = useState(false);
   const [splitMethod, setSplitMethod] = useState('card');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [localAmount, setLocalAmount] = useState(amountReceived);
+
+  useEffect(() => {
+    if (isOpen) {
+      setLocalAmount(amountReceived);
+    }
+  }, [isOpen, amountReceived]);
+
+  const handleAmountChange = (val: string) => {
+    setLocalAmount(val);
+    onAmountReceivedChange(val);
+  };
 
   const previousDebt = selectedCustomer && selectedCustomer !== 'general' && balance ? (balance.totalDebt || 0) : 0;
   const fullTotal = total + (includeDebt ? previousDebt : 0);
   const fullTotals = {
     total: fullTotal.toFixed(2)
   };
+
+  const currentReceived = parseFloat(localAmount) || 0;
+  const currentChange = currentReceived - fullTotal;
 
   const selectedCustomerData = React.useMemo(() => {
     if (!selectedCustomer) return null;
@@ -82,6 +98,14 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     if (!selectedCustomer) return "Consumidor Final";
     return selectedCustomerData ? selectedCustomerData.name : "Cargando...";
   }, [selectedCustomer, selectedCustomerData]);
+
+  const filteredCustomers = React.useMemo(() => {
+    if (!customerSearch) return customers.slice(0, 30);
+    const q = customerSearch.toLowerCase();
+    return customers
+      .filter(c => c.name?.toLowerCase().includes(q) || c.rnc?.includes(q) || c.phone?.includes(q))
+      .slice(0, 30);
+  }, [customers, customerSearch]);
 
   const webChangeInfo = React.useMemo(() => {
     if (!webOrderNotes) return null;
@@ -223,6 +247,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     <Command className="bg-transparent border-none">
                       <CommandInput 
                         placeholder="Buscar por nombre, RNC o teléfono..." 
+                        value={customerSearch}
+                        onValueChange={setCustomerSearch}
                         className="h-9 text-xs text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
                       />
                       <CommandList className="max-h-[220px] overflow-y-auto p-1 scrollbar-thin">
@@ -232,7 +258,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                         <CommandGroup>
                           <CommandItem
                             value="general-consumidor-final"
-                            onSelect={() => { onCustomerChange?.(""); setOpenCustomerPopover(false); }}
+                            onSelect={() => { onCustomerChange?.(""); setOpenCustomerPopover(false); setCustomerSearch(''); }}
                             className={cn(
                               "p-2 cursor-pointer rounded-lg mx-0.5 my-0.5 text-xs transition-all flex items-center justify-between",
                               !selectedCustomer ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent text-foreground"
@@ -245,13 +271,13 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                             {!selectedCustomer && <Check className="h-4 w-4 text-primary shrink-0" />}
                           </CommandItem>
 
-                          {customers.map((customer) => {
+                          {filteredCustomers.map((customer) => {
                             const isSelected = selectedCustomer === customer.id;
                             return (
                               <CommandItem
                                 key={customer.id}
                                 value={`${customer.name} ${customer.rnc || ''} ${customer.phone || ''} ${customer.id}`}
-                                onSelect={() => { onCustomerChange?.(customer.id); setOpenCustomerPopover(false); }}
+                                onSelect={() => { onCustomerChange?.(customer.id); setOpenCustomerPopover(false); setCustomerSearch(''); }}
                                 className={cn(
                                   "p-2 cursor-pointer rounded-lg mx-0.5 my-0.5 text-xs transition-all flex items-center justify-between",
                                   isSelected ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent text-foreground"
@@ -383,7 +409,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     <div className="space-y-0.5">
                       <label className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground ml-0.5">Monto Mixto</label>
                       <div className="h-8 w-full bg-blue-500/10 border border-blue-500/20 rounded-md flex items-center px-2 font-bold text-blue-600 text-xs">
-                        RD$ {Math.max(0, fullTotal - received).toFixed(2)}
+                        RD$ {Math.max(0, fullTotal - currentReceived).toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -410,10 +436,10 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       type="number"
                       inputMode="decimal"
                       placeholder="0.00"
-                      value={amountReceived}
-                      onChange={(e) => onAmountReceivedChange(e.target.value)}
+                      value={localAmount}
+                      onChange={(e) => handleAmountChange(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && ((received >= fullTotal || paymentMethod === 'split') && !isProcessing)) {
+                        if (e.key === 'Enter' && ((currentReceived >= fullTotal || paymentMethod === 'split') && !isProcessing)) {
                           onProcessPayment(includeDebt, splitMethod);
                         }
                       }}
@@ -427,7 +453,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                         type="button"
                         variant="outline"
                         className="h-7 px-2 rounded-md border-border bg-background hover:bg-muted text-[10px] font-bold uppercase flex-1 min-w-[15%]"
-                        onClick={() => onAmountReceivedChange(fullTotal.toString())}
+                        onClick={() => handleAmountChange(fullTotal.toString())}
                       >
                         Exacto
                       </Button>
@@ -437,7 +463,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                           type="button"
                           variant="outline"
                           className="h-7 px-2 rounded-md border-border bg-background hover:bg-muted text-[10px] font-bold uppercase flex-1 min-w-[15%]"
-                          onClick={() => onAmountReceivedChange(amt.toString())}
+                          onClick={() => handleAmountChange(amt.toString())}
                         >
                           {amt}
                         </Button>
@@ -445,8 +471,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     </div>
                   )}
 
-                  {paymentMethod === 'cash' && received >= 0 && (() => {
-                    const actualChange = received - fullTotal;
+                  {paymentMethod === 'cash' && currentReceived >= 0 && (() => {
+                    const actualChange = currentChange;
                     return (
                       <AnimatePresence mode="wait">
                         <motion.div
@@ -495,7 +521,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 "h-10 flex-1 rounded-lg font-bold text-sm shadow-md uppercase tracking-wider",
                 isProcessing ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground hover:bg-primary/90"
               )}
-              disabled={(paymentMethod === 'cash' && received < fullTotal) || (paymentMethod === 'split' && received <= 0) || (paymentMethod === 'split' && received >= fullTotal) || (paymentMethod === 'credit' && !selectedCustomer) || (requiresCustomer && (!selectedCustomer || !selectedCustomerData?.rnc)) || isProcessing}
+              disabled={(paymentMethod === 'cash' && currentReceived < fullTotal) || (paymentMethod === 'split' && currentReceived <= 0) || (paymentMethod === 'split' && currentReceived >= fullTotal) || (paymentMethod === 'credit' && !selectedCustomer) || (requiresCustomer && (!selectedCustomer || !selectedCustomerData?.rnc)) || isProcessing}
             >
               {isProcessing ? (
                 <div className="flex items-center gap-2">
@@ -522,5 +548,5 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   );
 };
 
-export default PaymentDialog;
+export default React.memo(PaymentDialog);
 
