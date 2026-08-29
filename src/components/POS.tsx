@@ -1287,6 +1287,8 @@ const POSContent: React.FC = () => {
     } finally {
       setIsSavingOrder(false);
     }
+  };
+
   const cartRef = useRef(cart);
   const currentWebOrderIdRef = useRef(currentWebOrderId);
   useEffect(() => {
