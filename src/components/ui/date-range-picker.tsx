@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle } from '@/components/ui/drawer';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar as CalendarIcon, Check, RotateCcw } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
     format,
     subDays,
@@ -125,6 +127,11 @@ const DATE_PRESETS = [
 ];
 
 export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: DateRangePickerProps) => {
+    // En mobile el Popover no tiene donde caber -- su ancho natural (sidebar
+    // + hasta 2 meses de calendario, 700px+) se aprieta contra el viewport y
+    // Radix lo recorta/trunca. En su lugar usamos el mismo patron de Drawer
+    // (hoja completa desde abajo) que ya usa el resto de la app en mobile.
+    const isMobile = useIsMobile();
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [month, setMonth] = useState<Date>(() => dateRange?.from || new Date());
 
@@ -208,24 +215,23 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
         return isSameDay(dateRange.from, p.from) && isSameDay(dateRange.to, p.to);
     };
 
-    return (
-        <div className={cn('grid gap-2', className)}>
-            <Popover open={isCalendarOpen} onOpenChange={handleOpenChange}>
-                <PopoverTrigger asChild>
-                    <Button
-                        id="date"
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                            'h-9 justify-start text-left font-semibold w-[260px] rounded-xl border-border/60 shadow-xs hover:border-primary/50 transition-all',
-                            !dateRange && 'text-muted-foreground'
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                        <span className="truncate">{formatDateRange()}</span>
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border-border/60 bg-background overflow-hidden" align="end">
+    const triggerButton = (
+        <Button
+            id="date"
+            variant="outline"
+            size="sm"
+            className={cn(
+                'h-9 justify-start text-left font-semibold w-[260px] rounded-xl border-border/60 hover:border-primary/50 transition-all',
+                !dateRange && 'text-muted-foreground'
+            )}
+        >
+            <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+            <span className="truncate">{formatDateRange()}</span>
+        </Button>
+    );
+
+    const pickerBody = (
+        <>
                     {/* Header bar con selección rápida de Mes y Año */}
                     <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/30 border-b border-border/40">
                         <div className="flex items-center gap-2">
@@ -266,40 +272,61 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
                                 Todo el Mes
                             </Button>
                         </div>
-
-                        {dateRange?.from && (
-                            <div className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-md">
-                                {formatDateRange()}
-                            </div>
-                        )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row max-h-[550px] overflow-auto sm:overflow-visible">
+                    <div className="flex flex-col sm:flex-row max-h-[70vh] sm:max-h-[550px] overflow-auto sm:overflow-visible">
                         {/* Sidebar Presets */}
-                        <div className="flex flex-col gap-1 p-2 border-r border-border/40 sm:w-44 bg-muted/15">
-                            <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground px-2 py-1">
-                                Accesos Rápidos
-                            </div>
-                            {DATE_PRESETS.map((preset) => {
-                                const active = isPresetActive(preset);
-                                return (
-                                    <Button
-                                        key={preset.label}
-                                        variant={active ? 'default' : 'ghost'}
-                                        size="sm"
-                                        className={cn(
-                                            'justify-between font-medium text-xs h-8 rounded-lg transition-all',
-                                            active
-                                                ? 'bg-primary text-primary-foreground shadow-xs'
-                                                : 'hover:bg-accent hover:text-accent-foreground'
-                                        )}
-                                        onClick={() => handlePresetClick(preset)}
-                                    >
-                                        <span>{preset.label}</span>
-                                        {active && <Check className="h-3.5 w-3.5 ml-1 shrink-0" />}
-                                    </Button>
-                                );
-                            })}
+                        <div className="flex flex-col gap-1 p-2 border-b sm:border-b-0 sm:border-r border-border/40 sm:w-44 bg-muted/15">
+                            {!isMobile && (
+                                <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground px-2 py-1">
+                                    Accesos Rápidos
+                                </div>
+                            )}
+                            {isMobile ? (
+                                // Chips que envuelven en vez de una lista larga de filas — mismo
+                                // patron de las demas chips de filtro de la app, mucho mas
+                                // compacto que 10 renglones apilados.
+                                <div className="flex flex-wrap gap-1.5 px-1 pb-1">
+                                    {DATE_PRESETS.map((preset) => {
+                                        const active = isPresetActive(preset);
+                                        return (
+                                            <button
+                                                key={preset.label}
+                                                onClick={() => handlePresetClick(preset)}
+                                                className={cn(
+                                                    'px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
+                                                    active
+                                                        ? 'bg-primary/10 text-primary border-primary/30'
+                                                        : 'text-muted-foreground border-border/50 hover:border-border hover:text-foreground'
+                                                )}
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                DATE_PRESETS.map((preset) => {
+                                    const active = isPresetActive(preset);
+                                    return (
+                                        <Button
+                                            key={preset.label}
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn(
+                                                'justify-between font-medium text-xs h-8 rounded-lg transition-all',
+                                                active
+                                                    ? 'bg-primary/10 text-primary border border-primary/20'
+                                                    : 'hover:bg-accent hover:text-accent-foreground'
+                                            )}
+                                            onClick={() => handlePresetClick(preset)}
+                                        >
+                                            <span>{preset.label}</span>
+                                            {active && <Check className="h-3.5 w-3.5 ml-1 shrink-0" />}
+                                        </Button>
+                                    );
+                                })
+                            )}
                             <div className="my-1 border-t border-border/40" />
                             <Button
                                 variant="ghost"
@@ -313,7 +340,7 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
                         </div>
 
                         {/* Calendar */}
-                        <div className="p-3">
+                        <div className="p-3 flex flex-col items-center sm:items-stretch">
                             <Calendar
                                 mode="range"
                                 selected={dateRange}
@@ -331,20 +358,43 @@ export const DateRangePicker = ({ dateRange, onDateRangeChange, className }: Dat
                                     }
                                 }}
                                 locale={es}
-                                numberOfMonths={2}
+                                numberOfMonths={isMobile ? 1 : 2}
                                 initialFocus
                             />
                             {/* Actions bar */}
-                            <div className="flex items-center justify-between p-2 border-t border-border/40 mt-3">
+                            <div className="flex items-center justify-between p-2 border-t border-border/40 mt-3 w-full">
                                 <span className="text-xs text-muted-foreground font-medium">
                                     {dateRange?.from && !dateRange.to ? 'Seleccione la fecha final...' : ''}
                                 </span>
-                                <Button size="sm" className="h-8 px-5 text-xs font-bold rounded-lg shadow-sm" onClick={() => handleOpenChange(false)}>
+                                <Button size="sm" className="h-8 px-5 text-xs font-bold rounded-lg" onClick={() => handleOpenChange(false)}>
                                     Listo
                                 </Button>
                             </div>
                         </div>
                     </div>
+        </>
+    );
+
+    if (isMobile) {
+        return (
+            <div className={cn('grid gap-2', className)}>
+                <Drawer open={isCalendarOpen} onOpenChange={handleOpenChange}>
+                    <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+                    <DrawerContent className="max-h-[92vh]">
+                        <DrawerTitle className="sr-only">Filtrar por fecha</DrawerTitle>
+                        {pickerBody}
+                    </DrawerContent>
+                </Drawer>
+            </div>
+        );
+    }
+
+    return (
+        <div className={cn('grid gap-2', className)}>
+            <Popover open={isCalendarOpen} onOpenChange={handleOpenChange}>
+                <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+                <PopoverContent className="w-auto p-0 rounded-2xl shadow-lg border-border/60 bg-background overflow-hidden" align="end">
+                    {pickerBody}
                 </PopoverContent>
             </Popover>
         </div>
