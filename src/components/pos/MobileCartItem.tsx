@@ -79,11 +79,11 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
 
                         {/* Name and Price */}
                         <div className="min-w-0 flex-1 flex flex-col justify-center min-h-[48px]">
-                            <h4 className="font-bold text-xs uppercase tracking-tight leading-tight text-white break-words" title={item.name}>
+                            <h4 className="font-bold text-xs uppercase tracking-tight leading-tight text-foreground break-words" title={item.name}>
                                 {item.name}
                             </h4>
                             <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] text-zinc-500 font-medium">
+                                <span className="text-[10px] text-muted-foreground font-medium">
                                     ${(item.price || 0).toFixed(2)} c/u
                                 </span>
                                 {item.offerApplied && (
@@ -98,7 +98,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-zinc-500 hover:text-destructive transition-colors shrink-0 rounded-full"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors shrink-0 rounded-full"
                             onClick={() => onRemoveFromCart(item.id)}
                         >
                             <Trash2 className="h-4 w-4" />
@@ -136,11 +136,11 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                     <div className="flex items-center justify-between gap-2 w-full pt-0.5">
                         <div className="flex items-center gap-2">
                             {/* Quantity Controls */}
-                            <div className="flex items-center bg-zinc-800/85 rounded-lg p-0.5 border border-white/5">
+                            <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-zinc-400 hover:text-white"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
                                 >
                                     <Minus className="h-3.5 w-3.5" />
@@ -194,7 +194,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     size="icon"
                                     className={cn(
                                         "h-8 w-8 rounded-lg transition-colors shrink-0",
-                                        item.comment ? "bg-green-500/20 text-green-500" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
+                                        item.comment ? "bg-green-500/20 text-green-500" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                     )}
                                     onClick={() => setIsEditingComment(!isEditingComment)}
                                 >
@@ -209,7 +209,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
                                     size="icon"
                                     className={cn(
                                         "h-8 w-8 rounded-lg transition-colors shrink-0",
-                                        item.discount && item.discount.value > 0 ? "bg-emerald-500/20 text-emerald-400" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
+                                        item.discount && item.discount.value > 0 ? "bg-emerald-500/20 text-emerald-400" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                     )}
                                     onClick={() => setIsEditingDiscount(!isEditingDiscount)}
                                 >
@@ -220,7 +220,7 @@ const MobileCartItem: React.FC<MobileCartItemProps> = ({
 
                         {/* Total Price */}
                         <div className="text-right">
-                            <p className="text-[9px] uppercase tracking-wider font-bold text-zinc-500">Subtotal</p>
+                            <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Subtotal</p>
                             <p className="font-black text-sm text-emerald-500">
                                 ${(calculateItemTotal(item) || 0).toFixed(2)}
                             </p>

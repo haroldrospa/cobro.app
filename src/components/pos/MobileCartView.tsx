@@ -107,7 +107,7 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={onSaveOrder}
-                className="h-8 rounded-full bg-secondary border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10 font-black uppercase tracking-widest text-[10px] px-4 shadow-sm"
+                className="h-8 rounded-full bg-secondary border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10 font-black uppercase tracking-widest text-[10px] px-4"
               >
                 {currentOrderInfo ? 'Actualizar Pedido' : 'Guardar Pedido'}
               </Button>
@@ -141,8 +141,8 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
               onClick={() => onOrderTypeChange('dine-in')}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                orderType === 'dine-in' 
-                  ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border shadow-md" 
+                orderType === 'dine-in'
+                  ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -153,8 +153,8 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
               onClick={() => onOrderTypeChange('takeout')}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                orderType === 'takeout' 
-                  ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border shadow-md" 
+                orderType === 'takeout'
+                  ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

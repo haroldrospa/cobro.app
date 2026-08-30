@@ -146,17 +146,16 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
             </button>
           </DrawerTrigger>
         )}
-        <DrawerContent className="bg-zinc-950/95 backdrop-blur-2xl border-white/10 max-h-[85vh]">
-          <DrawerHeader className="border-b border-white/5 pb-4">
-            <DrawerTitle className="text-xl font-black flex items-center gap-2">
-              <div className="bg-muted h-2 w-2 rounded-full" />
+        <DrawerContent className="bg-background/95 backdrop-blur-2xl border-border max-h-[85vh]">
+          <DrawerHeader className="border-b border-border/40 pb-4">
+            <DrawerTitle className="text-lg font-black">
               Resumen del Pedido
             </DrawerTitle>
           </DrawerHeader>
           <div className="flex-1 min-h-0 overflow-hidden p-0 flex flex-col">
             {cartComponent}
           </div>
-          <div className="p-4 bg-zinc-900/50 border-t border-white/5 safe-area-bottom">
+          <div className="p-4 border-t border-border/40 safe-area-bottom">
             <Button
               onClick={hasItems ? openPaymentSummary : undefined}
               disabled={!hasItems}
