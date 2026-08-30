@@ -477,14 +477,14 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
                 
                 {/* Order Type Toggle */}
                 {onOrderTypeChange && (isRestaurant || isStore || isSupermarket) && (
-                  <div className="flex w-full bg-zinc-900/50 p-1 rounded-xl mb-4 border border-white/5 shadow-inner min-w-0">
+                  <div className="flex w-full bg-muted p-1 rounded-xl mb-4 border border-border min-w-0">
                     <button
                       onClick={() => onOrderTypeChange('dine-in')}
                       className={cn(
                         "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all truncate",
-                        orderType === 'dine-in' 
-                          ? "bg-zinc-800 text-emerald-500 shadow-xl border border-white/5" 
-                          : "text-zinc-500 hover:text-zinc-300"
+                        orderType === 'dine-in'
+                          ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       {(isStore || isSupermarket) ? <Tag className="h-3 w-3" /> : <Utensils className="h-3 w-3" />}
@@ -494,9 +494,9 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
                       onClick={() => onOrderTypeChange('takeout')}
                       className={cn(
                         "flex-1 min-w-0 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all truncate",
-                        orderType === 'takeout' 
-                          ? "bg-zinc-800 text-emerald-500 shadow-xl border border-white/5" 
-                          : "text-zinc-500 hover:text-zinc-300"
+                        orderType === 'takeout'
+                          ? "bg-background text-emerald-600 dark:text-emerald-400 border border-border"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       <ShoppingBag className="h-3 w-3" />
@@ -506,30 +506,30 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
                 )}
                 
                 {cart.map((item, idx) => (
-                  <div key={`${item.id}-${idx}`} className="flex flex-col gap-1 py-4 border-b border-white/5 last:border-0 w-full text-left px-1 md:px-2 group min-w-0">
+                  <div key={`${item.id}-${idx}`} className="flex flex-col gap-1 py-4 border-b border-border/40 last:border-0 w-full text-left px-1 md:px-2 group min-w-0">
                     <div className="flex items-center justify-between gap-2 md:gap-4 w-full min-w-0">
                       <div className="flex flex-col min-w-0 flex-1">
-                        <p className="font-bold text-white text-xs md:text-sm uppercase truncate">{item.name}</p>
-                        <p className="text-[10px] md:text-[11px] text-zinc-500 mt-1 font-medium truncate">
+                        <p className="font-bold text-foreground text-xs md:text-sm uppercase truncate">{item.name}</p>
+                        <p className="text-[10px] md:text-[11px] text-muted-foreground mt-1 font-medium truncate">
                           ${(item.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / ud
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
-                        <div className="flex items-center bg-zinc-800/80 rounded-lg p-0.5 border border-white/5 shrink-0">
-                          <button 
-                            className="h-6 w-6 md:h-8 md:w-8 flex items-center justify-center text-zinc-500 active:bg-zinc-700/50 rounded-md transition-colors"
+                        <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border shrink-0">
+                          <button
+                            className="h-6 w-6 md:h-8 md:w-8 flex items-center justify-center text-muted-foreground active:bg-background rounded-md transition-colors"
                             onClick={() => props.onUpdateQuantity?.(item.id, item.quantity - 1)}
                           >
                              <Minus className="h-3 w-3 md:h-4 md:w-4" />
                           </button>
-                           <span 
-                             className="w-6 md:w-8 text-center text-xs md:text-sm font-bold text-white shrink-0 cursor-pointer hover:text-emerald-400 transition-colors"
+                           <span
+                             className="w-6 md:w-8 text-center text-xs md:text-sm font-bold text-foreground shrink-0 cursor-pointer hover:text-emerald-500 transition-colors"
                              onClick={() => handleQuantityClick(item.id, item.name, item.quantity)}
                            >
                              {item.quantity}
                            </span>
-                          <button 
-                            className="h-6 w-6 md:h-8 md:w-8 flex items-center justify-center text-emerald-500 active:bg-zinc-700/50 rounded-md transition-colors"
+                          <button
+                            className="h-6 w-6 md:h-8 md:w-8 flex items-center justify-center text-emerald-500 active:bg-background rounded-md transition-colors"
                             onClick={() => props.onUpdateQuantity?.(item.id, item.quantity + 1)}
                           >
                              <Plus className="h-3 w-3 md:h-4 md:w-4" />
@@ -559,29 +559,29 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
                   <div className="absolute inset-0 bg-emerald-400/5 blur-[40px] rounded-full" />
                   
                   {/* Icon composition */}
-                  <div className="relative bg-zinc-900/40 p-10 rounded-[3rem] border border-white/5 backdrop-blur-2xl shadow-2xl">
+                  <div className="relative bg-card p-10 rounded-[3rem] border border-border backdrop-blur-2xl shadow-sm">
                     <Package className="h-20 w-20 text-emerald-500/40 relative z-10" />
-                    <Search className="h-8 w-8 text-emerald-500 absolute -bottom-2 -right-2 bg-zinc-950 p-1.5 rounded-xl border border-white/10 shadow-xl" />
+                    <Search className="h-8 w-8 text-emerald-500 absolute -bottom-2 -right-2 bg-background p-1.5 rounded-xl border border-border shadow-sm" />
                   </div>
                 </div>
-                
-                <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic mb-3">
+
+                <h3 className="text-3xl font-black text-foreground uppercase tracking-tighter italic mb-3">
                   Sin Resultados
                 </h3>
                 <div className="space-y-1">
-                  <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-[0.3em]">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
                     No encontramos lo que buscas
                   </p>
                   <p className="text-[10px] font-medium text-emerald-500/50 uppercase tracking-widest">
                     Intenta con otro nombre o código
                   </p>
                 </div>
-                
+
                 {searchTerm && (
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     onClick={() => setSearchTerm('')}
-                    className="mt-10 h-11 px-8 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                    className="mt-10 h-11 px-8 rounded-2xl bg-muted border border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                   >
                     Limpiar Búsqueda
                   </Button>

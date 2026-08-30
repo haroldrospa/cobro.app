@@ -164,7 +164,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md bg-zinc-950 border-white/5 p-6 rounded-[2rem] max-h-[90vh] overflow-y-auto scrollbar-hide">
+      <DialogContent className="max-w-md bg-background border-border/40 p-6 rounded-[2rem] max-h-[90vh] overflow-y-auto scrollbar-hide">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-600 to-emerald-500" />
         
         <DialogHeader className="mb-4">
@@ -172,27 +172,27 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
             <div className="p-2.5 rounded-2xl bg-green-500/10 text-green-500">
               <UserPlus className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-xl font-black text-white tracking-tight uppercase">Nuevo Cliente</DialogTitle>
+            <DialogTitle className="text-xl font-black text-foreground tracking-tight uppercase">Nuevo Cliente</DialogTitle>
           </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2 col-span-2">
-              <Label htmlFor="rnc" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">RNC / Cédula</Label>
+              <Label htmlFor="rnc" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">RNC / Cédula</Label>
               <div className="relative flex items-center">
                 <Input
                   id="rnc"
                   value={formData.rnc}
                   onChange={(e) => setFormData({ ...formData, rnc: e.target.value })}
                   placeholder="402-..."
-                  className="h-12 bg-zinc-900/50 border-white/5 rounded-xl pr-12 focus:ring-green-500/20 text-white font-bold"
+                  className="h-12 bg-muted/50 border-border/40 rounded-xl pr-12 focus:ring-green-500/20 text-foreground font-bold"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 w-10 h-10 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  className="absolute right-1 w-10 h-10 text-muted-foreground hover:text-foreground hover:bg-muted"
                   onClick={handleLookupRnc}
                   disabled={isLookingUpRnc || !formData.rnc}
                   title="Buscar en DGII"
@@ -203,13 +203,13 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
             </div>
 
             <div className="space-y-2 col-span-2">
-              <Label htmlFor="name" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1">Nombre Completo *</Label>
+              <Label htmlFor="name" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Nombre Completo *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ej: Juan Pérez"
-                className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
+                className="h-12 bg-muted/50 border-border/40 rounded-xl focus:ring-green-500/20 text-foreground font-bold"
                 required
               />
             </div>
@@ -217,7 +217,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1 flex items-center gap-1.5">
+              <Label htmlFor="phone" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
                 <Phone className="h-3 w-3" /> Teléfono *
               </Label>
               <Input
@@ -225,13 +225,13 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="809-..."
-                className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
+                className="h-12 bg-muted/50 border-border/40 rounded-xl focus:ring-green-500/20 text-foreground font-bold"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1 flex items-center gap-1.5">
+              <Label htmlFor="email" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
                 <Mail className="h-3 w-3" /> Email
               </Label>
               <Input
@@ -240,13 +240,13 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="cliente@mail.com"
-                className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
+                className="h-12 bg-muted/50 border-border/40 rounded-xl focus:ring-green-500/20 text-foreground font-bold"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 ml-1 flex items-center gap-1.5">
+            <Label htmlFor="address" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
               <MapPin className="h-3 w-3" /> Dirección (Opcional)
             </Label>
             <Input
@@ -254,7 +254,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               placeholder="Calle..."
-              className="h-12 bg-zinc-900/50 border-white/5 rounded-xl focus:ring-green-500/20 text-white font-bold"
+              className="h-12 bg-muted/50 border-border/40 rounded-xl focus:ring-green-500/20 text-foreground font-bold"
             />
           </div>
 
@@ -269,10 +269,10 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 setFormData({ ...formData, profile_id: value })
               }
             >
-              <SelectTrigger className="h-12 !bg-zinc-900 !text-white border-white/5 rounded-xl font-bold">
+              <SelectTrigger className="h-12 !bg-muted !text-foreground border-border/40 rounded-xl font-bold">
                 <SelectValue placeholder="No vincular a empleado" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-white/10 text-white">
+              <SelectContent className="bg-muted border-border text-foreground">
                 <SelectItem value="none" className="font-bold">No vincular a empleado</SelectItem>
                 {employees.map((emp) => {
                   const isTaken = takenProfileIds.has(emp.id);
@@ -288,11 +288,11 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 })}
               </SelectContent>
             </Select>
-            <p className="text-[9px] text-zinc-500 italic mt-1">Permite asociar este cliente con un perfil de usuario del sistema.</p>
+            <p className="text-[9px] text-muted-foreground italic mt-1">Permite asociar este cliente con un perfil de usuario del sistema.</p>
           </div>
 
-          <div className="space-y-2 p-4 bg-zinc-900/50 border border-white/5 rounded-2xl">
-            <Label htmlFor="credit_limit" className="text-[10px] uppercase font-black tracking-widest text-zinc-500 flex items-center gap-1.5 mb-2">
+          <div className="space-y-2 p-4 bg-muted/50 border border-border/40 rounded-2xl">
+            <Label htmlFor="credit_limit" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground flex items-center gap-1.5 mb-2">
               <CreditCard className="h-3 w-3" /> Configuración de Crédito
             </Label>
             <div className="flex gap-2">
@@ -303,7 +303,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 step="0.01"
                 value={formData.credit_limit}
                 onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
-                className="h-10 bg-zinc-950/50 border-white/5 rounded-lg text-white font-black"
+                className="h-10 bg-muted/50 border-border/40 rounded-lg text-foreground font-black"
                 placeholder="0.00"
               />
               <div className="flex gap-1 overflow-x-auto pb-1 slim-scroll">
@@ -313,7 +313,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-10 bg-zinc-950/50 border-white/5 rounded-lg text-[10px] font-black hover:bg-green-500/10 hover:text-green-500"
+                    className="h-10 bg-muted/50 border-border/40 rounded-lg text-[10px] font-black hover:bg-green-500/10 hover:text-green-500"
                     onClick={() => setFormData({ ...formData, credit_limit: amount.toString() })}
                   >
                     ${amount / 1000}k

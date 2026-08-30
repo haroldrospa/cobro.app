@@ -248,7 +248,7 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Precios / Raciones Rápidas:
                     </span>
-                    <span className="text-xs font-black text-white">
+                    <span className="text-xs font-black text-foreground">
                       ${(configuredPrice * configuredQuantity).toFixed(2)} total ({isFractional ? configuredQuantity : Math.round(configuredQuantity)} {selectedExtra.unit || 'x'})
                     </span>
                   </div>
@@ -304,12 +304,12 @@ export const SelectExtraDialog: React.FC<SelectExtraDialogProps> = ({
                   </span>
 
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center bg-zinc-900 rounded-xl border border-white/10 p-1 shadow-inner flex-1 max-w-[170px]">
+                    <div className="flex items-center bg-muted rounded-xl border border-border p-1 shadow-inner flex-1 max-w-[170px]">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-zinc-400 hover:text-white rounded-lg"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg"
                         onClick={() => setConfiguredQuantity(prev => {
                           const nextVal = prev - step;
                           return isFractional ? Math.max(0.1, parseFloat(nextVal.toFixed(2))) : Math.max(1, Math.round(nextVal));

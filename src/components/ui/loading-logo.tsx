@@ -27,13 +27,13 @@ export const LoadingLogo: React.FC<LoadingLogoProps> = ({
                     loading="eager"
                 />
                 <div className={cn("font-black tracking-tight select-none flex items-center", textSize)}>
-                    <span className="text-white">Cobro</span>
+                    <span className="text-foreground">Cobro</span>
                     <span className="text-emerald-500">app</span>
                 </div>
             </div>
 
             {/* Sleek animated loading bar */}
-            <div className="w-32 h-1 bg-emerald-950/40 rounded-full overflow-hidden relative mt-2">
+            <div className="w-32 h-1 bg-emerald-500/10 rounded-full overflow-hidden relative mt-2">
                 <style>{`
                     @keyframes loading-slide {
                         0% { left: -50%; width: 30%; }

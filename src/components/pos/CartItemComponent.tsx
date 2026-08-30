@@ -285,7 +285,7 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-1.5 text-zinc-500 hover:text-zinc-300 text-[10px]"
+                className="h-7 px-1.5 text-muted-foreground hover:text-foreground text-[10px]"
                 onClick={() => setIsEditingDiscount(false)}
               >
                 X

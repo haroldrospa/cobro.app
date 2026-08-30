@@ -67,7 +67,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent 
                 hideCloseButton 
-                className="max-w-[95vw] sm:max-w-md lg:max-w-xl w-full p-0 overflow-hidden bg-zinc-950/95 backdrop-blur-2xl border-white/10 rounded-[2.5rem]"
+                className="max-w-[95vw] sm:max-w-md lg:max-w-xl w-full p-0 overflow-hidden bg-background/95 backdrop-blur-2xl border-border rounded-[2.5rem]"
                 centerOnMobile={true}
             >
                 <div className="bg-gradient-to-b from-green-500/10 to-transparent p-6 pb-2">
@@ -78,10 +78,10 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                     <Wallet className="h-6 w-6 text-green-500" />
                                 </div>
                                 <div>
-                                    <DialogTitle className="text-2xl font-black text-white tracking-tight">
+                                    <DialogTitle className="text-2xl font-black text-foreground tracking-tight">
                                         Movimientos de Caja
                                     </DialogTitle>
-                                    <DialogDescription className="text-zinc-500 font-medium">
+                                    <DialogDescription className="text-muted-foreground font-medium">
                                         {activeSession
                                             ? `Sesión iniciada: ${format(new Date(activeSession.opened_at), 'hh:mm a')}`
                                             : 'Registre entradas y salidas manuales'
@@ -90,7 +90,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                 </div>
                             </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400">
+                        <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted hover:bg-accent text-muted-foreground">
                             <X className="h-5 w-5" />
                         </Button>
                     </DialogHeader>
@@ -98,7 +98,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
 
                 <div className="px-6 pb-6">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start bg-white/5 p-1 rounded-2xl h-12 mb-6 sm:grid sm:grid-cols-2">
+                        <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start bg-muted p-1 rounded-2xl h-12 mb-6 sm:grid sm:grid-cols-2">
                             <TabsTrigger value="new" className="rounded-xl font-bold data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all flex items-center gap-2">
                                 <PlusIcon className="h-4 w-4" /> Nuevo Registro
                             </TabsTrigger>
@@ -114,30 +114,30 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                         type="button"
                                         variant="outline"
                                         className={cn(
-                                            "h-24 flex flex-col gap-2 rounded-3xl border-white/10 transition-all",
-                                            type === 'deposit' ? "bg-green-500/20 border-green-500/40 text-green-500 shadow-lg shadow-green-500/10 ring-1 ring-green-500/20" : "bg-white/5 hover:bg-white/10 text-zinc-500"
+                                            "h-24 flex flex-col gap-2 rounded-3xl border-border transition-all",
+                                            type === 'deposit' ? "bg-green-500/20 border-green-500/40 text-green-500 shadow-lg shadow-green-500/10 ring-1 ring-green-500/20" : "bg-muted hover:bg-accent text-muted-foreground"
                                         )}
                                         onClick={() => setType('deposit')}
                                     >
-                                        <ArrowUpCircle className={cn("h-8 w-8", type === 'deposit' ? "text-green-500" : "text-zinc-500")} />
+                                        <ArrowUpCircle className={cn("h-8 w-8", type === 'deposit' ? "text-green-500" : "text-muted-foreground")} />
                                         <span className="font-black uppercase tracking-widest text-[10px]">Entrada</span>
                                     </Button>
                                     <Button
                                         type="button"
                                         variant="outline"
                                         className={cn(
-                                            "h-24 flex flex-col gap-2 rounded-3xl border-white/10 transition-all",
-                                            type === 'withdrawal' ? "bg-red-500/20 border-red-500/40 text-red-500 shadow-lg shadow-red-500/10 ring-1 ring-red-500/20" : "bg-white/5 hover:bg-white/10 text-zinc-500"
+                                            "h-24 flex flex-col gap-2 rounded-3xl border-border transition-all",
+                                            type === 'withdrawal' ? "bg-red-500/20 border-red-500/40 text-red-500 shadow-lg shadow-red-500/10 ring-1 ring-red-500/20" : "bg-muted hover:bg-accent text-muted-foreground"
                                         )}
                                         onClick={() => setType('withdrawal')}
                                     >
-                                        <ArrowDownCircle className={cn("h-8 w-8", type === 'withdrawal' ? "text-red-500" : "text-zinc-500")} />
+                                        <ArrowDownCircle className={cn("h-8 w-8", type === 'withdrawal' ? "text-red-500" : "text-muted-foreground")} />
                                         <span className="font-black uppercase tracking-widest text-[10px]">Salida</span>
                                     </Button>
                                 </div>
 
                                 <div className="space-y-2 group">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Monto del Movimiento</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Monto del Movimiento</Label>
                                     <div className="relative">
                                         <span className={cn(
                                             "absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black transition-colors",
@@ -147,7 +147,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                             id="amount"
                                             type="number"
                                             placeholder="0.00"
-                                            className="pl-20 h-20 text-4xl font-black bg-zinc-900/50 border-white/10 rounded-[2rem] focus-visible:ring-offset-0 focus-visible:ring-1 focus-visible:ring-white/20 text-white placeholder:text-zinc-800 transition-all"
+                                            className="pl-20 h-20 text-4xl font-black bg-muted/50 border-border rounded-[2rem] focus-visible:ring-offset-0 focus-visible:ring-1 focus-visible:ring-primary/20 text-foreground placeholder:text-muted-foreground/50 transition-all"
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
                                         />
@@ -155,11 +155,11 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Descripción / Motivo</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Descripción / Motivo</Label>
                                     <Input
                                         id="reason"
                                         placeholder={type === 'deposit' ? "Ej. Cobro a deuda..." : "Ej. Pago a proveedor..."}
-                                        className="h-14 bg-white/5 border-white/5 rounded-2xl text-sm italic"
+                                        className="h-14 bg-muted border-border/40 rounded-2xl text-sm italic"
                                         value={reason}
                                         onChange={(e) => setReason(e.target.value)}
                                     />
@@ -167,8 +167,8 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
 
                                 <Button
                                     className={cn(
-                                        "w-full h-16 mt-4 rounded-3xl font-black transition-all active:scale-95 text-lg shadow-lg uppercase tracking-widest",
-                                        type === 'deposit' ? "bg-gradient-to-r from-green-600 to-emerald-500 text-white shadow-green-500/20" : "bg-gradient-to-r from-red-600 to-rose-500 text-white shadow-red-500/20"
+                                        "w-full h-16 mt-4 rounded-3xl font-black transition-all active:scale-95 text-lg uppercase tracking-widest",
+                                        type === 'deposit' ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
                                     )}
                                     onClick={handleSubmit}
                                     disabled={createMovement.isPending}
@@ -183,24 +183,24 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                         </TabsContent>
 
                         <TabsContent value="history" className="mt-0 outline-none">
-                            <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden max-h-[400px] overflow-y-auto no-scrollbar">
+                            <div className="bg-muted/30 border border-border/40 rounded-[2rem] overflow-hidden max-h-[400px] overflow-y-auto no-scrollbar">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="border-white/5 hover:bg-transparent">
-                                            <TableHead className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Hora</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Detalle</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase text-zinc-500 tracking-widest text-right">Monto</TableHead>
+                                        <TableRow className="border-border/40 hover:bg-transparent">
+                                            <TableHead className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Hora</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Detalle</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Monto</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {isLoading ? (
                                             <TableRow className="border-transparent">
-                                                <TableCell colSpan={3} className="text-center py-20 text-zinc-500 font-bold">Cargando...</TableCell>
+                                                <TableCell colSpan={3} className="text-center py-20 text-muted-foreground font-bold">Cargando...</TableCell>
                                             </TableRow>
                                         ) : sessionMovements.length === 0 ? (
                                             <TableRow className="border-transparent">
                                                 <TableCell colSpan={3} className="text-center py-20">
-                                                    <div className="flex flex-col items-center gap-3 text-zinc-600">
+                                                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
                                                         <AlertCircle className="h-10 w-10 opacity-30" />
                                                         <p className="font-bold">Sin movimientos aún</p>
                                                     </div>
@@ -208,9 +208,9 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                             </TableRow>
                                         ) : (
                                             sessionMovements.map((mov) => (
-                                                <TableRow key={mov.id} className="border-white/5 hover:bg-white/[0.02] transition-colors">
+                                                <TableRow key={mov.id} className="border-border/40 hover:bg-muted/30 transition-colors">
                                                     <TableCell className="py-4">
-                                                        <span className="text-zinc-500 text-[10px] font-black tracking-tighter uppercase">
+                                                        <span className="text-muted-foreground text-[10px] font-black tracking-tighter uppercase">
                                                             {format(new Date(mov.created_at), 'hh:mm a')}
                                                         </span>
                                                     </TableCell>
@@ -229,7 +229,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                                                     {mov.type === 'deposit' ? 'Entrada' : 'Salida'}
                                                                 </span>
                                                             </div>
-                                                            <span className="text-zinc-300 font-medium text-xs line-clamp-1">{mov.reason}</span>
+                                                            <span className="text-foreground font-medium text-xs line-clamp-1">{mov.reason}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className={cn(

@@ -70,7 +70,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
             className="flex-1 flex items-center gap-3 text-left group active:scale-[0.98] transition-transform duration-150"
           >
             <div className="relative">
-              <div className="bg-emerald-500 rounded-xl p-2 shadow-lg shadow-emerald-500/20">
+              <div className="bg-emerald-500 rounded-xl p-2">
                 <ShoppingCart className="h-5 w-5 text-white" />
               </div>
               <Badge
@@ -88,7 +88,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
 
           <button
             onClick={openPaymentSummary}
-            className="flex items-center gap-2 bg-gradient-to-br from-green-600 to-emerald-500 py-2.5 px-5 rounded-xl shadow-lg shadow-green-500/20 active:scale-[0.98] transition-transform duration-150"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 py-2.5 px-5 rounded-xl active:scale-[0.98] transition-transform duration-150"
           >
             <CreditCard className="h-5 w-5 text-white" />
             <span className="text-sm uppercase font-black text-white tracking-widest">Pagar</span>
@@ -156,6 +156,12 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
             {cartComponent}
           </div>
           <div className="p-4 border-t border-border/40 safe-area-bottom">
+            {hasItems && (
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total</span>
+                <span className="text-2xl font-black text-foreground">${cartTotal}</span>
+              </div>
+            )}
             <Button
               onClick={hasItems ? openPaymentSummary : undefined}
               disabled={!hasItems}
