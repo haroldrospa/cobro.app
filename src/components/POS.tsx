@@ -33,13 +33,22 @@ import PaymentDialog from './pos/PaymentDialog';
 // Lazy: arrastra jsPDF + html2canvas, y solo hace falta al terminar una venta
 const PrintOptionsDialog = lazy(() => import('./pos/PrintOptionsDialog'));
 import ProductSearchList from './pos/ProductSearchList';
-import WebSalesDialog from './pos/WebSalesDialog';
-import OpenAccountsDialog from './pos/OpenAccountsDialog';
-import SaveOrderDialog from './pos/SaveOrderDialog';
-import DailySalesDialog from './pos/DailySalesDialog';
-import RefundDialog from './pos/RefundDialog';
-import CashMovementsDialog from './pos/CashMovementsDialog';
-import CloseDayDialog from './pos/CloseDayDialog';
+// Lazy: dialogos de uso ocasional (no de la operacion normal de vender) que
+// antes se cargaban de entrada en CADA carga de POS.tsx aunque el cajero
+// nunca los abriera en la sesion -- inflaban el chunk inicial que hay que
+// bajar y parsear/ejecutar antes de poder vender nada, algo que se nota
+// mucho mas en el CPU de un celular que en una compu de escritorio.
+const WebSalesDialog = lazy(() => import('./pos/WebSalesDialog'));
+const OpenAccountsDialog = lazy(() => import('./pos/OpenAccountsDialog'));
+const SaveOrderDialog = lazy(() => import('./pos/SaveOrderDialog'));
+const DailySalesDialog = lazy(() => import('./pos/DailySalesDialog'));
+const RefundDialog = lazy(() => import('./pos/RefundDialog'));
+const CashMovementsDialog = lazy(() => import('./pos/CashMovementsDialog'));
+const CloseDayDialog = lazy(() => import('./pos/CloseDayDialog'));
+// OpenRegisterDialog se queda eager: su apertura depende de una condicion
+// automatica (!activeSession) que puede dispararse casi de inmediato al
+// entrar a POS, no de un click explicito -- no vale la pena el riesgo de
+// diferirlo.
 import OpenRegisterDialog from './pos/OpenRegisterDialog';
 import { useActiveSession } from '@/hooks/useCashSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -1805,65 +1814,93 @@ const POSContent: React.FC = () => {
           </Suspense>
         )}
 
-        <WebSalesDialog
-          isOpen={showWebSalesDialog}
-          onClose={() => setShowWebSalesDialog(false)}
-          onLoadToCart={handleLoadWebOrder}
-          currentLoadedOrderId={currentWebOrderId}
-        />
+        {showWebSalesDialog && (
+          <Suspense fallback={null}>
+            <WebSalesDialog
+              isOpen={showWebSalesDialog}
+              onClose={() => setShowWebSalesDialog(false)}
+              onLoadToCart={handleLoadWebOrder}
+              currentLoadedOrderId={currentWebOrderId}
+            />
+          </Suspense>
+        )}
 
-        <OpenAccountsDialog
-          isOpen={showOpenAccountsDialog}
-          onClose={() => setShowOpenAccountsDialog(false)}
-          onLoadToCart={handleLoadWebOrder}
-          currentLoadedOrderId={cart.length > 0 ? currentWebOrderId : null}
-        />
+        {showOpenAccountsDialog && (
+          <Suspense fallback={null}>
+            <OpenAccountsDialog
+              isOpen={showOpenAccountsDialog}
+              onClose={() => setShowOpenAccountsDialog(false)}
+              onLoadToCart={handleLoadWebOrder}
+              currentLoadedOrderId={cart.length > 0 ? currentWebOrderId : null}
+            />
+          </Suspense>
+        )}
 
-        <SaveOrderDialog
-          isOpen={showSaveOrderDialog}
-          onClose={() => setShowSaveOrderDialog(false)}
-          cart={cart}
-          orderSource={currentOrderSource}
-          initialCustomerName={currentOrderInfo?.customerName || ''}
-          initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
-          existingOrderId={currentWebOrderId}
-          existingOrderNumber={currentOrderInfo?.orderNumber}
-          posOrderType={posOrderType}
-          customers={customers}
-          initialCustomerId={selectedCustomer}
-          onSaved={() => {
-            setCart([]);
-            setGlobalDiscount({ value: 0, type: 'percentage' });
-            setCurrentOrderInfo(null);
-            setCurrentOrderSource('pos');
-            setCurrentWebOrderId(null);
-          }}
-        />
+        {showSaveOrderDialog && (
+          <Suspense fallback={null}>
+            <SaveOrderDialog
+              isOpen={showSaveOrderDialog}
+              onClose={() => setShowSaveOrderDialog(false)}
+              cart={cart}
+              orderSource={currentOrderSource}
+              initialCustomerName={currentOrderInfo?.customerName || ''}
+              initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
+              existingOrderId={currentWebOrderId}
+              existingOrderNumber={currentOrderInfo?.orderNumber}
+              posOrderType={posOrderType}
+              customers={customers}
+              initialCustomerId={selectedCustomer}
+              onSaved={() => {
+                setCart([]);
+                setGlobalDiscount({ value: 0, type: 'percentage' });
+                setCurrentOrderInfo(null);
+                setCurrentOrderSource('pos');
+                setCurrentWebOrderId(null);
+              }}
+            />
+          </Suspense>
+        )}
 
-        <DailySalesDialog
-          isOpen={showDailySalesDialog}
-          onClose={() => setShowDailySalesDialog(false)}
-        />
+        {showDailySalesDialog && (
+          <Suspense fallback={null}>
+            <DailySalesDialog
+              isOpen={showDailySalesDialog}
+              onClose={() => setShowDailySalesDialog(false)}
+            />
+          </Suspense>
+        )}
 
-        <RefundDialog
-          isOpen={showRefundDialog}
-          onClose={() => setShowRefundDialog(false)}
-        />
+        {showRefundDialog && (
+          <Suspense fallback={null}>
+            <RefundDialog
+              isOpen={showRefundDialog}
+              onClose={() => setShowRefundDialog(false)}
+            />
+          </Suspense>
+        )}
 
-        <CashMovementsDialog
-          isOpen={showCashMovementsDialog}
-          onClose={() => setShowCashMovementsDialog(false)}
-        />
+        {showCashMovementsDialog && (
+          <Suspense fallback={null}>
+            <CashMovementsDialog
+              isOpen={showCashMovementsDialog}
+              onClose={() => setShowCashMovementsDialog(false)}
+            />
+          </Suspense>
+        )}
 
-        <CloseDayDialog
-          isOpen={showCloseDayDialog}
-          onClose={() => setShowCloseDayDialog(false)}
-          onGoToPOS={handleGoToPOSFromCloseDay}
-        />
+        {showCloseDayDialog && (
+          <Suspense fallback={null}>
+            <CloseDayDialog
+              isOpen={showCloseDayDialog}
+              onClose={() => setShowCloseDayDialog(false)}
+              onGoToPOS={handleGoToPOSFromCloseDay}
+            />
+          </Suspense>
+        )}
 
         {/* Diálogo de selección de cliente para cobros de deuda */}
         <Dialog open={showDebtSelectDialog} onOpenChange={setShowDebtSelectDialog}>
-          <DialogContent 
+          <DialogContent
             className="max-w-[95vw] sm:max-w-md w-full p-0 overflow-hidden bg-[#0a0a0a] border-zinc-900 rounded-[2rem] shadow-2xl"
             centerOnMobile={true}
           >
@@ -2194,59 +2231,87 @@ const POSContent: React.FC = () => {
           )
         }
 
-        <WebSalesDialog
-          isOpen={showWebSalesDialog}
-          onClose={() => setShowWebSalesDialog(false)}
-          onLoadToCart={handleLoadWebOrder}
-        />
+        {showWebSalesDialog && (
+          <Suspense fallback={null}>
+            <WebSalesDialog
+              isOpen={showWebSalesDialog}
+              onClose={() => setShowWebSalesDialog(false)}
+              onLoadToCart={handleLoadWebOrder}
+            />
+          </Suspense>
+        )}
 
-        <OpenAccountsDialog
-          isOpen={showOpenAccountsDialog}
-          onClose={() => setShowOpenAccountsDialog(false)}
-          onLoadToCart={handleLoadWebOrder}
-        />
+        {showOpenAccountsDialog && (
+          <Suspense fallback={null}>
+            <OpenAccountsDialog
+              isOpen={showOpenAccountsDialog}
+              onClose={() => setShowOpenAccountsDialog(false)}
+              onLoadToCart={handleLoadWebOrder}
+            />
+          </Suspense>
+        )}
 
-        <SaveOrderDialog
-          isOpen={showSaveOrderDialog}
-          onClose={() => setShowSaveOrderDialog(false)}
-          cart={cart}
-          orderSource={currentOrderSource}
-          initialCustomerName={currentOrderInfo?.customerName || ''}
-          initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
-          existingOrderId={currentWebOrderId}
-          existingOrderNumber={currentOrderInfo?.orderNumber}
-          posOrderType={posOrderType}
-          customers={customers}
-          initialCustomerId={selectedCustomer}
-          onSaved={() => {
-            setCart([]);
-            setGlobalDiscount({ value: 0, type: 'percentage' });
-            setCurrentOrderInfo(null);
-            setCurrentOrderSource('pos');
-            setCurrentWebOrderId(null);
-          }}
-        />
+        {showSaveOrderDialog && (
+          <Suspense fallback={null}>
+            <SaveOrderDialog
+              isOpen={showSaveOrderDialog}
+              onClose={() => setShowSaveOrderDialog(false)}
+              cart={cart}
+              orderSource={currentOrderSource}
+              initialCustomerName={currentOrderInfo?.customerName || ''}
+              initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
+              existingOrderId={currentWebOrderId}
+              existingOrderNumber={currentOrderInfo?.orderNumber}
+              posOrderType={posOrderType}
+              customers={customers}
+              initialCustomerId={selectedCustomer}
+              onSaved={() => {
+                setCart([]);
+                setGlobalDiscount({ value: 0, type: 'percentage' });
+                setCurrentOrderInfo(null);
+                setCurrentOrderSource('pos');
+                setCurrentWebOrderId(null);
+              }}
+            />
+          </Suspense>
+        )}
 
-        <DailySalesDialog
-          isOpen={showDailySalesDialog}
-          onClose={() => setShowDailySalesDialog(false)}
-        />
+        {showDailySalesDialog && (
+          <Suspense fallback={null}>
+            <DailySalesDialog
+              isOpen={showDailySalesDialog}
+              onClose={() => setShowDailySalesDialog(false)}
+            />
+          </Suspense>
+        )}
 
-        <RefundDialog
-          isOpen={showRefundDialog}
-          onClose={() => setShowRefundDialog(false)}
-        />
+        {showRefundDialog && (
+          <Suspense fallback={null}>
+            <RefundDialog
+              isOpen={showRefundDialog}
+              onClose={() => setShowRefundDialog(false)}
+            />
+          </Suspense>
+        )}
 
-        <CashMovementsDialog
-          isOpen={showCashMovementsDialog}
-          onClose={() => setShowCashMovementsDialog(false)}
-        />
+        {showCashMovementsDialog && (
+          <Suspense fallback={null}>
+            <CashMovementsDialog
+              isOpen={showCashMovementsDialog}
+              onClose={() => setShowCashMovementsDialog(false)}
+            />
+          </Suspense>
+        )}
 
-        <CloseDayDialog
-          isOpen={showCloseDayDialog}
-          onClose={() => setShowCloseDayDialog(false)}
-          onGoToPOS={handleGoToPOSFromCloseDay}
-        />
+        {showCloseDayDialog && (
+          <Suspense fallback={null}>
+            <CloseDayDialog
+              isOpen={showCloseDayDialog}
+              onClose={() => setShowCloseDayDialog(false)}
+              onGoToPOS={handleGoToPOSFromCloseDay}
+            />
+          </Suspense>
+        )}
 
         {/* --- DEBT COLLECTION DIALOGS --- */}
         <Dialog open={showDebtSelectDialog} onOpenChange={setShowDebtSelectDialog}>

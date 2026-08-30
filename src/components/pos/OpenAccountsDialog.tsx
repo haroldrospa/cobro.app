@@ -18,6 +18,18 @@ import { useUserStore } from '@/hooks/useUserStore';
 import { generatePreCheckPDF } from '@/utils/invoicePdfGenerator';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 
+// Al guardar un pedido (SaveOrderDialog) se le agrega al final de las notas
+// una etiqueta técnica entre corchetes (ej. "[COMPRA AQUÍ]") para que otras
+// pantallas (Cocina, Delivery) sepan el tipo de pedido sin una columna
+// dedicada. Acá solo mostramos la nota al cajero -- si se muestra tal cual,
+// una nota vacía se ve como el puro tag técnico "[COMPRA AQUÍ]" suelto.
+const displayNotes = (notes?: string | null) => (notes || '')
+  .replace(/\[COMER AQUÍ\]/g, '')
+  .replace(/\[PARA LLEVAR\]/g, '')
+  .replace(/\[COMPRA AQUÍ\]/g, '')
+  .replace(/\[DELIVERY\]/g, '')
+  .trim();
+
 interface OpenAccountsDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -335,9 +347,9 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               </span>
             </div>
 
-            {order.notes && (
+            {displayNotes(order.notes) && (
               <div className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded truncate max-w-full italic mt-0.5">
-                {order.notes}
+                {displayNotes(order.notes)}
               </div>
             )}
           </div>
@@ -409,7 +421,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               <TableCell>{format(new Date(order.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}</TableCell>
               <TableCell>
                 <div>{order.customer_name}</div>
-                {order.notes && <div className="text-xs text-muted-foreground">{order.notes}</div>}
+                {displayNotes(order.notes) && <div className="text-xs text-muted-foreground">{displayNotes(order.notes)}</div>}
               </TableCell>
               <TableCell>{order.open_order_items?.length || 0} productos</TableCell>
               <TableCell className="text-right font-semibold">${(order.total || 0).toFixed(2)}</TableCell>
