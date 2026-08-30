@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { getDaysRemaining } from '@/lib/utils';
 
 const UserSubscription = () => {
     const { profile, loading: loadingProfile } = useUserProfile();
@@ -464,10 +465,12 @@ const UserSubscription = () => {
                                 {(() => {
                                     if (!subscription) return null;
                                     const end = new Date(subscription.end_date!); // ! is safe because of parent check
-                                    const now = new Date();
-                                    const remaining = end.getTime() - now.getTime();
-                                    const daysLeft = Math.ceil(remaining / (1000 * 60 * 60 * 24));
-                                    
+                                    // Misma función que el banner de aviso de pago (SubscriptionWarningBanner)
+                                    // — antes este cálculo usaba Math.ceil sobre la diferencia exacta en
+                                    // milisegundos mientras el banner truncaba, así que podían mostrar
+                                    // números distintos (ej. 6 vs 5) para la misma fecha de vencimiento.
+                                    const daysLeft = getDaysRemaining(subscription.end_date);
+
                                     // La barra representa los últimos 30 días. 
                                     // Si quedan más de 30 días, está al 100% (verde). 
                                     // Si quedan menos, empieza a bajar progresivamente.
