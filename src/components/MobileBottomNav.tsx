@@ -152,7 +152,7 @@ export const MobileBottomNav: React.FC = () => {
           <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border/40">
           <span className="font-bold text-base tracking-wide text-foreground">Menú</span>
           <button
             onClick={() => {
@@ -165,8 +165,12 @@ export const MobileBottomNav: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-5 max-h-[45dvh] overflow-y-auto no-scrollbar">
-        <div className="grid grid-cols-3 gap-4">
+        {/* Sin alto fijo por tarjeta — se compactan solas para que quepan
+            hasta 10 opciones sin recortar nada en pantallas chicas. El
+            max-h/overflow es solo un seguro para no salirse arriba en
+            casos extremos (ej. landscape muy bajo), no el modo normal. */}
+        <div className="p-4 max-h-[75dvh] overflow-y-auto no-scrollbar">
+        <div className="grid grid-cols-3 gap-2.5">
           {moreItems.map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
@@ -179,14 +183,14 @@ export const MobileBottomNav: React.FC = () => {
                   setMoreOpen(false);
                 }}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-2.5 p-4 rounded-[1.25rem] border transition-all duration-200 active:scale-[0.93] group h-22 select-none',
+                  'flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-[1.25rem] border transition-all duration-200 active:scale-[0.93] group select-none',
                   isActive
                     ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
                     : 'bg-muted/40 hover:bg-muted/60 border-border/40 text-muted-foreground hover:text-foreground shadow-md shadow-black/5'
                 )}
               >
-                <Icon className={cn("h-5.5 w-5.5 transition-colors duration-200", isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground")} />
-                <span className={cn("text-[11px] font-bold text-center leading-tight transition-colors duration-200", isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground")}>
+                <Icon className={cn("h-5 w-5 transition-colors duration-200", isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground")} />
+                <span className={cn("text-[10.5px] font-bold text-center leading-tight transition-colors duration-200", isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground")}>
                   {item.name}
                 </span>
               </Link>
@@ -197,15 +201,15 @@ export const MobileBottomNav: React.FC = () => {
           {/* Botón cerrar sesión — separado del grid, ancho completo */}
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2.5 w-full mt-4 py-3.5 rounded-[1.25rem] border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-200 active:scale-[0.98] group select-none"
+            className="flex items-center justify-center gap-2.5 w-full mt-3 py-3 rounded-[1.25rem] border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-200 active:scale-[0.98] group select-none"
           >
-            <LogOut className="h-4.5 w-4.5 text-rose-400 group-hover:text-rose-300 transition-colors" />
+            <LogOut className="h-5 w-5 text-rose-400 group-hover:text-rose-300 transition-colors" />
             <span className="text-sm font-bold text-rose-400 group-hover:text-rose-300 transition-colors">
               Salir
             </span>
           </button>
         </div>
-        <div className="h-4" />
+        <div className="h-3" />
       </div>
 
       {/* Barra de tabs inferior */}
