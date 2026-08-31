@@ -3049,18 +3049,14 @@ function AccountingContent() {
                         /* Split screen view when files are in the queue */
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 min-h-0 md:min-h-[450px] w-full max-w-full overflow-x-hidden">
                             {/* Left Column: Queue Manager */}
-                            <div className="md:col-span-5 flex flex-col gap-4 md:border-r border-b md:border-b-0 border-border/20 pr-0 md:pr-4 pb-4 md:pb-0 w-full max-w-full overflow-x-hidden">
-                                <div className="flex justify-between items-center pb-2 border-b">
-                                    <h3 className="font-black text-xs uppercase tracking-wider text-muted-foreground">Lista de Facturas</h3>
-                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
-                                        {scanQueue.filter(i => i.status === 'saved').length}/{scanQueue.length} Guardadas
-                                    </span>
-                                </div>
-                                
-                                {/* Add more invoices button */}
-                                <Button 
+                            {/* En móvil va DESPUÉS del formulario (order-2): con 1 sola factura --el
+                                caso más común-- esta columna es puro "chrome" de cola que antes tapaba
+                                el formulario real; en desktop se queda a la izquierda como siempre. */}
+                            <div className="order-2 md:order-1 md:col-span-5 flex flex-col gap-4 md:border-r border-t md:border-t-0 border-border/20 pr-0 md:pr-4 pt-4 md:pt-0 w-full max-w-full overflow-x-hidden">
+                                {/* Add more invoices button - siempre visible */}
+                                <Button
                                     size="sm"
-                                    variant="outline" 
+                                    variant="outline"
                                     className="w-full h-10 border-dashed border-2 border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/5 text-emerald-500 font-bold gap-2 rounded-xl text-xs"
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={isScanning}
@@ -3068,8 +3064,18 @@ function AccountingContent() {
                                     <Plus className="h-4 w-4" /> Agregar más facturas
                                 </Button>
 
-                                {/* Scrollable Queue List */}
-                                <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                                {/* Header + lista: solo aporta cuando hay más de 1 factura que navegar;
+                                    en desktop se muestra siempre por consistencia con las 2 columnas */}
+                                <div className={cn(scanQueue.length <= 1 ? "hidden md:flex md:flex-col md:gap-4" : "flex flex-col gap-4")}>
+                                    <div className="flex justify-between items-center pb-2 border-b">
+                                        <h3 className="font-black text-xs uppercase tracking-wider text-muted-foreground">Lista de Facturas</h3>
+                                        <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
+                                            {scanQueue.filter(i => i.status === 'saved').length}/{scanQueue.length} Guardadas
+                                        </span>
+                                    </div>
+
+                                    {/* Scrollable Queue List */}
+                                    <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                                     {scanQueue.map((item, idx) => (
                                         <div 
                                             key={item.id} 
@@ -3129,9 +3135,10 @@ function AccountingContent() {
                                             </div>
                                         </div>
                                     ))}
+                                    </div>
                                 </div>
 
-                                {/* Save All / Actions */}
+                                {/* Save All / Actions - siempre visible */}
                                 <div className="pt-2 border-t mt-auto flex flex-col gap-2">
                                     {scanQueue.some(i => i.status === 'error') && (
                                         <Button 
@@ -3179,7 +3186,8 @@ function AccountingContent() {
                             </div>
                             
                             {/* Right Column: Review Details Form */}
-                            <div className="md:col-span-7 flex flex-col justify-center w-full max-w-full overflow-x-hidden pt-4 md:pt-0">
+                            {/* En móvil va primero (order-1): es lo que hay que revisar/editar */}
+                            <div className="order-1 md:order-2 md:col-span-7 flex flex-col justify-center w-full max-w-full overflow-x-hidden">
                                 {scanQueue[reviewIndex]?.status === 'scanning' ? (
                                     <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 text-center p-4">
                                         <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center animate-pulse">
