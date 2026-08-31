@@ -47,6 +47,10 @@ function PayrollContent() {
     const [loadingItems, setLoadingItems] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    // Filtro de la tabla de detalle: por defecto oculta a quien no tiene pago
+    // este periodo (base, bonos y deducciones todos en 0 -> Neto $0.00), que
+    // es ruido visual cuando solo quieres revisar a quien sí se le va a pagar.
+    const [hideZeroPayroll, setHideZeroPayroll] = useState(true);
     const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
     const [justPaidPayroll, setJustPaidPayroll] = useState<{ payroll: PayrollType, items: PayrollItem[] } | null>(null);
 
@@ -241,9 +245,9 @@ function PayrollContent() {
         }
     };
 
-    const filteredItems = items.filter(item =>
-        item.employee_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredItems = items
+        .filter(item => item.employee_name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(item => !hideZeroPayroll || (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0);
 
 
     // --- PAYROLL DETAILS LOGIC ---
@@ -789,7 +793,7 @@ function PayrollContent() {
                             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                 {selectedPayroll?.status !== 'paid' && (
                                     <>
-                                        <Button variant="outline" size="sm" onClick={handleSyncCredits} disabled={isSaving} className="text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-4">
+                                        <Button variant="outline" size="sm" onClick={handleSyncCredits} disabled={isSaving} className="text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-4">
                                             <RefreshCcw className={`mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSaving ? 'animate-spin' : ''}`} />
                                             Sincronizar Créditos
                                         </Button>
@@ -798,7 +802,14 @@ function PayrollContent() {
                                         </Button>
                                         <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-10 px-2.5 sm:px-4" onClick={async () => {
                                             await finalizePayroll(selectedPayroll!.id);
-                                            setJustPaidPayroll({ payroll: selectedPayroll!, items: items });
+                                            // Comprobante impreso/descargado: excluye a quien no tuvo pago este
+                                            // periodo (igual que la tabla en pantalla), sin importar si había
+                                            // un texto de búsqueda activo en ese momento -- eso solo filtra la
+                                            // vista, no debería recortar el recibo por accidente.
+                                            const itemsForReceipt = items.filter(item =>
+                                                (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
+                                            );
+                                            setJustPaidPayroll({ payroll: selectedPayroll!, items: itemsForReceipt });
                                             setIsPrintDialogOpen(true);
                                             setSelectedPayroll(curr => curr ? { ...curr, status: 'paid' } : null);
                                         }}>
@@ -814,16 +825,46 @@ function PayrollContent() {
                     {/* Content */}
                     <div className="flex-1 overflow-hidden flex flex-col bg-muted/5">
                         {/* Toolbar */}
-                        <div className="p-3 sm:p-4 border-b border-border/40 flex justify-between items-center bg-background/50 shrink-0">
-                            <div className="relative w-full max-w-xs sm:w-72">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar empleado..."
-                                    className="pl-9 bg-muted/20 border-none focus-visible:ring-1 focus-visible:ring-primary/50 text-xs sm:text-sm"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                        <div className="p-3 sm:p-4 border-b border-border/40 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between bg-background/50 shrink-0">
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <div className="relative w-full max-w-xs sm:w-72">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Buscar empleado..."
+                                        className="pl-9 bg-muted/20 border-none focus-visible:ring-1 focus-visible:ring-primary/50 text-xs sm:text-sm"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Filtro: ocultar a quien no tiene pago este periodo, u a todos */}
+                                <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setHideZeroPayroll(true)}
+                                        className={cn(
+                                            "px-3 h-7 text-xs font-semibold rounded-md transition-all",
+                                            hideZeroPayroll ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Con Pago
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setHideZeroPayroll(false)}
+                                        className={cn(
+                                            "px-3 h-7 text-xs font-semibold rounded-md transition-all",
+                                            !hideZeroPayroll ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Todos
+                                    </button>
+                                </div>
                             </div>
+
+                            <span className="text-xs text-muted-foreground font-medium shrink-0">
+                                {filteredItems.length} de {items.length} empleados
+                            </span>
                         </div>
 
                         {/* Table Area */}

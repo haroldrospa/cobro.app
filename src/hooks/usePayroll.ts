@@ -113,10 +113,15 @@ export const usePayroll = () => {
                 // C. Fetch Employees and Profiles for robust matching
                 const { data: rawEmployees, error: empError } = await supabase
                     .from('profiles')
-                    .select('id, full_name, email, base_salary, default_deduction, default_deduction_note, is_active')
+                    .select('id, full_name, email, base_salary, default_deduction, default_deduction_note, is_active, include_in_payroll')
                     .eq('store_id', userStore.id);
 
-                const employees = rawEmployees ? rawEmployees.filter(emp => (emp as any).is_active !== false) : [];
+                // Skip inactive employees AND anyone explicitly flagged out of payroll
+                // (app users with access but no salary). `!== false` treats missing/null
+                // as included, so existing rows keep working before the flag is ever set.
+                const employees = rawEmployees ? rawEmployees.filter(emp =>
+                    (emp as any).is_active !== false && (emp as any).include_in_payroll !== false
+                ) : [];
 
                 console.log('[PAYROLL] Fetched employees:', employees?.length || 0, 'Error:', empError);
 

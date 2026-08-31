@@ -58,7 +58,7 @@ export function DeductionsManager({ deductions = [], onChange, readOnly = false 
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
-                    className={`h-8 border-dashed ${total > 0 ? 'border-red-300 bg-red-50 text-red-900' : 'text-muted-foreground'}`}
+                    className={`h-8 border-dashed ${total > 0 ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
                 >
                     <List className="mr-2 h-3 w-3" />
                     ${total.toLocaleString()}
@@ -68,7 +68,7 @@ export function DeductionsManager({ deductions = [], onChange, readOnly = false 
                 <div className="p-4 border-b bg-muted/30">
                     <h4 className="font-medium leading-none">Deducciones Detalladas</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Total: <span className="font-bold text-red-600">${total.toLocaleString()}</span>
+                        Total: <span className="font-bold text-red-600 dark:text-red-400">${total.toLocaleString()}</span>
                     </p>
                 </div>
                 <div className="p-2 max-h-[300px] overflow-y-auto">

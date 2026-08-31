@@ -30,6 +30,10 @@ export interface Employee {
     credit_used?: number;
     customer_id?: string;
     cedula?: string;
+
+    // Payroll inclusion: false = has app access but should never get a
+    // payroll_item generated (e.g. no salary). Undefined/true = included.
+    include_in_payroll?: boolean;
 }
 
 import { useQuery } from '@tanstack/react-query';
@@ -121,6 +125,7 @@ interface ManageEmployeePayload {
     role?: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery' | 'accountant';
     isActive?: boolean;
     cedula?: string;
+    includeInPayroll?: boolean;
 }
 
 export const useManageEmployee = () => {
@@ -178,6 +183,21 @@ export const useManageEmployee = () => {
                 
                 if (typeof rpcResult === 'string' && rpcResult !== 'OK') {
                     throw new Error('Error guardando cédula: ' + rpcResult);
+                }
+            }
+
+            // ── 3. Save "include in payroll" flag (direct update; profiles UPDATE
+            // triggers were made trigger-safe, so this doesn't need an RPC like cedula) ──
+            if (payload.includeInPayroll !== undefined && targetId) {
+                const { error: payrollFlagError } = await (supabase
+                    .from('profiles')
+                    .update({ include_in_payroll: payload.includeInPayroll } as any) as any)
+                    .eq('id', targetId);
+
+                if (payrollFlagError) {
+                    // Non-fatal: don't block the rest of the employee save over this flag
+                    // (e.g. if the migration adding the column hasn't run yet).
+                    console.warn('No se pudo guardar el estado de nómina:', payrollFlagError.message);
                 }
             }
 
