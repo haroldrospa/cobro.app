@@ -65,26 +65,36 @@ const sendDirectEvolutionMessage = async (
 ): Promise<boolean> => {
   const cleanPhone = phone.replace(/\D/g, '');
   const formattedPhone = cleanPhone.startsWith('1') ? cleanPhone : `1${cleanPhone}`;
-  const baseUrl = config.url.replace(/\/+$/, '');
+  let baseUrl = config.url.replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(baseUrl)) {
+    baseUrl = `https://${baseUrl}`;
+  }
   const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': config.apiKey,
-    },
-    body: JSON.stringify({
-      number: formattedPhone,
-      text: message,
-      delay: 1200,
-    }),
-  });
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.apiKey,
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        text: message,
+        delay: 1200,
+      }),
+    });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Evolution API (${res.status}): ${errText || 'Instancia no disponible'}`);
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Evolution API (${res.status}): ${errText || 'Instancia no disponible'}`);
+    }
+
+    return true;
+  } catch (networkErr: any) {
+    if (networkErr.message?.includes('Failed to fetch') || networkErr.name === 'TypeError') {
+      throw new Error('No se pudo conectar con el servidor de Evolution API (Railway). Verifica que el servicio esté activo y no esté suspendido o apagado.');
+    }
+    throw networkErr;
   }
-
-  return true;
 };
