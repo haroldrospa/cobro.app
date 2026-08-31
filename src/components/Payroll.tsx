@@ -54,7 +54,10 @@ function PayrollContent() {
     const [loadingItems, setLoadingItems] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [salaryFilter, setSalaryFilter] = useState<'all' | 'with_salary' | 'zero_salary'>('all');
+    // Filtro de la tabla de detalle: 'with_salary' (por defecto) oculta a quien
+    // no tiene pago este periodo (base, bonos y neto todos en 0), que es ruido
+    // visual cuando solo quieres revisar a quien sí se le va a pagar.
+    const [salaryFilter, setSalaryFilter] = useState<'all' | 'with_salary' | 'zero_salary'>('with_salary');
     const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
     const [justPaidPayroll, setJustPaidPayroll] = useState<{ payroll: PayrollType, items: PayrollItem[] } | null>(null);
 
@@ -780,25 +783,25 @@ function PayrollContent() {
             <Dialog open={!!selectedPayroll} onOpenChange={(o) => {
                 if (!o && !isSaving) setSelectedPayroll(null);
             }}>
-                <DialogContent centerOnMobile={false} className="w-full max-w-[96vw] xl:max-w-7xl h-[92vh] sm:h-[90vh] max-h-[100dvh] flex flex-col gap-0 p-0 bg-zinc-950 border border-zinc-800/80 text-zinc-100 shadow-[0_25px_80px_rgba(0,0,0,0.9)] rounded-3xl overflow-hidden [&>button]:hidden">
+                <DialogContent centerOnMobile={false} className="w-full max-w-[96vw] xl:max-w-7xl h-[92vh] sm:h-[90vh] max-h-[100dvh] flex flex-col gap-0 p-0 bg-background border border-border shadow-[0_25px_80px_rgba(0,0,0,0.35)] dark:shadow-[0_25px_80px_rgba(0,0,0,0.9)] rounded-3xl overflow-hidden [&>button]:hidden">
 
                     {/* Top Header */}
-                    <div className="p-4 sm:p-6 border-b border-zinc-800/80 bg-zinc-950 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shrink-0">
+                    <div className="p-4 sm:p-6 border-b border-border bg-background flex flex-col lg:flex-row lg:items-center justify-between gap-4 shrink-0">
                         <div className="flex items-center gap-3.5">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-zinc-900 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-inner shrink-0">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-muted border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-inner shrink-0">
                                 <Calendar className="w-6 h-6" />
                             </div>
                             <div>
                                 <div className="flex items-center gap-2.5">
-                                    <DialogTitle className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
+                                    <DialogTitle className="text-xl sm:text-2xl font-black uppercase tracking-tight text-foreground">
                                         {selectedPayroll && format(new Date(selectedPayroll.period_start), 'MMMM yyyy', { locale: es })}
                                     </DialogTitle>
-                                    <Badge 
+                                    <Badge
                                         className={cn(
                                             "text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border",
                                             selectedPayroll?.status === 'paid'
-                                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                                                : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                                                : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
                                         )}
                                     >
                                         {selectedPayroll?.status === 'paid' ? '● Pagado' : '● Borrador'}
@@ -807,12 +810,12 @@ function PayrollContent() {
                                 <DialogDescription className="sr-only">
                                     Detalles de la nómina generada para este periodo.
                                 </DialogDescription>
-                                <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-2">
+                                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
                                     <span>
                                         {selectedPayroll && `${format(new Date(selectedPayroll.period_start), 'd MMM')} — ${format(new Date(selectedPayroll.period_end), 'd MMM yyyy')}`}
                                     </span>
-                                    <span className="text-zinc-600">•</span>
-                                    <span className="font-semibold text-zinc-300">{items.length} {items.length === 1 ? 'Empleado' : 'Empleados'}</span>
+                                    <span className="text-muted-foreground/50">•</span>
+                                    <span className="font-semibold text-foreground">{items.length} {items.length === 1 ? 'Empleado' : 'Empleados'}</span>
                                 </p>
                             </div>
                         </div>
@@ -821,47 +824,54 @@ function PayrollContent() {
                         <div className="flex items-center gap-2 flex-wrap">
                             {selectedPayroll?.status !== 'paid' && (
                                 <>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={handleSyncCredits} 
-                                        disabled={isSaving} 
-                                        className="bg-sky-950/40 border-sky-800/60 text-sky-300 hover:bg-sky-900/60 hover:text-white rounded-xl text-xs font-semibold h-9 px-3.5 transition-all"
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleSyncCredits}
+                                        disabled={isSaving}
+                                        className="bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 rounded-xl text-xs font-semibold h-9 px-3.5 transition-all"
                                     >
                                         <RefreshCcw className={cn("mr-2 h-3.5 w-3.5", isSaving && "animate-spin")} />
                                         Sincronizar Créditos
                                     </Button>
-                                    
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={savePayrollDetails} 
-                                        disabled={isSaving} 
-                                        className="bg-zinc-900 border-zinc-700/80 text-zinc-200 hover:bg-zinc-800 hover:text-white rounded-xl text-xs font-semibold h-9 px-3.5 transition-all"
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={savePayrollDetails}
+                                        disabled={isSaving}
+                                        className="bg-muted border-border text-foreground hover:bg-muted/70 rounded-xl text-xs font-semibold h-9 px-3.5 transition-all"
                                     >
-                                        <Save className="mr-2 h-3.5 w-3.5 text-zinc-400" />
+                                        <Save className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                                         {isSaving ? "Guardando..." : "Guardar Cambios"}
                                     </Button>
 
-                                    <Button 
-                                        size="sm" 
+                                    <Button
+                                        size="sm"
                                         className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-9 px-4 shadow-[0_0_20px_rgba(16,185,129,0.25)] transition-all"
                                         onClick={async () => {
                                             await finalizePayroll(selectedPayroll!.id);
-                                            setJustPaidPayroll({ payroll: selectedPayroll!, items: items });
+                                            // Comprobante impreso/descargado: excluye a quien no tuvo pago este
+                                            // periodo (igual que la tabla en pantalla), sin importar si había
+                                            // un texto de búsqueda activo en ese momento -- eso solo filtra la
+                                            // vista, no debería recortar el recibo por accidente.
+                                            const itemsForReceipt = items.filter(item =>
+                                                (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
+                                            );
+                                            setJustPaidPayroll({ payroll: selectedPayroll!, items: itemsForReceipt });
                                             setIsPrintDialogOpen(true);
                                             setSelectedPayroll(curr => curr ? { ...curr, status: 'paid' } : null);
                                         }}
                                     >
-                                        <CheckCircle className="mr-2 h-4 w-4" /> 
+                                        <CheckCircle className="mr-2 h-4 w-4" />
                                         Pagar Nómina
                                     </Button>
                                 </>
                             )}
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-9 w-9 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-all ml-1" 
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all ml-1"
                                 onClick={() => setSelectedPayroll(null)}
                             >
                                 <X className="h-4 w-4" />
@@ -870,72 +880,72 @@ function PayrollContent() {
                     </div>
 
                     {/* Metric Cards Banner */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3.5 sm:px-6 bg-zinc-950/80 border-b border-zinc-800/60">
-                        <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-3 flex flex-col justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-                                <DollarSign className="w-3.5 h-3.5 text-zinc-400" /> Salario Base Total
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3.5 sm:px-6 bg-muted/20 border-b border-border/60">
+                        <div className="bg-muted/40 border border-border rounded-2xl p-3 flex flex-col justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <DollarSign className="w-3.5 h-3.5 text-muted-foreground" /> Salario Base Total
                             </span>
-                            <span className="text-base sm:text-lg font-bold font-mono text-zinc-200 mt-1">
+                            <span className="text-base sm:text-lg font-bold font-mono text-foreground mt-1">
                                 ${items.reduce((s, i) => s + (i.base_salary || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
-                        <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-3 flex flex-col justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500/90 flex items-center gap-1.5">
-                                <Gift className="w-3.5 h-3.5 text-emerald-400" /> Total Bonos
+                        <div className="bg-muted/40 border border-border rounded-2xl p-3 flex flex-col justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                <Gift className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Total Bonos
                             </span>
-                            <span className="text-base sm:text-lg font-bold font-mono text-emerald-400 mt-1">
+                            <span className="text-base sm:text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
                                 +${items.reduce((s, i) => s + (i.bonuses || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
-                        <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-3 flex flex-col justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400/90 flex items-center gap-1.5">
-                                <Receipt className="w-3.5 h-3.5 text-rose-400" /> Retenciones & Deducciones
+                        <div className="bg-muted/40 border border-border rounded-2xl p-3 flex flex-col justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                                <Receipt className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" /> Retenciones & Deducciones
                             </span>
-                            <span className="text-base sm:text-lg font-bold font-mono text-rose-400 mt-1">
+                            <span className="text-base sm:text-lg font-bold font-mono text-rose-600 dark:text-rose-400 mt-1">
                                 -${items.reduce((s, i) => s + (i.deductions || 0) + (i.tss || 0) + (i.infotep || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
-                        <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3 flex flex-col justify-between shadow-[0_0_15px_rgba(16,185,129,0.08)]">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                                <Wallet className="w-3.5 h-3.5 text-emerald-400" /> Total Neto a Pagar
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3 flex flex-col justify-between shadow-[0_0_15px_rgba(16,185,129,0.08)]">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                <Wallet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Total Neto a Pagar
                             </span>
-                            <span className="text-lg sm:text-xl font-black font-mono text-emerald-300 mt-0.5">
+                            <span className="text-lg sm:text-xl font-black font-mono text-emerald-700 dark:text-emerald-300 mt-0.5">
                                 ${items.reduce((s, i) => s + (i.net_salary || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
                     </div>
 
                     {/* Content & Table */}
-                    <div className="flex-1 overflow-hidden flex flex-col bg-zinc-950">
+                    <div className="flex-1 overflow-hidden flex flex-col bg-muted/5">
                         {/* Search & Filter Toolbar */}
-                        <div className="p-3 sm:px-6 border-b border-zinc-800/60 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-zinc-900/40 shrink-0">
+                        <div className="p-3 sm:px-6 border-b border-border/60 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-muted/20 shrink-0">
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
                                 <div className="relative w-full sm:max-w-xs">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                                     <Input
                                         placeholder="Buscar empleado por nombre..."
-                                        className="pl-9 bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-emerald-500/50 text-xs h-9 rounded-xl"
+                                        className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-emerald-500/50 text-xs h-9 rounded-xl"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
 
                                 {/* Filter Tabs */}
-                                <div className="flex items-center p-1 bg-zinc-900/90 border border-zinc-800 rounded-xl self-start sm:self-auto overflow-x-auto max-w-full">
+                                <div className="flex items-center p-1 bg-muted/50 border border-border rounded-xl self-start sm:self-auto overflow-x-auto max-w-full">
                                     <button
                                         type="button"
                                         onClick={() => setSalaryFilter('all')}
                                         className={cn(
                                             "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                                             salaryFilter === 'all'
-                                                ? "bg-zinc-800 text-white shadow-sm"
-                                                : "text-zinc-400 hover:text-zinc-200"
+                                                ? "bg-background text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         <span>Todas</span>
                                         <span className={cn(
                                             "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
-                                            salaryFilter === 'all' ? "bg-zinc-700 text-zinc-200" : "bg-zinc-800/80 text-zinc-500"
+                                            salaryFilter === 'all' ? "bg-muted text-foreground" : "bg-muted/50 text-muted-foreground"
                                         )}>
                                             {countAll}
                                         </span>
@@ -948,19 +958,19 @@ function PayrollContent() {
                                             "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                                             salaryFilter === 'with_salary'
                                                 ? "bg-emerald-600 text-white shadow-sm"
-                                                : "text-zinc-400 hover:text-emerald-400"
+                                                : "text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400"
                                         )}
                                     >
                                         <span className="flex items-center gap-1">
                                             <span className={cn(
                                                 "w-1.5 h-1.5 rounded-full",
-                                                salaryFilter === 'with_salary' ? "bg-white" : "bg-emerald-400"
+                                                salaryFilter === 'with_salary' ? "bg-white" : "bg-emerald-600 dark:bg-emerald-400"
                                             )} />
                                             Con Pago (&gt; $0)
                                         </span>
                                         <span className={cn(
                                             "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
-                                            salaryFilter === 'with_salary' ? "bg-emerald-700 text-white" : "bg-zinc-800/80 text-zinc-500"
+                                            salaryFilter === 'with_salary' ? "bg-emerald-700 text-white" : "bg-muted/50 text-muted-foreground"
                                         )}>
                                             {countWithSalary}
                                         </span>
@@ -972,14 +982,14 @@ function PayrollContent() {
                                         className={cn(
                                             "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                                             salaryFilter === 'zero_salary'
-                                                ? "bg-zinc-800 text-amber-400 shadow-sm"
-                                                : "text-zinc-400 hover:text-amber-300"
+                                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-sm"
+                                                : "text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400"
                                         )}
                                     >
                                         <span>En Cero ($0)</span>
                                         <span className={cn(
                                             "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
-                                            salaryFilter === 'zero_salary' ? "bg-zinc-700 text-amber-300" : "bg-zinc-800/80 text-zinc-500"
+                                            salaryFilter === 'zero_salary' ? "bg-amber-500/20 text-amber-700 dark:text-amber-300" : "bg-muted/50 text-muted-foreground"
                                         )}>
                                             {countZeroSalary}
                                         </span>
@@ -987,30 +997,30 @@ function PayrollContent() {
                                 </div>
                             </div>
 
-                            <span className="text-xs text-zinc-500 font-medium whitespace-nowrap">
-                                Mostrando <strong className="text-zinc-300">{filteredItems.length}</strong> de <strong className="text-zinc-300">{items.length}</strong> empleados
+                            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                                Mostrando <strong className="text-foreground">{filteredItems.length}</strong> de <strong className="text-foreground">{items.length}</strong> empleados
                             </span>
                         </div>
 
                         {/* Table Area */}
                         <div className="flex-1 overflow-auto p-0">
                             <Table className="w-full min-w-[750px] border-collapse">
-                                <TableHeader className="bg-zinc-900/80 sticky top-0 backdrop-blur-md z-10">
-                                    <TableRow className="border-b border-zinc-800 hover:bg-transparent">
-                                        <TableHead className="w-[240px] pl-6 text-[11px] font-bold uppercase tracking-wider text-zinc-400">Empleado</TableHead>
-                                        <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-zinc-400">Sal. Base</TableHead>
-                                        <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-zinc-400">Bonos (+)</TableHead>
+                                <TableHeader className="bg-muted/60 sticky top-0 backdrop-blur-md z-10">
+                                    <TableRow className="border-b border-border hover:bg-transparent">
+                                        <TableHead className="w-[240px] pl-6 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Empleado</TableHead>
+                                        <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Sal. Base</TableHead>
+                                        <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Bonos (+)</TableHead>
 
                                         {(showTSSGroup || showAFPOnly || showSFSOnly) && (
-                                            <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-amber-500">TSS / Ley (-)</TableHead>
+                                            <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500">TSS / Ley (-)</TableHead>
                                         )}
 
                                         {showInfotep && (
-                                            <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-purple-400">Infotep (-)</TableHead>
+                                            <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Infotep (-)</TableHead>
                                         )}
 
-                                        <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-zinc-400">Deducciones (-)</TableHead>
-                                        <TableHead className="text-right font-bold w-[160px] pr-6 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Neto a Pagar</TableHead>
+                                        <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Deducciones (-)</TableHead>
+                                        <TableHead className="text-right font-bold w-[160px] pr-6 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Neto a Pagar</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1019,13 +1029,13 @@ function PayrollContent() {
                                             <TableCell colSpan={8} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                     <LoadingLogo text="" size="sm" />
-                                                    <span className="text-xs text-zinc-400">Cargando detalles de nómina...</span>
+                                                    <span className="text-xs text-muted-foreground">Cargando detalles de nómina...</span>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : filteredItems.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-32 text-center text-zinc-500 text-xs">
+                                            <TableCell colSpan={8} className="h-32 text-center text-muted-foreground text-xs">
                                                 No se encontraron empleados registrados en este periodo
                                             </TableCell>
                                         </TableRow>
@@ -1034,36 +1044,36 @@ function PayrollContent() {
                                             const emp = employees.find(e => e.id === item.profile_id);
                                             const initials = getInitials(item.employee_name);
                                             return (
-                                                <TableRow key={item.id} className="hover:bg-zinc-900/40 border-b border-zinc-800/40 transition-colors">
+                                                <TableRow key={item.id} className="hover:bg-muted/40 border-b border-border/60 transition-colors">
                                                     <TableCell className="pl-6 py-3.5">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-zinc-800/90 border border-emerald-500/20 flex items-center justify-center text-xs font-bold text-emerald-300 shrink-0 shadow-sm">
+                                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-muted border border-emerald-500/20 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0 shadow-sm">
                                                                 {initials}
                                                             </div>
                                                             <div className="flex flex-col">
-                                                                <span className="font-semibold text-sm text-zinc-100 leading-snug">{item.employee_name}</span>
+                                                                <span className="font-semibold text-sm text-foreground leading-snug">{item.employee_name}</span>
                                                                 {emp?.cedula ? (
-                                                                    <span className="text-[10px] font-mono text-zinc-400 bg-zinc-900/80 px-1.5 py-0.5 rounded border border-zinc-800/60 w-fit mt-0.5">
+                                                                    <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border w-fit mt-0.5">
                                                                         ID: {emp.cedula}
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="text-[10px] text-zinc-500 italic mt-0.5">Sin cédula</span>
+                                                                    <span className="text-[10px] text-muted-foreground italic mt-0.5">Sin cédula</span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                     </TableCell>
-                                                    
-                                                    <TableCell className="text-right font-mono text-xs sm:text-sm text-zinc-300 py-3.5">
+
+                                                    <TableCell className="text-right font-mono text-xs sm:text-sm text-foreground py-3.5">
                                                         ${item.base_salary.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </TableCell>
 
                                                     <TableCell className="text-center py-3.5">
                                                         <div className="flex justify-center items-center">
                                                             <div className="relative w-28">
-                                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-emerald-500/70">+$</span>
+                                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-emerald-600 dark:text-emerald-500/70">+$</span>
                                                                 <Input
                                                                     type="number"
-                                                                    className="w-28 h-8 pl-7 pr-2 text-right bg-zinc-900/80 border-zinc-700/60 hover:border-zinc-600 focus:border-emerald-500/60 focus:bg-zinc-900 transition-all font-mono text-xs text-emerald-300 rounded-lg"
+                                                                    className="w-28 h-8 pl-7 pr-2 text-right bg-muted/40 border-border hover:border-emerald-500/40 focus:border-emerald-500/60 focus:bg-background transition-all font-mono text-xs text-emerald-700 dark:text-emerald-300 rounded-lg"
                                                                     value={item.bonuses}
                                                                     onChange={(e) => handleItemUpdate(item, 'bonuses', parseFloat(e.target.value) || 0)}
                                                                     readOnly={selectedPayroll?.status === 'paid'}
@@ -1075,7 +1085,7 @@ function PayrollContent() {
 
                                                     {(showTSSGroup || showAFPOnly || showSFSOnly) && (
                                                         <TableCell className="text-center py-3.5">
-                                                            <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-xs font-semibold">
+                                                            <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-xs font-semibold">
                                                                 -${item.tss.toFixed(2)}
                                                             </div>
                                                         </TableCell>
@@ -1083,7 +1093,7 @@ function PayrollContent() {
 
                                                     {showInfotep && (
                                                         <TableCell className="text-center py-3.5">
-                                                            <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 font-mono text-xs font-semibold">
+                                                            <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 font-mono text-xs font-semibold">
                                                                 -${item.infotep.toFixed(2)}
                                                             </div>
                                                         </TableCell>
@@ -1100,7 +1110,7 @@ function PayrollContent() {
                                                     </TableCell>
 
                                                     <TableCell className="text-right pr-6 py-3.5">
-                                                        <div className="inline-flex items-center justify-end font-mono font-bold text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
+                                                        <div className="inline-flex items-center justify-end font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
                                                             ${item.net_salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </div>
                                                     </TableCell>
@@ -1113,24 +1123,24 @@ function PayrollContent() {
                         </div>
 
                         {/* Table Footer Totals Bar */}
-                        <div className="p-3 sm:px-6 border-t border-zinc-800/80 bg-zinc-950/90 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
-                            <div className="flex items-center gap-2 text-xs text-zinc-500">
-                                <span className="font-semibold text-zinc-300">Resumen General:</span>
+                        <div className="p-3 sm:px-6 border-t border-border bg-muted/30 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="font-semibold text-foreground">Resumen General:</span>
                                 <span>{filteredItems.length} empleados listados</span>
                             </div>
                             <div className="flex items-center gap-4 text-xs font-mono">
-                                <span className="text-zinc-400">
-                                    Base: <strong className="text-zinc-200">${filteredItems.reduce((s, i) => s + (i.base_salary || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <span className="text-muted-foreground">
+                                    Base: <strong className="text-foreground">${filteredItems.reduce((s, i) => s + (i.base_salary || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                                 </span>
-                                <span className="text-emerald-500/80">
-                                    Bonos: <strong className="text-emerald-400">+${filteredItems.reduce((s, i) => s + (i.bonuses || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <span className="text-emerald-600 dark:text-emerald-500/80">
+                                    Bonos: <strong className="text-emerald-600 dark:text-emerald-400">+${filteredItems.reduce((s, i) => s + (i.bonuses || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                                 </span>
-                                <span className="text-rose-500/80">
-                                    Deduc.: <strong className="text-rose-400">-${filteredItems.reduce((s, i) => s + (i.deductions || 0) + (i.tss || 0) + (i.infotep || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <span className="text-rose-600 dark:text-rose-500/80">
+                                    Deduc.: <strong className="text-rose-600 dark:text-rose-400">-${filteredItems.reduce((s, i) => s + (i.deductions || 0) + (i.tss || 0) + (i.infotep || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                                 </span>
-                                <div className="h-4 w-px bg-zinc-800" />
-                                <span className="text-zinc-300 font-sans font-semibold">
-                                    Gran Total: <strong className="text-emerald-400 font-mono font-black text-sm">${filteredItems.reduce((s, i) => s + (i.net_salary || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                <div className="h-4 w-px bg-border" />
+                                <span className="text-foreground font-sans font-semibold">
+                                    Gran Total: <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-black text-sm">${filteredItems.reduce((s, i) => s + (i.net_salary || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                                 </span>
                             </div>
                         </div>

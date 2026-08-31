@@ -40,6 +40,7 @@ const employeeSchema = z.object({
     password: z.string().optional(),
     role: z.enum(['admin', 'manager', 'cashier', 'kitchen', 'delivery', 'accountant']),
     is_active: z.boolean().default(true),
+    include_in_payroll: z.boolean().default(true),
     credit_limit: z.coerce.number().min(0).optional(),
     cedula: z.string().optional(),
 });
@@ -63,6 +64,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             password: '',
             role: 'cashier',
             is_active: true,
+            include_in_payroll: true,
             credit_limit: 0,
             cedula: '',
         },
@@ -76,6 +78,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 email: employee.email,
                 role: (['staff', 'cashier'].includes(employee.role)) ? 'cashier' : (['kitchen', 'delivery', 'accountant'].includes(employee.role) ? employee.role as any : employee.role),
                 is_active: employee.is_active,
+                include_in_payroll: employee.include_in_payroll !== false,
                 password: '',
                 credit_limit: employee.credit_limit || 0,
                 cedula: employee.cedula || '',
@@ -86,6 +89,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 email: '',
                 role: 'cashier',
                 is_active: true,
+                include_in_payroll: true,
                 password: '',
                 credit_limit: 0,
                 cedula: '',
@@ -111,6 +115,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             email: values.email,
             role: values.role,
             is_active: values.is_active,
+            includeInPayroll: values.include_in_payroll,
             credit_limit: values.credit_limit,
             cedula: values.cedula || '',
         };
@@ -283,6 +288,27 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                             )}
                         />
 
+
+                        <FormField
+                            control={form.control}
+                            name="include_in_payroll"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="text-base">Incluir en Nómina</FormLabel>
+                                        <FormDescription>
+                                            Desactiva si tiene acceso a la app pero no recibe salario. No se le generará pago al crear una nómina.
+                                        </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
 
                         {employee && (
                             <FormField

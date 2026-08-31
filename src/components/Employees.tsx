@@ -237,11 +237,16 @@ const Employees: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {employee.is_active ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black text-[9px] uppercase tracking-widest">Activo</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 font-black text-[9px] uppercase tracking-widest">Inactivo</Badge>
-                      )}
+                      <div className="flex flex-col items-start gap-1">
+                        {employee.is_active ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black text-[9px] uppercase tracking-widest">Activo</Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 font-black text-[9px] uppercase tracking-widest">Inactivo</Badge>
+                        )}
+                        {employee.include_in_payroll === false && (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 font-black text-[9px] uppercase tracking-widest">Sin Nómina</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right pr-8">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -308,6 +313,12 @@ const Employees: React.FC = () => {
                       <div className={cn("h-1.5 w-1.5 rounded-full", employee.is_active ? "bg-emerald-500" : "bg-red-500")} />
                       <span className="text-[10px] font-black uppercase tracking-widest">{employee.is_active ? "Activo" : "Inactivo"}</span>
                     </div>
+                    {employee.include_in_payroll === false && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-600">Sin Nómina</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
