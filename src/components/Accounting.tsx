@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw, Pencil, Wallet, ArrowUpRight, ArrowDownRight, Layers, CreditCard, Phone, Landmark, Copy } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw, Pencil, Wallet, ArrowUpRight, ArrowDownRight, Layers, CreditCard, Phone, Landmark, Copy } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -440,6 +440,10 @@ function AccountingContent() {
     const [activeTab, setActiveTab] = useState('overview');
     const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
     const [expenseEntryMode, setExpenseEntryMode] = useState<string>('manual');
+    // Formulario manual simplificado: fecha, categoría, proveedor, factura y
+    // foto son opcionales (solo monto + concepto son requeridos), así que
+    // quedan colapsados detrás de "Más detalles" por defecto.
+    const [showMoreExpenseDetails, setShowMoreExpenseDetails] = useState(false);
 
     // States for interactive zoomable receipt preview
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -2596,6 +2600,7 @@ function AccountingContent() {
                 if (!open) {
                     setIsScanning(false);
                     setScanQueue([]);
+                    setShowMoreExpenseDetails(false);
                 }
             }}>
                 <DialogContent centerOnMobile className={cn("p-3 sm:p-6 max-h-[90dvh] gap-3 sm:gap-4 overflow-y-auto overflow-x-hidden w-full transition-all duration-300", scanQueue.length > 0 ? "sm:max-w-4xl" : "sm:max-w-[560px]")}>
@@ -2802,218 +2807,233 @@ function AccountingContent() {
                                         </div>
                                     </div>
 
-                                    {/* Concept + Date */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="flex flex-col gap-1">
-                                            <label htmlFor="description" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                                <FileText className="h-3 w-3" /> Concepto
-                                            </label>
-                                            <Input
-                                                id="description"
-                                                placeholder="Ej. Compra de mercancería"
-                                                className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
-                                                value={newExpense.description || ''}
-                                                onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label htmlFor="date" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" /> Fecha
-                                            </label>
-                                            <Input
-                                                id="date"
-                                                type="date"
-                                                className="h-9 bg-muted/30 border-border/60 rounded-xl font-medium text-sm"
-                                                value={newExpense.date && isValid(newExpense.date) ? format(newExpense.date, 'yyyy-MM-dd') : ''}
-                                                onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value ? new Date(e.target.value) : new Date() })}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Category pills */}
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                            <ShoppingCart className="h-3 w-3" /> Categoría
+                                    {/* Concept (único campo obligatorio junto al monto) */}
+                                    <div className="flex flex-col gap-1">
+                                        <label htmlFor="description" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                            <FileText className="h-3 w-3" /> Concepto
                                         </label>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {availableCategories.map(cat => (
-                                                <button
-                                                    key={cat}
-                                                    type="button"
-                                                    onClick={() => setNewExpense({ ...newExpense, category: cat })}
-                                                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 ${
-                                                        newExpense.category === cat
-                                                            ? 'bg-green-600 border-green-600 text-white shadow-sm shadow-green-500/30'
-                                                            : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:border-green-500/40'
-                                                    }`}
-                                                >
-                                                    {cat}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Supplier + Invoice number */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                                <Building2 className="h-3 w-3" /> Proveedor
-                                            </label>
-                                            <Popover modal={true}>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className={cn(
-                                                            "w-full justify-between h-10 bg-muted/30 border-border/60 rounded-xl",
-                                                            !newExpense.supplier_name && "text-muted-foreground"
-                                                        )}
-                                                    >
-                                                        <span className="truncate">{newExpense.supplier_name || 'Seleccionar...'}</span>
-                                                        <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-[calc(100vw-32px)] sm:w-[280px] p-0" align="start">
-                                                    <Command>
-                                                        <CommandInput placeholder="Buscar proveedor..." />
-                                                        <CommandList>
-                                                            <CommandEmpty>
-                                                                <div className="p-2 text-sm text-center">
-                                                                    No encontrado. Escribe para crear.
-                                                                </div>
-                                                            </CommandEmpty>
-                                                            <CommandGroup heading="Proveedores Existentes">
-                                                                {suppliers.map((supplier) => (
-                                                                    <CommandItem
-                                                                        key={supplier.id}
-                                                                        value={supplier.name}
-                                                                        onSelect={(currentValue) => {
-                                                                            setNewExpense({ ...newExpense, supplier_name: currentValue });
-                                                                        }}
-                                                                        className="flex justify-between items-center group w-full"
-                                                                    >
-                                                                        <div className="flex items-center">
-                                                                            <Check
-                                                                                className={cn(
-                                                                                    "mr-2 h-4 w-4",
-                                                                                    newExpense.supplier_name === supplier.name ? "opacity-100" : "opacity-0"
-                                                                                )}
-                                                                            />
-                                                                            {supplier.name}
-                                                                        </div>
-                                                                        <Button
-                                                                            size="icon"
-                                                                            variant="ghost"
-                                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleDeleteSupplier(supplier.id, supplier.name);
-                                                                            }}
-                                                                        >
-                                                                            <Trash2 className="h-3 w-3 text-destructive" />
-                                                                        </Button>
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                        <div className="p-2 border-t">
-                                                            <Input
-                                                                placeholder="O escribir nombre nuevo..."
-                                                                value={newExpense.supplier_name}
-                                                                onChange={(e) => setNewExpense({ ...newExpense, supplier_name: e.target.value })}
-                                                                className="h-8"
-                                                            />
-                                                        </div>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label htmlFor="invoice" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                                <Receipt className="h-3 w-3" /> No. Factura
-                                            </label>
-                                            <Input
-                                                id="invoice"
-                                                placeholder="NCF o Referencia"
-                                                className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
-                                                value={newExpense.invoice_number || ''}
-                                                onChange={(e) => setNewExpense({ ...newExpense, invoice_number: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Photo upload */}
-                                    <div className="flex flex-col gap-1.5 mt-1">
-                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                            <Camera className="h-3 w-3" /> Foto de Factura / Comprobante
-                                        </label>
-                                        <input
-                                            type="file"
-                                            ref={manualFileInputRef}
-                                            onChange={handleManualImageUpload}
-                                            accept="image/*"
-                                            className="hidden"
+                                        <Input
+                                            id="description"
+                                            placeholder="Ej. Compra de mercancería"
+                                            className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
+                                            value={newExpense.description || ''}
+                                            onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
                                         />
-                                        
-                                        {isUploadingManualImage ? (
-                                            <div className="flex items-center justify-center gap-2 h-14 rounded-xl border border-dashed border-border bg-muted/20 text-muted-foreground text-xs font-semibold">
-                                                <Loader2 className="h-4 w-4 animate-spin text-green-500" />
-                                                <span>Subiendo imagen...</span>
-                                            </div>
-                                        ) : newExpense.image_url ? (
-                                            <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
-                                                <div 
-                                                    className="group relative cursor-pointer overflow-hidden rounded-lg border border-border/80 w-12 h-12 flex-shrink-0"
-                                                    onClick={() => {
-                                                        setPreviewImageUrl(newExpense.image_url);
-                                                        setPreviewImageScale(1);
-                                                        setPreviewImageRotation(0);
-                                                        setPreviewImagePosition({ x: 0, y: 0 });
-                                                    }}
-                                                >
-                                                    <img
-                                                        src={newExpense.image_url}
-                                                        alt="Comprobante"
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                                    />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                                                        <Search className="h-4 w-4 text-white" />
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
-                                                    <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
-                                                    onClick={() => setNewExpense(prev => ({ ...prev, image_url: null }))}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => manualFileInputRef.current?.click()}
-                                                className="h-14 border-dashed border-border/60 hover:border-green-500/40 bg-muted/10 hover:bg-green-500/5 hover:text-green-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
-                                            >
-                                                <Upload className="h-4 w-4 text-muted-foreground" />
-                                                <div className="text-left">
-                                                    <p className="text-xs font-semibold">Subir imagen (Opcional)</p>
-                                                    <p className="text-[10px] text-muted-foreground">Formato JPG, PNG (máx. 5MB)</p>
-                                                </div>
-                                            </Button>
-                                        )}
                                     </div>
+
+                                    {/* Toggle: el resto (fecha, categoría, proveedor, factura, foto) es
+                                        opcional -- se guarda con valores por defecto sensatos si no se toca */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMoreExpenseDetails(v => !v)}
+                                        className="flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors py-1"
+                                    >
+                                        {showMoreExpenseDetails ? 'Menos detalles' : 'Más detalles (opcional)'}
+                                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showMoreExpenseDetails && "rotate-180")} />
+                                    </button>
+
+                                    {showMoreExpenseDetails && (
+                                        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                            {/* Date */}
+                                            <div className="flex flex-col gap-1">
+                                                <label htmlFor="date" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" /> Fecha
+                                                </label>
+                                                <Input
+                                                    id="date"
+                                                    type="date"
+                                                    className="h-9 bg-muted/30 border-border/60 rounded-xl font-medium text-sm"
+                                                    value={newExpense.date && isValid(newExpense.date) ? format(newExpense.date, 'yyyy-MM-dd') : ''}
+                                                    onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value ? new Date(e.target.value) : new Date() })}
+                                                />
+                                            </div>
+
+                                            {/* Category pills */}
+                                            <div className="flex flex-col gap-1.5">
+                                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                    <ShoppingCart className="h-3 w-3" /> Categoría
+                                                </label>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {availableCategories.map(cat => (
+                                                        <button
+                                                            key={cat}
+                                                            type="button"
+                                                            onClick={() => setNewExpense({ ...newExpense, category: cat })}
+                                                            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 ${
+                                                                newExpense.category === cat
+                                                                    ? 'bg-green-600 border-green-600 text-white shadow-sm shadow-green-500/30'
+                                                                    : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:border-green-500/40'
+                                                            }`}
+                                                        >
+                                                            {cat}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Supplier + Invoice number */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                        <Building2 className="h-3 w-3" /> Proveedor
+                                                    </label>
+                                                    <Popover modal={true}>
+                                                        <PopoverTrigger asChild>
+                                                            <Button
+                                                                variant="outline"
+                                                                role="combobox"
+                                                                className={cn(
+                                                                    "w-full justify-between h-10 bg-muted/30 border-border/60 rounded-xl",
+                                                                    !newExpense.supplier_name && "text-muted-foreground"
+                                                                )}
+                                                            >
+                                                                <span className="truncate">{newExpense.supplier_name || 'Seleccionar...'}</span>
+                                                                <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-[calc(100vw-32px)] sm:w-[280px] p-0" align="start">
+                                                            <Command>
+                                                                <CommandInput placeholder="Buscar proveedor..." />
+                                                                <CommandList>
+                                                                    <CommandEmpty>
+                                                                        <div className="p-2 text-sm text-center">
+                                                                            No encontrado. Escribe para crear.
+                                                                        </div>
+                                                                    </CommandEmpty>
+                                                                    <CommandGroup heading="Proveedores Existentes">
+                                                                        {suppliers.map((supplier) => (
+                                                                            <CommandItem
+                                                                                key={supplier.id}
+                                                                                value={supplier.name}
+                                                                                onSelect={(currentValue) => {
+                                                                                    setNewExpense({ ...newExpense, supplier_name: currentValue });
+                                                                                }}
+                                                                                className="flex justify-between items-center group w-full"
+                                                                            >
+                                                                                <div className="flex items-center">
+                                                                                    <Check
+                                                                                        className={cn(
+                                                                                            "mr-2 h-4 w-4",
+                                                                                            newExpense.supplier_name === supplier.name ? "opacity-100" : "opacity-0"
+                                                                                        )}
+                                                                                    />
+                                                                                    {supplier.name}
+                                                                                </div>
+                                                                                <Button
+                                                                                    size="icon"
+                                                                                    variant="ghost"
+                                                                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleDeleteSupplier(supplier.id, supplier.name);
+                                                                                    }}
+                                                                                >
+                                                                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                                                                </Button>
+                                                                            </CommandItem>
+                                                                        ))}
+                                                                    </CommandGroup>
+                                                                </CommandList>
+                                                                <div className="p-2 border-t">
+                                                                    <Input
+                                                                        placeholder="O escribir nombre nuevo..."
+                                                                        value={newExpense.supplier_name}
+                                                                        onChange={(e) => setNewExpense({ ...newExpense, supplier_name: e.target.value })}
+                                                                        className="h-8"
+                                                                    />
+                                                                </div>
+                                                            </Command>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <label htmlFor="invoice" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                        <Receipt className="h-3 w-3" /> No. Factura
+                                                    </label>
+                                                    <Input
+                                                        id="invoice"
+                                                        placeholder="NCF o Referencia"
+                                                        className="h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
+                                                        value={newExpense.invoice_number || ''}
+                                                        onChange={(e) => setNewExpense({ ...newExpense, invoice_number: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Photo upload */}
+                                            <div className="flex flex-col gap-1.5 mt-1">
+                                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                                    <Camera className="h-3 w-3" /> Foto de Factura / Comprobante
+                                                </label>
+                                                <input
+                                                    type="file"
+                                                    ref={manualFileInputRef}
+                                                    onChange={handleManualImageUpload}
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                />
+
+                                                {isUploadingManualImage ? (
+                                                    <div className="flex items-center justify-center gap-2 h-14 rounded-xl border border-dashed border-border bg-muted/20 text-muted-foreground text-xs font-semibold">
+                                                        <Loader2 className="h-4 w-4 animate-spin text-green-500" />
+                                                        <span>Subiendo imagen...</span>
+                                                    </div>
+                                                ) : newExpense.image_url ? (
+                                                    <div className="relative flex items-center gap-3 p-2 rounded-xl border border-border bg-muted/20">
+                                                        <div
+                                                            className="group relative cursor-pointer overflow-hidden rounded-lg border border-border/80 w-12 h-12 flex-shrink-0"
+                                                            onClick={() => {
+                                                                setPreviewImageUrl(newExpense.image_url);
+                                                                setPreviewImageScale(1);
+                                                                setPreviewImageRotation(0);
+                                                                setPreviewImagePosition({ x: 0, y: 0 });
+                                                            }}
+                                                        >
+                                                            <img
+                                                                src={newExpense.image_url}
+                                                                alt="Comprobante"
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                                <Search className="h-4 w-4 text-white" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-semibold truncate text-foreground">Comprobante subido</p>
+                                                            <p className="text-[10px] text-muted-foreground truncate">La imagen se guardará con el gasto</p>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                                                            onClick={() => setNewExpense(prev => ({ ...prev, image_url: null }))}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() => manualFileInputRef.current?.click()}
+                                                        className="h-14 border-dashed border-border/60 hover:border-green-500/40 bg-muted/10 hover:bg-green-500/5 hover:text-green-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
+                                                    >
+                                                        <Upload className="h-4 w-4 text-muted-foreground" />
+                                                        <div className="text-left">
+                                                            <p className="text-xs font-semibold">Subir imagen (Opcional)</p>
+                                                            <p className="text-[10px] text-muted-foreground">Formato JPG, PNG (máx. 5MB)</p>
+                                                        </div>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Action Buttons */}
                                     <div className="flex justify-end gap-2 mt-4 pt-2 border-t">
                                         <Button variant="ghost" className="rounded-xl h-10 px-4 text-xs font-semibold" onClick={() => setIsAddExpenseOpen(false)}>Cancelar</Button>
-                                        <Button 
+                                        <Button
                                             onClick={handleAddExpense}
                                             disabled={isCreating}
                                             className="rounded-xl h-10 px-6 font-bold bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
