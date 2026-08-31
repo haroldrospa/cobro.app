@@ -54,6 +54,7 @@ function PayrollContent() {
     const [loadingItems, setLoadingItems] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [salaryFilter, setSalaryFilter] = useState<'all' | 'with_salary' | 'zero_salary'>('all');
     const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
     const [justPaidPayroll, setJustPaidPayroll] = useState<{ payroll: PayrollType, items: PayrollItem[] } | null>(null);
 
@@ -248,9 +249,23 @@ function PayrollContent() {
         }
     };
 
-    const filteredItems = items.filter(item =>
-        item.employee_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredItems = items.filter(item => {
+        const matchesSearch = item.employee_name.toLowerCase().includes(searchTerm.toLowerCase());
+        if (!matchesSearch) return false;
+
+        const hasSalary = (item.base_salary > 0) || ((item.bonuses || 0) > 0) || ((item.net_salary || 0) > 0);
+        if (salaryFilter === 'with_salary') {
+            return hasSalary;
+        }
+        if (salaryFilter === 'zero_salary') {
+            return !hasSalary;
+        }
+        return true;
+    });
+
+    const countAll = items.length;
+    const countWithSalary = items.filter(i => (i.base_salary > 0) || ((i.bonuses || 0) > 0) || ((i.net_salary || 0) > 0)).length;
+    const countZeroSalary = items.filter(i => (i.base_salary === 0) && (!i.bonuses || i.bonuses === 0) && (!i.net_salary || i.net_salary === 0)).length;
 
 
     // --- PAYROLL DETAILS LOGIC ---
@@ -892,18 +907,87 @@ function PayrollContent() {
 
                     {/* Content & Table */}
                     <div className="flex-1 overflow-hidden flex flex-col bg-zinc-950">
-                        {/* Search Toolbar */}
-                        <div className="p-3 sm:px-6 border-b border-zinc-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/30 shrink-0">
-                            <div className="relative w-full max-w-xs">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
-                                <Input
-                                    placeholder="Buscar empleado por nombre..."
-                                    className="pl-9 bg-zinc-900/80 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-emerald-500/50 text-xs h-9 rounded-xl"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                        {/* Search & Filter Toolbar */}
+                        <div className="p-3 sm:px-6 border-b border-zinc-800/60 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-zinc-900/40 shrink-0">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                                <div className="relative w-full sm:max-w-xs">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                                    <Input
+                                        placeholder="Buscar empleado por nombre..."
+                                        className="pl-9 bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-emerald-500/50 text-xs h-9 rounded-xl"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Filter Tabs */}
+                                <div className="flex items-center p-1 bg-zinc-900/90 border border-zinc-800 rounded-xl self-start sm:self-auto overflow-x-auto max-w-full">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSalaryFilter('all')}
+                                        className={cn(
+                                            "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
+                                            salaryFilter === 'all'
+                                                ? "bg-zinc-800 text-white shadow-sm"
+                                                : "text-zinc-400 hover:text-zinc-200"
+                                        )}
+                                    >
+                                        <span>Todas</span>
+                                        <span className={cn(
+                                            "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+                                            salaryFilter === 'all' ? "bg-zinc-700 text-zinc-200" : "bg-zinc-800/80 text-zinc-500"
+                                        )}>
+                                            {countAll}
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setSalaryFilter('with_salary')}
+                                        className={cn(
+                                            "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
+                                            salaryFilter === 'with_salary'
+                                                ? "bg-emerald-600 text-white shadow-sm"
+                                                : "text-zinc-400 hover:text-emerald-400"
+                                        )}
+                                    >
+                                        <span className="flex items-center gap-1">
+                                            <span className={cn(
+                                                "w-1.5 h-1.5 rounded-full",
+                                                salaryFilter === 'with_salary' ? "bg-white" : "bg-emerald-400"
+                                            )} />
+                                            Con Pago (&gt; $0)
+                                        </span>
+                                        <span className={cn(
+                                            "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+                                            salaryFilter === 'with_salary' ? "bg-emerald-700 text-white" : "bg-zinc-800/80 text-zinc-500"
+                                        )}>
+                                            {countWithSalary}
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setSalaryFilter('zero_salary')}
+                                        className={cn(
+                                            "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
+                                            salaryFilter === 'zero_salary'
+                                                ? "bg-zinc-800 text-amber-400 shadow-sm"
+                                                : "text-zinc-400 hover:text-amber-300"
+                                        )}
+                                    >
+                                        <span>En Cero ($0)</span>
+                                        <span className={cn(
+                                            "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+                                            salaryFilter === 'zero_salary' ? "bg-zinc-700 text-amber-300" : "bg-zinc-800/80 text-zinc-500"
+                                        )}>
+                                            {countZeroSalary}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
-                            <span className="text-xs text-zinc-500 font-medium">
+
+                            <span className="text-xs text-zinc-500 font-medium whitespace-nowrap">
                                 Mostrando <strong className="text-zinc-300">{filteredItems.length}</strong> de <strong className="text-zinc-300">{items.length}</strong> empleados
                             </span>
                         </div>
