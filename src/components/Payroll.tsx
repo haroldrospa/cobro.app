@@ -21,7 +21,6 @@ import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { Plus, Users, CheckCircle, Settings, Calculator, Percent, DollarSign, Trash2, Search, Printer, Mail, RefreshCcw, TrendingUp, TrendingDown, ArrowRight, Calendar, X, Save, Wallet, Gift, Receipt, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
-import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeductionsManager } from './DeductionsManager';
 import { printPayrollReceipt } from '@/utils/printPayrollReceipt';
@@ -45,12 +44,10 @@ function PayrollContent() {
     const queryClient = useQueryClient();
 
     const [isNewOpen, setIsNewOpen] = useState(false);
-    const [isSalaryConfigOpen, setIsSalaryConfigOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const [selectedPayroll, setSelectedPayroll] = useState<PayrollType | null>(null);
     const [items, setItems] = useState<PayrollItem[]>([]);
-    const [localEmployees, setLocalEmployees] = useState<Employee[]>([]);
     const [loadingItems, setLoadingItems] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -101,25 +98,10 @@ function PayrollContent() {
         }
     }, [frequency, isNewOpen]);
 
-    // Sync employees when fetching or opening dialog
-    useEffect(() => {
-        if (employees.length > 0) {
-            setLocalEmployees(employees);
-        }
-    }, [employees, isSalaryConfigOpen]);
-
     const showTSSGroup = localSettings.enable_afp && localSettings.enable_sfs;
     const showAFPOnly = localSettings.enable_afp && !localSettings.enable_sfs;
     const showSFSOnly = !localSettings.enable_afp && localSettings.enable_sfs;
-    const showISR = localSettings.enable_isr;
     const showInfotep = localSettings.enable_infotep;
-
-    // Label helpers
-    const getLabel = (rate: number, type: string) => type === 'fixed' ? `$${rate}` : `${rate}%`;
-
-    const afpLabel = getLabel(localSettings.afp_rate, localSettings.afp_type);
-    const sfsLabel = getLabel(localSettings.sfs_rate, localSettings.sfs_type);
-    const infotepLabel = getLabel(localSettings.infotep_rate, localSettings.infotep_type);
 
     const handleCreate = async () => {
         try {
@@ -157,80 +139,6 @@ function PayrollContent() {
         }
     };
 
-    // --- SALARY CONFIG LOGIC ---
-
-    const updateEmployeeProfile = async (id: string, updates: Record<string, any>) => {
-        const { error } = await supabase.from('profiles').update(updates).eq('id', id);
-        if (error) {
-            // Fallback for missing column - POLYFILL
-            if (error.message?.includes('column') && updates.default_deductions_details) {
-                const { default_deductions_details, ...safeUpdates } = updates;
-
-                // Polyfill: Save details as JSON in the note column so they persist
-                try {
-                    safeUpdates.default_deduction_note = JSON.stringify(default_deductions_details);
-                } catch (e) {
-                    console.warn("Failed to stringify details for polyfill", e);
-                }
-
-                if (Object.keys(safeUpdates).length > 0) {
-                    const { error: retryError } = await supabase.from('profiles').update(safeUpdates).eq('id', id);
-                    if (retryError) throw retryError;
-                    return 'partial';
-                }
-            }
-            throw error;
-        }
-        return 'success';
-    };
-
-    const handleLocalEmployeeChange = (id: string, field: keyof Employee, value: any) => {
-        setLocalEmployees(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e));
-    };
-
-    const saveSalaryConfig = async () => {
-        setIsSaving(true);
-        let errorCount = 0;
-        let partialCount = 0;
-
-        try {
-            await Promise.all(localEmployees.map(async (emp) => {
-                try {
-                    const details = emp.default_deductions_details || [];
-                    const totalDed = details.reduce((s, d) => s + (Number(d.amount) || 0), 0);
-
-                    // If user edited deduction legacy input (if enabled) or details, update both
-                    const result = await updateEmployeeProfile(emp.id, {
-                        base_salary: emp.base_salary,
-                        default_deduction: totalDed,
-                        default_deductions_details: details
-                    });
-                    if (result === 'partial') partialCount++;
-
-                } catch (e) {
-                    console.error(e);
-                    errorCount++;
-                }
-            }));
-
-            await queryClient.invalidateQueries({ queryKey: ['employees'] });
-
-            if (errorCount > 0) {
-                toast({ title: "Completado con errores", description: `Hubo ${errorCount} errores al guardar.`, variant: "destructive" });
-            } else if (partialCount > 0) {
-                toast({ title: "Guardado Parcial", description: "Algunos detalles no se guardaron por compatibilidad, pero los montos están correctos." });
-            } else {
-                toast({ title: "Guardado", description: "Configuración de salarios actualizada." });
-                setIsSalaryConfigOpen(false);
-            }
-
-        } catch (e) {
-            toast({ title: "Error Fatal", description: "No se pudo iniciar el guardado.", variant: "destructive" });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-    
     const handleSyncCredits = async () => {
         if (!selectedPayroll) return;
         setIsSaving(true);
@@ -364,16 +272,7 @@ function PayrollContent() {
                     </div>
 
                     <div className="flex flex-wrap justify-center gap-3">
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => setIsSalaryConfigOpen(true)}
-                            className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-all rounded-full px-6"
-                        >
-                            <Users className="mr-2 h-3.5 w-3.5" />
-                            Configurar Salarios
-                        </Button>
-                        <Button 
+                        <Button
                             variant="outline" 
                             size="sm" 
                             onClick={() => setIsSettingsOpen(true)}
@@ -682,100 +581,6 @@ function PayrollContent() {
                     <DialogFooter>
                         <Button onClick={saveSettings}>Guardar Cambios</Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* SAlARY CONFIG DIALOG */}
-            <Dialog open={isSalaryConfigOpen} onOpenChange={setIsSalaryConfigOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-4xl w-full">
-                    <DialogHeader>
-                        <DialogTitle>Configuración de Salarios</DialogTitle>
-                        <DialogDescription>Define los sueldos y deducciones fijas por empleado.</DialogDescription>
-                    </DialogHeader>
-                    <div className="overflow-x-auto border rounded-md max-h-[60vh]">
-                        <Table>
-                            <TableHeader className="bg-muted sticky top-0 z-10">
-                                <TableRow>
-                                    <TableHead className="min-w-[150px]">Empleado</TableHead>
-                                    <TableHead>Salario Base</TableHead>
-
-                                    {showTSSGroup && <TableHead className="text-center w-[120px] font-bold text-orange-600">TSS</TableHead>}
-                                    {showAFPOnly && <TableHead className="text-center w-[100px]">AFP ({afpLabel})</TableHead>}
-                                    {showSFSOnly && <TableHead className="text-center w-[100px]">SFS ({sfsLabel})</TableHead>}
-                                    {showISR && <TableHead className="text-center w-[100px]">ISR</TableHead>}
-
-                                    {showInfotep && <TableHead className="text-center w-[100px]">Infotep ({infotepLabel})</TableHead>}
-
-                                    <TableHead className="text-center">Deducciones</TableHead>
-                                    <TableHead className="text-right">Neto Estimado</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {localEmployees.map(emp => {
-                                    const { tss, infotep, net } = calculateEstimates(emp);
-
-                                    return (
-                                        <TableRow key={emp.id}>
-                                            <TableCell className="font-medium">
-                                                <div className="flex flex-col">
-                                                    <span>{emp.full_name}</span>
-                                                    <span className="text-xs text-muted-foreground capitalize">
-                                                        {emp.role}{emp.cedula && ` • ID: ${emp.cedula}`}
-                                                    </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Input
-                                                    key={`base-${emp.id}`}
-                                                    type="number"
-                                                    className="w-24"
-                                                    value={emp.base_salary || 0}
-                                                    onChange={(e) => handleLocalEmployeeChange(emp.id, 'base_salary', parseFloat(e.target.value) || 0)}
-                                                />
-                                            </TableCell>
-
-                                            {showTSSGroup && <TableCell className="text-center font-bold text-orange-600">${tss.toLocaleString()}</TableCell>}
-                                            {showAFPOnly && <TableCell className="text-center">${(localSettings.afp_type === 'fixed' ? localSettings.afp_rate : (emp.base_salary || 0) * (localSettings.afp_rate / 100)).toFixed(2)}</TableCell>}
-                                            {showSFSOnly && <TableCell className="text-center">${(localSettings.sfs_type === 'fixed' ? localSettings.sfs_rate : (emp.base_salary || 0) * (localSettings.sfs_rate / 100)).toFixed(2)}</TableCell>}
-                                            {showISR && <TableCell className="text-center text-xs text-muted-foreground">--</TableCell>}
-
-                                            {showInfotep && <TableCell className="text-center">${infotep.toLocaleString()}</TableCell>}
-
-                                            <TableCell className="text-center">
-                                                <DeductionsManager
-                                                    deductions={(emp.default_deductions_details as DeductionDetail[]) || (emp.default_deduction ? [{ amount: emp.default_deduction, reason: "Deducción" }] : [])}
-                                                    onChange={(newDetails) => handleLocalEmployeeChange(emp.id, 'default_deductions_details', newDetails)}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="text-right font-bold">
-                                                ${net.toLocaleString()}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <div className="flex justify-end border-t p-4 bg-muted/10">
-                        <div className="mr-auto flex gap-6 items-center text-sm">
-                            <div className="flex flex-col">
-                                <span className="text-muted-foreground text-xs">Empleados</span>
-                                <span className="font-bold text-lg">{localEmployees.length}</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-muted-foreground text-xs">Total Nómina Estimada</span>
-                                <span className="font-bold text-lg text-primary">
-                                    ${localEmployees.reduce((sum, emp) => sum + calculateEstimates(emp).net, 0).toLocaleString()}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" onClick={() => setIsSalaryConfigOpen(false)}>Cancelar</Button>
-                            <Button onClick={saveSalaryConfig} disabled={isSaving}>
-                                {isSaving ? "Guardando..." : "Guardar Salarios"}
-                            </Button>
-                        </div>
-                    </div>
                 </DialogContent>
             </Dialog>
 

@@ -24,8 +24,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useManageEmployee, Employee } from '@/hooks/useEmployees';
+import { useManageEmployee, Employee, DeductionDetail } from '@/hooks/useEmployees';
 import { useCustomers } from '@/hooks/useCustomers';
+import { DeductionsManager } from '@/components/DeductionsManager';
 
 const formatCedula = (v: string) => {
     const clean = v.replace(/\D/g, '');
@@ -42,6 +43,7 @@ const employeeSchema = z.object({
     is_active: z.boolean().default(true),
     include_in_payroll: z.boolean().default(true),
     credit_limit: z.coerce.number().min(0).optional(),
+    base_salary: z.coerce.number().min(0).optional(),
     cedula: z.string().optional(),
 });
 
@@ -55,6 +57,10 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
     const { mutate: manageEmployee, isPending } = useManageEmployee();
     const { data: customers = [] } = useCustomers();
     const [showPassword, setShowPassword] = useState(false);
+    // DeductionsManager keeps its own list state and reports changes via onChange,
+    // so it's tracked separately from react-hook-form (same pattern the old Payroll
+    // "Configurar Salarios" bulk editor used for this exact widget).
+    const [deductions, setDeductions] = useState<DeductionDetail[]>([]);
 
     const form = useForm<z.infer<typeof employeeSchema>>({
         resolver: zodResolver(employeeSchema),
@@ -66,6 +72,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             is_active: true,
             include_in_payroll: true,
             credit_limit: 0,
+            base_salary: 0,
             cedula: '',
         },
     });
@@ -81,8 +88,16 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 include_in_payroll: employee.include_in_payroll !== false,
                 password: '',
                 credit_limit: employee.credit_limit || 0,
+                base_salary: employee.base_salary || 0,
                 cedula: employee.cedula || '',
             });
+            // Same fallback chain the old bulk salary editor used: prefer the
+            // detailed JSONB column, fall back to the legacy single-amount field.
+            setDeductions(
+                employee.default_deductions_details?.length
+                    ? employee.default_deductions_details
+                    : (employee.default_deduction ? [{ amount: employee.default_deduction, reason: 'Deducción' }] : [])
+            );
         } else {
             form.reset({
                 full_name: '',
@@ -92,8 +107,10 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 include_in_payroll: true,
                 password: '',
                 credit_limit: 0,
+                base_salary: 0,
                 cedula: '',
             });
+            setDeductions([]);
         }
     }, [employee, form, open]);
 
@@ -117,6 +134,8 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             is_active: values.is_active,
             includeInPayroll: values.include_in_payroll,
             credit_limit: values.credit_limit,
+            baseSalary: values.base_salary,
+            defaultDeductionsDetails: deductions,
             cedula: values.cedula || '',
         };
 
@@ -270,24 +289,54 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                             />
                         </div>
 
-                        <FormField
-                            control={form.control}
-                            name="credit_limit"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Límite de Crédito / Adelantos</FormLabel>
-                                    <FormControl>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                                            <Input type="number" placeholder="0.00" className="pl-7" {...field} />
-                                        </div>
-                                    </FormControl>
-                                    <FormDescription>Máximo que el empleado puede adeudar</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="base_salary"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Salario Base</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                                <Input type="number" placeholder="0.00" className="pl-7" {...field} />
+                                            </div>
+                                        </FormControl>
+                                        <FormDescription>Sueldo usado al generar la nómina</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
+                            <FormField
+                                control={form.control}
+                                name="credit_limit"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Límite de Crédito / Adelantos</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                                <Input type="number" placeholder="0.00" className="pl-7" {...field} />
+                                            </div>
+                                        </FormControl>
+                                        <FormDescription>Máximo que el empleado puede adeudar</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <FormItem>
+                            <FormLabel>Deducciones Fijas</FormLabel>
+                            <div>
+                                <DeductionsManager
+                                    deductions={deductions}
+                                    onChange={setDeductions}
+                                />
+                            </div>
+                            <FormDescription>Descuentos recurrentes aplicados cada nómina (uniforme, préstamos, etc.)</FormDescription>
+                        </FormItem>
 
                         <FormField
                             control={form.control}

@@ -126,6 +126,8 @@ interface ManageEmployeePayload {
     isActive?: boolean;
     cedula?: string;
     includeInPayroll?: boolean;
+    baseSalary?: number;
+    defaultDeductionsDetails?: DeductionDetail[];
 }
 
 export const useManageEmployee = () => {
@@ -198,6 +200,38 @@ export const useManageEmployee = () => {
                     // Non-fatal: don't block the rest of the employee save over this flag
                     // (e.g. if the migration adding the column hasn't run yet).
                     console.warn('No se pudo guardar el estado de nómina:', payrollFlagError.message);
+                }
+            }
+
+            // ── 4. Save base salary + deductions (direct update, same field this used
+            // to live in on the Payroll "Configurar Salarios" bulk editor — ported here
+            // now that salary lives on each employee's own edit form) ──
+            if ((payload.baseSalary !== undefined || payload.defaultDeductionsDetails !== undefined) && targetId) {
+                const details = payload.defaultDeductionsDetails || [];
+                const totalDed = details.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+                const salaryUpdates: Record<string, any> = {
+                    base_salary: payload.baseSalary,
+                    default_deduction: totalDed,
+                    default_deductions_details: details
+                };
+
+                const { error: salaryError } = await supabase.from('profiles').update(salaryUpdates as any).eq('id', targetId);
+
+                if (salaryError) {
+                    // Fallback for stores whose DB is missing the default_deductions_details
+                    // column (JSONB) — polyfill by stashing the details as JSON in the note.
+                    if (salaryError.message?.includes('column')) {
+                        const { default_deductions_details, ...safeUpdates } = salaryUpdates;
+                        try {
+                            (safeUpdates as any).default_deduction_note = JSON.stringify(details);
+                        } catch (e) {
+                            console.warn('Failed to stringify deduction details for polyfill', e);
+                        }
+                        const { error: retryError } = await supabase.from('profiles').update(safeUpdates as any).eq('id', targetId);
+                        if (retryError) throw new Error('Error guardando salario: ' + retryError.message);
+                    } else {
+                        throw new Error('Error guardando salario: ' + salaryError.message);
+                    }
                 }
             }
 
