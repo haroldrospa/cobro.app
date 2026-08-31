@@ -2675,31 +2675,6 @@ function AccountingContent() {
                         </div>
                     )}
 
-                    {isKeyConfigured && !isEditingKey && (
-                        <div className="bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/20 mb-4 flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                    <Sparkles className="h-4 w-4 text-emerald-500" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70">IA Configurada</p>
-                                    <p className="text-xs font-bold text-muted-foreground">La clave de Groq está lista para usar</p>
-                                </div>
-                            </div>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => {
-                                    setApiKeyInput(storeSettings?.ai_api_key || '');
-                                    setIsEditingKey(true);
-                                }}
-                                className="h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-background border hover:bg-muted"
-                            >
-                                <Settings2 className="h-3 w-3 mr-1" /> Configurar
-                            </Button>
-                        </div>
-                    )}
-
                     {/* The Hidden File Input */}
                     <input
                         type="file"
