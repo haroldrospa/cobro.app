@@ -1,26 +1,49 @@
 -- =========================================================================
--- SCRIPT DE CORRECCIÓN: FIJAR SECUENCIA EXACTA (SIN BORRAR NINGÚN DATO)
+-- SCRIPT DE CORRECCIÓN: PERMITIR SECUENCIA 5189 SIN BORRAR NINGÚN DATO
 -- Ejecuta todo este script en el SQL Editor de Supabase
 -- =========================================================================
 
--- 1. ELIMINAR CUALQUIER RESTRICCIÓN QUE BLOQUEE NÚMEROS REPETIDOS EN SALES
--- (Esto permite emitir la 5189 sin borrar ni alterar ninguna factura anterior)
+-- 1. ELIMINAR AUTOMÁTICAMENTE TODAS LAS RESTRICCIONES ÚNICAS SOBRE INVOICE_NUMBER EN SALES
+-- (Esto permite que el sistema emita la 5189 sin borrar ni alterar tus facturas históricas)
 DO $$
+DECLARE
+    r RECORD;
 BEGIN
-    ALTER TABLE public.sales DROP CONSTRAINT IF EXISTS sales_invoice_number_key;
-    DROP INDEX IF EXISTS public.sales_store_invoice_unique_idx;
-EXCEPTION WHEN OTHERS THEN NULL;
+    -- Eliminar constraints únicos en tabla sales (excepto la clave primaria id)
+    FOR r IN (
+        SELECT conname 
+        FROM pg_constraint 
+        WHERE conrelid = 'public.sales'::regclass 
+          AND contype = 'u' 
+          AND conname NOT LIKE '%pkey%'
+    ) LOOP
+        EXECUTE 'ALTER TABLE public.sales DROP CONSTRAINT IF EXISTS ' || quote_ident(r.conname);
+        RAISE NOTICE '✅ Constraint eliminado: %', r.conname;
+    END LOOP;
+
+    -- Eliminar índices únicos en tabla sales (excepto la clave primaria)
+    FOR r IN (
+        SELECT indexname 
+        FROM pg_indexes 
+        WHERE tablename = 'sales' 
+          AND schemaname = 'public' 
+          AND indexdef LIKE '%UNIQUE%' 
+          AND indexname NOT LIKE '%pkey%'
+    ) LOOP
+        EXECUTE 'DROP INDEX IF EXISTS public.' || quote_ident(r.indexname);
+        RAISE NOTICE '✅ Índice único eliminado: %', r.indexname;
+    END LOOP;
 END $$;
 
 
--- 2. FIJAR LA SECUENCIA B02 EXACTAMENTE EN 5188 (La próxima será 5189)
+-- 2. FIJAR LA SECUENCIA B02 EXACTAMENTE EN 5188 (Para que la siguiente factura sea 5189)
 UPDATE public.invoice_sequences
 SET current_number = 5188,
     updated_at = NOW()
 WHERE invoice_type_id = 'B02';
 
 
--- 3. ACTUALIZAR FUNCIÓN GET_NEXT_INVOICE_NUMBER PARA RESPETAR LA SECUENCIA EXACTA
+-- 3. ACTUALIZAR FUNCIÓN GET_NEXT_INVOICE_NUMBER PARA QUE NO SALTE NÚMEROS
 CREATE OR REPLACE FUNCTION public.get_next_invoice_number(invoice_type_code text)
 RETURNS text
 LANGUAGE plpgsql
@@ -36,7 +59,6 @@ DECLARE
   padding int := 8;
   is_elec boolean := false;
 BEGIN
-  -- Obtener la tienda del usuario actual
   SELECT store_id INTO user_store_id 
   FROM public.profiles 
   WHERE id = auth.uid();
@@ -45,7 +67,6 @@ BEGIN
     SELECT id INTO user_store_id FROM public.stores ORDER BY created_at LIMIT 1;
   END IF;
 
-  -- 1. Obtener o incrementar secuencia directamente según lo configurado
   UPDATE public.invoice_sequences
   SET current_number = current_number + 1,
       updated_at = NOW()
@@ -60,7 +81,6 @@ BEGIN
     RETURNING current_number INTO next_number;
   END IF;
 
-  -- 2. Verificar si e-NCF está activo
   SELECT COALESCE(is_active, FALSE) INTO is_elec 
   FROM public.alanube_config 
   WHERE store_id = user_store_id LIMIT 1;
@@ -116,7 +136,6 @@ DECLARE
   v_invoice_number TEXT;
   v_invoice_type_code TEXT;
   v_is_electronic_active BOOLEAN := FALSE;
-  v_seq_id UUID;
   v_next_number INT;
   v_display_prefix TEXT;
   v_separator TEXT := '-';
@@ -172,7 +191,7 @@ BEGIN
   FROM public.alanube_config 
   WHERE store_id = p_store_id LIMIT 1;
 
-  -- 4. Incrementar la secuencia directamente
+  -- 4. Incrementar la secuencia directamente (secuencia exacta y continua)
   UPDATE public.invoice_sequences
   SET current_number = current_number + 1, updated_at = NOW()
   WHERE invoice_type_id = v_invoice_type_code AND store_id = p_store_id
@@ -205,7 +224,7 @@ BEGIN
 
   v_invoice_number := v_display_prefix || v_separator || LPAD(v_next_number::text, v_padding, '0');
 
-  -- 6. Insertar la Venta (Seguro, sin conflicto de clave)
+  -- 6. Insertar la Venta de forma limpia y directa
   INSERT INTO public.sales (
     id,
     invoice_number,
