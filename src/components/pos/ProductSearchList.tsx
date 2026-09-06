@@ -180,8 +180,8 @@ const ProductItem = React.memo<ProductItemProps>(({
         {/* Left/Top: Name & Details */}
         <div className="space-y-1 min-w-0 flex-1">
           <h4 className={cn(
-            "font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary break-words min-w-0",
-            viewMode === 'list' ? "text-sm sm:text-base line-clamp-1" : "text-sm leading-tight line-clamp-2"
+            "font-medium tracking-tight text-foreground transition-colors group-hover:text-primary break-words min-w-0",
+            viewMode === 'list' ? "text-sm line-clamp-1" : "text-sm leading-tight line-clamp-2"
           )}>
             {product.name}
           </h4>
@@ -194,7 +194,7 @@ const ProductItem = React.memo<ProductItemProps>(({
                 </span>
               )}
               {product.internal_code && (
-                <span className="flex items-center gap-0.5 font-mono text-[11px] opacity-60">
+                <span className="flex items-center gap-0.5 text-[11px] opacity-60">
                   <span>#</span>{product.internal_code}
                 </span>
               )}
@@ -213,7 +213,7 @@ const ProductItem = React.memo<ProductItemProps>(({
             </span>
           )}
 
-          <div className="font-bold text-base sm:text-lg text-emerald-500 font-mono leading-none flex items-center gap-1.5">
+          <div className="font-bold text-base md:text-lg text-primary leading-none flex items-center gap-1.5">
             {(() => {
               let displayPrice = product.price || 0;
               if (matchedBundle) {
@@ -250,7 +250,7 @@ const ProductItem = React.memo<ProductItemProps>(({
             if (hasRecipeStock) {
               return (
                 <span className={cn(
-                  "text-[11px] font-medium px-2 py-0.5 rounded-full font-mono",
+                  "text-[11px] font-medium px-2 py-0.5 rounded-full",
                   avail <= 0 
                     ? "bg-destructive/15 text-destructive font-semibold" 
                     : avail <= 5 
@@ -264,14 +264,14 @@ const ProductItem = React.memo<ProductItemProps>(({
             if (product.track_inventory !== false) {
               if (product.stock <= 0) {
                 return (
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-destructive/15 text-destructive font-mono">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-destructive/15 text-destructive">
                     Agotado
                   </span>
                 );
               }
               return (
                 <span className={cn(
-                  "text-[11px] font-medium px-2 py-0.5 rounded-full font-mono",
+                  "text-[11px] font-medium px-2 py-0.5 rounded-full",
                   product.stock < 5 
                     ? "bg-amber-500/15 text-amber-500 font-semibold" 
                     : product.stock < 10
@@ -286,7 +286,7 @@ const ProductItem = React.memo<ProductItemProps>(({
           })()}
 
           {viewMode === 'grid' && product.internal_code && (
-            <span className="text-[10px] text-muted-foreground/60 font-mono">
+            <span className="text-[10px] text-muted-foreground/60">
               {product.internal_code}
             </span>
           )}
