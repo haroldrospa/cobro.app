@@ -1549,36 +1549,37 @@ function AccountingContent() {
     };
 
     return (
-        <div className="p-6 pb-24 space-y-10 animate-in fade-in duration-500">
-            {/* Centered Premium Header */}
-            <div className="max-w-2xl mx-auto flex flex-col items-center text-center gap-8 py-4">
-                <div className="space-y-2">
-                    <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.1em] leading-normal py-1">Contabilidad</h1>
-                    <div className="flex items-center justify-center gap-3 text-muted-foreground">
-                        <div className="h-px w-6 bg-border" />
-                        <p className="text-xs font-bold uppercase tracking-widest">Gestión financiera y gastos</p>
-                        <div className="h-px w-6 bg-border" />
+        <div className="p-4 sm:p-6 pb-24 space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
+            {/* Minimalist Top Header */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2 border-b border-border/30 pb-4">
+                <div className="flex items-center gap-3">
+                    <div className="bg-emerald-500/10 p-2 rounded-xl text-emerald-500">
+                        <Wallet className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Contabilidad</h1>
+                        <p className="text-[11px] text-muted-foreground font-medium">Gestión financiera, gastos y proveedores</p>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-6 w-full">
-                    {/* Month Selector Centered */}
-                    <div className="flex items-center gap-3 bg-muted/20 p-2 rounded-2xl border border-border/50 shadow-inner w-full max-w-[280px] justify-between">
-                        <Button variant="ghost" size="icon" onClick={prevMonth} className="h-10 w-10 rounded-xl hover:bg-background">
-                            <ChevronLeft className="h-5 w-5" />
+                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+                    {/* Month Selector Pill */}
+                    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40">
+                        <Button variant="ghost" size="icon" onClick={prevMonth} className="h-7 w-7 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground">
+                            <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <div className="flex items-center gap-2 font-black uppercase tracking-widest text-[11px] text-primary">
-                            <Calendar className="h-4 w-4" />
-                            <span>
+                        <div className="flex items-center gap-1.5 px-2 font-bold text-xs text-foreground min-w-[110px] justify-center">
+                            <Calendar className="h-3.5 w-3.5 text-emerald-500" />
+                            <span className="capitalize">
                                 {currentDate ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={nextMonth} className="h-10 w-10 rounded-xl hover:bg-background">
-                            <ChevronRight className="h-5 w-5" />
+                        <Button variant="ghost" size="icon" onClick={nextMonth} className="h-7 w-7 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground">
+                            <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
 
-                    {/* Main Action Button Centered */}
+                    {/* Main Action Button */}
                     <Button 
                         id="accounting-add-expense-btn" 
                         onClick={() => {
@@ -1596,175 +1597,163 @@ function AccountingContent() {
                             setExpenseType('reinversion');
                             setIsAddExpenseOpen(true);
                         }} 
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 w-full sm:w-auto transition-all active:scale-95"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm gap-1.5 transition-all active:scale-95 shrink-0"
                     >
-                        <Plus className="h-5 w-5" />
+                        <Plus className="h-4 w-4" />
                         Registrar Gasto
                     </Button>
                 </div>
             </div>
 
             {/* Impact Metrics Grid */}
-            <div id="accounting-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <TrendingUp className="h-12 w-12 text-emerald-500" />
+            <div id="accounting-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Ingresos Cobrados */}
+                <div className="bg-card/60 border border-border/40 p-3.5 rounded-2xl flex flex-col justify-between backdrop-blur-sm hover:border-emerald-500/30 transition-all">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ingresos Cobrados</span>
+                        <div className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-500">
+                            <TrendingUp className="h-3.5 w-3.5" />
+                        </div>
                     </div>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500/70">Ingresos (Cobrados)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
+                    <div className="mt-2">
                         {loadingSales ? (
-                            <Skeleton className="h-10 w-32 bg-emerald-500/10" />
+                            <Skeleton className="h-7 w-28 bg-emerald-500/10 rounded-lg" />
                         ) : (
-                            <div className="flex flex-col">
-                                <span className="text-3xl font-black text-emerald-500">${Number(collectedSales || 0).toLocaleString()}</span>
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Excluye créditos pendientes</span>
-                            </div>
+                            <p className="text-xl sm:text-2xl font-black text-emerald-500 tracking-tight">
+                                RD$ {Number(collectedSales || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
                         )}
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-amber-500/5 border-amber-500/20 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <AlertCircle className="h-12 w-12 text-amber-500" />
+                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Excluye créditos pendientes</p>
                     </div>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/70">Créditos Pendientes</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
+                </div>
+
+                {/* Créditos Pendientes */}
+                <div className="bg-card/60 border border-border/40 p-3.5 rounded-2xl flex flex-col justify-between backdrop-blur-sm hover:border-amber-500/30 transition-all">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Créditos Pendientes</span>
+                        <div className="p-1.5 bg-amber-500/10 rounded-lg text-amber-500">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                        </div>
+                    </div>
+                    <div className="mt-2">
                         {loadingSales ? (
-                            <Skeleton className="h-10 w-32 bg-amber-500/10" />
+                            <Skeleton className="h-7 w-28 bg-amber-500/10 rounded-lg" />
                         ) : (
-                            <div className="flex flex-col">
-                                <span className="text-3xl font-black text-amber-500">${Number(pendingCreditSales || 0).toLocaleString()}</span>
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Por cobrar a clientes</span>
-                            </div>
+                            <p className="text-xl sm:text-2xl font-black text-amber-500 tracking-tight">
+                                RD$ {Number(pendingCreditSales || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
                         )}
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-primary/5 border-primary/20 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <DollarSign className="h-12 w-12 text-primary" />
+                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Por cobrar a clientes</p>
                     </div>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">Utilidad Neta (Cobrado)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
+                </div>
+
+                {/* Utilidad Neta */}
+                <div className="bg-card/60 border border-border/40 p-3.5 rounded-2xl flex flex-col justify-between backdrop-blur-sm hover:border-primary/30 transition-all">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Utilidad Neta</span>
+                        <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
+                            <DollarSign className="h-3.5 w-3.5" />
+                        </div>
+                    </div>
+                    <div className="mt-2">
                         {loadingSales || loadingExpenses ? (
-                            <Skeleton className="h-10 w-32 bg-primary/10" />
+                            <Skeleton className="h-7 w-28 bg-primary/10 rounded-lg" />
                         ) : (
-                            <div className="flex flex-col">
-                                <span className={`text-3xl font-black ${netIncome >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                    ${Number(netIncome || 0).toLocaleString()}
-                                </span>
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Flujo de caja real</span>
-                            </div>
+                            <p className={`text-xl sm:text-2xl font-black tracking-tight ${netIncome >= 0 ? 'text-primary' : 'text-red-500'}`}>
+                                RD$ {Number(netIncome || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
                         )}
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-red-500/5 border-red-500/20 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <TrendingDown className="h-12 w-12 text-red-500" />
+                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Flujo de caja real</p>
                     </div>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500/70">Total Gastos</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
+                </div>
+
+                {/* Total Gastos */}
+                <div className="bg-card/60 border border-border/40 p-3.5 rounded-2xl flex flex-col justify-between backdrop-blur-sm hover:border-red-500/30 transition-all">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Gastos</span>
+                        <div className="p-1.5 bg-red-500/10 rounded-lg text-red-500">
+                            <TrendingDown className="h-3.5 w-3.5" />
+                        </div>
+                    </div>
+                    <div className="mt-2">
                         {loadingExpenses ? (
-                            <Skeleton className="h-10 w-32 bg-red-500/10" />
+                            <Skeleton className="h-7 w-28 bg-red-500/10 rounded-lg" />
                         ) : (
-                            <div className="flex flex-col">
-                                <span className="text-3xl font-black text-red-500">${Number(totalExpenses || 0).toLocaleString()}</span>
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Reinv. + Operativos</span>
-                            </div>
+                            <p className="text-xl sm:text-2xl font-black text-red-500 tracking-tight">
+                                RD$ {Number(totalExpenses || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
                         )}
-                    </CardContent>
-                </Card>
+                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Reinv. + Operativos</p>
+                    </div>
+                </div>
             </div>
 
-            {/* Premium Expense Breakdown */}
+            {/* Expense Breakdown Progress (Compact) */}
             {!loadingExpenses && totalExpenses > 0 && (
-                <div className="max-w-3xl mx-auto w-full">
-                    <Card className="border-0 shadow-2xl bg-muted/10 backdrop-blur-sm overflow-hidden rounded-3xl">
-                        <CardContent className="p-8 space-y-8">
-                            <div className="flex flex-col items-center text-center gap-1">
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Análisis de Distribución</span>
-                                <h3 className="text-xl font-black uppercase">Desglose de Gastos</h3>
-                                <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mt-2">${totalExpenses.toLocaleString()} TOTAL</span>
-                            </div>
+                <div className="bg-card/40 border border-border/40 p-4 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Desglose de Gastos</span>
+                        <span className="font-black text-foreground">RD$ {totalExpenses.toLocaleString('es-DO', { minimumFractionDigits: 2 })} TOTAL</span>
+                    </div>
 
-                            {/* Refined Progress Bar */}
-                            <div className="space-y-3">
-                                <div className="w-full h-3 rounded-full overflow-hidden flex bg-muted/30 shadow-inner">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-1000 shadow-[0_0_15px_rgba(37,99,235,0.3)]"
-                                        style={{ width: `${totalExpenses > 0 ? (reinvestmentExpenses / totalExpenses) * 100 : 0}%` }}
-                                    />
-                                    <div
-                                        className="h-full bg-gradient-to-r from-orange-500 to-orange-400 transition-all duration-1000 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
-                                        style={{ width: `${totalExpenses > 0 ? (operationalExpenses / totalExpenses) * 100 : 0}%` }}
-                                    />
-                                </div>
-                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">
-                                    <span>Reinversión</span>
-                                    <span>Operativos</span>
-                                </div>
-                            </div>
+                    <div className="w-full h-2 rounded-full overflow-hidden flex bg-muted/40">
+                        <div
+                            className="h-full bg-blue-500 transition-all duration-700"
+                            style={{ width: `${totalExpenses > 0 ? (reinvestmentExpenses / totalExpenses) * 100 : 0}%` }}
+                        />
+                        <div
+                            className="h-full bg-orange-500 transition-all duration-700"
+                            style={{ width: `${totalExpenses > 0 ? (operationalExpenses / totalExpenses) * 100 : 0}%` }}
+                        />
+                    </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="flex flex-col items-center text-center gap-2 p-5 rounded-3xl bg-blue-500/5 border border-blue-500/20 hover:bg-blue-500/10 transition-all">
-                                    <span className="text-[10px] font-black uppercase text-blue-500 tracking-widest">Reinversión</span>
-                                    <span className="text-3xl font-black text-blue-500">${reinvestmentExpenses.toLocaleString()}</span>
-                                    <span className="text-[10px] font-bold text-muted-foreground">
-                                        {totalExpenses > 0 ? ((reinvestmentExpenses / totalExpenses) * 100).toFixed(1) : 0}% DEL TOTAL
-                                    </span>
-                                </div>
-                                <div className="flex flex-col items-center text-center gap-2 p-5 rounded-3xl bg-orange-500/5 border border-orange-500/20 hover:bg-orange-500/10 transition-all">
-                                    <span className="text-[10px] font-black uppercase text-orange-500 tracking-widest">Gastos Operativos</span>
-                                    <span className="text-3xl font-black text-orange-500">${operationalExpenses.toLocaleString()}</span>
-                                    <span className="text-[10px] font-bold text-muted-foreground">
-                                        {totalExpenses > 0 ? ((operationalExpenses / totalExpenses) * 100).toFixed(1) : 0}% DEL TOTAL
-                                    </span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-blue-500" />
+                            <span className="text-muted-foreground font-medium">Reinversión:</span>
+                            <span className="font-bold text-blue-400">RD$ {reinvestmentExpenses.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-[10px] text-muted-foreground">({totalExpenses > 0 ? ((reinvestmentExpenses / totalExpenses) * 100).toFixed(0) : 0}%)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-orange-500" />
+                            <span className="text-muted-foreground font-medium">Operativos:</span>
+                            <span className="font-bold text-orange-400">RD$ {operationalExpenses.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-[10px] text-muted-foreground">({totalExpenses > 0 ? ((operationalExpenses / totalExpenses) * 100).toFixed(0) : 0}%)</span>
+                        </div>
+                    </div>
                 </div>
             )}
 
-            <Tabs id="accounting-tabs" defaultValue="expenses" className="space-y-8">
-                <div className="flex justify-center w-full max-w-full overflow-x-auto px-1">
-                    <TabsList className="bg-muted/20 p-1 rounded-2xl border border-border/50 h-auto self-center flex-nowrap max-w-full overflow-x-auto justify-start sm:justify-center whitespace-nowrap scrollbar-none">
-                        <TabsTrigger value="expenses" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Gastos</TabsTrigger>
-                        <TabsTrigger value="fixed-expenses" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Gastos Fijos</TabsTrigger>
-                        <TabsTrigger value="suppliers" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Proveedores</TabsTrigger>
-                        <TabsTrigger value="reports" className="rounded-xl px-3 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg shrink-0">Reportes</TabsTrigger>
+            <Tabs id="accounting-tabs" defaultValue="expenses" className="space-y-4">
+                <div className="flex justify-center w-full">
+                    <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1">
+                        <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Gastos</TabsTrigger>
+                        <TabsTrigger value="fixed-expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Gastos Fijos</TabsTrigger>
+                        <TabsTrigger value="suppliers" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Proveedores</TabsTrigger>
+                        <TabsTrigger value="reports" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Reportes</TabsTrigger>
                     </TabsList>
                 </div>
 
-                <TabsContent value="expenses" className="space-y-6">
-                    {/* Main Search & Advanced Filter Controls */}
-                    <div className="max-w-3xl mx-auto w-full space-y-4">
-                        <div className="flex flex-col sm:flex-row items-center gap-3">
-                            {/* Search Input with Clear Button */}
+                <TabsContent value="expenses" className="space-y-4 outline-none">
+                    {/* Search & Filter Controls */}
+                    <div className="space-y-2.5">
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                            {/* Search Input */}
                             <div className="relative flex-1 w-full">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input 
                                     placeholder="Buscar por descripción, proveedor, comprobante, categoría..." 
                                     value={expenseSearchQuery}
                                     onChange={(e) => setExpenseSearchQuery(e.target.value)}
-                                    className="pl-11 pr-10 h-12 bg-muted/20 border-border/50 rounded-2xl focus:ring-primary/20 text-sm font-medium" 
+                                    className="pl-9 pr-8 h-9 bg-card/60 border-border/40 rounded-xl text-xs font-medium focus-visible:ring-emerald-500/30" 
                                 />
                                 {expenseSearchQuery && (
                                     <button
                                         onClick={() => setExpenseSearchQuery('')}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/40 transition-colors"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md hover:bg-muted/40 transition-colors"
                                         title="Limpiar búsqueda"
                                     >
-                                        <X className="h-4 w-4" />
+                                        <X className="h-3.5 w-3.5" />
                                     </button>
                                 )}
                             </div>
@@ -1775,48 +1764,48 @@ function AccountingContent() {
                                     <Button 
                                         variant="outline" 
                                         className={cn(
-                                            "h-12 px-4 sm:px-5 rounded-2xl border-border/50 font-bold text-xs gap-2 shrink-0 transition-all",
+                                            "h-9 px-3.5 rounded-xl border-border/40 font-bold text-xs gap-1.5 shrink-0 transition-all",
                                             hasActiveExpenseFilters 
-                                                ? "bg-primary/10 border-primary text-primary hover:bg-primary/20 shadow-md" 
-                                                : "bg-muted/20 hover:bg-muted/30"
+                                                ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-500" 
+                                                : "bg-card/60 hover:bg-muted/40 text-muted-foreground"
                                         )}
                                     >
-                                        <Filter className="h-4 w-4" />
+                                        <Filter className="h-3.5 w-3.5" />
                                         <span>Filtros</span>
                                         {hasActiveExpenseFilters && (
-                                            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                                         )}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-80 p-5 rounded-3xl space-y-4 border-border/60 shadow-2xl bg-card" align="end">
-                                    <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                                        <div className="flex items-center gap-2">
-                                            <Filter className="h-4 w-4 text-primary" />
-                                            <h4 className="font-black text-sm uppercase tracking-wider">Filtrar Gastos</h4>
+                                <PopoverContent className="w-80 p-4 rounded-2xl space-y-3.5 border-border/40 shadow-xl bg-card" align="end">
+                                    <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+                                        <div className="flex items-center gap-1.5">
+                                            <Filter className="h-3.5 w-3.5 text-emerald-500" />
+                                            <h4 className="font-bold text-xs uppercase tracking-wider">Filtrar Gastos</h4>
                                         </div>
                                         {hasActiveExpenseFilters && (
                                             <Button 
                                                 variant="ghost" 
                                                 size="sm" 
                                                 onClick={clearExpenseFilters}
-                                                className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10 rounded-lg"
+                                                className="h-6 px-1.5 text-[10px] font-bold text-destructive hover:bg-destructive/10 rounded-md"
                                             >
-                                                Limpiar todo
+                                                Limpiar
                                             </Button>
                                         )}
                                     </div>
 
                                     {/* Filter by Category */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Categoría</Label>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categoría</Label>
                                         <Select value={expenseCategoryFilter} onValueChange={setExpenseCategoryFilter}>
-                                            <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/50 text-xs font-bold">
+                                            <SelectTrigger className="h-8 rounded-lg bg-muted/20 border-border/40 text-xs font-medium">
                                                 <SelectValue placeholder="Todas las categorías" />
                                             </SelectTrigger>
-                                            <SelectContent className="rounded-2xl">
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="all" className="text-xs font-bold">Todas las categorías</SelectItem>
                                                 {CATEGORIES.map((cat) => (
-                                                    <SelectItem key={cat} value={cat} className="text-xs font-semibold">
+                                                    <SelectItem key={cat} value={cat} className="text-xs">
                                                         {cat}
                                                     </SelectItem>
                                                 ))}
@@ -1825,13 +1814,13 @@ function AccountingContent() {
                                     </div>
 
                                     {/* Filter by Expense Type */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Tipo de Gasto</Label>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tipo de Gasto</Label>
                                         <Select value={expenseTypeFilter} onValueChange={(val: any) => setExpenseTypeFilter(val)}>
-                                            <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/50 text-xs font-bold">
+                                            <SelectTrigger className="h-8 rounded-lg bg-muted/20 border-border/40 text-xs font-medium">
                                                 <SelectValue placeholder="Todos los tipos" />
                                             </SelectTrigger>
-                                            <SelectContent className="rounded-2xl">
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="all" className="text-xs font-bold">Todos los tipos</SelectItem>
                                                 <SelectItem value="reinversion" className="text-xs font-semibold text-blue-500">Reinversión (Inventario)</SelectItem>
                                                 <SelectItem value="operativo" className="text-xs font-semibold text-orange-500">Gastos Operativos</SelectItem>
@@ -1840,25 +1829,25 @@ function AccountingContent() {
                                     </div>
 
                                     {/* Filter by Attachment */}
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Factura Adjunta</Label>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Factura Adjunta</Label>
                                         <Select value={expenseHasReceiptFilter} onValueChange={(val: any) => setExpenseHasReceiptFilter(val)}>
-                                            <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/50 text-xs font-bold">
+                                            <SelectTrigger className="h-8 rounded-lg bg-muted/20 border-border/40 text-xs font-medium">
                                                 <SelectValue placeholder="Todos los comprobantes" />
                                             </SelectTrigger>
-                                            <SelectContent className="rounded-2xl">
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="all" className="text-xs font-bold">Todos</SelectItem>
-                                                <SelectItem value="with_receipt" className="text-xs font-semibold text-green-500">📎 Con Factura/Imagen</SelectItem>
+                                                <SelectItem value="with_receipt" className="text-xs font-semibold text-green-500">Con Factura/Imagen</SelectItem>
                                                 <SelectItem value="without_receipt" className="text-xs font-semibold text-muted-foreground">Sin Comprobante</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
-                                    <div className="pt-2 flex justify-end">
+                                    <div className="pt-1">
                                         <Button 
                                             size="sm" 
                                             onClick={() => setIsFilterPopoverOpen(false)}
-                                            className="w-full bg-primary text-primary-foreground font-black text-xs h-9 rounded-xl uppercase tracking-wider"
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 rounded-lg uppercase tracking-wider"
                                         >
                                             Aplicar Filtros
                                         </Button>
@@ -1868,8 +1857,8 @@ function AccountingContent() {
                         </div>
 
                         {/* Quick Filter Badges / Chips */}
-                        <div className="flex flex-wrap items-center gap-2 pt-1 overflow-x-auto pb-1 scrollbar-none">
-                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mr-1">Rápidos:</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mr-1">Rápidos:</span>
                             
                             <button
                                 onClick={() => {
@@ -1878,10 +1867,10 @@ function AccountingContent() {
                                     setExpenseHasReceiptFilter('all');
                                 }}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
                                     !hasActiveExpenseFilters && !expenseSearchQuery
-                                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                        : "bg-muted/20 hover:bg-muted/40 text-muted-foreground border-border/40"
+                                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                                        : "bg-card/60 hover:bg-muted/40 text-muted-foreground border-border/40"
                                 )}
                             >
                                 Todos ({filteredExpenses.length})
@@ -1890,133 +1879,125 @@ function AccountingContent() {
                             <button
                                 onClick={() => setExpenseCategoryFilter(expenseCategoryFilter === 'Inventario' ? 'all' : 'Inventario')}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
                                     expenseCategoryFilter === 'Inventario'
-                                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                                         : "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20"
                                 )}
                             >
-                                📦 Inventario
+                                Inventario
                             </button>
 
                             <button
                                 onClick={() => setExpenseTypeFilter(expenseTypeFilter === 'operativo' ? 'all' : 'operativo')}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
                                     expenseTypeFilter === 'operativo'
-                                        ? "bg-orange-500 text-white border-orange-600 shadow-sm"
+                                        ? "bg-orange-600 text-white border-orange-600 shadow-sm"
                                         : "bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border-orange-500/20"
                                 )}
                             >
-                                ⚙️ Operativos
+                                Operativos
                             </button>
 
                             <button
                                 onClick={() => setExpenseHasReceiptFilter(expenseHasReceiptFilter === 'with_receipt' ? 'all' : 'with_receipt')}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
                                     expenseHasReceiptFilter === 'with_receipt'
-                                        ? "bg-green-500 text-white border-green-600 shadow-sm"
-                                        : "bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20"
+                                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20"
                                 )}
                             >
-                                📎 Con Factura
+                                Con Factura
                             </button>
 
                             {hasActiveExpenseFilters && (
                                 <button
                                     onClick={clearExpenseFilters}
-                                    className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-destructive bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 transition-all ml-auto flex items-center gap-1"
+                                    className="px-2 py-1 rounded-lg text-[10px] font-bold text-destructive hover:bg-destructive/10 border border-destructive/20 transition-all ml-auto flex items-center gap-1"
                                 >
-                                    <X className="h-3 w-3" /> Limpiar Filtros
+                                    <X className="h-3 w-3" /> Limpiar
                                 </button>
                             )}
                         </div>
-
-                        {/* Results Counter Banner */}
-                        {hasActiveExpenseFilters && (
-                            <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground font-semibold">
-                                <span>
-                                    Mostrando <strong className="text-foreground">{searchedAndFilteredExpenses.length}</strong> de <strong className="text-foreground">{filteredExpenses.length}</strong> gastos este mes
-                                </span>
-                            </div>
-                        )}
                     </div>
 
                     <div className="space-y-4">
                         {/* Desktop Table View */}
-                        <div className="hidden md:block overflow-hidden rounded-3xl border border-border/50 shadow-xl bg-card">
+                        <div className="hidden md:block overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm">
                             <Table>
-                                <TableHeader className="bg-muted/30">
-                                    <TableRow className="border-none">
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest py-5">Fecha</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest py-5">Descripción</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest py-5">Proveedor</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest py-5">Categoría</TableHead>
-                                        <TableHead className="text-right font-black uppercase text-[10px] tracking-widest py-5 pr-8">Monto</TableHead>
+                                <TableHeader className="bg-muted/20 border-b border-border/40">
+                                    <TableRow className="border-none hover:bg-transparent">
+                                        <TableHead className="font-bold uppercase text-[10px] tracking-wider py-3 text-muted-foreground">Fecha</TableHead>
+                                        <TableHead className="font-bold uppercase text-[10px] tracking-wider py-3 text-muted-foreground">Descripción</TableHead>
+                                        <TableHead className="font-bold uppercase text-[10px] tracking-wider py-3 text-muted-foreground">Proveedor</TableHead>
+                                        <TableHead className="font-bold uppercase text-[10px] tracking-wider py-3 text-muted-foreground">Categoría</TableHead>
+                                        <TableHead className="text-right font-bold uppercase text-[10px] tracking-wider py-3 text-muted-foreground pr-6">Monto</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loadingExpenses ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-48 text-center"><LoadingLogo size="sm" /></TableCell>
+                                            <TableCell colSpan={6} className="h-36 text-center"><LoadingLogo size="sm" /></TableCell>
                                         </TableRow>
                                     ) : searchedAndFilteredExpenses.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="h-36 text-center text-muted-foreground font-bold">
-                                                {hasActiveExpenseFilters ? (
-                                                    <div className="flex flex-col items-center justify-center gap-2 py-4">
-                                                        <p className="text-sm text-foreground">No se encontraron gastos con los filtros aplicados</p>
+                                        <TableRow className="hover:bg-transparent">
+                                            <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">
+                                                <div className="flex flex-col items-center justify-center gap-2 py-4">
+                                                    <Receipt className="h-8 w-8 text-muted-foreground/30" />
+                                                    <p className="text-xs font-medium text-muted-foreground">
+                                                        {hasActiveExpenseFilters ? 'No se encontraron gastos con los filtros aplicados' : 'No hay gastos registrados este mes'}
+                                                    </p>
+                                                    {hasActiveExpenseFilters && (
                                                         <Button 
                                                             variant="outline" 
                                                             size="sm" 
                                                             onClick={clearExpenseFilters}
-                                                            className="rounded-xl font-black text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10"
+                                                            className="rounded-lg font-bold text-xs gap-1 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10 h-7"
                                                         >
-                                                            <X className="h-3.5 w-3.5" /> Limpiar filtros
+                                                            <X className="h-3 w-3" /> Limpiar filtros
                                                         </Button>
-                                                    </div>
-                                                ) : (
-                                                    <span className="italic">No hay registros este mes</span>
-                                                )}
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         searchedAndFilteredExpenses.map((expense) => (
                                             <TableRow
                                                 key={expense.id}
-                                                className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/30"
+                                                className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/20"
                                                 onClick={() => {
                                                     setSelectedExpenseForDetails(expense);
                                                     setIsDetailsOpen(true);
                                                 }}
                                             >
-                                                <TableCell className="text-[11px] font-bold text-muted-foreground">
+                                                <TableCell className="text-xs font-semibold text-muted-foreground">
                                                     {expense.date && isValid(expense.date) ? format(expense.date, 'dd/MM/yyyy') : '-'}
                                                 </TableCell>
-                                                <TableCell className="font-bold text-sm tracking-tight">
-                                                    <div className="flex items-center gap-2">
+                                                <TableCell className="font-bold text-xs tracking-tight">
+                                                    <div className="flex items-center gap-1.5">
                                                         <span>{expense.description}</span>
                                                         {expense.image_url && (
-                                                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 text-[9px] font-black uppercase border border-green-500/20">
-                                                                📎 Factura
+                                                            <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-bold uppercase border border-emerald-500/20">
+                                                                Factura
                                                             </span>
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-[11px] font-black uppercase text-primary/70">{expense.supplier_name || 'N/A'}</TableCell>
+                                                <TableCell className="text-xs font-medium text-foreground">{expense.supplier_name || '-'}</TableCell>
                                                 <TableCell>
-                                                    <span className={`inline-flex px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${isReinvestment(expense.category) ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
+                                                    <span className={`inline-flex px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${isReinvestment(expense.category) ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
                                                         {expense.category}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="text-right font-black text-base pr-8">
-                                                    ${(expense.amount || 0).toLocaleString()}
+                                                <TableCell className="text-right font-black text-xs pr-6">
+                                                    RD$ {(expense.amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                                 </TableCell>
                                                 <TableCell onClick={(e) => e.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteExpense(expense.id)}>
-                                                        <Trash2 className="h-4 w-4" />
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteExpense(expense.id)}>
+                                                        <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -2026,23 +2007,24 @@ function AccountingContent() {
                             </Table>
                         </div>
 
-                        {/* Mobile Card View - PREMIER DESIGN */}
-                        <div className="md:hidden space-y-4">
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-2.5">
                             {loadingExpenses ? (
-                                <div className="p-12 flex justify-center"><LoadingLogo size="sm" /></div>
+                                <div className="p-8 flex justify-center"><LoadingLogo size="sm" /></div>
                             ) : searchedAndFilteredExpenses.length === 0 ? (
-                                <div className="p-8 text-center bg-card rounded-3xl border border-dashed border-border/60 space-y-3">
-                                    <p className="text-xs font-black uppercase text-muted-foreground tracking-wider">
-                                        {hasActiveExpenseFilters ? 'Sin resultados para estos filtros' : 'Sin registros este mes'}
+                                <div className="p-6 text-center bg-card/40 rounded-2xl border border-dashed border-border/40 space-y-2">
+                                    <Receipt className="h-6 w-6 text-muted-foreground/30 mx-auto" />
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        {hasActiveExpenseFilters ? 'Sin resultados para estos filtros' : 'Sin gastos este mes'}
                                     </p>
                                     {hasActiveExpenseFilters && (
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
                                             onClick={clearExpenseFilters}
-                                            className="rounded-xl font-black text-xs gap-1 text-primary border-primary/30"
+                                            className="rounded-lg font-bold text-xs gap-1 text-emerald-500 border-emerald-500/30 h-7"
                                         >
-                                            <X className="h-3.5 w-3.5" /> Limpiar Filtros
+                                            <X className="h-3 w-3" /> Limpiar
                                         </Button>
                                     )}
                                 </div>
@@ -2050,51 +2032,49 @@ function AccountingContent() {
                                 searchedAndFilteredExpenses.map((expense) => (
                                     <div
                                         key={expense.id}
-                                        className="bg-muted/10 border border-border/50 rounded-3xl p-5 space-y-4 shadow-sm relative overflow-hidden group active:bg-muted/20 cursor-pointer transition-all hover:border-green-500/30"
+                                        className="bg-card/40 border border-border/40 rounded-xl p-3.5 space-y-2.5 shadow-sm active:bg-muted/20 cursor-pointer transition-all"
                                         onClick={() => {
                                             setSelectedExpenseForDetails(expense);
                                             setIsDetailsOpen(true);
                                         }}
                                     >
                                         <div className="flex justify-between items-start">
-                                            <div className="space-y-1">
-                                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                                            <div className="space-y-0.5">
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase">
                                                     {expense.date && isValid(expense.date) ? format(expense.date, 'dd MMM yyyy', { locale: es }) : '-'}
                                                 </span>
-                                                <h4 className="font-black text-lg leading-tight tracking-tight">{expense.description}</h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
-                                                        <Building2 className="h-2.5 w-2.5 text-primary" />
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase text-primary/80 tracking-wider">
+                                                <h4 className="font-bold text-sm leading-tight text-foreground">{expense.description}</h4>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <Building2 className="h-3 w-3 text-muted-foreground" />
+                                                    <span className="text-[10px] text-muted-foreground">
                                                         {expense.supplier_name || 'Sin Proveedor'}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="text-right flex flex-col items-end">
-                                                <span className="text-xl font-black text-foreground tracking-tighter">${(expense.amount || 0).toLocaleString()}</span>
-                                                <span className={`mt-1 inline-flex px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter ${isReinvestment(expense.category) ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
+                                                <span className="text-base font-black text-foreground">RD$ {(expense.amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                                <span className={`mt-0.5 inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${isReinvestment(expense.category) ? 'bg-blue-500/10 text-blue-400' : 'bg-orange-500/10 text-orange-400'}`}>
                                                     {expense.category}
                                                 </span>
                                             </div>
                                         </div>
                                         
-                                        <div className="flex justify-between items-center pt-3 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex gap-2">
+                                        <div className="flex justify-between items-center pt-2 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex gap-1.5">
                                                 {expense.image_url && (
-                                                    <span className="text-[9px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-lg">
-                                                        📎 Con Factura
+                                                    <span className="text-[8px] font-bold uppercase text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                                                        Factura
                                                     </span>
                                                 )}
                                                 {expense.invoice_number && (
-                                                    <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted border border-border/30 px-2 py-0.5 rounded-lg">
+                                                    <span className="text-[8px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                                                         #{expense.invoice_number}
                                                     </span>
                                                 )}
                                             </div>
-                                            <Button variant="ghost" size="sm" className="h-8 px-3 rounded-xl text-destructive hover:bg-destructive/10 gap-2" onClick={() => handleDeleteExpense(expense.id)}>
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                                <span className="text-[10px] font-black uppercase">Eliminar</span>
+                                            <Button variant="ghost" size="sm" className="h-6 px-2 rounded-lg text-destructive hover:bg-destructive/10 gap-1 text-[10px] font-bold" onClick={() => handleDeleteExpense(expense.id)}>
+                                                <Trash2 className="h-3 w-3" />
+                                                Eliminar
                                             </Button>
                                         </div>
                                     </div>
