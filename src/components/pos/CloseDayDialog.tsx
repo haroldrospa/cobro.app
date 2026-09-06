@@ -412,465 +412,421 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             />
             <DialogContent 
                 hideCloseButton 
-                className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl w-full h-[90vh] p-0 overflow-hidden bg-background/95 backdrop-blur-2xl border-border flex flex-col rounded-[2rem]"
+                className="max-w-[95vw] sm:max-w-4xl lg:max-w-5xl w-full h-[90vh] max-h-[660px] p-0 overflow-hidden bg-background/95 backdrop-blur-2xl border-border/40 flex flex-col rounded-3xl shadow-2xl"
                 centerOnMobile={true}
             >
-                <div className="bg-gradient-to-b from-green-500/10 via-green-500/5 to-transparent p-5 pb-1">
-                    <DialogHeader className="flex flex-row items-center justify-between space-y-0">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-green-500/20 p-2 rounded-xl">
-                                    <Lock className="h-5 w-5 text-green-500" />
-                                </div>
-                                <div>
-                                    <DialogTitle className="text-2xl font-black text-foreground tracking-tight">
-                                        Control de Caja
-                                    </DialogTitle>
-                                    <DialogDescription className="text-muted-foreground text-[10px] font-medium flex items-center gap-2">
-                                        <Clock className="h-2.5 w-2.5" />
-                                        Apertura: {activeSession ? format(new Date(activeSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es }) : '-'}
-                                    </DialogDescription>
-                                </div>
-                            </div>
+                {/* Header with integrated tabs */}
+                <div className="px-5 py-3 border-b border-border/40 bg-gradient-to-r from-green-500/10 via-transparent to-transparent flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-green-500/20 p-2 rounded-xl text-green-500">
+                            <Lock className="h-4 w-4" />
                         </div>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-full bg-muted hover:bg-accent text-muted-foreground">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <DialogTitle className="text-lg font-black text-foreground tracking-tight">
+                                    Control de Caja
+                                </DialogTitle>
+                                {activeSession && (
+                                    <Badge variant="outline" className="text-[10px] font-semibold text-muted-foreground border-border/40 py-0 h-5 gap-1">
+                                        <Clock className="h-2.5 w-2.5 text-green-500" />
+                                        {format(new Date(activeSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}
+                                    </Badge>
+                                )}
+                            </div>
+                            <DialogDescription className="sr-only">Cierre de sesión y arqueo de caja</DialogDescription>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
+                            <TabsList className="bg-muted/80 p-0.5 rounded-xl h-8">
+                                <TabsTrigger value="close" className="rounded-lg text-xs font-bold px-3 h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
+                                    Cierre de Sesión
+                                </TabsTrigger>
+                                <TabsTrigger value="history" className="rounded-lg text-xs font-bold px-3 h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
+                                    Historial
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+                        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground">
                             <X className="h-4 w-4" />
                         </Button>
-                    </DialogHeader>
+                    </div>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full flex-1 flex flex-col overflow-hidden px-6 pb-6">
-                    <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start bg-muted p-1 rounded-2xl h-12 mb-6 sm:grid sm:grid-cols-2">
-                        <TabsTrigger value="close" className="rounded-xl font-bold data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
-                            Cierre de Sesión
-                        </TabsTrigger>
-                        <TabsTrigger value="history" className="rounded-xl font-bold data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
-                            Historial
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="close" className="mt-0 flex-1 overflow-y-auto pr-1 no-scrollbar outline-none">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
-                            <div className="space-y-2 flex flex-col h-full">
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="bg-muted/60 border border-border/40 p-3 rounded-2xl flex flex-col justify-between h-[4.5rem] backdrop-blur-sm">
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Wallet className="h-3 w-3" />
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/80">Fondo Inicial</span>
-                                        </div>
-                                        <p className="text-lg font-black text-foreground">RD$ {stats.initialCash.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <TabsContent value="close" className="m-0 p-4 flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-3.5 outline-none">
+                        {/* Left Column: Financial Overview */}
+                        <div className="lg:col-span-7 flex flex-col justify-between gap-2.5 min-h-0 h-full overflow-hidden">
+                            {/* 4 Stats Cards in 1 Row */}
+                            <div className="grid grid-cols-4 gap-2 shrink-0">
+                                <div className="bg-card/60 border border-border/40 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
+                                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                                        <Wallet className="h-3 w-3" />
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80">Fondo</span>
                                     </div>
-                                    <div className="bg-green-500/10 border border-green-500/10 p-3 rounded-2xl flex flex-col justify-between h-[4.5rem] backdrop-blur-sm">
-                                        <div className="flex items-center gap-2 text-green-500">
-                                            <TrendingUp className="h-3 w-3" />
-                                            <span className="text-[8px] font-black uppercase tracking-widest">Ingresos Caja</span>
-                                        </div>
-                                        <p className="text-lg font-black text-green-500">RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div className="bg-muted/60 border border-border/40 p-3 rounded-2xl flex flex-col justify-between h-[4.5rem] backdrop-blur-sm">
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Calculator className="h-3 w-3" />
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/80">Ventas Totales</span>
-                                        </div>
-                                        <p className="text-lg font-black text-foreground">RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div className="bg-red-500/10 border border-red-500/10 p-3 rounded-2xl flex flex-col justify-between h-[4.5rem] backdrop-blur-sm">
-                                        <div className="flex items-center gap-2 text-red-500">
-                                            <TrendingDown className="h-3 w-3" />
-                                            <span className="text-[8px] font-black uppercase tracking-widest">Salidas Caja</span>
-                                        </div>
-                                        <p className="text-lg font-black text-red-500">RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
+                                    <p className="text-xs font-black text-foreground truncate">RD$ {stats.initialCash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
                                 </div>
+                                <div className="bg-card/60 border border-border/40 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
+                                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                                        <Calculator className="h-3 w-3" />
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80">Ventas</span>
+                                    </div>
+                                    <p className="text-xs font-black text-foreground truncate">RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
+                                </div>
+                                <div className="bg-green-500/10 border border-green-500/20 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
+                                    <div className="flex items-center gap-1.5 text-green-500">
+                                        <TrendingUp className="h-3 w-3" />
+                                        <span className="text-[9px] font-bold uppercase tracking-wider">Entradas</span>
+                                    </div>
+                                    <p className="text-xs font-black text-green-500 truncate">RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
+                                </div>
+                                <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
+                                    <div className="flex items-center gap-1.5 text-red-500">
+                                        <TrendingDown className="h-3 w-3" />
+                                        <span className="text-[9px] font-bold uppercase tracking-wider">Salidas</span>
+                                    </div>
+                                    <p className="text-xs font-black text-red-500 truncate">RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
+                                </div>
+                            </div>
 
-                                <div className="bg-muted/60 border border-border/40 p-3 rounded-2xl backdrop-blur-sm">
-                                    <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                            {/* Middle Details: Breakdown + Active Shifts/Movements */}
+                            <div className="grid grid-cols-2 gap-2.5 flex-1 min-h-0 overflow-hidden">
+                                {/* Card 1: Desglose por Método */}
+                                <div className="bg-card/60 border border-border/40 p-3 rounded-xl flex flex-col justify-between overflow-hidden">
+                                    <div className="flex items-center gap-1.5 text-muted-foreground border-b border-border/30 pb-1.5">
                                         <FileText className="h-3 w-3" />
-                                        <span className="text-[8px] font-black uppercase tracking-widest">Desglose por Método</span>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider">Desglose Métodos</span>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-medium text-foreground">Efectivo</span>
-                                            <span className="text-xs font-bold text-foreground">RD$ {stats.cashSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <div className="space-y-1.5 py-1">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-muted-foreground font-medium">Efectivo</span>
+                                            <span className="font-bold text-foreground">RD$ {stats.cashSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-medium text-foreground">Tarjeta</span>
-                                            <span className="text-xs font-bold text-foreground">RD$ {stats.cardSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-muted-foreground font-medium">Tarjeta</span>
+                                            <span className="font-bold text-foreground">RD$ {stats.cardSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-medium text-foreground">Transferencia</span>
-                                            <span className="text-xs font-bold text-foreground">RD$ {stats.transferSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-muted-foreground font-medium">Transferencia</span>
+                                            <span className="font-bold text-foreground">RD$ {stats.transferSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-medium text-foreground">Crédito / Otros</span>
-                                            <span className="text-xs font-bold text-foreground">RD$ {stats.otherSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-muted-foreground font-medium">Crédito / Otros</span>
+                                            <span className="font-bold text-foreground">RD$ {stats.otherSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                                         </div>
+                                    </div>
+                                    <div className="pt-1.5 border-t border-border/30 flex justify-between items-center text-[10px] text-muted-foreground">
+                                        <span>Total Facturas:</span>
+                                        <span className="font-bold text-foreground">{stats.salesCount}</span>
                                     </div>
                                 </div>
 
-                                {sessionMovements.length > 0 && (
-                                    <div className="bg-muted/60 border border-border/40 p-3 rounded-2xl backdrop-blur-sm">
-                                        <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                                            <Wallet className="h-3 w-3" />
-                                            <span className="text-[8px] font-black uppercase tracking-widest">Detalle de Movimientos</span>
+                                {/* Card 2: Turnos & Movimientos */}
+                                <div className="bg-card/60 border border-border/40 p-3 rounded-xl flex flex-col min-h-0 overflow-hidden">
+                                    <div className="flex items-center justify-between border-b border-border/30 pb-1.5">
+                                        <div className="flex items-center gap-1.5 text-green-500">
+                                            <Clock className="h-3 w-3" />
+                                            <span className="text-[9px] font-bold uppercase tracking-wider">Turnos Abiertos</span>
                                         </div>
-                                        <div className="space-y-2 max-h-24 overflow-y-auto no-scrollbar">
-                                            {sessionMovements.map(m => (
-                                                <div key={m.id} className="flex justify-between items-center">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-medium text-foreground line-clamp-1">{m.reason || (m.type === 'deposit' ? 'Ingreso' : 'Salida')}</span>
-                                                        <span className="text-[8px] text-muted-foreground font-bold uppercase">{format(new Date(m.created_at), 'hh:mm a')}</span>
-                                                    </div>
-                                                    <span className={cn("text-[11px] font-bold", m.type === 'deposit' ? "text-green-500" : "text-red-500")}>
-                                                        {m.type === 'deposit' ? '+' : '-'} RD$ {Number(m.amount).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <Badge variant="outline" className="text-[9px] py-0 h-4 border-green-500/30 text-green-500 font-bold">
+                                            {openSessions.length} Activos
+                                        </Badge>
                                     </div>
-                                )}
 
-                                <div className="bg-muted/60 border border-border/40 p-3 rounded-2xl backdrop-blur-sm">
-                                    <div className="flex items-center gap-2 mb-2 text-green-500">
-                                        <Clock className="h-3 w-3" />
-                                        <span className="text-[8px] font-black uppercase tracking-widest">Turnos Abiertos</span>
-                                    </div>
-                                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 py-1.5">
                                         {isLoading ? (
-                                            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
-                                                <RefreshCcw className="h-4 w-4 animate-spin mb-2 opacity-20" />
-                                                <p className="text-[8px] uppercase tracking-widest opacity-20 font-black">Cargando...</p>
+                                            <div className="flex items-center justify-center py-4 text-muted-foreground">
+                                                <RefreshCcw className="h-3 w-3 animate-spin mr-1.5 opacity-50" />
+                                                <span className="text-[9px]">Cargando...</span>
                                             </div>
                                         ) : openSessions.length > 0 ? (
                                             openSessions.map((session: any) => (
                                                 <div key={session.id} className={cn(
-                                                    "flex justify-between items-center bg-muted p-3 rounded-2xl border transition-all hover:bg-accent",
-                                                    session.id === activeSession?.id ? "border-green-500/40 bg-green-500/10" : "border-border/40"
+                                                    "flex items-center justify-between p-1.5 rounded-lg border text-xs transition-all",
+                                                    session.id === activeSession?.id ? "border-green-500/30 bg-green-500/5" : "border-border/30 bg-muted/40"
                                                 )}>
-                                                    <div className="flex items-center gap-3">
-                                                         <div className={cn(
-                                                             "h-10 w-10 rounded-full flex items-center justify-center font-black text-xs border relative",
-                                                             session.id === activeSession?.id ? "bg-green-500 text-white border-green-400" : "bg-muted text-muted-foreground border-border"
-                                                         )}>
-                                                             {(session.opener?.full_name || 'U').charAt(0)}
-                                                             <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-border rounded-full" />
-                                                         </div>
-                                                         <div className="flex flex-col">
-                                                             <div className="flex items-center gap-2">
-                                                                 <span className="text-xs font-bold text-foreground leading-none">{session.opener?.full_name || 'Cajero'}</span>
-                                                                 <span className="text-[7px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest border border-border/40">
-                                                                     {session.opener?.role || 'Cajero'}
-                                                                 </span>
-                                                                 {session.id === activeSession?.id && <span className="text-[7px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase shadow-lg shadow-green-500/20">Tú</span>}
-                                                             </div>
-                                                             <span className="text-[9px] text-muted-foreground font-medium mt-1">
-                                                                 Abierto hace {Math.floor((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60 * 60))}h {Math.floor(((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60)) % 60)}m
-                                                             </span>
-                                                         </div>
-                                                    </div>
-                                                    <div className="flex flex-col items-end gap-1.5">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <div className="h-1 w-1 bg-green-500 rounded-full animate-pulse" />
-                                                            <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">En Línea</span>
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <div className={cn(
+                                                            "h-6 w-6 rounded-full flex items-center justify-center font-bold text-[9px] shrink-0",
+                                                            session.id === activeSession?.id ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
+                                                        )}>
+                                                            {(session.opener?.full_name || 'U').charAt(0)}
                                                         </div>
-                                                        <span className="text-[11px] font-black text-foreground bg-muted/50 px-2.5 py-1 rounded-lg border border-border/40 shadow-inner">
-                                                            RD$ {getSessionTotal(session).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                        <div className="truncate flex flex-col">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="font-bold truncate text-[11px]">{session.opener?.full_name || 'Cajero'}</span>
+                                                                {session.id === activeSession?.id && <span className="text-[7px] bg-green-500 text-white px-1 rounded-full font-black">TÚ</span>}
+                                                            </div>
+                                                            <span className="text-[8px] text-muted-foreground">
+                                                                {Math.floor((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60 * 60))}h {Math.floor(((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60)) % 60)}m
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <span className="text-[10px] font-bold text-foreground">
+                                                            RD$ {getSessionTotal(session).toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                         </span>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="sm" 
-                                                            className="h-6 px-2 text-[8px] font-black uppercase text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                if (!confirm(`¿Estás seguro de cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
-                                                                
-                                                                try {
-                                                                    const sessionUserId = session.opener?.id || (typeof session.opened_by === 'object' && session.opened_by !== null ? session.opened_by.id : session.opened_by) || session.user_id;
-                                                                    
-                                                                    // 1. Eliminar automáticamente tickets delta de cocina (ventas fantasmas)
+                                                        {session.id !== activeSession?.id && (
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                className="h-5 px-1 text-[8px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!confirm(`¿Cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
                                                                     try {
-                                                                        await supabase
-                                                                            .from('open_orders')
-                                                                            .delete()
-                                                                            .eq('store_id', userData?.id)
-                                                                            .eq('profile_id', sessionUserId)
-                                                                            .ilike('notes', '[ACTUALIZADO]%');
-                                                                    } catch (cleanupErr) {
-                                                                        console.error('Error cleaning up delta tickets:', cleanupErr);
+                                                                        const sessionUserId = session.opener?.id || (typeof session.opened_by === 'object' && session.opened_by !== null ? session.opened_by.id : session.opened_by) || session.user_id;
+                                                                        const { error } = await supabase
+                                                                            .from('cash_sessions')
+                                                                            .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: currentUserProfile?.id })
+                                                                            .eq('id', session.id);
+                                                                        if (error) throw error;
+                                                                        queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
+                                                                        queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
+                                                                        toast({ title: 'Turno cerrado' });
+                                                                    } catch (err: any) {
+                                                                        toast({ variant: 'destructive', title: 'Error', description: err.message });
                                                                     }
-
-                                                                    // Verificación de ventas abiertas (excluyendo tickets delta)
-                                                                    const { count, error: countError } = await supabase
-                                                                        .from('open_orders')
-                                                                        .select('id', { count: 'exact', head: true })
-                                                                        .eq('store_id', userData?.id)
-                                                                        .eq('profile_id', sessionUserId)
-                                                                        .eq('payment_status', 'pending')
-                                                                        .eq('source', 'pos')
-                                                                        .or('notes.is.null,notes.not.ilike.[ACTUALIZADO]%');
-                                                                        
-                                                                    if (countError) throw countError;
-                                                                    
-                                                                    if (count && count > 0) {
-                                                                        toast({ 
-                                                                            variant: 'destructive', 
-                                                                            title: 'Ventas abiertas pendientes', 
-                                                                            description: `No se puede cerrar. ${session.opener?.full_name || 'El cajero'} tiene ${count} venta(s) abierta(s).` 
-                                                                        });
-                                                                        return;
-                                                                    }
-
-                                                                    const { error } = await supabase
-                                                                        .from('cash_sessions')
-                                                                        .update({ 
-                                                                            status: 'closed', 
-                                                                            closed_at: new Date().toISOString(),
-                                                                            closed_by: currentUserProfile?.id 
-                                                                        })
-                                                                        .eq('id', session.id);
-                                                                    
-                                                                    if (error) throw error;
-                                                                    queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
-                                                                    queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
-                                                                    toast({ title: 'Turno cerrado', description: 'El turno se ha cerrado correctamente.' });
-                                                                } catch (err: any) {
-                                                                    toast({ variant: 'destructive', title: 'Error', description: err.message });
-                                                                }
-                                                            }}
-                                                        >
-                                                            Cerrar Turno
-                                                        </Button>
+                                                                }}
+                                                            >
+                                                                Cerrar
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))
                                         ) : (
-                                            <p className="text-[10px] text-muted-foreground text-center py-2 italic">No hay otros turnos abiertos.</p>
+                                            <p className="text-[10px] text-muted-foreground text-center py-2 italic">Sin otros turnos.</p>
                                         )}
                                     </div>
-                                </div>
 
-                                <Card className="bg-muted border-border rounded-2xl overflow-hidden mt-auto">
-                                    <CardContent className="p-3">
-                                        <div className="bg-muted/50 rounded-xl p-3 border border-border/40 shadow-inner text-center">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">Efectivo Generado Esperado</span>
-                                                <CheckCircle className="h-3 w-3 text-green-500" />
-                                            </div>
-                                            <p className="text-3xl font-black text-green-500 tracking-tighter leading-none">
-                                                RD$ {stats.expectedCash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                            </p>
+                                    {sessionMovements.length > 0 && (
+                                        <div className="pt-1.5 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground">
+                                            <span>Movimientos de caja:</span>
+                                            <span className="font-bold text-foreground">{sessionMovements.length} registradas</span>
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                    )}
+                                </div>
                             </div>
 
-                            <div className="space-y-3 bg-muted/30 border border-border/40 p-5 rounded-3xl flex flex-col h-full">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center px-1">
-                                        <Label className="text-base font-black text-foreground italic tracking-tight">Declaración de Efectivo</Label>
-                                        <Button variant="outline" size="sm" onClick={() => setShowCashCount(true)} className="h-7 gap-1.5 bg-muted border-border text-[9px] font-bold rounded-lg active:scale-95 transition-all">
-                                            <Calculator className="h-3 w-3 text-green-500" /> Conteo
-                                        </Button>
+                            {/* Bottom Hero: Expected Cash */}
+                            <div className="bg-gradient-to-r from-green-500/15 via-green-500/10 to-transparent border border-green-500/20 p-3 rounded-xl flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-green-500/20 p-1.5 rounded-lg text-green-500">
+                                        <CheckCircle className="h-4 w-4" />
                                     </div>
-                                    <div className="relative group">
-                                        <div className="absolute inset-0 bg-green-500/5 blur-2xl group-focus-within:bg-green-500/10 transition-all rounded-xl" />
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500/50 text-lg font-black">RD$</span>
-                                            <Input
-                                                id="actualCash"
-                                                type="number"
-                                                placeholder="0.00"
-                                                className="pl-14 h-12 text-2xl font-black bg-muted/50 border-border/40 rounded-xl focus-visible:ring-green-500/30 text-foreground placeholder:text-muted-foreground/50 transition-all"
-                                                value={actualCash}
-                                                onChange={(e) => setActualCash(e.target.value)}
-                                            />
-                                        </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider">Efectivo Esperado en Caja</p>
+                                        <p className="text-[10px] text-muted-foreground">Fondo + Ventas Efectivo + Entradas - Salidas</p>
                                     </div>
-                                    <p className="text-[9px] text-muted-foreground text-center font-medium">Solo monto de ventas y entradas. No incluya el fondo inicial.</p>
+                                </div>
+                                <p className="text-2xl font-black text-green-500 tracking-tight">
+                                    RD$ {stats.expectedCash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Right Column: Declaration & Closing Actions */}
+                        <div className="lg:col-span-5 bg-card/40 border border-border/40 p-3.5 rounded-2xl flex flex-col justify-between gap-2.5 min-h-0 h-full overflow-hidden">
+                            {/* Declaration Header & Input */}
+                            <div className="space-y-2 shrink-0">
+                                <div className="flex justify-between items-center">
+                                    <Label className="text-xs font-black text-foreground uppercase tracking-wider">Declaración de Efectivo</Label>
+                                    <Button variant="outline" size="sm" onClick={() => setShowCashCount(true)} className="h-6 gap-1 bg-background/80 border-border/60 text-[9px] font-bold rounded-lg active:scale-95 transition-all px-2">
+                                        <Calculator className="h-2.5 w-2.5 text-green-500" /> Conteo
+                                    </Button>
                                 </div>
 
-                                <AnimatePresence>
-                                    {actualCash && (
-                                        <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className={cn("p-4 rounded-2xl border backdrop-blur-sm", difference === 0 ? "bg-green-500/10 border-green-500/20" : difference > 0 ? "bg-blue-500/10 border-blue-500/20" : "bg-red-500/10 border-red-500/20")}>
-                                            <div className="flex justify-between items-center mb-0.5">
-                                                <span className="font-bold text-muted-foreground text-[10px]">Diferencia de Caja:</span>
-                                                <span className={cn("font-black text-xl tracking-tight", difference === 0 ? "text-green-500" : difference > 0 ? "text-blue-500" : "text-red-500")}>
-                                                    {difference > 0 ? '+' : ''}RD$ {Math.abs(difference).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <p className={cn("text-center text-[8px] font-black uppercase tracking-widest", difference === 0 ? "text-green-500" : difference > 0 ? "text-blue-500" : "text-red-500")}>
-                                                {difference === 0 ? '¡Cuadre Perfecto!' : difference < 0 ? 'Faltante de Efectivo' : 'Sobrante en Caja'}
-                                            </p>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500/60 text-sm font-black">RD$</span>
+                                    <Input
+                                        id="actualCash"
+                                        type="number"
+                                        placeholder="0.00"
+                                        className="pl-11 h-10 text-lg font-black bg-background/80 border-border/60 rounded-xl focus-visible:ring-green-500/30 text-foreground placeholder:text-muted-foreground/40"
+                                        value={actualCash}
+                                        onChange={(e) => setActualCash(e.target.value)}
+                                    />
+                                </div>
 
-                                {blockingOrders.length > 0 && (
-                                    <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl space-y-3">
-                                        <div className="flex items-center justify-between gap-2 text-red-500">
-                                            <div className="flex items-center gap-2">
-                                                <Lock className="h-4 w-4 shrink-0" />
-                                                <span className="text-xs font-black uppercase tracking-widest">Ventas Pendientes ({blockingOrders.length})</span>
+                                {/* Compact Difference Indicator */}
+                                {actualCash ? (
+                                    <div className={cn(
+                                        "p-2 rounded-xl border flex items-center justify-between text-xs transition-all",
+                                        difference === 0 ? "bg-green-500/10 border-green-500/20 text-green-500" :
+                                        difference > 0 ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                                        "bg-red-500/10 border-red-500/20 text-red-500"
+                                    )}>
+                                        <div className="flex items-center gap-1 font-bold text-[10px]">
+                                            <span>{difference === 0 ? '¡Cuadre Perfecto!' : difference < 0 ? 'Faltante:' : 'Sobrante:'}</span>
+                                        </div>
+                                        <span className="font-black text-sm">
+                                            {difference > 0 ? '+' : ''}RD$ {Math.abs(difference).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <p className="text-[9px] text-muted-foreground text-center italic">Ingresa el total contado de ventas y entradas.</p>
+                                )}
+                            </div>
+
+                            {/* Middle section: Blocking Orders or Notes */}
+                            <div className="flex-1 min-h-0 flex flex-col justify-center gap-2 overflow-hidden">
+                                {blockingOrders.length > 0 ? (
+                                    <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl space-y-1.5 flex-1 min-h-0 flex flex-col justify-between">
+                                        <div className="flex items-center justify-between text-red-500">
+                                            <div className="flex items-center gap-1.5">
+                                                <Lock className="h-3 w-3 shrink-0" />
+                                                <span className="text-[10px] font-black uppercase">Ventas Pendientes ({blockingOrders.length})</span>
                                             </div>
                                             <Button
                                                 size="sm"
                                                 variant="destructive"
-                                                className="h-6 px-2 text-[10px] font-bold gap-1 rounded-lg shrink-0"
+                                                className="h-5 px-1.5 text-[8px] font-bold gap-1 rounded-md"
                                                 onClick={async () => {
-                                                    if (!confirm(`¿Eliminar los ${blockingOrders.length} pedidos pendientes? Esta acción no se puede deshacer.`)) return;
+                                                    if (!confirm(`¿Eliminar los ${blockingOrders.length} pedidos pendientes?`)) return;
                                                     try {
                                                         const ids = blockingOrders.map(o => o.id);
                                                         await supabase.from('open_order_items').delete().in('order_id', ids);
                                                         await supabase.from('open_orders').delete().in('id', ids);
                                                         setBlockingOrders([]);
-                                                        toast({ title: 'Pedidos eliminados', description: 'Se eliminaron todos los pedidos pendientes.' });
+                                                        toast({ title: 'Pedidos eliminados' });
                                                     } catch (err: any) {
                                                         toast({ variant: 'destructive', title: 'Error', description: err.message });
                                                     }
                                                 }}
                                             >
-                                                <Trash2 className="h-3 w-3" />
-                                                Cancelar Todos
+                                                <Trash2 className="h-2.5 w-2.5" /> Cancelar Todos
                                             </Button>
                                         </div>
-                                        <p className="text-[10px] text-muted-foreground font-medium">Debes cobrar o cancelar estos pedidos antes de finalizar el día:</p>
-                                        <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
+                                        <div className="space-y-1 max-h-20 overflow-y-auto no-scrollbar">
                                             {blockingOrders.map(order => (
-                                                <div key={order.id} className="flex justify-between items-center bg-muted/60 border border-border/40 p-2.5 rounded-xl gap-2">
-                                                    <div className="flex flex-col min-w-0 flex-1">
-                                                        <span className="text-xs font-bold text-foreground truncate">{order.customer_name || 'Cliente sin nombre'}</span>
-                                                        <span className="text-[9px] text-muted-foreground">RD$ {Number(order.total || 0).toLocaleString()} · #{order.order_number}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 shrink-0">
-                                                        {onGoToPOS && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                className="h-7 px-2 text-[9px] font-black uppercase text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 gap-1"
-                                                                onClick={() => {
-                                                                    onClose();
-                                                                    onGoToPOS(order.id, order.customer_name, order.order_number);
-                                                                }}
-                                                            >
-                                                                <ShoppingCart className="h-3 w-3" />
-                                                                Cobrar
-                                                            </Button>
-                                                        )}
+                                                <div key={order.id} className="flex justify-between items-center bg-background/60 p-1.5 rounded-lg text-[10px]">
+                                                    <span className="font-bold truncate text-foreground flex-1">{order.customer_name || 'Sin nombre'}</span>
+                                                    <span className="text-muted-foreground font-semibold px-1">RD$ {Number(order.total || 0).toLocaleString()}</span>
+                                                    {onGoToPOS && (
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
-                                                            className="h-7 px-2 text-[9px] font-black uppercase text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                                            onClick={async () => {
-                                                                if (!confirm(`¿Cancelar el pedido "${order.customer_name}" por RD$ ${Number(order.total || 0).toLocaleString()}?`)) return;
-                                                                try {
-                                                                    await supabase.from('open_order_items').delete().eq('order_id', order.id);
-                                                                    await supabase.from('open_orders').delete().eq('id', order.id);
-                                                                    setBlockingOrders(prev => prev.filter(o => o.id !== order.id));
-                                                                    toast({ title: 'Pedido cancelado', description: `"${order.customer_name}" eliminado.` });
-                                                                } catch (err: any) {
-                                                                    toast({ variant: 'destructive', title: 'Error', description: err.message });
-                                                                }
+                                                            className="h-5 px-1 text-[8px] font-bold text-green-500"
+                                                            onClick={() => {
+                                                                onClose();
+                                                                onGoToPOS(order.id, order.customer_name, order.order_number);
                                                             }}
                                                         >
-                                                            <Trash2 className="h-3 w-3" />
+                                                            Cobrar
                                                         </Button>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
-                                )}
+                                ) : null}
 
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center gap-2 px-1">
-                                        <FileText className="h-3 w-3 text-muted-foreground" />
-                                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Notas</Label>
+                                <div className="space-y-1">
+                                    <Label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                        <FileText className="h-2.5 w-2.5" /> Observaciones / Notas
+                                    </Label>
+                                    <Input 
+                                        placeholder="Escribe aquí observaciones del cierre (opcional)..." 
+                                        className="h-8 bg-background/60 border-border/40 rounded-lg text-xs" 
+                                        value={notes} 
+                                        onChange={(e) => setNotes(e.target.value)} 
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Bottom: Options and Action Buttons */}
+                            <div className="space-y-2 shrink-0 pt-1 border-t border-border/30">
+                                <div className="flex items-center justify-between bg-muted/40 px-2.5 py-1 rounded-lg border border-border/30">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1 cursor-pointer" onClick={() => setDownloadPdf(!downloadPdf)}>
+                                            <Checkbox id="pdf-opt" checked={downloadPdf} onCheckedChange={(c) => setDownloadPdf(!!c)} className="w-3 h-3 border-border data-[state=checked]:bg-green-600" />
+                                            <Label htmlFor="pdf-opt" className="text-[9px] font-bold text-muted-foreground cursor-pointer">PDF</Label>
+                                        </div>
+                                        <div className="flex items-center gap-1 cursor-pointer" onClick={() => setSendEmail(!sendEmail)}>
+                                            <Checkbox id="email-opt" checked={sendEmail} onCheckedChange={(c) => setSendEmail(!!c)} className="w-3 h-3 border-border data-[state=checked]:bg-green-600" />
+                                            <Label htmlFor="email-opt" className="text-[9px] font-bold text-muted-foreground cursor-pointer">Email</Label>
+                                        </div>
                                     </div>
-                                    <Input placeholder="Observaciones..." className="h-9 bg-muted border-border/40 rounded-lg text-[11px] italic" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                                    <div className="flex items-center gap-1 cursor-pointer" onClick={() => setPrintReport(!printReport)}>
+                                        <Checkbox id="print-opt" checked={printReport} onCheckedChange={(c) => setPrintReport(!!c)} className="w-3 h-3 border-border data-[state=checked]:bg-green-600" />
+                                        <Label htmlFor="print-opt" className="text-[9px] font-bold text-muted-foreground cursor-pointer">Ticket</Label>
+                                    </div>
                                 </div>
 
-                                <div className="space-y-2 mt-auto">
-                                    <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border border-border/40">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <Checkbox id="pdf-opt" checked={downloadPdf} onCheckedChange={(c) => setDownloadPdf(!!c)} className="border-border data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 w-3.5 h-3.5" />
-                                                <Label htmlFor="pdf-opt" className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter cursor-pointer">PDF</Label>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <Checkbox id="email-opt" checked={sendEmail} onCheckedChange={(c) => setSendEmail(!!c)} className="border-border data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 w-3.5 h-3.5" />
-                                                <Label htmlFor="email-opt" className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter cursor-pointer">Email</Label>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Checkbox id="print-opt" checked={printReport} onCheckedChange={(c) => setPrintReport(!!c)} className="border-border data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 w-3.5 h-3.5" />
-                                            <Label htmlFor="print-opt" className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter cursor-pointer">Ticket</Label>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button variant="ghost" className="flex-1 h-10 rounded-xl font-black text-muted-foreground hover:text-foreground transition-all uppercase tracking-widest text-[9px]" onClick={onClose}>Cancelar</Button>
-                                        <Button className="flex-[2] h-10 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-xs" disabled={!actualCash || closeSession.isPending} onClick={handleCloseDay}>
-                                            {closeSession.isPending ? 'Cerrando...' : 'FINALIZAR DIA'}
-                                        </Button>
-                                    </div>
+                                <div className="flex gap-2">
+                                    <Button variant="ghost" className="flex-1 h-9 rounded-xl font-bold text-muted-foreground hover:text-foreground text-[10px] uppercase tracking-wider" onClick={onClose}>
+                                        Cancelar
+                                    </Button>
+                                    <Button 
+                                        className="flex-[2] h-9 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-xs tracking-wider uppercase shadow-md shadow-green-600/20" 
+                                        disabled={!actualCash || closeSession.isPending} 
+                                        onClick={handleCloseDay}
+                                    >
+                                        {closeSession.isPending ? 'Cerrando...' : 'FINALIZAR DÍA'}
+                                    </Button>
                                 </div>
                             </div>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="history" className="flex-1 outline-none">
-                        <Card className="bg-muted border-border rounded-[2.5rem] overflow-hidden">
-                            <CardContent className="p-0">
-                                <ScrollArea className="h-[60vh] px-6 py-4">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow className="border-border/40 hover:bg-transparent">
-                                                <TableHead className="text-muted-foreground font-black uppercase text-[10px] tracking-widest">Fecha & Hora</TableHead>
-                                                <TableHead className="text-muted-foreground font-black uppercase text-[10px] tracking-widest">Responsable</TableHead>
-                                                <TableHead className="text-muted-foreground font-black uppercase text-[10px] tracking-widest text-right">Fondo</TableHead>
-                                                <TableHead className="text-muted-foreground font-black uppercase text-[10px] tracking-widest text-right">Real</TableHead>
-                                                <TableHead className="text-muted-foreground font-black uppercase text-[10px] tracking-widest text-right">Diferencia</TableHead>
+                    {/* History Tab */}
+                    <TabsContent value="history" className="m-0 p-4 flex-1 min-h-0 overflow-hidden outline-none">
+                        <div className="bg-card/40 border border-border/40 rounded-2xl overflow-hidden h-full flex flex-col">
+                            <ScrollArea className="flex-1 h-full px-4 py-2">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-border/40 hover:bg-transparent">
+                                            <TableHead className="text-muted-foreground font-black uppercase text-[9px] tracking-wider">Fecha & Hora</TableHead>
+                                            <TableHead className="text-muted-foreground font-black uppercase text-[9px] tracking-wider">Responsable</TableHead>
+                                            <TableHead className="text-muted-foreground font-black uppercase text-[9px] tracking-wider text-right">Fondo</TableHead>
+                                            <TableHead className="text-muted-foreground font-black uppercase text-[9px] tracking-wider text-right">Real</TableHead>
+                                            <TableHead className="text-muted-foreground font-black uppercase text-[9px] tracking-wider text-right">Diferencia</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {history.filter(h => h.status === 'closed').length === 0 ? (
+                                            <TableRow className="border-transparent">
+                                                <TableCell colSpan={5} className="text-center py-16">
+                                                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                                        <FileText className="h-8 w-8 opacity-30" />
+                                                        <p className="font-bold text-sm">No hay cierres registrados aún</p>
+                                                    </div>
+                                                </TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {history.filter(h => h.status === 'closed').length === 0 ? (
-                                                <TableRow className="border-transparent">
-                                                    <TableCell colSpan={5} className="text-center py-20">
-                                                        <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                                                            <div className="p-6 bg-muted rounded-full"><FileText className="h-12 w-12" /></div>
-                                                            <p className="font-bold text-lg">No hay cierres registrados aún</p>
+                                        ) : (
+                                            history.filter(h => h.status === 'closed').map((closing: any) => (
+                                                <TableRow key={closing.id} className="border-border/30 hover:bg-muted/30 transition-colors">
+                                                    <TableCell className="py-2.5">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-foreground font-bold text-xs">{closing.closed_at ? format(new Date(closing.closed_at), 'dd MMM, yyyy', { locale: es }) : '-'}</span>
+                                                            <span className="text-muted-foreground text-[9px] uppercase font-semibold">{closing.closed_at ? format(new Date(closing.closed_at), 'hh:mm a', { locale: es }) : '-'}</span>
                                                         </div>
                                                     </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center font-bold text-[9px] text-muted-foreground">
+                                                                {(closing.opener?.full_name || 'N').charAt(0)}
+                                                            </div>
+                                                            <span className="text-foreground font-medium text-xs">{closing.opener?.full_name || 'N/A'}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right text-muted-foreground font-bold text-xs">RD$ {(closing.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</TableCell>
+                                                    <TableCell className="text-right text-foreground font-black text-xs">RD$ {(closing.actual_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge className={cn("rounded-md px-1.5 h-5 font-bold text-[10px]", (closing.difference || 0) === 0 ? "bg-green-500/10 text-green-500 border-green-500/20" : (closing.difference || 0) > 0 ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-red-500/10 text-red-500 border-red-500/20")}>
+                                                            {(closing.difference || 0) > 0 ? '+' : ''}RD$ {(closing.difference || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                        </Badge>
+                                                    </TableCell>
                                                 </TableRow>
-                                            ) : (
-                                                history.filter(h => h.status === 'closed').map((closing: any) => (
-                                                    <TableRow key={closing.id} className="border-border/40 hover:bg-muted/30 transition-colors">
-                                                        <TableCell className="py-4">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-foreground font-bold">{closing.closed_at ? format(new Date(closing.closed_at), 'dd MMM, yyyy', { locale: es }) : '-'}</span>
-                                                                <span className="text-muted-foreground text-[10px] uppercase font-black tracking-tighter">{closing.closed_at ? format(new Date(closing.closed_at), 'hh:mm a', { locale: es }) : '-'}</span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center font-black text-[10px] text-muted-foreground">{(closing.opener?.full_name || 'N').charAt(0)}</div>
-                                                                <span className="text-foreground font-medium">{closing.opener?.full_name || 'N/A'}</span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right text-muted-foreground font-bold">RD$ {(closing.initial_cash || 0).toLocaleString()}</TableCell>
-                                                        <TableCell className="text-right text-foreground font-black text-lg">RD$ {(closing.actual_cash || 0).toLocaleString()}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Badge className={cn("rounded-lg px-2 h-7 font-black text-[11px]", (closing.difference || 0) === 0 ? "bg-green-500/10 text-green-500 border-green-500/20" : (closing.difference || 0) > 0 ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-red-500/10 text-red-500 border-red-500/20")}>
-                                                                {(closing.difference || 0) > 0 ? '+' : ''}RD$ {(closing.difference || 0).toLocaleString()}
-                                                            </Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </ScrollArea>
+                        </div>
                     </TabsContent>
                 </Tabs>
             </DialogContent>
