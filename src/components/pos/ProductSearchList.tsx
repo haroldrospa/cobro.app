@@ -87,19 +87,21 @@ const ProductItem = React.memo<ProductItemProps>(({
     <Card
       ref={itemRef}
       className={cn(
-        "group cursor-pointer relative overflow-hidden border-border/50 bg-card/60 transition-colors duration-150 hover:border-primary/40 hover:bg-card",
-        isOutOfStock ? "opacity-75 grayscale-[0.5]" : "",
-        viewMode === 'list' && "flex flex-row items-stretch h-20",
-        isFocused && "ring-2 ring-primary border-primary bg-card shadow-md z-10"
+        "group cursor-pointer relative overflow-hidden border-border/40 bg-card/40 transition-all duration-150 hover:border-primary/40 hover:bg-card hover:shadow-sm",
+        isOutOfStock ? "opacity-70 grayscale-[0.3]" : "",
+        viewMode === 'list' ? "flex flex-row items-center p-2.5 sm:p-3 min-h-[72px] gap-3 rounded-xl" : "rounded-xl",
+        isFocused && "ring-2 ring-primary border-primary bg-primary/5 shadow-md z-10"
       )}
       onClick={handleClick}
       style={viewMode === 'grid' ? { flex: '1 1 auto' } : undefined}
     >
       {/* Image Section */}
       <div className={cn(
-        "relative flex items-center justify-center overflow-hidden shrink-0 bg-secondary/20",
-        viewMode === 'list' ? "w-20 h-full" : "aspect-[4/3] w-full",
-        !product.image_url && "bg-muted/20"
+        "relative flex items-center justify-center overflow-hidden shrink-0",
+        viewMode === 'list' 
+          ? "w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-secondary/30 border border-border/40" 
+          : "aspect-[4/3] w-full bg-secondary/20",
+        !product.image_url && "bg-muted/15"
       )}>
         {product.image_url ? (
           <img
@@ -109,61 +111,59 @@ const ProductItem = React.memo<ProductItemProps>(({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="flex items-center justify-center text-muted-foreground/20">
-            <Package className="h-8 w-8" strokeWidth={1.5} />
+          <div className="flex items-center justify-center text-muted-foreground/30">
+            <Package className={cn(viewMode === 'list' ? "h-6 w-6" : "h-8 w-8")} strokeWidth={1.5} />
           </div>
         )}
 
-        {/* Stock Badges (Overlay on Image) — sin backdrop-blur: se repiten por
-            cada tarjeta de la grilla y ya tienen fondo casi opaco (90%), el
-            blur no se nota pero sí cuesta caro recomponerlo en cada render
-            en GPUs débiles (medido: ~800ms de frame trabado al agregar al
-            carrito, que re-renderiza toda la grilla visible). */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-          {(() => {
-            if (hasRecipeStock) {
-              if (avail <= 0) {
+        {/* Stock Badges (Overlay on Image) - ONLY in Grid Mode */}
+        {viewMode === 'grid' && (
+          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+            {(() => {
+              if (hasRecipeStock) {
+                if (avail <= 0) {
+                  return (
+                    <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-destructive/90">
+                      Agotado
+                    </Badge>
+                  );
+                }
+                if (avail <= 5) {
+                  return (
+                    <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 text-white border-0">
+                      {avail} disp.
+                    </Badge>
+                  );
+                }
+                return (
+                  <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-emerald-600/90 text-white border-0">
+                    {avail} disp.
+                  </Badge>
+                );
+              }
+              if (product.track_inventory !== false && product.stock <= 0) {
                 return (
                   <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-destructive/90">
                     Agotado
                   </Badge>
                 );
               }
-              if (avail <= 5) {
+              if (product.track_inventory !== false && product.stock < 10) {
                 return (
-                  <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 hover:bg-amber-600/90 text-white border-0">
-                    {avail} disp.
+                  <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 text-white border-0">
+                    Quedan {product.stock}
                   </Badge>
                 );
               }
-              return (
-                <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-emerald-600/90 hover:bg-emerald-700/90 text-white border-0">
-                  {avail} disp.
-                </Badge>
-              );
-            }
-            if (product.track_inventory !== false && product.stock <= 0) {
-              return (
-                <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-destructive/90">
-                  Agotado
-                </Badge>
-              );
-            }
-            if (product.track_inventory !== false && product.stock < 10) {
-              return (
-                <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 hover:bg-amber-600/90 text-white border-0">
-                  Quedan {product.stock}
-                </Badge>
-              );
-            }
-            return null;
-          })()}
-        </div>
+              return null;
+            })()}
+          </div>
+        )}
 
         {/* Category Badge overlay (bottom left of image) - Only in Grid */}
         {viewMode === 'grid' && product.category?.name && (
           <div className="absolute bottom-2 left-2 max-w-[80%]">
-            <Badge variant="secondary" className="shadow-sm px-1.5 h-4 text-[9px] font-medium bg-background/60 text-foreground/80 border-0 truncate max-w-full">
+            <Badge variant="secondary" className="shadow-sm px-1.5 h-4 text-[9px] font-medium bg-background/70 text-foreground/80 border-0 truncate max-w-full">
               {product.category.name}
             </Badge>
           </div>
@@ -172,67 +172,70 @@ const ProductItem = React.memo<ProductItemProps>(({
 
       {/* Content Section */}
       <div className={cn(
-        "flex flex-col justify-between",
-        viewMode === 'list' ? "flex-1 p-3" : "p-3 gap-2"
+        "flex min-w-0",
+        viewMode === 'list' 
+          ? "flex-1 items-center justify-between gap-3" 
+          : "flex-col p-3 gap-2 justify-between"
       )}>
-        {/* Top: Name & ID */}
-        <div className="space-y-1 min-w-0">
+        {/* Left/Top: Name & Details */}
+        <div className="space-y-1 min-w-0 flex-1">
           <h4 className={cn(
-            "font-medium tracking-tight text-foreground transition-colors group-hover:text-primary break-words min-w-0",
-            viewMode === 'list' ? "text-sm line-clamp-1" : "text-sm leading-tight line-clamp-2"
+            "font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary break-words min-w-0",
+            viewMode === 'list' ? "text-sm sm:text-base line-clamp-1" : "text-sm leading-tight line-clamp-2"
           )}>
             {product.name}
           </h4>
 
           {viewMode === 'list' && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {product.category?.name && <span>{product.category.name}</span>}
+              {product.category?.name && (
+                <span className="px-1.5 py-0.5 rounded bg-secondary/50 text-foreground/70 font-medium text-[11px]">
+                  {product.category.name}
+                </span>
+              )}
               {product.internal_code && (
-                <span className="flex items-center gap-0.5">
-                  <span className="opacity-50">#</span>{product.internal_code}
+                <span className="flex items-center gap-0.5 font-mono text-[11px] opacity-60">
+                  <span>#</span>{product.internal_code}
                 </span>
               )}
             </div>
           )}
         </div>
 
-        {/* Bottom: Price & Details */}
+        {/* Right/Bottom: Price & Stock Badge */}
         <div className={cn(
-          "flex items-center",
-          viewMode === 'list' ? "gap-4 justify-end mt-0" : "justify-between mt-auto pt-1"
+          "flex items-center shrink-0",
+          viewMode === 'list' ? "flex-col items-end gap-1" : "justify-between mt-auto pt-1"
         )}>
-          <div className="flex flex-col">
-            {viewMode === 'grid' && (
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider opacity-60">
-                {matchedBundle ? 'Precio Paquete' : 'Precio'}
-              </span>
-            )}
-            <div className="font-bold text-base md:text-lg text-primary leading-none flex items-center gap-1.5">
-              {(() => {
-                let displayPrice = product.price || 0;
-                if (matchedBundle) {
-                  const qty = Number(matchedBundle.quantity) || 1;
-                  const discount = Number(matchedBundle.discount_value) || 0;
-                  const type = matchedBundle.discount_type || 'percentage';
-                  if (discount > 0) {
-                    if (type === 'percentage') {
-                      displayPrice = product.price * (1 - discount / 100);
-                    } else {
-                      displayPrice = product.price - (discount / qty);
-                    }
+          {viewMode === 'grid' && (
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider opacity-60">
+              {matchedBundle ? 'Precio Paquete' : 'Precio'}
+            </span>
+          )}
+
+          <div className="font-bold text-base sm:text-lg text-emerald-500 font-mono leading-none flex items-center gap-1.5">
+            {(() => {
+              let displayPrice = product.price || 0;
+              if (matchedBundle) {
+                const qty = Number(matchedBundle.quantity) || 1;
+                const discount = Number(matchedBundle.discount_value) || 0;
+                const type = matchedBundle.discount_type || 'percentage';
+                if (discount > 0) {
+                  if (type === 'percentage') {
+                    displayPrice = product.price * (1 - discount / 100);
+                  } else {
+                    displayPrice = product.price - (discount / qty);
                   }
                 }
-                return `$${displayPrice.toFixed(2)}`;
-              })()}
-              
-              {matchedBundle && (
-                <div className="flex flex-col">
-                  <span className="text-[10px] line-through text-muted-foreground font-normal opacity-50">
-                    ${(product.price * (Number(matchedBundle.quantity) || 1)).toFixed(2)}
-                  </span>
-                </div>
-              )}
-            </div>
+              }
+              return `$${displayPrice.toFixed(2)}`;
+            })()}
+            
+            {matchedBundle && (
+              <span className="text-[10px] line-through text-muted-foreground font-normal opacity-50">
+                ${(product.price * (Number(matchedBundle.quantity) || 1)).toFixed(2)}
+              </span>
+            )}
           </div>
 
           {matchedBundle && (
@@ -242,26 +245,41 @@ const ProductItem = React.memo<ProductItemProps>(({
             </Badge>
           )}
 
+          {/* Clean Stock Pill in List Mode */}
           {viewMode === 'list' && (() => {
             if (hasRecipeStock) {
               return (
-                <div className="text-right">
-                  <span className={cn(
-                    "text-xs font-medium",
-                    avail <= 0 ? "text-destructive" : avail <= 5 ? "text-amber-500" : "text-emerald-600"
-                  )}>
-                    {avail} disp.
-                  </span>
-                </div>
+                <span className={cn(
+                  "text-[11px] font-medium px-2 py-0.5 rounded-full font-mono",
+                  avail <= 0 
+                    ? "bg-destructive/15 text-destructive font-semibold" 
+                    : avail <= 5 
+                    ? "bg-amber-500/15 text-amber-500" 
+                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {avail <= 0 ? "Agotado" : `${avail} disp.`}
+                </span>
               );
             }
-            if (product.track_inventory !== false && product.stock > 0) {
-              return (
-                <div className="text-right">
-                  <span className={cn("text-xs font-medium", product.stock < 10 ? "text-amber-500" : "text-emerald-600")}>
-                    {product.stock} un.
+            if (product.track_inventory !== false) {
+              if (product.stock <= 0) {
+                return (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-destructive/15 text-destructive font-mono">
+                    Agotado
                   </span>
-                </div>
+                );
+              }
+              return (
+                <span className={cn(
+                  "text-[11px] font-medium px-2 py-0.5 rounded-full font-mono",
+                  product.stock < 5 
+                    ? "bg-amber-500/15 text-amber-500 font-semibold" 
+                    : product.stock < 10
+                    ? "bg-amber-500/10 text-amber-500/90"
+                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {product.stock} un.
+                </span>
               );
             }
             return null;
