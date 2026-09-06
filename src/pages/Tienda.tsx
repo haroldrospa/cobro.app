@@ -738,8 +738,8 @@ const Tienda: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/70 dark:bg-zinc-950 font-sans text-slate-900 dark:text-zinc-100 pb-24 selection:bg-emerald-500/20 selection:text-emerald-600">
-      {/* Sleek Minimalist Header */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-zinc-800/60 transition-colors">
+      {/* Sleek Minimalist Header - Fixed on top */}
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-zinc-800/80 shadow-xs transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Brand Info */}
           <div className="flex items-center gap-3 min-w-0">
