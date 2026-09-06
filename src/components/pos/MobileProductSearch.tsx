@@ -74,7 +74,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [isVariablePriceDialogOpen, setIsVariablePriceDialogOpen] = useState(false);
   const [selectedVariableProduct, setSelectedVariableProduct] = useState<Product | null>(null);
-  const [visibleCount, setVisibleCount] = useState(24);
+  const [visibleCount, setVisibleCount] = useState(40);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
 
   const [isQuantityDialogOpen, setIsQuantityDialogOpen] = useState(false);
@@ -132,14 +132,14 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     }
 
     if (!rawTerm) {
-      return list.slice(0, 80);
+      return list;
     }
 
     const normTerm = normalizeText(rawTerm);
     const searchWords = normTerm.split(/\s+/).filter(Boolean);
 
     if (searchWords.length === 0) {
-      return list.slice(0, 80);
+      return list;
     }
 
     // Scoring and filtering products by relevance
@@ -204,9 +204,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
       return a.product._name_norm.localeCompare(b.product._name_norm);
     });
 
-    const result = scoredProducts.map(item => item.product);
-
-    return result.slice(0, 80);
+    return scoredProducts.map(item => item.product);
   }, [normalizedProducts, debouncedSearchTerm, selectedCategory, normalizeText]);
 
   // Slice results for infinite scrolling/performance
@@ -216,7 +214,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
 
   // Reset visible products on search or category filter change
   React.useEffect(() => {
-    setVisibleCount(24);
+    setVisibleCount(40);
   }, [debouncedSearchTerm, selectedCategory]);
 
   // Infinite scroll observer sentinel
@@ -226,10 +224,10 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && filteredProducts.length > visibleCount) {
-          setVisibleCount(prev => prev + 24);
+          setVisibleCount(prev => prev + 40);
         }
       },
-      { threshold: 0.1 }
+      { rootMargin: '300px', threshold: 0.05 }
     );
 
     observer.observe(loadMoreRef.current);
@@ -599,7 +597,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
               onQuantityClick={handleQuantityClick}
             />
           )}
-          {slicedProducts.length > visibleCount && (
+          {filteredProducts.length > visibleCount && (
             <div ref={loadMoreRef} className="py-4 flex justify-center items-center w-full">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 animate-pulse">
                 Cargando más productos...

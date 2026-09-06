@@ -456,12 +456,12 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     if (mode === 'classic' && !rawTerm) return [];
 
     // Catalog mode or while searching: Show results
-    if (!rawTerm) return normalizedProducts.slice(0, 60);
+    if (!rawTerm) return normalizedProducts;
 
     const normTerm = normalizeText(rawTerm);
     const searchWords = normTerm.split(/\s+/).filter(Boolean);
 
-    if (searchWords.length === 0) return normalizedProducts.slice(0, 60);
+    if (searchWords.length === 0) return normalizedProducts;
 
     // Scoring and filtering products by relevance
     const scoredProducts = normalizedProducts
@@ -558,7 +558,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
         : null,
     }));
 
-    return withBundles.slice(0, 60);
+    return withBundles;
   }, [normalizedProducts, debouncedSearchTerm, searchType, mode, normalizeText]);
 
   // Reset focused index when search results change
