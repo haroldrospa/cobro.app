@@ -470,47 +470,12 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               <span className="font-semibold">${totals.subtotal}</span>
             </div>
 
-            {/* Descuento con controles */}
-            <div className="flex justify-between items-center text-base md:text-lg gap-1">
-              <span className="shrink-0 font-medium">Desc.:</span>
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex rounded-md border border-border overflow-hidden shrink-0 h-6">
-                  <button
-                    onClick={() => handleDiscountTypeChange('percentage')}
-                    className={cn(
-                      "w-6 transition-colors flex items-center justify-center",
-                      globalDiscount.type === 'percentage'
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted hover:bg-muted/80"
-                    )}
-                    title="Descuento por porcentaje"
-                  >
-                    <Percent className="h-3 w-3" />
-                  </button>
-                  <button
-                    onClick={() => handleDiscountTypeChange('amount')}
-                    className={cn(
-                      "w-6 transition-colors flex items-center justify-center",
-                      globalDiscount.type === 'amount'
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted hover:bg-muted/80"
-                    )}
-                    title="Descuento por monto"
-                  >
-                    <DollarSign className="h-3 w-3" />
-                  </button>
-                </div>
-                <Input
-                  type="number"
-                  value={globalDiscount.value || ''}
-                  onChange={(e) => handleDiscountValueChange(parseFloat(e.target.value) || 0)}
-                  placeholder="0"
-                  className="w-14 h-6 text-sm px-1"
-                  min={0}
-                />
-                <span className="font-semibold text-destructive shrink-0 text-base md:text-lg text-right min-w-[30px]">-${totals.discount}</span>
+            {parseFloat(totals.discount) > 0 && (
+              <div className="flex justify-between text-base md:text-lg font-medium text-destructive">
+                <span>Desc.:</span>
+                <span className="font-semibold">-${totals.discount}</span>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-between text-base md:text-lg font-medium">
               <span>ITBIS:</span>
