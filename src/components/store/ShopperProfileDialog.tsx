@@ -954,99 +954,104 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
         );
     };
 
-    /* ── SETTINGS VIEW ── */
+    /* ── SETTINGS VIEW (Compact 100% Fit) ── */
     const renderSettings = () => (
-        <form onSubmit={handleSubmit(onSubmitSettings)} className="space-y-6">
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    <User className="h-3.5 w-3.5" /> Información Personal
+        <form onSubmit={handleSubmit(onSubmitSettings)} className="space-y-3">
+            {/* Section 1: Datos Personales */}
+            <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <User className="h-3 w-3" /> Información Personal
                 </div>
-                <Separator />
-                <div className="space-y-2">
-                    <Label htmlFor="s-name">Nombre y Apellido <span className="text-destructive">*</span></Label>
-                    <Input id="s-name" {...register('name', { required: true })} placeholder="Juan Pérez" className="h-11" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="s-cedula" className="flex items-center gap-1.5">
-                        <CreditCard className="h-3.5 w-3.5 text-primary" />
-                        Cédula <span className="text-destructive">*</span>
-                    </Label>
-                    <Input id="s-cedula" {...register('cedula', { required: true })}
-                        placeholder="000-0000000-0"
-                        className="h-11 font-mono tracking-widest text-lg"
-                        onChange={e => setValue('cedula', formatCedula(e.target.value))} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                        <Label htmlFor="s-phone">Teléfono <span className="text-destructive">*</span></Label>
-                        <Input id="s-phone" {...register('phone', { required: true })} placeholder="(809) 000-0000" className="h-11" />
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-0.5">
+                        <Label htmlFor="s-name" className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">
+                            Nombre <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="s-name" {...register('name', { required: true })} placeholder="Tu nombre" className="h-8 text-xs rounded-xl" />
                     </div>
-                    <div className="space-y-2">
-                        <Label>Email</Label>
+                    <div className="space-y-0.5">
+                        <Label htmlFor="s-cedula" className="text-[11px] font-bold text-slate-600 dark:text-zinc-400 flex items-center gap-1">
+                            <CreditCard className="h-3 w-3 text-emerald-500" /> Cédula <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="s-cedula" {...register('cedula', { required: true })}
+                            placeholder="000-0000000-0"
+                            className="h-8 font-mono text-xs rounded-xl"
+                            onChange={e => setValue('cedula', formatCedula(e.target.value))} />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-0.5">
+                        <Label htmlFor="s-phone" className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">
+                            Teléfono <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="s-phone" {...register('phone', { required: true })} placeholder="(809) 000-0000" className="h-8 text-xs rounded-xl" />
+                    </div>
+                    <div className="space-y-0.5">
+                        <Label className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">Email</Label>
                         <Input {...register('email')} type="email" readOnly={!!user}
-                            className={cn('h-11', user ? 'bg-muted cursor-not-allowed text-muted-foreground' : '')} />
+                            placeholder="tu@email.com"
+                            className={cn('h-8 text-xs rounded-xl', user ? 'bg-muted cursor-not-allowed text-muted-foreground' : '')} />
                     </div>
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" /> Punto de Entrega
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                    <Label>Nombre del punto (opcional)</Label>
-                    <Input {...register('locationLabel')} placeholder="Mi Casa, Trabajo..." className="h-11" />
+            {/* Section 2: Punto de Entrega */}
+            <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <MapPin className="h-3 w-3" /> Punto de Entrega
                 </div>
 
-                {/* GPS box */}
-                <div className={cn('rounded-xl border-2 p-4 space-y-3 transition-colors',
-                    hasGPS ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800'
-                        : 'border-dashed border-border bg-muted/20')}>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-semibold flex items-center gap-1.5">
-                                <Navigation className={cn('h-4 w-4', hasGPS ? 'text-emerald-500' : 'text-primary')} />
-                                Ubicación GPS <span className="text-destructive">*</span>
+                {/* Compact GPS Tile */}
+                <div className={cn('rounded-xl border p-2 transition-all flex items-center justify-between gap-2',
+                    hasGPS ? 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20'
+                        : 'border-dashed border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900/50')}>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className={cn('h-6 w-6 rounded-lg flex items-center justify-center shrink-0',
+                            hasGPS ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-zinc-800 text-slate-500')}>
+                            <Navigation className="h-3 w-3" />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                                {hasGPS ? (watchedLat ? `${watchedLat.toFixed(4)}, ${watchedLng?.toFixed(4)}` : 'GPS Confirmado') : 'Sin Ubicación GPS'}
                             </p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">Tu punto exacto de entrega</p>
+                            <p className="text-[9px] text-slate-400 dark:text-zinc-500 truncate">
+                                {hasGPS ? 'Punto fijado' : 'Fija tu punto para delivery'}
+                            </p>
                         </div>
-                        {hasGPS && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />}
                     </div>
-                    {hasGPS ? (
-                        <div className="space-y-2">
-                            <a href={`https://www.google.com/maps?q=${watchedLat},${watchedLng}`} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-2 p-2.5 bg-white dark:bg-background rounded-lg border text-xs font-mono text-emerald-700 dark:text-emerald-400 hover:opacity-80 transition-opacity">
-                                <MapPin className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                                {watchedLat?.toFixed(5)}, {watchedLng?.toFixed(5)}
-                                <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground" />
-                            </a>
-                            <Button type="button" variant="outline" size="sm" className="w-full text-xs" onClick={handleGetLocation} disabled={gettingLocation}>
-                                {gettingLocation ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Navigation className="h-3 w-3 mr-1" />}
-                                Actualizar ubicación
-                            </Button>
-                        </div>
-                    ) : (
-                        <Button type="button" className="w-full font-semibold" onClick={handleGetLocation} disabled={gettingLocation}>
-                            {gettingLocation ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Obteniendo...</>
-                                : <><Navigation className="h-4 w-4 mr-2" />Confirmar mi punto de entrega</>}
-                        </Button>
-                    )}
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant={hasGPS ? 'outline' : 'default'}
+                        className={cn("h-6 px-2 text-[10px] font-bold rounded-lg shrink-0", !hasGPS && "bg-emerald-600 hover:bg-emerald-500 text-white")}
+                        onClick={handleGetLocation}
+                        disabled={gettingLocation}
+                    >
+                        {gettingLocation ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : hasGPS ? 'Actualizar' : 'Fijar GPS'}
+                    </Button>
                 </div>
 
-                <div className="space-y-2">
-                    <Label>Dirección (referencia adicional)</Label>
-                    <Textarea {...register('address')} placeholder="Calle, número, sector..." className="resize-none min-h-[70px]" />
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-0.5">
+                        <Label className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">Nombre del punto</Label>
+                        <Input {...register('locationLabel')} placeholder="Ej: Mi Casa" className="h-8 text-xs rounded-xl" />
+                    </div>
+                    <div className="space-y-0.5">
+                        <Label className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">Referencia / Apto</Label>
+                        <Input {...register('notes')} placeholder="Apto 3B, timbre..." className="h-8 text-xs rounded-xl" />
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <Label>Notas para el repartidor</Label>
-                    <Input {...register('notes')} placeholder="Edificio blanco, 2do piso..." className="h-11" />
+
+                <div className="space-y-0.5">
+                    <Label className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">Dirección (Calle / Sector)</Label>
+                    <Input {...register('address')} placeholder="Calle y número..." className="h-8 text-xs rounded-xl" />
                 </div>
             </div>
 
-            <Button type="submit" className="w-full h-12 font-bold text-base" disabled={isSaving}>
-                {isSaving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</>
-                    : <><Save className="h-4 w-4 mr-2" />Guardar Cambios</>}
+            <Button type="submit" className="w-full h-9 font-black text-xs rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all" disabled={isSaving}>
+                {isSaving ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Guardando...</>
+                    : <><Save className="h-3 w-3 mr-1.5" />Guardar Cambios</>}
             </Button>
         </form>
     );
@@ -1055,45 +1060,43 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
     const renderLoggedIn = () => (
         <div className="flex flex-col h-full">
             {/* User header */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b bg-card/60 backdrop-blur-sm">
-                <div className="h-10 w-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-base shrink-0 shadow-md ring-2 ring-emerald-500/20">
+            <div className="flex items-center gap-2.5 px-4 py-2.5 border-b bg-card/60 backdrop-blur-sm">
+                <div className="h-8 w-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
                     {(user?.user_metadata?.full_name || currentProfile?.name || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-foreground truncate leading-tight">
+                    <p className="font-bold text-xs text-foreground truncate leading-tight">
                         {user?.user_metadata?.full_name || currentProfile?.name || 'Mi Cuenta'}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate leading-tight mt-0.5">{user?.email}</p>
+                    <p className="text-[10px] text-muted-foreground truncate leading-tight">{user?.email}</p>
                 </div>
                 <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-8 text-xs font-semibold rounded-xl text-muted-foreground hover:text-destructive hover:border-destructive/30 gap-1.5 shrink-0 px-3" 
+                    className="h-7 text-[11px] font-semibold rounded-lg text-muted-foreground hover:text-destructive hover:border-destructive/30 gap-1 shrink-0 px-2" 
                     onClick={handleSignOut}
                 >
-                    <LogOut className="h-3.5 w-3.5" /> Salir
+                    <LogOut className="h-3 w-3" /> Salir
                 </Button>
             </div>
 
             {/* Tab content */}
-            <ScrollArea className="flex-1 max-h-[calc(90dvh-170px)] sm:max-h-[480px]">
-                <div className="p-4 sm:p-5">
-                    <AnimatePresence mode="wait">
-                        {activeView === 'orders' && (
-                            <motion.div key="orders" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
-                                {renderOrders()}
-                            </motion.div>
-                        )}
-                        {activeView === 'settings' && (
-                            <motion.div key="settings" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}>
-                                {renderSettings()}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </ScrollArea>
+            <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto">
+                <AnimatePresence mode="wait">
+                    {activeView === 'orders' && (
+                        <motion.div key="orders" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
+                            {renderOrders()}
+                        </motion.div>
+                    )}
+                    {activeView === 'settings' && (
+                        <motion.div key="settings" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}>
+                            {renderSettings()}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
 
             {/* Bottom nav */}
             <div className="grid grid-cols-2 border-t bg-background">
@@ -1102,9 +1105,9 @@ export const ShopperProfileDialog: React.FC<ShopperProfileDialogProps> = ({
                     { view: 'settings' as ActiveView, icon: Settings, label: 'Configuración' },
                 ].map(({ view, icon: Icon, label }) => (
                     <button key={view} onClick={() => setActiveView(view)}
-                        className={cn('flex flex-col items-center gap-1 py-3 text-xs font-semibold transition-colors border-t-2',
+                        className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold transition-colors border-t-2',
                             activeView === view ? 'text-primary border-primary' : 'text-muted-foreground hover:text-foreground border-transparent')}>
-                        <Icon className="h-5 w-5" />
+                        <Icon className="h-4 w-4" />
                         {label}
                     </button>
                 ))}
