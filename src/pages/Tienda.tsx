@@ -938,35 +938,33 @@ const Tienda: React.FC = () => {
             )}
           </div>
 
-          {/* Minimalist Horizontal Scroll Categories */}
-          <ScrollArea className="w-full whitespace-nowrap pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6" type="scroll">
-            <div className="flex w-max space-x-2 py-1">
+          {/* Minimalist Horizontal Smooth Scroll Categories */}
+          <div className="w-full overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-2 pb-2 pt-1 -mx-4 px-4 sm:-mx-6 sm:px-6 touch-pan-x overscroll-x-contain">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 active:scale-95 ${
+                !selectedCategory
+                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                  : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-zinc-800'
+              }`}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Todos
+            </button>
+            {categories.map((cat) => (
               <button
-                onClick={() => setSelectedCategory(null)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  !selectedCategory
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 active:scale-95 ${
+                  selectedCategory === cat.id
                     ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
                     : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-zinc-800'
                 }`}
               >
-                <Tag className="h-3.5 w-3.5" />
-                Todos
+                <span>{cat.name}</span>
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    selectedCategory === cat.id
-                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                      : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-zinc-800'
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
+            ))}
+          </div>
         </section>
 
         {/* Minimalist Modern Product Grid */}
