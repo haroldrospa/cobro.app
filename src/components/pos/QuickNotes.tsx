@@ -203,11 +203,10 @@ const QuickNotesSection: React.FC = () => {
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState<Date>(new Date());
     const [isExpanded, setIsExpanded] = useState(true);
-    const [selectedSupplier, setSelectedSupplier] = useState<string>(''); // supplier name
+    const [selectedSupplier, setSelectedSupplier] = useState<string>('');
     const [supplierOpen, setSupplierOpen] = useState(false);
     const { toast } = useToast();
 
-    // When a supplier is selected, pre-fill the concept
     const handleSelectSupplier = (supplierName: string) => {
         setSelectedSupplier(supplierName);
         if (!name) setName(supplierName);
@@ -224,49 +223,62 @@ const QuickNotesSection: React.FC = () => {
             return;
         }
 
-        if (!name || !amount) {
+        if (!name.trim() || !amount) {
             toast({
                 title: "Campos requeridos",
-                description: "Por favor el nombre y el monto",
+                description: "Ingresa el concepto y el monto",
                 variant: "destructive"
             });
             return;
         }
 
         try {
-            await addNote(name, parseFloat(amount), format(date, 'yyyy-MM-dd'), selectedSupplier || undefined);
+            await addNote(name.trim(), parseFloat(amount), format(date, 'yyyy-MM-dd'), selectedSupplier || undefined);
             setName('');
             setAmount('');
             setDate(new Date());
             setSelectedSupplier('');
         } catch (error) {
-            // Error is handled in the mutation onSuccess/onError
+            // Error handled in mutation
         }
     };
 
     return (
-        <Card className="border-border/60 shadow-none bg-accent/20 overflow-hidden w-full">
+        <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden w-full transition-all">
+            {/* Minimalist Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-2.5 bg-accent/30 hover:bg-accent/40 transition-colors text-left"
+                className="w-full flex items-center justify-between px-3 py-2.5 bg-muted/20 hover:bg-muted/40 transition-colors text-left"
             >
                 <div className="flex items-center gap-2">
-                    <StickyNote className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notas y Pendientes de Pago</span>
+                    <div className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                        <StickyNote className="h-3 w-3" />
+                    </div>
+                    <span className="text-xs font-semibold text-foreground tracking-tight">Notas y Pendientes</span>
+                    {notes.length > 0 && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-secondary text-muted-foreground border border-border/40">
+                            {notes.length}
+                        </span>
+                    )}
                 </div>
-                {isExpanded ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                {isExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
             </button>
             
             {isExpanded && (
-                <CardContent className="p-2.5 space-y-2.5">
-                    {/* Supplier selector row */}
-                    <div className="pb-2 border-b border-border/30">
+                <div className="p-3 space-y-2.5">
+                    {/* Add Form Container */}
+                    <div className="space-y-2 bg-muted/20 p-2 rounded-lg border border-border/30">
+                        {/* Supplier Selector (Compact) */}
                         <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className={cn(
-                                        "w-full h-8 text-xs justify-between font-normal bg-background px-2",
+                                        "w-full h-7 text-[11px] justify-between font-normal bg-background/80 px-2 rounded-md border-border/40",
                                         !selectedSupplier && "text-muted-foreground"
                                     )}
                                 >
@@ -274,18 +286,17 @@ const QuickNotesSection: React.FC = () => {
                                         <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
                                         {selectedSupplier || "Proveedor (opcional)"}
                                     </span>
-                                    <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-50" />
+                                    <ChevronsUpDown className="h-2.5 w-2.5 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-64 p-0" align="start">
+                            <PopoverContent className="w-60 p-0" align="start">
                                 <Command>
                                     <CommandInput placeholder="Buscar proveedor..." className="h-8 text-xs" />
                                     <CommandList>
-                                        <CommandEmpty className="text-xs py-4 text-center text-muted-foreground">
+                                        <CommandEmpty className="text-xs py-3 text-center text-muted-foreground">
                                             No se encontraron proveedores.
                                         </CommandEmpty>
                                         <CommandGroup>
-                                            {/* Option to clear selection */}
                                             {selectedSupplier && (
                                                 <CommandItem
                                                     onSelect={() => {
@@ -313,45 +324,43 @@ const QuickNotesSection: React.FC = () => {
                                 </Command>
                             </PopoverContent>
                         </Popover>
-                    </div>
 
-                    {/* Note form row with flex layout to prevent grid blowout */}
-                    <div className="flex items-center gap-1.5 pb-2 border-b border-border/40">
-                        <div className="flex-1 min-w-0">
+                        {/* Concept, Amount, Date & Submit Row */}
+                        <div className="flex items-center gap-1.5">
                             <Input
-                                placeholder="Concepto"
+                                placeholder="Concepto..."
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="h-8 text-xs bg-background w-full"
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+                                className="h-7 text-xs bg-background/80 flex-1 min-w-0 rounded-md border-border/40"
                             />
-                        </div>
-                        <div className="w-20 shrink-0">
-                            <div className="relative">
-                                <span className="absolute left-1.5 top-2 text-muted-foreground/50 text-[10px]">$</span>
+
+                            <div className="relative w-18 shrink-0">
+                                <span className="absolute left-1.5 top-1.5 text-muted-foreground text-[10px]">$</span>
                                 <Input
                                     type="number"
-                                    placeholder="Monto"
+                                    placeholder="0"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
-                                    className="h-8 text-xs bg-background pl-3.5 pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full"
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+                                    className="h-7 text-xs bg-background/80 pl-3.5 pr-1 rounded-md border-border/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full font-medium"
                                 />
                             </div>
-                        </div>
-                        <div className="w-24 shrink-0">
+
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
-                                        variant={"outline"}
+                                        variant="outline"
                                         className={cn(
-                                            "w-full h-8 text-xs justify-start text-left font-normal bg-background px-1.5",
+                                            "h-7 text-[11px] px-1.5 rounded-md bg-background/80 border-border/40 shrink-0 font-normal",
                                             !date && "text-muted-foreground"
                                         )}
                                     >
-                                        <CalendarIcon className="mr-1 h-3 w-3 shrink-0" />
-                                        <span className="truncate">{date ? format(date, "dd/MM/yy", { locale: es }) : "Fecha"}</span>
+                                        <CalendarIcon className="h-3 w-3 text-muted-foreground mr-1 shrink-0" />
+                                        <span>{date ? format(date, "dd/MM", { locale: es }) : "Fecha"}</span>
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0" align="end">
                                     <Calendar
                                         mode="single"
                                         selected={date}
@@ -361,74 +370,94 @@ const QuickNotesSection: React.FC = () => {
                                     />
                                 </PopoverContent>
                             </Popover>
+
+                            <Button 
+                                size="icon" 
+                                className="h-7 w-7 shrink-0 rounded-md shadow-none" 
+                                onClick={handleAdd}
+                                disabled={isAdding || isLoading}
+                                title="Agregar pendiente"
+                            >
+                                {isAdding ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                            </Button>
                         </div>
-                        <Button 
-                            size="icon" 
-                            variant="default" 
-                            className="h-8 w-8 shrink-0 p-0" 
-                            onClick={handleAdd}
-                            disabled={isAdding || isLoading}
-                            title="Agregar pendiente"
-                        >
-                            {isAdding ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                        </Button>
                     </div>
 
+                    {/* Notes List */}
                     <div className={cn(
-                        notes.length > 0 || isLoading ? "max-h-40 overflow-y-auto overflow-x-hidden" : "h-0 overflow-hidden",
-                        "w-full pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
+                        notes.length > 0 || isLoading ? "max-h-44 overflow-y-auto" : "h-0 overflow-hidden",
+                        "w-full pr-0.5 space-y-1.5 scrollbar-thin"
                     )}>
                         {isLoading && (
-                            <div className="h-full flex items-center justify-center py-4">
-                                <RefreshCcw className="h-5 w-5 animate-spin text-primary/40" />
+                            <div className="flex items-center justify-center py-4">
+                                <RefreshCcw className="h-4 w-4 animate-spin text-primary/50" />
                             </div>
                         )}
                         {notes.map((note) => {
                             const today = format(new Date(), 'yyyy-MM-dd');
                             const isToday = note.dueDate === today;
                             const isOverdue = note.dueDate < today;
+
                             return (
-                                <div key={note.id} className={cn(
-                                    "flex items-center justify-between gap-1.5 p-2 rounded-md border transition-all w-full box-border",
-                                    isOverdue
-                                        ? "bg-destructive/10 border-destructive/40"
-                                        : isToday
-                                        ? "bg-primary/10 border-primary/40"
-                                        : "bg-background/50 border-border/30 hover:border-primary/30"
-                                )}>
-                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
+                                <div 
+                                    key={note.id} 
+                                    className={cn(
+                                        "group flex items-center justify-between gap-2 p-2 rounded-lg border transition-all text-xs",
+                                        isOverdue
+                                            ? "bg-destructive/[0.06] border-destructive/30 hover:border-destructive/50"
+                                            : isToday
+                                            ? "bg-primary/[0.06] border-primary/30 hover:border-primary/50"
+                                            : "bg-background/60 border-border/40 hover:border-border hover:bg-background/90"
+                                    )}
+                                >
+                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 min-w-0">
                                             {isOverdue && (
-                                                <span className="text-[9px] font-black uppercase bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded shrink-0">VENCIDO</span>
+                                                <span className="text-[9px] font-semibold uppercase bg-destructive/15 text-destructive px-1.5 py-0.2 rounded shrink-0">
+                                                    Vencido
+                                                </span>
                                             )}
                                             {isToday && !isOverdue && (
-                                                <span className="text-[9px] font-black uppercase bg-primary text-primary-foreground px-1.5 py-0.5 rounded shrink-0">HOY</span>
-                                            )}
-                                            <span className="text-xs font-bold text-foreground truncate">{note.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 min-w-0">
-                                            <span className="flex items-center gap-1 shrink-0"><CalendarIcon className="h-2.5 w-2.5" /> {format(parseISO(note.dueDate), 'dd/MM/yyyy')}</span>
-                                            {note.supplier_name && (
-                                                <span className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded font-medium min-w-0 truncate max-w-[120px]">
-                                                    <Building2 className="h-2.5 w-2.5 shrink-0" />
-                                                    <span className="truncate">{note.supplier_name}</span>
+                                                <span className="text-[9px] font-semibold uppercase bg-primary/15 text-primary px-1.5 py-0.2 rounded shrink-0">
+                                                    Hoy
                                                 </span>
+                                            )}
+                                            <span className="font-semibold text-foreground truncate">{note.name}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                            <span className="flex items-center gap-1 shrink-0">
+                                                <CalendarIcon className="h-2.5 w-2.5 opacity-70" />
+                                                {format(parseISO(note.dueDate), 'dd/MM/yyyy')}
+                                            </span>
+                                            {note.supplier_name && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="flex items-center gap-0.5 truncate max-w-[100px]">
+                                                        <Building2 className="h-2.5 w-2.5 opacity-70 shrink-0" />
+                                                        <span className="truncate">{note.supplier_name}</span>
+                                                    </span>
+                                                </>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-1 shrink-0 ml-1">
-                                        <span className={cn("text-xs md:text-sm font-black whitespace-nowrap", isOverdue ? "text-destructive" : "text-primary")}>
-                                            ${note.amount.toLocaleString()}
+
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <span className={cn(
+                                            "font-bold text-xs tabular-nums",
+                                            isOverdue ? "text-destructive" : "text-primary"
+                                        )}>
+                                            ${(note.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                         </span>
                                         <Button 
                                             size="icon" 
                                             variant="ghost" 
-                                            className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                                            className="h-6 w-6 p-0 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
                                             onClick={() => removeNote(note.id)}
                                             disabled={isRemoving}
                                             title="Eliminar"
                                         >
-                                            <Trash2 className="h-3.5 w-3.5" />
+                                            <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </div>
                                 </div>
@@ -436,39 +465,31 @@ const QuickNotesSection: React.FC = () => {
                         })}
                     </div>
 
+                    {/* Minimalist Summary Footer */}
                     {notes.length > 0 && (
-                        <div className="pt-2 border-t border-border/40 space-y-1.5">
-                            <div className={cn(
-                                "flex justify-between items-center px-2 py-1.5 rounded-md border transition-colors gap-2",
-                                todayTotal > 0 
-                                    ? "bg-primary/10 border-primary/30" 
-                                    : "bg-muted/50 border-border/20"
-                            )}>
-                                <span className={cn(
-                                    "text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 truncate",
-                                    todayTotal > 0 ? "text-primary" : "text-muted-foreground"
-                                )}>
-                                    <CalendarIcon className="h-3 w-3 shrink-0" /> Pagar Hoy / Vencido:
-                                </span>
-                                <span className={cn(
-                                    "text-sm md:text-base font-black whitespace-nowrap shrink-0",
-                                    todayTotal > 0 ? "text-primary" : "text-muted-foreground"
-                                )}>
-                                    ${todayTotal.toLocaleString()}
-                                </span>
-                            </div>
+                        <div className="pt-2 border-t border-border/40 space-y-1.5 text-xs">
+                            {todayTotal > 0 && (
+                                <div className="flex justify-between items-center px-2.5 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
+                                    <span className="text-[11px] font-medium flex items-center gap-1.5">
+                                        <CalendarIcon className="h-3 w-3" /> Pagar Hoy / Vencido:
+                                    </span>
+                                    <span className="font-bold tabular-nums">
+                                        ${todayTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            )}
                             
-                            <div className="flex justify-between items-center px-2 gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground/70 truncate">Monto Total General:</span>
-                                <span className="text-xs md:text-sm font-black text-foreground/70 whitespace-nowrap shrink-0">
-                                    ${totalNotes.toLocaleString()}
+                            <div className="flex justify-between items-center px-1 text-muted-foreground">
+                                <span className="text-[11px] font-medium">Total Pendientes:</span>
+                                <span className="font-bold text-foreground tabular-nums">
+                                    ${totalNotes.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                 </span>
                             </div>
                         </div>
                     )}
-                </CardContent>
+                </div>
             )}
-        </Card>
+        </div>
     );
 };
 
