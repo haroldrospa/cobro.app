@@ -57,6 +57,31 @@ export const useQuickNotes = () => {
         enabled: !!storeId && !!userId
     });
 
+    // ─── Realtime Subscription for Quick Notes ───
+    useEffect(() => {
+        if (!storeId) return;
+
+        const channel = supabase
+            .channel(`pos-quick-notes-realtime-${storeId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'pos_quick_notes',
+                    filter: `store_id=eq.${storeId}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['pos-quick-notes', storeId] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [storeId, queryClient]);
+
     const addMutation = useMutation({
         mutationFn: async ({ name, amount, dueDate, supplier_name }: Omit<QuickNote, 'id' | 'store_id'>) => {
             const currentStoreId = storeId;

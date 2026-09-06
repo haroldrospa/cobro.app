@@ -96,6 +96,42 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   // Filter out the currently loaded order
   const filteredOrders = orders.filter((order: any) => String(order.id) !== String(currentLoadedOrderId));
 
+  // ─── Realtime Subscription ───
+  React.useEffect(() => {
+    if (!isOpen || !userStore?.id) return;
+
+    const channel = supabase
+      .channel(`pos-open-orders-realtime-${userStore.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'open_orders',
+          filter: `store_id=eq.${userStore.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'open_order_items',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, userStore?.id, queryClient]);
+
   // ─── Delete mutation ───
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {

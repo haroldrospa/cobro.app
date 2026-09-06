@@ -51,6 +51,7 @@ export const useWebOrderNotifications = ({
           // Re-validate queries for any change
           queryClient.invalidateQueries({ queryKey: ['web-orders'] });
           queryClient.invalidateQueries({ queryKey: ['web-orders-count'] });
+          queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
 
           // Only skip if storeId is present and doesn't match
           if (storeId && newOrder.store_id !== storeId) return;
