@@ -438,8 +438,8 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             return rpcResult;
         }
     } catch (err: any) {
-        if (err && err.code === 'PGRST202') {
-            console.warn('🔄 RPC no encontrado. Usando fallback clásico de facturación por JS...');
+        if (err && (err.code === 'PGRST202' || err.code === '23505' || err.message?.includes('unique constraint') || err.message?.includes('duplicate'))) {
+            console.warn('🔄 RPC dio conflicto o no disponible. Usando fallback con recuperación automática de secuencia...', err);
         } else {
             console.error('❌ Error crítico en RPC de facturación:', err);
             throw err;
@@ -471,7 +471,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     }
 
     let attempts = 0;
-    const maxAttempts = 20;
+    const maxAttempts = 50;
     let finalSale = null;
     let highestTriedNumber = 0;
 

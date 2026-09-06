@@ -204,7 +204,6 @@ export const useStoreSettings = () => {
 
     const mergedSettings = { 
       ...uiDefaults,
-      bank_accounts: resolvedBankAccounts,
       ...cleanExistingSettings, 
       ...localSettings, 
       ...userPersistedSettings,
