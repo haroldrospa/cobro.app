@@ -413,6 +413,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
     },
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+      queryClient.refetchQueries({ queryKey: ['pos-open-orders'] });
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
       toast({
         title: existingOrderId ? "Pedido actualizado" : "Pedido guardado",

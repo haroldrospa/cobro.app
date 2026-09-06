@@ -55,7 +55,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
 
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, refetch: refetchOpenOrders } = useQuery({
     queryKey: ['pos-open-orders', userStore?.id],
     queryFn: async () => {
       if (!userStore?.id) return [];
@@ -86,19 +86,26 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
       if (error) throw error;
       // Excluir los tickets delta de cocina (notas que empiezan con [ACTUALIZADO])
       return (data || []).filter((order: any) => !order.notes?.startsWith('[ACTUALIZADO]'));
-
     },
-    enabled: isOpen && !!userStore?.id,
+    enabled: !!userStore?.id,
     staleTime: 0,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
+
+  // Refetch explicitly whenever the dialog opens
+  React.useEffect(() => {
+    if (isOpen && userStore?.id) {
+      refetchOpenOrders();
+    }
+  }, [isOpen, userStore?.id, refetchOpenOrders]);
 
   // Filter out the currently loaded order
   const filteredOrders = orders.filter((order: any) => String(order.id) !== String(currentLoadedOrderId));
 
-  // ─── Realtime Subscription ───
+  // ─── Realtime Subscription (always active for the store) ───
   React.useEffect(() => {
-    if (!isOpen || !userStore?.id) return;
+    if (!userStore?.id) return;
 
     const channel = supabase
       .channel(`pos-open-orders-realtime-${userStore.id}`)
@@ -130,7 +137,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen, userStore?.id, queryClient]);
+  }, [userStore?.id, queryClient]);
 
   // ─── Delete mutation ───
   const deleteOrderMutation = useMutation({

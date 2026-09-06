@@ -1308,6 +1308,7 @@ const POSContent: React.FC = () => {
       }
 
       queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+      queryClient.refetchQueries({ queryKey: ['pos-open-orders'] });
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
       queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
 
