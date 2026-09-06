@@ -5,7 +5,8 @@ import {
   Search, Sparkles, Tag, Filter, X, ChevronRight, Star, Percent,
   SlidersHorizontal, DollarSign, MapPin, User, ShoppingBag, Utensils, Home,
   Wallet, CreditCard, Smartphone, Building2, CheckCircle2, Navigation, UserPlus,
-  Facebook, Instagram, Twitter, Phone, Mail, AlertTriangle, LogIn, Heart, Moon, Sun
+  Facebook, Instagram, Twitter, Phone, Mail, AlertTriangle, LogIn, Heart, Moon, Sun,
+  Copy, Check, Landmark, Info
 } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import {
@@ -208,6 +209,17 @@ const Tienda: React.FC = () => {
   const [customerNotes, setCustomerNotes] = useState('');
   const [needsChange, setNeedsChange] = useState(false);
   const [amountPayingWith, setAmountPayingWith] = useState('');
+  const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
+
+  const handleCopyAccount = (accountNum: string) => {
+    navigator.clipboard.writeText(accountNum);
+    setCopiedAccount(accountNum);
+    toast({
+      title: 'Cuenta copiada',
+      description: `Número ${accountNum} copiado al portapapeles`
+    });
+    setTimeout(() => setCopiedAccount(null), 2500);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -259,6 +271,17 @@ const Tienda: React.FC = () => {
     : store?.store_settings;
   const shopType = (storeSettings as any)?.shop_type || 'default';
   const isRestaurant = shopType === 'restaurant' || shopType === 'restaurante';
+
+  const bankAccounts = useMemo(() => {
+    if (storeSettings?.bank_accounts && Array.isArray(storeSettings.bank_accounts) && storeSettings.bank_accounts.length > 0) {
+      return storeSettings.bank_accounts;
+    }
+    const transferMethod = storeSettings?.payment_methods?.find((m: any) => m.id === 'transfer' || m.id === 'bank');
+    if (transferMethod?.bank_accounts && Array.isArray(transferMethod.bank_accounts) && transferMethod.bank_accounts.length > 0) {
+      return transferMethod.bank_accounts;
+    }
+    return [];
+  }, [storeSettings]);
 
   // Calculate if store is currently open based on business hours
   const isStoreCurrentlyOpen = useMemo(() => {
@@ -1661,6 +1684,88 @@ const Tienda: React.FC = () => {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Bank Accounts & Instructions for Transfer */}
+          {paymentMethod === 'transfer' && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex items-start gap-2 text-xs text-emerald-900 dark:text-emerald-200">
+                <Info className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <p className="font-semibold leading-snug">
+                  <span className="font-bold underline decoration-emerald-500/40">Importante:</span> Una vez aceptado el pedido por el negocio, se debe realizar la transferencia del monto total y enviar el comprobante.
+                </p>
+              </div>
+
+              {bankAccounts.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    Cuentas Bancarias del Negocio ({bankAccounts.length})
+                  </p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {bankAccounts.map((acc: any, index: number) => (
+                      <div
+                        key={index}
+                        className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 flex items-center justify-between gap-2 shadow-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Landmark className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              {acc.bank_name || 'Banco'}
+                            </span>
+                            {acc.account_type && (
+                              <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 rounded">
+                                {acc.account_type}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400 tracking-wide select-all">
+                              {acc.account_number}
+                            </span>
+                          </div>
+                          {(acc.holder_name || acc.rnc_cedula) && (
+                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 truncate mt-0.5">
+                              {acc.holder_name} {acc.rnc_cedula ? `• RNC/Céd: ${acc.rnc_cedula}` : ''}
+                            </p>
+                          )}
+                        </div>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCopyAccount(acc.account_number)}
+                          className="h-8 px-2.5 text-xs font-bold gap-1 rounded-lg shrink-0 border-slate-200 dark:border-zinc-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        >
+                          {copiedAccount === acc.account_number ? (
+                            <>
+                              <Check className="h-3 w-3 text-emerald-500" />
+                              <span className="text-emerald-600 text-[10px]">Copiado</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" />
+                              <span className="text-[10px]">Copiar</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
+                    <Building2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>{storeName}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-tight">
+                    Al confirmar tu pedido, el negocio te notificará en el chat / WhatsApp con las cuentas bancarias activas para validar tu transferencia.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
