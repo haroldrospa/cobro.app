@@ -737,93 +737,170 @@ const Tienda: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-background font-sans text-slate-900 dark:text-foreground pb-24">
-      {/* iOS-Style Header */}
-      <header className="sticky top-0 z-40 bg-[#f8f9fa] dark:bg-background/80 backdrop-blur-xl pt-4 pb-2 px-6 flex items-center justify-between max-w-7xl mx-auto w-full">
-        <div className="w-10" />
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground/80 font-medium tracking-wide">location:</span>
-          <span className="text-sm font-bold tracking-tight text-slate-800 dark:text-foreground/90">{storeName || 'Tienda'}</span>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-200/50 dark:hover:bg-zinc-800" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-            {theme === 'dark' ? <Sun className="h-6 w-6 text-slate-400 dark:text-muted-foreground/80 dark:text-muted-foreground" /> : <Moon className="h-6 w-6 text-slate-400 dark:text-muted-foreground/80 dark:text-muted-foreground" />}
-          </Button>
-          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-slate-200/50 dark:hover:bg-zinc-800" onClick={() => setShowProfileDialog(true)}>
-            {user && profile?.name ? (
-              <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-secondary flex items-center justify-center font-bold text-slate-600 dark:text-muted-foreground dark:text-muted-foreground">
-                {profile.name.charAt(0)}
-              </div>
+    <div className="min-h-screen bg-slate-50/70 dark:bg-zinc-950 font-sans text-slate-900 dark:text-zinc-100 pb-24 selection:bg-emerald-500/20 selection:text-emerald-600">
+      {/* Sleek Minimalist Header */}
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-zinc-800/60 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          {/* Brand Info */}
+          <div className="flex items-center gap-3 min-w-0">
+            {companySettings?.logo_url ? (
+              <img
+                src={companySettings.logo_url}
+                alt={storeName}
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain bg-slate-100 dark:bg-zinc-900 p-1 border border-slate-200 dark:border-zinc-800 shrink-0"
+              />
             ) : (
-              <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-secondary flex items-center justify-center">
-                <User className="h-5 w-5 text-slate-500 dark:text-muted-foreground dark:text-muted-foreground" />
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
+                <Store className="h-5 w-5" />
               </div>
             )}
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#f8f9fa] dark:border-zinc-950"></span>
-          </Button>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white truncate">
+                {storeName || 'Tienda'}
+              </h1>
+              <div className="flex items-center gap-1.5 text-[11px]">
+                {isStoreCurrentlyOpen ? (
+                  <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Abierto
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 font-semibold text-rose-500 dark:text-rose-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                    Cerrado
+                  </span>
+                )}
+                {companySettings?.phone && (
+                  <>
+                    <span className="text-slate-300 dark:text-zinc-700">•</span>
+                    <span className="text-slate-400 dark:text-zinc-500 truncate hidden sm:inline">
+                      {companySettings.phone}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Search Bar (Desktop Integrated) */}
+          <div className="hidden md:flex flex-1 max-w-md mx-4 relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
+            <Input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Buscar por nombre, categoría o código..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-9 h-10 bg-slate-100/80 dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800 rounded-xl text-sm placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30 transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Right Action Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-xl text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800/80 hover:text-slate-900 dark:hover:text-white"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title="Cambiar tema"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+
+            {/* Desktop Cart Button */}
+            <Button
+              variant="outline"
+              onClick={() => setShowCart(true)}
+              className="relative h-9 px-3.5 rounded-xl border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800/80 gap-2 text-slate-700 dark:text-zinc-200 hidden sm:flex items-center font-bold text-xs"
+            >
+              <ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Carrito</span>
+              {cartItemCount > 0 && (
+                <span className="bg-emerald-600 text-white text-[10px] font-black h-5 min-w-[20px] px-1 rounded-full flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
+            </Button>
+
+            {/* Profile / Orders Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-xl text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800/80 hover:text-slate-900 dark:hover:text-white"
+              onClick={() => setShowProfileDialog(true)}
+              title="Mi perfil y pedidos"
+            >
+              {user && profile?.name ? (
+                <div className="h-7 w-7 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                  {profile.name.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <User className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="px-6 space-y-6 mt-4 max-w-7xl mx-auto w-full">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-muted-foreground" />
-          <Input 
+      <main className="px-4 sm:px-6 space-y-6 mt-5 max-w-7xl mx-auto w-full">
+        {/* Mobile Search Bar */}
+        <div className="relative md:hidden">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
+          <Input
             ref={searchInputRef}
             type="text"
             placeholder="Buscar productos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-12 py-6 bg-white dark:bg-zinc-900 border-none shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-none rounded-2xl text-base focus-visible:ring-1 focus-visible:ring-primary/50 transition-shadow"
+            className="w-full pl-10 pr-9 h-11 bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-xl text-sm placeholder:text-slate-400 dark:placeholder:text-zinc-500 shadow-xs focus-visible:ring-2 focus-visible:ring-emerald-500/30 transition-all"
           />
           {searchTerm && (
-            <button 
+            <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:text-muted-foreground dark:hover:text-foreground transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 transition-colors"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
         {/* Restaurant Special Hero Banner (Only shown if shopType is restaurant) */}
         {isRestaurant && (
-          <section className="bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-transparent dark:from-amber-950/20 dark:via-rose-950/10 rounded-[32px] p-6 border border-amber-500/20 shadow-sm relative overflow-hidden">
+          <section className="bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-transparent dark:from-amber-950/20 dark:via-rose-950/10 rounded-2xl p-5 sm:p-6 border border-amber-500/20 shadow-xs relative overflow-hidden">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
               <div className="flex items-center gap-4">
                 {companySettings?.logo_url ? (
-                  <img src={companySettings.logo_url} alt={storeName} className="h-16 w-16 object-cover rounded-2xl border-2 border-white dark:border-zinc-800 shadow-md" />
+                  <img src={companySettings.logo_url} alt={storeName} className="h-14 w-14 object-cover rounded-2xl border border-white/20 shadow-sm" />
                 ) : (
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
-                    <Utensils className="h-8 w-8" />
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
+                    <Utensils className="h-7 w-7" />
                   </div>
                 )}
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-foreground tracking-tight">{storeName}</h1>
-                    <Badge variant="outline" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">{storeName}</h2>
+                    <Badge variant="outline" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Utensils className="h-3 w-3" /> Restaurante
                     </Badge>
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-muted-foreground mt-1 line-clamp-1">
-                    {companySettings?.slogan || companySettings?.meta_description || "¡Sabores deliciosos preparados al instante para ti!"}
+                  <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1 line-clamp-1">
+                    {companySettings?.slogan || companySettings?.meta_description || "¡Sabores preparados al instante para ti!"}
                   </p>
-                  <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
+                  <div className="flex items-center gap-2.5 mt-2 text-xs flex-wrap">
                     <span className="flex items-center gap-1 font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> 4.8 (120+)
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> 4.8
                     </span>
                     <span className="flex items-center gap-1 font-semibold text-slate-600 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
                       🛵 25-35 min
                     </span>
-                    {isStoreCurrentlyOpen ? (
-                      <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Abierto ahora
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full">
-                        <span className="h-2 w-2 rounded-full bg-rose-500" /> Cerrado ahora
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -831,172 +908,198 @@ const Tienda: React.FC = () => {
           </section>
         )}
 
-        {/* Title & Categories */}
-        <section>
-          <div className="flex items-end justify-between mb-4">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground tracking-tight">
-              {isRestaurant ? "Menú de Platos" : "Populares"}
-            </h1>
-            <button className="text-xs text-slate-400 dark:text-muted-foreground/80 font-medium hover:text-slate-600 dark:text-muted-foreground transition-colors" onClick={() => setSelectedCategory(null)}>
-              ver todo
-            </button>
-          </div>
-          
-          <ScrollArea className="w-full whitespace-nowrap pb-4 -mx-6 px-6" type="scroll">
-            <div className="flex w-max space-x-3">
-              <button 
+        {/* Promotional Banner Carousel */}
+        {banners.length > 0 && (
+          <section className="rounded-2xl overflow-hidden border border-slate-200/80 dark:border-zinc-800 shadow-xs">
+            <BannerCarousel banners={banners} />
+          </section>
+        )}
+
+        {/* Category Filter Pills & Header */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {isRestaurant ? "Menú de Platos" : "Catálogo de Productos"}
+              </h2>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 font-medium">
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'producto disponible' : 'productos disponibles'}
+              </p>
+            </div>
+            {selectedCategory && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-bold px-2 rounded-lg"
                 onClick={() => setSelectedCategory(null)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm ${!selectedCategory ? (isRestaurant ? 'bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-rose-500/20' : 'bg-red-700 text-white') : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
               >
-                🥘 Todos
+                Limpiar filtro
+              </Button>
+            )}
+          </div>
+
+          {/* Minimalist Horizontal Scroll Categories */}
+          <ScrollArea className="w-full whitespace-nowrap pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6" type="scroll">
+            <div className="flex w-max space-x-2 py-1">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  !selectedCategory
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                    : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-zinc-800'
+                }`}
+              >
+                <Tag className="h-3.5 w-3.5" />
+                Todos
               </button>
-              {categories.map((cat, idx) => {
-                const foodEmojis = ['🍔', '🍕', '🍟', '🥤', '🍰', '🍱', '🥗', '🌮', '🍣', '🍦', '🥩'];
-                const emoji = foodEmojis[idx % foodEmojis.length];
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm ${selectedCategory === cat.id ? (isRestaurant ? 'bg-gradient-to-r from-amber-600 to-rose-600 text-white shadow-rose-500/20' : 'bg-red-700 text-white') : 'bg-white dark:bg-white/5 text-slate-700 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/10 dark:border dark:border-border'}`}
-                  >
-                    <span className="text-base">{isRestaurant ? emoji : ['🍜', '🍣', '🍱', '🍙', '🥟', '🍤', '🍚'][idx % 7]}</span>
-                    {cat.name}
-                  </button>
-                );
-              })}
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    selectedCategory === cat.id
+                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                      : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-zinc-800'
+                  }`}
+                >
+                  <span>{cat.name}</span>
+                </button>
+              ))}
             </div>
           </ScrollArea>
         </section>
 
-        {/* Featured Banner */}
-        <section>
-          <div className="w-full bg-black rounded-[32px] overflow-hidden relative min-h-[160px] flex items-center shadow-lg">
-             <div className="absolute top-0 left-0 bottom-0 w-2/3 bg-gradient-to-r from-black via-black/80 to-transparent z-10" />
-             {banners.length > 0 && banners[0].image_url ? (
-               <img src={banners[0].image_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover opacity-70" />
-             ) : (
-               <div className="absolute inset-0 bg-zinc-900" />
-             )}
-             <div className="relative z-20 w-full flex justify-end px-8 py-6">
-                <div className="text-right flex flex-col items-end">
-                  <h3 className="text-white text-2xl font-light leading-tight">Discount 50%</h3>
-                  <button className="text-white/60 text-xs mt-2 hover:text-white transition-colors">learn more...</button>
-                </div>
-             </div>
-          </div>
-        </section>
-
-        {/* Product Grid */}
-        <section className="pt-2">
+        {/* Minimalist Modern Product Grid */}
+        <section className="pt-1">
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 dark:text-muted-foreground/80">No hay productos disponibles</div>
+            <div className="text-center py-16 bg-white dark:bg-zinc-900/50 rounded-2xl border border-slate-200/60 dark:border-zinc-800/60">
+              <Package className="h-10 w-10 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
+              <p className="text-base font-bold text-slate-800 dark:text-zinc-200">No se encontraron productos</p>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Prueba cambiando la búsqueda o seleccionando otra categoría</p>
+              {selectedCategory && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 rounded-xl text-xs font-bold"
+                  onClick={() => setSelectedCategory(null)}
+                >
+                  Ver todos los productos
+                </Button>
+              )}
+            </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4">
               {filteredProducts.slice(0, visibleCount).map((product) => {
                 const hasDiscount = isDiscountActive(product);
                 const discountedPrice = getDiscountedPrice(product);
                 const cartItem = cart.find(item => item.product.id === product.id);
                 const itemQty = cartItem ? cartItem.quantity : 0;
-                
-                return (
-                  <div 
-                    key={product.id} 
-                    className={`bg-white dark:bg-card rounded-[24px] p-3.5 sm:p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.08)] hover:shadow-xl transition-all duration-300 flex flex-col h-full relative border border-slate-100 dark:border-border group ${isRestaurant ? 'hover:-translate-y-1' : ''}`}
-                  >
-                    {/* Heart / Favorite */}
-                    <button 
-                      className="absolute top-3.5 left-3.5 z-10 text-slate-300 hover:text-rose-500 transition-colors p-1 rounded-full bg-white/70 dark:bg-zinc-800/70 backdrop-blur-sm" 
-                      onClick={(e) => { e.stopPropagation(); }}
-                    >
-                      <Heart className="h-4 w-4" />
-                    </button>
 
-                    {/* Badges */}
-                    <div className="absolute top-3.5 right-3.5 z-10 flex flex-col items-end gap-1">
-                      {hasDiscount && (
-                        <span className="bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
-                          -{product.discount_percentage}%
-                        </span>
-                      )}
-                      {isRestaurant && product.is_featured && (
-                        <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center gap-0.5">
-                          🔥 Top
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Product Image */}
-                    <div 
-                      className={`aspect-square w-full relative mb-2.5 overflow-hidden rounded-2xl ${isRestaurant ? 'bg-amber-500/5 dark:bg-zinc-800/80 p-1.5' : 'bg-slate-50/80 dark:bg-zinc-800/50 p-2'} flex items-center justify-center cursor-pointer group-hover:bg-amber-500/10 transition-colors`}
-                      onClick={(e) => handleAddToCartAnim(e, product)}
-                    >
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="w-full h-full object-cover rounded-xl drop-shadow-md group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center gap-1 text-slate-300 dark:text-zinc-600">
-                          {isRestaurant ? <Utensils className="h-8 w-8 text-amber-500/40" /> : <Package className="h-8 w-8" />}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Product Info */}
-                    <div className="flex-1 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-bold text-[13px] sm:text-sm text-slate-800 dark:text-foreground/90 line-clamp-2 min-h-[2.4rem] leading-tight mb-1">
-                          {product.name}
-                        </h3>
-                        {product.category?.name && (
-                          <span className="text-[10px] text-slate-400 dark:text-muted-foreground font-medium block">
-                            {product.category.name}
+                return (
+                  <div
+                    key={product.id}
+                    className="group relative bg-white dark:bg-zinc-900/80 rounded-2xl p-3 sm:p-3.5 border border-slate-200/80 dark:border-zinc-800/80 hover:border-slate-300 dark:hover:border-zinc-700 hover:shadow-lg dark:hover:shadow-zinc-950/50 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    {/* Top Badges & Actions */}
+                    <div className="relative">
+                      {/* Heart / Favorite */}
+                      <button
+                        className="absolute top-0 left-0 z-10 p-1.5 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-slate-400 hover:text-rose-500 transition-colors shadow-xs"
+                        onClick={(e) => { e.stopPropagation(); }}
+                        title="Favorito"
+                      >
+                        <Heart className="h-3.5 w-3.5" />
+                      </button>
+
+                      {/* Discount / Special Badge */}
+                      <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1">
+                        {hasDiscount && (
+                          <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs tracking-wide">
+                            -{product.discount_percentage}%
+                          </span>
+                        )}
+                        {isRestaurant && product.is_featured && (
+                          <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs flex items-center gap-0.5">
+                            <Sparkles className="h-2.5 w-2.5" /> Top
                           </span>
                         )}
                       </div>
 
-                      <div className="mt-2 space-y-2.5">
+                      {/* Product Image Box */}
+                      <div
+                        className="aspect-square w-full rounded-xl bg-slate-50/90 dark:bg-zinc-800/40 p-3 mb-3 flex items-center justify-center relative overflow-hidden group-hover:bg-slate-100/80 dark:group-hover:bg-zinc-800/70 transition-colors cursor-pointer"
+                        onClick={(e) => handleAddToCartAnim(e, product)}
+                      >
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-xs"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-slate-300 dark:text-zinc-600">
+                            {isRestaurant ? <Utensils className="h-7 w-7 text-amber-500/40" /> : <Package className="h-7 w-7" />}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Product Meta */}
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        {product.category?.name && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block line-clamp-1 mb-1">
+                            {product.category.name}
+                          </span>
+                        )}
+                        <h3 className="font-bold text-[13px] sm:text-sm text-slate-800 dark:text-zinc-100 line-clamp-2 leading-snug min-h-[2.4rem] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          {product.name}
+                        </h3>
+                      </div>
+
+                      <div className="mt-3 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col">
                             {hasDiscount && (
-                              <span className="text-[10px] text-slate-400 line-through">
+                              <span className="text-[10px] text-slate-400 dark:text-zinc-500 line-through">
                                 ${product.price.toFixed(2)}
                               </span>
                             )}
-                            <span className={`font-extrabold text-[15px] sm:text-base tracking-tight font-mono ${isRestaurant ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-foreground'}`}>
+                            <span className="font-black text-sm sm:text-base font-mono tracking-tight text-slate-900 dark:text-white">
                               ${discountedPrice.toFixed(2)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1 text-slate-400 dark:text-muted-foreground">
-                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                            <span className="text-[11px] font-bold">4.8</span>
+                          <div className="flex items-center gap-1 text-slate-400 dark:text-zinc-500">
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            <span className="text-[10px] font-bold">4.8</span>
                           </div>
                         </div>
 
-                        {/* Quick Order Actions (+ / -) */}
+                        {/* Quantity / Add Button */}
                         {itemQty === 0 ? (
                           <Button
                             size="sm"
-                            className={`w-full h-9 rounded-xl font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center justify-center gap-1.5 ${isRestaurant ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white' : 'bg-slate-900 hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 text-white'}`}
+                            className="w-full h-9 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs shadow-emerald-600/10 hover:shadow-md hover:shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
                             onClick={(e) => handleAddToCartAnim(e, product)}
                           >
                             <Plus className="h-3.5 w-3.5" />
                             Agregar
                           </Button>
                         ) : (
-                          <div className="flex items-center justify-between bg-slate-100 dark:bg-zinc-800/80 rounded-xl p-1 border border-slate-200 dark:border-zinc-700/60 shadow-inner">
+                          <div className="flex items-center justify-between bg-slate-100 dark:bg-zinc-800/90 rounded-xl p-1 border border-slate-200/80 dark:border-zinc-700/60 shadow-xs">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 updateQuantity(product.id, -1);
                               }}
-                              className="h-7 w-7 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-slate-700 dark:text-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/30 transition-colors shadow-xs active:scale-90"
+                              className="h-7 w-7 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-slate-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/30 transition-colors shadow-xs active:scale-90"
+                              title="Restar"
                             >
                               <Minus className="h-3 w-3" />
                             </button>
-                            <span className="font-extrabold text-xs text-slate-800 dark:text-foreground px-2 font-mono">
+                            <span className="font-black text-xs text-slate-800 dark:text-zinc-100 px-2 font-mono">
                               {itemQty}
                             </span>
                             <button
@@ -1005,7 +1108,8 @@ const Tienda: React.FC = () => {
                                 e.stopPropagation();
                                 handleAddToCartAnim(e, product);
                               }}
-                              className={`h-7 w-7 rounded-lg flex items-center justify-center text-white transition-colors shadow-xs active:scale-90 ${isRestaurant ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-900 dark:bg-primary hover:bg-slate-800 dark:hover:bg-primary/90'}`}
+                              className="h-7 w-7 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center transition-colors shadow-xs active:scale-90"
+                              title="Sumar"
                             >
                               <Plus className="h-3 w-3" />
                             </button>
@@ -1018,11 +1122,15 @@ const Tienda: React.FC = () => {
               })}
             </div>
           )}
-          
+
           {visibleCount < filteredProducts.length && (
-            <div className="flex justify-center mt-6">
-              <Button variant="outline" className="rounded-full bg-white dark:bg-card shadow-sm border-slate-200 dark:border-border text-slate-600 dark:text-muted-foreground font-semibold" onClick={() => setVisibleCount(prev => prev + 20)}>
-                Cargar más
+            <div className="flex justify-center mt-8">
+              <Button
+                variant="outline"
+                className="rounded-xl bg-white dark:bg-zinc-900 shadow-xs border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-bold text-xs h-10 px-6 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all"
+                onClick={() => setVisibleCount(prev => prev + 24)}
+              >
+                Cargar más productos ({filteredProducts.length - visibleCount} restantes)
               </Button>
             </div>
           )}
