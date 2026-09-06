@@ -70,40 +70,16 @@ export const useMaxInvoiceNumbers = () => {
   });
 };
 
+import { offlineDB, OfflineStore } from '@/lib/offlineDB';
+
 export const useUpdateInvoiceSequence = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, current_number, invoice_type_id }: { id: string; current_number: number; invoice_type_id: string }) => {
-      // Primero verificar el número máximo usado para este tipo
-      const { data: sales, error: salesError } = await supabase
-        .from('sales')
-        .select('invoice_number')
-        .eq('invoice_type_id', invoice_type_id);
-
-      if (salesError) throw salesError;
-
-      // Encontrar el número máximo usado
-      let maxUsed = 0;
-      sales?.forEach(sale => {
-        const match = sale.invoice_number.match(/-(\d{1,9})$/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxUsed) maxUsed = num;
-        }
-      });
-
-      // Validar que el nuevo current_number no sea menor al máximo usado
-      // current_number representa el último número usado, el próximo será current_number + 1
-      /* VALIDATION REMOVED BY USER REQUEST
-      if (current_number < maxUsed) {
-        throw new Error(`No puedes establecer un próximo número menor a ${maxUsed + 1}. Ya existen facturas hasta ${invoice_type_id}-${String(maxUsed).padStart(8, '0')}.`);
-      }
-      */
-
       const { data, error } = await supabase
         .from('invoice_sequences')
-        .update({ current_number })
+        .update({ current_number, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
@@ -111,9 +87,22 @@ export const useUpdateInvoiceSequence = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoice-sequences'] });
       queryClient.invalidateQueries({ queryKey: ['max-invoice-numbers'] });
+
+      // Actualizar caché offline inmediatamente
+      try {
+        const settings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'invoice_sequences') || { key: 'invoice_sequences' };
+        settings[variables.invoice_type_id] = {
+          current: variables.current_number,
+          prefix: `${variables.invoice_type_id}-`
+        };
+        await offlineDB.put(OfflineStore.SETTINGS, settings);
+        console.log(`💾 Secuencia ${variables.invoice_type_id} guardada en offlineDB: #${variables.current_number}`);
+      } catch (e) {
+        console.error('Error actualizando offlineDB para secuencias:', e);
+      }
     },
   });
 };
