@@ -257,36 +257,36 @@ function PayrollContent() {
             <div className="max-w-3xl mx-auto px-4 space-y-12">
                 
                 {/* --- PREMIUM HEADER --- */}
-                <div className="flex flex-col items-center text-center pt-12 space-y-6">
-                    <div className="space-y-2">
-                        <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.2em] text-foreground leading-normal py-1">
-                            Nomina
+                <div className="flex flex-col items-center text-center pt-8 space-y-8">
+                    <div className="space-y-3">
+                        <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.15em] leading-normal py-1">
+                            Nómina
                         </h1>
-                        <div className="flex items-center justify-center gap-3">
-                            <div className="h-px w-8 bg-emerald-500/30" />
-                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-500/70">
-                                Gestion de Periodos de Pago
+                        <div className="flex items-center justify-center gap-4 text-primary/80">
+                            <div className="h-px w-10 bg-primary/30" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+                                Gestión de Periodos de Pago
                             </p>
-                            <div className="h-px w-8 bg-emerald-500/30" />
+                            <div className="h-px w-10 bg-primary/30" />
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap justify-center gap-3">
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                        <Button 
+                            size="lg"
+                            onClick={() => setIsNewOpen(true)} 
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
+                        >
+                            <Plus className="h-5 w-5" />
+                            Ejecutar Nómina
+                        </Button>
                         <Button
                             variant="outline" 
-                            size="sm" 
+                            className="h-14 px-6 rounded-2xl border-border/50 bg-muted/10 font-black uppercase text-[10px] tracking-widest gap-2"
                             onClick={() => setIsSettingsOpen(true)}
-                            className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-all rounded-full px-6"
                         >
-                            <Settings className="mr-2 h-3.5 w-3.5" />
+                            <Settings className="h-4 w-4" />
                             Ajustes
-                        </Button>
-                        <Button 
-                            onClick={() => setIsNewOpen(true)} 
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all rounded-full px-8 font-bold"
-                        >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Ejecutar Nomina
                         </Button>
                     </div>
                 </div>

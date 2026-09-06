@@ -1549,39 +1549,43 @@ function AccountingContent() {
     };
 
     return (
-        <div className="p-4 sm:p-6 pb-24 space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
-            {/* Minimalist Top Header */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2 border-b border-border/30 pb-4">
-                <div className="flex items-center gap-3">
-                    <div className="bg-emerald-500/10 p-2 rounded-xl text-emerald-500">
-                        <Wallet className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Contabilidad</h1>
-                        <p className="text-[11px] text-muted-foreground font-medium">Gestión financiera, gastos y proveedores</p>
+        <div className="space-y-10 animate-fade-in pb-24 max-w-7xl mx-auto px-4 sm:px-6">
+            {/* Centered Premium Header */}
+            <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-8 py-6">
+                <div className="space-y-3">
+                    <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.15em] leading-normal py-1">
+                        Contabilidad
+                    </h1>
+                    <div className="flex items-center justify-center gap-4 text-primary/80">
+                        <div className="h-px w-10 bg-primary/30" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+                            Gestión Financiera y Gastos
+                        </p>
+                        <div className="h-px w-10 bg-primary/30" />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="flex flex-wrap items-center justify-center gap-3">
                     {/* Month Selector Pill */}
-                    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40">
-                        <Button variant="ghost" size="icon" onClick={prevMonth} className="h-7 w-7 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground">
-                            <ChevronLeft className="h-4 w-4" />
+                    <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-2xl border border-border/40 shadow-inner h-14 px-3">
+                        <Button variant="ghost" size="icon" onClick={prevMonth} className="h-9 w-9 rounded-xl hover:bg-background text-muted-foreground hover:text-foreground">
+                            <ChevronLeft className="h-5 w-5" />
                         </Button>
-                        <div className="flex items-center gap-1.5 px-2 font-bold text-xs text-foreground min-w-[110px] justify-center">
-                            <Calendar className="h-3.5 w-3.5 text-emerald-500" />
+                        <div className="flex items-center gap-2 px-3 font-black uppercase tracking-widest text-xs text-primary min-w-[130px] justify-center">
+                            <Calendar className="h-4 w-4" />
                             <span className="capitalize">
                                 {currentDate ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={nextMonth} className="h-7 w-7 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground">
-                            <ChevronRight className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={nextMonth} className="h-9 w-9 rounded-xl hover:bg-background text-muted-foreground hover:text-foreground">
+                            <ChevronRight className="h-5 w-5" />
                         </Button>
                     </div>
 
                     {/* Main Action Button */}
                     <Button 
                         id="accounting-add-expense-btn" 
+                        size="lg"
                         onClick={() => {
                             setNewExpense({
                                 date: new Date(),
@@ -1597,10 +1601,10 @@ function AccountingContent() {
                             setExpenseType('reinversion');
                             setIsAddExpenseOpen(true);
                         }} 
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm gap-1.5 transition-all active:scale-95 shrink-0"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
                     >
-                        <Plus className="h-4 w-4" />
-                        Registrar Gasto
+                        <Plus className="h-5 w-5" />
+                        Nuevo Gasto
                     </Button>
                 </div>
             </div>

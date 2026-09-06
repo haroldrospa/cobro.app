@@ -1323,22 +1323,26 @@ const Products: FC = () => {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in pb-20">
-      {/* Header */}
-      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-3 py-2">
-        <div>
-          <h1 className="text-xl font-black tracking-tight uppercase">
+    <div className="space-y-12 animate-fade-in pb-20">
+      {/* Centered Premium Header */}
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-8 py-6">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.15em] leading-normal py-1">
             Inventario
           </h1>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70 mt-0.5">
-            Gestión de Catálogo y Stock
-          </p>
+          <div className="flex items-center justify-center gap-4 text-primary/80">
+            <div className="h-px w-10 bg-primary/30" />
+            <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+              Gestión de Catálogo y Stock
+            </p>
+            <div className="h-px w-10 bg-primary/30" />
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-3xl px-4">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             size="lg"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wide text-xs h-10 px-5 rounded-xl gap-2 transition-all active:scale-95"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
             onClick={() => {
               if (hasReachedLimit('products', products.length)) {
                 setShowLimitDialog(true);
@@ -1347,27 +1351,27 @@ const Products: FC = () => {
               }
             }}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5" />
             Nuevo Producto
           </Button>
 
           <Button
             size="lg"
-            className="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-bold uppercase tracking-wide text-xs h-10 px-5 rounded-xl gap-2 transition-all active:scale-95"
+            className="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-blue-500/20 gap-3 transition-all active:scale-95"
             onClick={() => setIsAIStockOpen(true)}
           >
-            <Sparkles className="h-4 w-4 text-blue-200" />
+            <Sparkles className="h-5 w-5 text-blue-200" />
             Stock con IA
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10 px-4 rounded-xl border-border/50 bg-muted/10 font-bold uppercase text-[10px] tracking-widest">
-                <Upload className="mr-2 h-4 w-4" />
+              <Button variant="outline" className="h-14 px-6 rounded-2xl border-border/50 bg-muted/10 font-black uppercase text-[10px] tracking-widest gap-2">
+                <Upload className="h-4 w-4" />
                 Acciones
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="rounded-2xl p-2 min-w-[200px]">
+            <DropdownMenuContent align="center" className="rounded-2xl p-2 min-w-[220px]">
               <DropdownMenuItem onSelect={() => setActiveTab('settings')} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                 <Settings2 className="mr-2 h-4 w-4" />
                 Configuración y Categorías
@@ -1400,7 +1404,7 @@ const Products: FC = () => {
 
           <Button
             variant="outline"
-            className="h-10 w-10 rounded-xl border-border/50 bg-muted/10"
+            className="h-14 w-14 rounded-2xl border-border/50 bg-muted/10"
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['products'] });
               toast({ title: "Actualizando...", description: "Sincronizando inventario..." });
