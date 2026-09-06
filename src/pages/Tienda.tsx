@@ -1417,338 +1417,301 @@ const Tienda: React.FC = () => {
     </DialogContent>
   </Dialog>
 
-  {/* Checkout Dialog - Mobile Optimized */ }
-      <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent className="w-[95vw] sm:max-w-md max-h-[85vh] flex flex-col rounded-[2rem] p-0 gap-0 overflow-hidden border-border/50 shadow-2xl bg-background/95 backdrop-blur-xl">
-          <DialogHeader className="px-6 py-5 border-b border-border/40 bg-card/50">
-            <DialogTitle className="text-lg md:text-xl font-black">Finalizar Pedido</DialogTitle>
-            <p className="text-sm text-muted-foreground">Completa tus datos para confirmar</p>
-            {!isStoreCurrentlyOpen && (
-              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-xs text-red-600 font-bold flex items-center gap-1">
-                  <X className="h-3 w-3" />
-                  AVISO: La tienda se encuentra fuera de horario de servicio.
-                </p>
-              </div>
+  {/* Checkout Dialog - Ultra-fast Interactive 1-Click Checkout */}
+  <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+    <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] flex flex-col rounded-[2rem] p-0 gap-0 overflow-hidden border-slate-200/80 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-950">
+      {/* Header */}
+      <DialogHeader className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+              <ShoppingBag className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                Finalizar Pedido
+              </DialogTitle>
+              <p className="text-xs text-slate-400 dark:text-zinc-500">
+                {isProfileComplete(profile) ? "Verifica y confirma en 1 solo paso" : "Completa tus datos para entrega"}
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="font-mono text-xs font-black px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+            ${cartTotal.toFixed(2)}
+          </Badge>
+        </div>
+        {!isStoreCurrentlyOpen && (
+          <div className="mt-3 p-2.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-xl">
+            <p className="text-xs text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Tienda fuera de horario. No se pueden procesar pedidos ahora.
+            </p>
+          </div>
+        )}
+      </DialogHeader>
+
+      <div className="flex-1 overflow-y-auto min-h-0 p-5 sm:p-6 space-y-5">
+        {/* Order Type Tabs (Interactive Segmented Control) */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            Modalidad de Entrega
+          </label>
+          <div className={`grid ${(shopType === 'store' || shopType === 'supermarket') ? 'grid-cols-2' : 'grid-cols-3'} gap-2 p-1 bg-slate-100 dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800`}>
+            <button
+              type="button"
+              onClick={() => setOrderType('delivery')}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                orderType === 'delivery'
+                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 scale-[1.02]'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              <span>Delivery</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderType('pickup')}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                orderType === 'pickup'
+                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 scale-[1.02]'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Home className="h-4 w-4" />
+              <span>Para Recoger</span>
+            </button>
+            {!(shopType === 'store' || shopType === 'supermarket') && (
+              <button
+                type="button"
+                onClick={() => setOrderType('dine-in')}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                  orderType === 'dine-in'
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 scale-[1.02]'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Utensils className="h-4 w-4" />
+                <span>En Mesa</span>
+              </button>
             )}
-          </DialogHeader>
+          </div>
+        </div>
 
-          <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
-
-            {/* Saved Profile Summary Card */}
-            {isProfileComplete(profile) && (
-              <div className="flex items-start gap-3 p-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800">
-                <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-black text-base flex-shrink-0">
+        {/* Customer Information (Smart Mode: Express Card vs Quick Form) */}
+        {isProfileComplete(profile) ? (
+          /* Express Customer Summary Card */
+          <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-sm">
                   {profile!.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm text-emerald-800 dark:text-emerald-300 truncate">{profile!.name}</p>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-bold text-sm text-slate-900 dark:text-white">{profile!.name}</p>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   </div>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-mono">{profile!.cedula}</p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400">{profile!.phone}</p>
-                  {(profile!.deliveryLat && profile!.deliveryLng) && (
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">{profile!.phone}</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg px-2.5"
+                onClick={() => { setShowCheckout(false); setProfileDialogView('settings'); setShowProfileDialog(true); }}
+              >
+                Editar
+              </Button>
+            </div>
+
+            {orderType === 'delivery' && (
+              <div className="pt-2 border-t border-emerald-500/15 flex items-start gap-2 text-xs text-slate-600 dark:text-zinc-300">
+                <MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium line-clamp-2">{profile!.address || 'Dirección guardada'}</p>
+                  {profile!.deliveryLat && profile!.deliveryLng && (
                     <a
                       href={`https://www.google.com/maps?q=${profile!.deliveryLat},${profile!.deliveryLng}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5 hover:underline"
+                      className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1 mt-0.5 hover:underline"
                     >
                       <Navigation className="h-3 w-3" />
-                      {profile!.locationLabel || 'Ver punto de entrega GPS'}
+                      {profile!.locationLabel || 'Ubicación GPS confirmada'}
                     </a>
                   )}
                 </div>
-                <button
-                  onClick={() => { setShowCheckout(false); setProfileDialogView('settings'); setShowProfileDialog(true); }}
-                  className="text-[10px] text-emerald-600 font-bold hover:underline flex-shrink-0 mt-0.5"
-                >
-                  Editar
-                </button>
               </div>
             )}
-
-            {/* Order Type Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Pedido</label>
-              <div className={`grid ${(shopType === 'store' || shopType === 'supermarket') ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
-                <button
-                  type="button"
-                  onClick={() => setOrderType('delivery')}
-                  className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border-2 transition-all active:scale-95 ${orderType === 'delivery'
-                    ? 'border-primary bg-primary/10 text-primary shadow-md'
-                    : 'border-border hover:border-primary/50 hover:bg-muted'
-                    }`}
-                >
-                  <ShoppingBag className={`h-6 w-6 md:h-7 md:w-7 ${orderType === 'delivery' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className="text-xs md:text-sm font-medium">Delivery</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderType('pickup')}
-                  className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border-2 transition-all active:scale-95 ${orderType === 'pickup'
-                    ? 'border-primary bg-primary/10 text-primary shadow-md'
-                    : 'border-border hover:border-primary/50 hover:bg-muted'
-                    }`}
-                >
-                  <Home className={`h-6 w-6 md:h-7 md:w-7 ${orderType === 'pickup' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className="text-xs md:text-sm font-medium">Recoger</span>
-                </button>
-                {!(shopType === 'store' || shopType === 'supermarket') && (
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('dine-in')}
-                    className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border-2 transition-all active:scale-95 ${orderType === 'dine-in'
-                      ? 'border-primary bg-primary/10 text-primary shadow-md'
-                      : 'border-border hover:border-primary/50 hover:bg-muted'
-                      }`}
-                  >
-                    <Utensils className={`h-6 w-6 md:h-7 md:w-7 ${orderType === 'dine-in' ? 'text-primary' : 'text-muted-foreground'}`} />
-                    <span className="text-xs md:text-sm font-medium">Comer Aquí</span>
-                  </button>
-                )}
+          </div>
+        ) : (
+          /* Guest Smart Form */
+          <div className="space-y-3.5 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  Nombre Completo <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  placeholder="Tu nombre"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  className="h-10 text-sm bg-white dark:bg-zinc-900 rounded-xl"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  Teléfono / WhatsApp <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="(809) 000-0000"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  className="h-10 text-sm bg-white dark:bg-zinc-900 rounded-xl"
+                />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-1">
-                Nombre <span className="text-destructive">*</span>
-              </label>
-              <Input
-                placeholder="Tu nombre completo"
-                value={customerName}
-                onChange={e => setCustomerName(e.target.value)}
-                className="h-12 text-base"
-                autoFocus
-              />
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Teléfono</label>
-              <Input
-                type="tel"
-                placeholder="(809) 000-0000"
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-                className="h-12 text-base"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                type="email"
-                placeholder="tu@email.com"
-                value={customerEmail}
-                onChange={e => setCustomerEmail(e.target.value)}
-                className="h-12 text-base"
-              />
-            </div>
-
-            {/* Conditional Address Field - Only for Delivery */}
             {orderType === 'delivery' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-500" />
                   Dirección de Entrega
                 </label>
                 <Textarea
-                  placeholder="Calle, número, sector, ciudad..."
+                  placeholder="Sector, calle, número de casa/apto..."
                   value={customerAddress}
                   onChange={e => setCustomerAddress(e.target.value)}
-                  className="min-h-[80px] text-base resize-none"
+                  className="min-h-[70px] text-sm bg-white dark:bg-zinc-900 rounded-xl resize-none"
                 />
               </div>
             )}
+          </div>
+        )}
 
-            {/* Info message for Pickup/Dine-in */}
-            {orderType !== 'delivery' && (
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <p className="text-sm text-primary flex items-center gap-2">
-                  {orderType === 'pickup' ? (
-                    <><Home className="h-4 w-4" /> Tu pedido estará listo para recoger en {store?.store_name || 'nuestro negocio'}</>
-                  ) : (
-                    <><Utensils className="h-4 w-4" /> Por favor indica tu número de mesa en las notas</>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* Payment Method Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Método de Pago</label>
-              <div className="grid grid-cols-2 gap-2">
+        {/* Payment Methods (Interactive Chips) */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            Método de Pago
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { id: 'cash', label: 'Efectivo', icon: Wallet },
+              { id: 'card', label: 'Tarjeta', icon: CreditCard },
+              { id: 'transfer', label: 'Transferencia', icon: Building2 },
+              { id: 'mobile', label: 'Pago Móvil', icon: Smartphone }
+            ].map((method) => {
+              const Icon = method.icon;
+              const isSelected = paymentMethod === method.id;
+              return (
                 <button
+                  key={method.id}
                   type="button"
-                  onClick={() => setPaymentMethod('cash')}
-                  className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all active:scale-95 ${paymentMethod === 'cash'
-                    ? 'border-primary bg-primary/10 text-primary shadow-md'
-                    : 'border-border hover:border-primary/50 hover:bg-muted'
-                    }`}
+                  onClick={() => setPaymentMethod(method.id as any)}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
+                    isSelected
+                      ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/50'
+                      : 'bg-white dark:bg-zinc-900 border-slate-200/80 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
+                  }`}
                 >
-                  <Wallet className={`h-5 w-5 ${paymentMethod === 'cash' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className="text-sm font-medium">Efectivo</span>
+                  <Icon className={`h-5 w-5 mb-1.5 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-zinc-500'}`} />
+                  <span>{method.label}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all active:scale-95 ${paymentMethod === 'card'
-                    ? 'border-primary bg-primary/10 text-primary shadow-md'
-                    : 'border-border hover:border-primary/50 hover:bg-muted'
-                    }`}
-                >
-                  <CreditCard className={`h-5 w-5 ${paymentMethod === 'card' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className="text-sm font-medium">Tarjeta</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('transfer')}
-                  className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all active:scale-95 ${paymentMethod === 'transfer'
-                    ? 'border-primary bg-primary/10 text-primary shadow-md'
-                    : 'border-border hover:border-primary/50 hover:bg-muted'
-                    }`}
-                >
-                  <Building2 className={`h-5 w-5 ${paymentMethod === 'transfer' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className="text-sm font-medium">Transferencia</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('mobile')}
-                  className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all active:scale-95 ${paymentMethod === 'mobile'
-                    ? 'border-primary bg-primary/10 text-primary shadow-md'
-                    : 'border-border hover:border-primary/50 hover:bg-muted'
-                    }`}
-                >
-                  <Smartphone className={`h-5 w-5 ${paymentMethod === 'mobile' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className="text-sm font-medium">Pago Móvil</span>
-                </button>
-              </div>
+              );
+            })}
+          </div>
 
-              {/* Cash Options: Needs Change? */}
-              {paymentMethod === 'cash' && (
-                <div className="mt-4 p-4 rounded-xl border-2 border-primary/20 bg-primary/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-primary" />
-                      ¿Necesitas cambio?
-                    </label>
-                    <div className="flex bg-muted p-1 rounded-lg">
-                      <button
-                        type="button"
-                        onClick={() => setNeedsChange(false)}
-                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${!needsChange ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground'}`}
-                      >
-                        No
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNeedsChange(true)}
-                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${needsChange ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground'}`}
-                      >
-                        Sí
-                      </button>
-                    </div>
-                  </div>
-
-                  {needsChange && (
-                    <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                      <p className="text-xs text-muted-foreground font-medium italic">Selecciona con cuánto vas a pagar:</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[100, 200, 500, 1000, 2000].map(amount => (
-                          <button
-                            key={amount}
-                            type="button"
-                            onClick={() => setAmountPayingWith(amount.toString())}
-                            className={`py-2 px-1 rounded-lg border-2 transition-all text-sm font-bold ${amountPayingWith === amount.toString()
-                              ? 'border-primary bg-primary/20 text-primary scale-105'
-                              : 'border-border hover:border-primary/30 hover:bg-background bg-background'
-                              }`}
-                          >
-                            ${amount}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => { setAmountPayingWith(''); document.getElementById('cash-input')?.focus(); }}
-                          className={`py-2 px-1 rounded-lg border-2 transition-all text-xs font-bold ${!['100', '200', '500', '1000', '2000'].includes(amountPayingWith) && amountPayingWith !== ''
-                            ? 'border-primary bg-primary/20 text-primary'
-                            : 'border-border hover:border-primary/30'
-                            }`}
-                        >
-                          Otro
-                        </button>
-                      </div>
-
-                      <div className="relative group">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <Input
-                          id="cash-input"
-                          type="number"
-                          placeholder="Monto exacto (ej: 150)"
-                          value={amountPayingWith}
-                          onChange={e => setAmountPayingWith(e.target.value)}
-                          className="pl-9 h-11 text-base font-bold bg-background border-2 focus-visible:ring-0 focus-visible:border-primary transition-all"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Notas Adicionales (Opcional)</label>
-              <Input
-                placeholder="Ej: Tocar el timbre dos veces"
-                value={customerNotes}
-                onChange={e => setCustomerNotes(e.target.value)}
-                className="h-12 text-base"
-              />
-            </div>
-
-            <Separator className="my-2 opacity-50" />
-
-            <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-4 border border-primary/20">
+          {/* Quick Change Selector for Cash */}
+          {paymentMethod === 'cash' && (
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-base font-semibold">Total a Pagar</span>
-                <span className="text-2xl font-black text-primary">${cartTotal.toFixed(2)}</span>
+                <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                  ¿Con cuánto vas a pagar?
+                </span>
+                <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  {amountPayingWith ? `Cambio de $${amountPayingWith}` : 'Monto exacto'}
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 font-medium">{cartItemCount} {cartItemCount === 1 ? 'producto' : 'productos'}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => { setNeedsChange(false); setAmountPayingWith(''); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    !needsChange
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400'
+                  }`}
+                >
+                  Exacto
+                </button>
+                {[500, 1000, 2000].map(amt => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => { setNeedsChange(true); setAmountPayingWith(amt.toString()); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      needsChange && amountPayingWith === amt.toString()
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    ${amt}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+        </div>
 
-          <div className="bg-card/80 backdrop-blur-md px-6 py-4 border-t border-border/40">
-            <div className="flex flex-col-reverse sm:flex-row gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowCheckout(false)}
-                className="w-full sm:w-auto h-12 rounded-xl font-semibold"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleCheckout}
-                disabled={createOrder.isPending || !customerName.trim() || !isStoreCurrentlyOpen}
-                className="w-full sm:flex-1 h-12 rounded-xl text-base font-bold shadow-md shadow-primary/20 active:scale-[0.98] transition-all"
-              >
-                {createOrder.isPending ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Procesando...
-                  </div>
-                ) : !isStoreCurrentlyOpen ? (
-                  "Cerrado"
-                ) : (
-                  <div className="flex items-center justify-center gap-2 w-full">
-                    Confirmar Pedido
-                    <ChevronRight className="h-5 w-5" />
-                  </div>
-                )}
-              </Button>
+        {/* Optional Notes */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-500 dark:text-zinc-400">
+            Notas para el pedido (Opcional)
+          </label>
+          <Input
+            placeholder="Ej: Tocar el timbre, salsa extra..."
+            value={customerNotes}
+            onChange={e => setCustomerNotes(e.target.value)}
+            className="h-10 text-xs bg-slate-50 dark:bg-zinc-900/60 rounded-xl"
+          />
+        </div>
+      </div>
+
+      {/* Footer / Express Action Buttons */}
+      <div className="bg-slate-50/80 dark:bg-zinc-900/80 backdrop-blur-xl px-5 sm:px-6 py-4 border-t border-slate-200/60 dark:border-zinc-800 flex flex-col-reverse sm:flex-row gap-2.5">
+        <Button
+          variant="ghost"
+          onClick={() => setShowCheckout(false)}
+          className="w-full sm:w-auto h-11 rounded-xl text-xs font-bold text-slate-500 dark:text-zinc-400"
+        >
+          Volver
+        </Button>
+        <Button
+          onClick={handleCheckout}
+          disabled={createOrder.isPending || !customerName.trim() || !isStoreCurrentlyOpen}
+          className="w-full sm:flex-1 h-12 rounded-xl text-sm font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        >
+          {createOrder.isPending ? (
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Procesando...</span>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          ) : !isStoreCurrentlyOpen ? (
+            "Tienda Cerrada"
+          ) : (
+            <>
+              <span>Confirmar Pedido • ${cartTotal.toFixed(2)}</span>
+              <ChevronRight className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
       <ShopperProfileDialog
         open={showProfileDialog}
         onOpenChange={setShowProfileDialog}
