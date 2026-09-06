@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2 } from 'lucide-react';
+import { useSales } from '@/hooks/useSalesManagement';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
 import { useToast } from '@/hooks/use-toast';
@@ -140,8 +141,6 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         fetchBlockingOrders();
     }, [isOpen, userData?.id, activeSessionUserId]);
 
-    const storeId = userData?.id || currentUserProfile?.store_id;
-
     const effectiveStart = useMemo(() => {
         if (!activeSession) {
             const today = new Date();
@@ -165,40 +164,17 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                 }
             }
         }
-        // Buffer de 12 horas antes de la sesión más antigua para compensar desfase de reloj/zona horaria
-        const buffer = new Date(baseDate);
-        buffer.setHours(buffer.getHours() - 12);
-        return buffer;
+        return baseDate;
     }, [openSessions, effectiveStart]);
 
-    const earliestStartIso = useMemo(() => earliestStart.toISOString(), [earliestStart]);
-
-    // Ultra-lightweight sales query specific to CloseDay calculations
-    const { data: allStoreSales = [] } = useQuery({
-        queryKey: ['close-day-sales', storeId, earliestStartIso],
-        queryFn: async () => {
-            if (!storeId) return [];
-            const { data, error } = await supabase
-                .from('sales')
-                .select('id, total, payment_method, split_cash, split_method, created_at, profile_id, user_id, status')
-                .eq('store_id', storeId)
-                .gte('created_at', earliestStartIso)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error('Error fetching close day sales:', error);
-                throw error;
-            }
-            return data || [];
-        },
-        enabled: isOpen && !!storeId,
-        staleTime: 1000 * 10,
+    const { data: allStoreSales = [] } = useSales({ 
+        dateFrom: earliestStart,
+        userId: currentUserProfile?.role === 'admin' ? 'all' : (currentUserProfile?.id || 'all')
     });
     
     const { data: movements = [] } = useCashMovements(
         earliestStart, 
-        undefined,
-        { enabled: isOpen && !!storeId }
+        currentUserProfile?.role === 'admin' ? 'all' : (currentUserProfile?.id || 'all')
     );
     const { companyInfo } = usePrintSettings();
     const closeSession = useCloseSession();
@@ -214,20 +190,16 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         return allStoreSales.filter(sale => {
             const saleDate = new Date(sale.created_at);
             const isWithinTime = saleDate >= bufferStart;
-            const saleUserId = sale.profile_id || sale.user_id;
-            const isSameUser = !activeSessionUserId || !saleUserId || saleUserId === activeSessionUserId;
             const isNotCancelled = sale.status !== 'cancelled';
-            return isWithinTime && isSameUser && isNotCancelled;
+            return isWithinTime && isNotCancelled;
         });
-    }, [allStoreSales, activeSession, activeSessionUserId]);
+    }, [allStoreSales, activeSession]);
 
     // Helper to calculate sales for any open session
     const getSessionTotal = (session: any) => {
         const sessionStart = new Date(session.opened_at);
         sessionStart.setMinutes(sessionStart.getMinutes() - 1);
 
-        // Priority: opener.id (from join) > opened_by string > user_id
-        // opener is always a full profile object when the join query succeeds
         const sessionUserId = session.opener?.id
             || (typeof session.opened_by === 'object' && session.opened_by !== null
                 ? session.opened_by.id
@@ -236,11 +208,9 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
         const sSales = allStoreSales.filter(sale => {
             const saleDate = new Date(sale.created_at);
-            // Sales store the cashier in profile_id (preferred) or user_id (legacy)
             const saleUserId = sale.profile_id || sale.user_id;
             const isNotCancelled = sale.status !== 'cancelled';
             const isWithinSession = saleDate >= sessionStart;
-            // If we can't resolve a user ID for the session, show all sales (fallback)
             const isFromUser = !sessionUserId || !saleUserId || saleUserId === sessionUserId;
             return isWithinSession && isNotCancelled && isFromUser;
         });
@@ -257,14 +227,9 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         return movements.filter(m => {
             const mDate = new Date(m.created_at);
             const isWithinTime = mDate >= bufferStart;
-            // Extract the user ID from activeSession.opened_by (may be object or string)
-            const sessionUserId = typeof activeSession.opened_by === 'object' && activeSession.opened_by !== null
-                ? (activeSession.opened_by as any).id
-                : (activeSession.opened_by || activeSession.opener?.id || activeSession.user_id);
-            const isSameUser = !sessionUserId || !m.profile_id || m.profile_id === sessionUserId || m.profile_id === activeSessionUserId;
-            return isWithinTime && isSameUser;
+            return isWithinTime;
         });
-    }, [movements, activeSession, activeSessionUserId]);
+    }, [movements, activeSession]);
 
     // Calculate Financials
     const stats = useMemo(() => {
