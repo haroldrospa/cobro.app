@@ -300,329 +300,302 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   // ─── Merge badge for an order ───
   const getMergeLabel = (orderId: string) => {
     if (!mergeMode) return null;
-    if (orderId === mergeTarget) return <Badge className="bg-primary text-primary-foreground text-[9px] px-1.5 py-0.5">DESTINO</Badge>;
-    if (mergeSources.includes(orderId)) return <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5 bg-orange-500 text-white">FUSIONAR</Badge>;
-    if (mergeTarget) return <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 text-muted-foreground">+ Agregar</Badge>;
-    return <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 text-muted-foreground">Seleccionar destino</Badge>;
+    if (orderId === mergeTarget) return <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 shadow-sm">Destino</Badge>;
+    if (mergeSources.includes(orderId)) return <Badge className="text-[10px] px-2 py-0.5 bg-orange-500 text-white shadow-sm">Fusionar</Badge>;
+    if (mergeTarget) return <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground border-dashed">+ Unir</Badge>;
+    return <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground border-dashed">Elegir destino</Badge>;
   };
 
-  const renderMobileCard = (order: any) => {
+  const renderOrderRow = (order: any) => {
     const isTarget = order.id === mergeTarget;
     const isSource = mergeSources.includes(order.id);
-    const cardHighlight = mergeMode
-      ? isTarget ? 'ring-2 ring-primary bg-primary/10' : isSource ? 'ring-2 ring-orange-400 bg-orange-500/10' : 'hover:bg-muted/50'
-      : selectedOrderId === order.id ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50';
+    const isSelected = selectedOrderId === order.id;
+
+    let borderClass = 'border-border/50 hover:border-border hover:bg-muted/30 bg-card';
+    if (mergeMode) {
+      if (isTarget) borderClass = 'border-primary ring-2 ring-primary/30 bg-primary/5';
+      else if (isSource) borderClass = 'border-orange-500 ring-2 ring-orange-500/30 bg-orange-500/5';
+    } else if (isSelected) {
+      borderClass = 'border-primary ring-2 ring-primary/20 bg-primary/[0.04] shadow-sm';
+    }
+
+    const itemCount = order.open_order_items?.length || 0;
+    const notesText = displayNotes(order.notes);
 
     return (
-      <Card
+      <div
         key={order.id}
-        className={`cursor-pointer transition-all ${cardHighlight}`}
-        onClick={mergeMode ? (e) => handleMergeClick(e as any, order.id) : () => setSelectedOrderId(order.id)}
+        onClick={mergeMode ? (e) => handleMergeClick(e, order.id) : () => setSelectedOrderId(order.id)}
         onDoubleClick={!mergeMode ? () => handleRowDoubleClick(order) : undefined}
+        className={cn(
+          "group relative flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all duration-150 cursor-pointer gap-3",
+          borderClass
+        )}
       >
-        <CardContent className="p-2.5 flex items-center justify-between gap-2">
-          {/* Info Column */}
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {!mergeMode && selectedOrderId === order.id && (
-                <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+        {/* Left / Main Info */}
+        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+          {/* Status / Selection Indicator */}
+          <div className="flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+            {mergeMode ? (
+              getMergeLabel(order.id)
+            ) : (
+              <div className={cn(
+                "w-5 h-5 rounded-full flex items-center justify-center transition-colors border text-xs",
+                isSelected 
+                  ? "bg-primary border-primary text-primary-foreground font-bold shadow-sm" 
+                  : "border-border/60 group-hover:border-primary/50 text-transparent"
+              )}>
+                <Check className="h-3 w-3 stroke-[3]" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-secondary/80 text-foreground border border-border/40">
+                {order.order_number}
+              </span>
+
+              <span className="font-semibold text-sm text-foreground truncate max-w-[200px] flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                {order.customer_name || 'Cliente sin nombre'}
+              </span>
+
+              {notesText && (
+                <span className="text-[11px] text-muted-foreground/90 bg-muted/60 px-2 py-0.5 rounded truncate max-w-[180px]">
+                  {notesText}
+                </span>
               )}
-              <span className="font-bold text-xs text-primary leading-none">{order.order_number}</span>
-              <span className="text-xs font-semibold text-foreground truncate max-w-[120px] leading-none flex items-center gap-1">
-                <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                {order.customer_name}
-              </span>
-              {getMergeLabel(order.id)}
             </div>
 
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap leading-none">
-              <span className="flex items-center gap-0.5">
-                <Package className="h-3 w-3 text-muted-foreground/80 shrink-0" />
-                {order.open_order_items?.length || 0} prod.
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1.5">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 opacity-70" />
+                {format(new Date(order.created_at), 'dd/MM/yyyy • HH:mm', { locale: es })}
               </span>
-              <span className="text-muted-foreground/45">•</span>
-              <span className="flex items-center gap-0.5">
-                <Calendar className="h-3 w-3 text-muted-foreground/80 shrink-0" />
-                {format(new Date(order.created_at), 'dd/MM/yy HH:mm', { locale: es })}
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Package className="h-3 w-3 opacity-70" />
+                {itemCount} {itemCount === 1 ? 'producto' : 'productos'}
               </span>
             </div>
+          </div>
+        </div>
 
-            {displayNotes(order.notes) && (
-              <div className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded truncate max-w-full italic mt-0.5">
-                {displayNotes(order.notes)}
-              </div>
-            )}
+        {/* Right / Total & Quick Actions */}
+        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
+          <div className="text-left sm:text-right">
+            <div className="text-xs text-muted-foreground font-medium hidden sm:block">Total</div>
+            <div className="text-base sm:text-lg font-bold text-primary tabular-nums">
+              ${(order.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
 
-          {/* Action/Price Column */}
-          <div className="flex flex-col items-end justify-center gap-1 shrink-0 pl-2 border-l border-border/40 min-w-[75px]">
-            <span className="text-xs font-bold text-foreground leading-none">${(order.total || 0).toFixed(2)}</span>
-            
-            {!mergeMode && (
-              <div className="flex items-center gap-0.5 mt-0.5">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 text-muted-foreground hover:bg-muted/50" 
-                  onClick={(e) => handlePrint(e, order)}
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 text-destructive hover:bg-destructive/10" 
-                  onClick={(e) => handleDeleteClick(e, order.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          {!mergeMode && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg"
+                onClick={(e) => handlePrint(e, order)}
+                title="Imprimir Pre-cuenta"
+              >
+                <Printer className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                onClick={(e) => handleDeleteClick(e, order.id)}
+                title="Eliminar pedido"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+
+              <Button
+                size="sm"
+                variant={isSelected ? "default" : "secondary"}
+                className="h-8 px-3 text-xs font-medium gap-1.5 rounded-lg ml-1 shadow-none hidden sm:inline-flex"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLoadToCart(order);
+                }}
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                Cargar
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
     );
   };
-
-  const renderDesktopTable = () => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-12"></TableHead>
-          <TableHead>Pedido</TableHead>
-          <TableHead>Fecha</TableHead>
-          <TableHead>Cliente</TableHead>
-          <TableHead>Items</TableHead>
-          <TableHead className="text-right">Total</TableHead>
-          <TableHead className="w-28"></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {filteredOrders.map((order: any) => {
-          const isTarget = order.id === mergeTarget;
-          const isSource = mergeSources.includes(order.id);
-          const rowHighlight = mergeMode
-            ? isTarget ? 'bg-primary/10 hover:bg-primary/15 cursor-pointer'
-              : isSource ? 'bg-orange-500/10 hover:bg-orange-500/15 cursor-pointer'
-                : 'hover:bg-muted/50 cursor-pointer'
-            : selectedOrderId === order.id ? 'bg-primary/10 hover:bg-primary/15 cursor-pointer' : 'hover:bg-muted/50 cursor-pointer';
-
-          return (
-            <TableRow
-              key={order.id}
-              className={`transition-colors ${rowHighlight}`}
-              onClick={mergeMode ? (e) => handleMergeClick(e, order.id) : () => setSelectedOrderId(order.id)}
-              onDoubleClick={!mergeMode ? () => handleRowDoubleClick(order) : undefined}
-            >
-              <TableCell>
-                {mergeMode ? getMergeLabel(order.id) : (selectedOrderId === order.id && <Check className="h-4 w-4 text-primary" />)}
-              </TableCell>
-              <TableCell className="font-medium">{order.order_number}</TableCell>
-              <TableCell>{format(new Date(order.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}</TableCell>
-              <TableCell>
-                <div>{order.customer_name}</div>
-                {displayNotes(order.notes) && <div className="text-xs text-muted-foreground">{displayNotes(order.notes)}</div>}
-              </TableCell>
-              <TableCell>{order.open_order_items?.length || 0} productos</TableCell>
-              <TableCell className="text-right font-semibold">${(order.total || 0).toFixed(2)}</TableCell>
-              <TableCell>
-                {!mergeMode && (
-                  <div className="flex gap-1 justify-end">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => handlePrint(e, order)} title="Imprimir Pre-cuenta">
-                      <Printer className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => handleDeleteClick(e, order.id)} title="Eliminar pedido">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  );
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl w-full h-[90vh] sm:h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader className="pb-3 border-b border-border/40 bg-muted/10 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              {/* Info Column */}
-              <div className="flex items-start justify-between gap-4 w-full sm:w-auto">
-                <div className="flex flex-col gap-0.5">
-                  <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-                    <ClipboardList className="h-5 w-5 text-primary" />
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full h-[88vh] sm:h-[82vh] flex flex-col p-0 overflow-hidden rounded-2xl border-border/60 shadow-2xl">
+          {/* Minimalist Top Header */}
+          <DialogHeader className="px-5 py-4 border-b border-border/40 bg-card/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Title & Count */}
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <ClipboardList className="h-4 w-4" />
+                  </div>
+                  <DialogTitle className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
                     <span>Pedidos Guardados</span>
-                    {mergeMode && <Badge className="bg-orange-500 text-white text-[10px] ml-1.5 px-1.5 py-0 shrink-0">Modo Unir</Badge>}
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-muted-foreground">
-                    {mergeMode
-                      ? mergeTarget
-                        ? `Destino: ${targetOrder?.customer_name || '...'} — Selecciona cuentas`
-                        : 'Toca la cuenta DESTINO (recibirá los ítems)'
-                      : 'Toca para seleccionar'}
-                  </DialogDescription>
-                </div>
-
-                {/* Mobile Action Buttons (Right of the title on mobile) */}
-                {isMobile && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    {filteredOrders.length > 0 && !mergeMode && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 border-destructive/40 text-destructive hover:bg-destructive/10 px-2 text-xs font-bold gap-1"
-                        onClick={() => setConfirmDeleteAll(true)}
-                        title="Eliminar todos los pedidos"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="text-[10px]">Eliminar Todos</span>
-                      </Button>
+                    {filteredOrders.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                        {filteredOrders.length}
+                      </span>
                     )}
-                    {filteredOrders.length > 1 && !mergeMode && (
+                    {mergeMode && (
+                      <Badge className="bg-orange-500 text-white text-[10px] ml-1">Modo Unir</Badge>
+                    )}
+                  </DialogTitle>
+                </div>
+                <DialogDescription className="text-xs text-muted-foreground pl-10">
+                  {mergeMode
+                    ? mergeTarget
+                      ? `Destino: ${targetOrder?.customer_name || '...'} — Selecciona cuentas a fusionar`
+                      : 'Toca la cuenta DESTINO (que recibirá los productos)'
+                    : 'Toca para seleccionar o doble clic para cargar directo'}
+                </DialogDescription>
+              </div>
+
+              {/* Actions & Summary Header Badge */}
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                {filteredOrders.length > 0 && !mergeMode && (
+                  <>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/60 border border-border/40 text-xs">
+                      <span className="text-muted-foreground font-medium">Total:</span>
+                      <span className="font-bold text-primary">
+                        ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    {filteredOrders.length > 1 && (
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 w-8 p-0 border-orange-400/80 text-orange-500 hover:bg-orange-500/10"
+                        className="h-8 text-xs font-medium gap-1.5 border-border/60 hover:bg-secondary rounded-lg"
                         onClick={() => setMergeMode(true)}
                         title="Unir Cuentas"
                       >
-                        <Merge className="h-4 w-4" />
+                        <Merge className="h-3.5 w-3.5 text-orange-500" />
+                        <span className="hidden sm:inline">Unir</span>
                       </Button>
                     )}
-                    {mergeMode && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:bg-muted/80" 
-                        onClick={resetMergeMode} 
-                        title="Cancelar"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
 
-              {/* Total & Desktop Buttons Column */}
-              <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto border-t border-border/20 pt-2 sm:border-t-0 sm:pt-0">
-                {/* Desktop Buttons */}
-                {!isMobile && (
-                  <div className="flex items-center gap-1.5">
-                    {filteredOrders.length > 0 && !mergeMode && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive font-bold"
-                        onClick={() => setConfirmDeleteAll(true)}
-                        title="Eliminar todos los pedidos"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Eliminar Todos
-                      </Button>
-                    )}
-                    {filteredOrders.length > 1 && !mergeMode && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 border-orange-400 text-orange-500 hover:bg-orange-500/10"
-                        onClick={() => setMergeMode(true)}
-                      >
-                        <Merge className="h-4 w-4" />
-                        Unir Cuentas
-                      </Button>
-                    )}
-                    {mergeMode && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetMergeMode} title="Cancelar">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg px-2"
+                      onClick={() => setConfirmDeleteAll(true)}
+                      title="Eliminar todos los pedidos"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
                 )}
 
-                {filteredOrders.length > 0 && !mergeMode && (
-                  <div className="flex flex-row items-center justify-between sm:justify-end gap-3 bg-emerald-950/35 border border-emerald-500/20 px-3 py-1.5 rounded-lg shadow-sm backdrop-blur-sm w-full sm:w-auto">
-                    <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider">Total Guardado</span>
-                    <span className="text-base font-black text-emerald-400 tabular-nums">
-                      ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
+                {mergeMode && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 text-xs text-muted-foreground hover:bg-secondary rounded-lg gap-1"
+                    onClick={resetMergeMode}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancelar unión
+                  </Button>
                 )}
               </div>
             </div>
           </DialogHeader>
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Cargando pedidos...</div>
-            </div>
-          ) : filteredOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <ClipboardList className="h-12 w-12 mb-4" />
-              <p>No hay pedidos guardados</p>
-            </div>
-          ) : (
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <ScrollArea className="flex-1 min-h-0">
-                {isMobile ? (
-                  <div className="space-y-1.5 pr-4 pb-2">
-                    {filteredOrders.map((order: any) => renderMobileCard(order))}
-                  </div>
-                ) : renderDesktopTable()}
+          {/* Content Area */}
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 sm:p-5 bg-background/50">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center flex-1 py-12 text-muted-foreground gap-2">
+                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs">Cargando pedidos guardados...</span>
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mb-3 text-muted-foreground">
+                  <ClipboardList className="h-7 w-7 stroke-[1.5]" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground mb-1">No hay pedidos guardados</h3>
+                <p className="text-xs text-muted-foreground max-w-[260px]">
+                  Cuando pongas cuentas o ventas en espera desde el POS, aparecerán listadas aquí.
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="flex-1 -mr-2 pr-3">
+                <div className="space-y-2.5 pb-2">
+                  {filteredOrders.map((order: any) => renderOrderRow(order))}
+                </div>
               </ScrollArea>
+            )}
 
-              {/* ─── Merge summary bar ─── */}
-              {mergeMode && mergeTarget && mergeSources.length > 0 && (
-                <div className="border-t border-orange-400/30 bg-orange-500/5 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <div className="flex-1 text-sm">
-                    <span className="font-bold text-orange-400">{sourceOrders.length} cuenta(s)</span>
-                    <ArrowRight className="inline h-4 w-4 mx-2 text-muted-foreground" />
-                    <span className="font-bold text-primary">{targetOrder?.customer_name}</span>
-                    <span className="text-muted-foreground ml-2">
-                      (Total nuevo estimado: ${(
-                        (targetOrder?.total || 0) +
-                        sourceOrders.reduce((s: number, o: any) => s + (o.total || 0), 0)
-                      ).toFixed(2)})
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="gap-1.5 bg-orange-500 hover:bg-orange-600 text-white shrink-0"
-                    onClick={() => setConfirmMerge(true)}
-                    disabled={mergeOrdersMutation.isPending}
-                  >
-                    <Merge className="h-4 w-4" />
-                    Confirmar Unión
-                  </Button>
+            {/* ─── Merge summary bar ─── */}
+            {mergeMode && mergeTarget && mergeSources.length > 0 && (
+              <div className="mt-3 p-3 rounded-xl border border-orange-500/30 bg-orange-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="text-xs text-foreground flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-orange-500">{sourceOrders.length} cuenta(s)</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-semibold text-primary">{targetOrder?.customer_name}</span>
+                  <span className="text-muted-foreground">
+                    (Nuevo total: ${(
+                      (targetOrder?.total || 0) +
+                      sourceOrders.reduce((s: number, o: any) => s + (o.total || 0), 0)
+                    ).toFixed(2)})
+                  </span>
                 </div>
-              )}
+                <Button
+                  size="sm"
+                  className="h-8 bg-orange-500 hover:bg-orange-600 text-white text-xs gap-1.5 rounded-lg shrink-0"
+                  onClick={() => setConfirmMerge(true)}
+                  disabled={mergeOrdersMutation.isPending}
+                >
+                  <Merge className="h-3.5 w-3.5" />
+                  Confirmar Unión
+                </Button>
+              </div>
+            )}
+          </div>
 
-              {/* ─── Action buttons ─── */}
-              {!mergeMode && (
-                <div className={`flex gap-2 pt-4 border-t mt-4 ${isMobile ? 'flex-col' : 'justify-end'}`}>
-                  {isMobile ? (
-                    <>
-                      <Button onClick={() => handleLoadToCart()} disabled={!selectedOrder} className="gap-2 w-full" size="lg">
-                        <ShoppingCart className="h-4 w-4" />
-                        Cargar al POS
-                      </Button>
-                      <Button variant="outline" onClick={onClose} className="w-full">Cerrar</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="outline" onClick={onClose}>Cerrar</Button>
-                      <Button onClick={() => handleLoadToCart()} disabled={!selectedOrder} className="gap-2">
-                        <ShoppingCart className="h-4 w-4" />
-                        Cargar al POS
-                      </Button>
-                    </>
-                  )}
-                </div>
-              )}
+          {/* Minimalist Bottom Footer */}
+          {!mergeMode && filteredOrders.length > 0 && (
+            <div className="px-5 py-3.5 border-t border-border/40 bg-card/80 flex items-center justify-between gap-3">
+              <div className="text-xs text-muted-foreground truncate">
+                {selectedOrder ? (
+                  <span>
+                    Seleccionado: <strong className="text-foreground">{selectedOrder.order_number}</strong> ({selectedOrder.customer_name})
+                  </span>
+                ) : (
+                  <span>Selecciona un pedido para cargarlo</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="ghost" size="sm" onClick={onClose} className="h-9 px-3 text-xs rounded-lg">
+                  Cerrar
+                </Button>
+                <Button
+                  onClick={() => handleLoadToCart()}
+                  disabled={!selectedOrder}
+                  size="sm"
+                  className="h-9 px-4 text-xs font-semibold gap-1.5 rounded-lg shadow-sm"
+                >
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                  Cargar al POS
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
