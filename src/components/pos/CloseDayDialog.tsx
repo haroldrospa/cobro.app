@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2 } from 'lucide-react';
-import { useSales } from '@/hooks/useSalesManagement';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +32,7 @@ interface CloseDayDialogProps {
 }
 
 const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoToPOS }) => {
+    const [activeTab, setActiveTab] = useState<'close' | 'history'>('close');
     const [actualCash, setActualCash] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [showCashCount, setShowCashCount] = useState(false);
@@ -51,8 +51,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
     const { data: activeSessionCached } = useActiveSession();
     const { profile: currentUserProfile } = useUserProfile();
     const { data: userData } = useUserStore();
-    const { data: openSessionsData, isLoading: isLoadingOpenSessions, isPending: isPendingOpenSessions } = useOpenSessions();
-    const { data: historyData, isLoading: isLoadingHistory, isPending: isPendingHistory } = useSessionHistory();
+    const { data: openSessionsData, isLoading: isLoadingOpenSessions, isPending: isPendingOpenSessions } = useOpenSessions({ enabled: isOpen });
+    const { data: historyData, isLoading: isLoadingHistory, isPending: isPendingHistory } = useSessionHistory({ enabled: isOpen && activeTab === 'history' });
     const history = historyData || [];
     const isLoading = isLoadingHistory || isPendingHistory || isLoadingOpenSessions || isPendingOpenSessions;
 
@@ -119,7 +119,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             try {
                 const { data, error: fetchErr } = await supabase
                     .from('open_orders')
-                    .select('*')
+                    .select('id, total, order_number, customer_name, notes')
                     .eq('store_id', userData.id)
                     .eq('profile_id', activeSessionUserId)
                     .eq('payment_status', 'pending')
@@ -140,23 +140,53 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         fetchBlockingOrders();
     }, [isOpen, userData?.id, activeSessionUserId]);
 
-    const effectiveStart = useMemo(() => {
-        if (!activeSession) return new Date();
-        return new Date(activeSession.opened_at);
-    }, [activeSession]);
+    const activeSessionOpenedAt = activeSession?.opened_at;
 
-    const earliestStart = useMemo(() => {
-        if (openSessions.length === 0) return effectiveStart;
-        const minTime = Math.min(...openSessions.map((s: any) => new Date(s.opened_at).getTime()));
-        const minDate = new Date(minTime);
-        return minDate < effectiveStart ? minDate : effectiveStart;
-    }, [openSessions, effectiveStart]);
+    const effectiveStartIso = useMemo(() => {
+        if (!activeSessionOpenedAt) return new Date().toISOString();
+        return activeSessionOpenedAt;
+    }, [activeSessionOpenedAt]);
 
-    const { data: allStoreSales = [] } = useSales({ 
-        dateFrom: earliestStart
+    const earliestStartIso = useMemo(() => {
+        if (openSessions.length === 0) return effectiveStartIso;
+        const timestamps = openSessions
+            .map((s: any) => s.opened_at ? new Date(s.opened_at).getTime() : null)
+            .filter((t): t is number => t !== null && !isNaN(t));
+        if (timestamps.length === 0) return effectiveStartIso;
+        const minTime = Math.min(...timestamps);
+        const minDateIso = new Date(minTime).toISOString();
+        return minDateIso < effectiveStartIso ? minDateIso : effectiveStartIso;
+    }, [openSessions, effectiveStartIso]);
+
+    const effectiveStart = useMemo(() => new Date(effectiveStartIso), [effectiveStartIso]);
+
+    // Ultra-lightweight sales query specific to CloseDay calculations
+    const { data: allStoreSales = [] } = useQuery({
+        queryKey: ['close-day-sales', userData?.id, earliestStartIso],
+        queryFn: async () => {
+            if (!userData?.id || !earliestStartIso) return [];
+            const { data, error } = await supabase
+                .from('sales')
+                .select('id, total, payment_method, split_cash, split_method, created_at, profile_id, user_id, status')
+                .eq('store_id', userData.id)
+                .gte('created_at', earliestStartIso)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching close day sales:', error);
+                throw error;
+            }
+            return data || [];
+        },
+        enabled: isOpen && !!userData?.id && !!earliestStartIso,
+        staleTime: 1000 * 30,
     });
     
-    const { data: movements = [] } = useCashMovements(effectiveStart, activeSession?.opened_by);
+    const { data: movements = [] } = useCashMovements(
+        effectiveStartIso, 
+        activeSessionUserId || undefined,
+        { enabled: isOpen && !!userData?.id }
+    );
     const { companyInfo } = usePrintSettings();
     const closeSession = useCloseSession();
     const { toast } = useToast();
@@ -341,7 +371,11 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             toast({ title: 'Cierre Exitoso', description: 'La caja se ha cerrado correctamente.' });
 
             if (downloadPdf || printReport) {
-                const openerName = history.find((h: any) => h.id === activeSession.id)?.opener?.full_name || 'Desconocido';
+                const openerName = history.find((h: any) => h.id === activeSession.id)?.opener?.full_name 
+                    || (typeof activeSession.opened_by === 'object' ? (activeSession.opened_by as any)?.full_name : null) 
+                    || (activeSession as any).opener?.full_name 
+                    || currentUserProfile?.full_name 
+                    || 'Desconocido';
                 const doc = await generateCloseDayPDF(companyInfo, {
                     stats,
                     actualCash: parseFloat(actualCash) || 0,
@@ -418,7 +452,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                     </DialogHeader>
                 </div>
 
-                <Tabs defaultValue="close" className="w-full flex-1 flex flex-col overflow-hidden px-6 pb-6">
+                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full flex-1 flex flex-col overflow-hidden px-6 pb-6">
                     <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start bg-muted p-1 rounded-2xl h-12 mb-6 sm:grid sm:grid-cols-2">
                         <TabsTrigger value="close" className="rounded-xl font-bold data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
                             Cierre de Sesión

@@ -291,7 +291,7 @@ export const useCloseSession = () => {
 };
 
 
-export const useOpenSessions = () => {
+export const useOpenSessions = (options?: { enabled?: boolean }) => {
     const { profile } = useUserProfile();
     const storeId = profile?.store_id;
 
@@ -331,12 +331,12 @@ export const useOpenSessions = () => {
                 new Date(s.opened_at) > twoDaysAgo
             );
         },
-        enabled: !!storeId,
+        enabled: options?.enabled !== undefined ? (options.enabled && !!storeId) : !!storeId,
         refetchInterval: 1000 * 60 * 2, // Reduced: 2 min is enough for shift monitoring (was 30s — too aggressive on mobile)
     });
 };
 
-export const useSessionHistory = () => {
+export const useSessionHistory = (options?: { enabled?: boolean }) => {
     const { profile } = useUserProfile();
     const storeId = profile?.store_id;
 
@@ -367,7 +367,7 @@ export const useSessionHistory = () => {
                 .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
                 .slice(0, 50);
         },
-        enabled: !!storeId,
+        enabled: options?.enabled !== undefined ? (options.enabled && !!storeId) : !!storeId,
         refetchInterval: 1000 * 60 * 10, // 10 min — shift history changes rarely, no need to check every 5min
     });
 };

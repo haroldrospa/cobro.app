@@ -15,9 +15,13 @@ export interface CashMovement {
     };
 }
 
-export const useCashMovements = (dateFrom?: Date, userId?: string) => {
+export const useCashMovements = (dateFrom?: Date | string, userId?: string, options?: { enabled?: boolean }) => {
+    const dateStr = typeof dateFrom === 'string' 
+        ? (dateFrom.includes('T') ? dateFrom.split('T')[0] : dateFrom)
+        : dateFrom?.toISOString().split('T')[0];
+
     return useQuery({
-        queryKey: ['cash-movements', dateFrom, userId],
+        queryKey: ['cash-movements', dateStr, userId],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return [];
@@ -32,7 +36,7 @@ export const useCashMovements = (dateFrom?: Date, userId?: string) => {
 
             let query = supabase
                 .from('cash_movements')
-                .select('*, profile:profiles(full_name)')
+                .select('id, store_id, profile_id, type, amount, reason, created_at, profile:profiles(full_name)')
                 .eq('store_id', profile.store_id)
                 .order('created_at', { ascending: false });
 
@@ -40,9 +44,8 @@ export const useCashMovements = (dateFrom?: Date, userId?: string) => {
                 query = query.eq('profile_id', userId);
             }
 
-            if (dateFrom) {
-                const dateFromStr = dateFrom.toISOString().split('T')[0];
-                query = query.gte('created_at', dateFromStr);
+            if (dateStr) {
+                query = query.gte('created_at', dateStr);
             }
 
             const { data, error } = await query;
@@ -50,6 +53,7 @@ export const useCashMovements = (dateFrom?: Date, userId?: string) => {
             if (error) throw error;
             return data as CashMovement[];
         },
+        enabled: options?.enabled !== undefined ? options.enabled : true,
     });
 };
 
