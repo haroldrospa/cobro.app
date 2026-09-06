@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useUserStore } from '@/hooks/useUserStore';
 import { generatePreCheckPDF } from '@/utils/invoicePdfGenerator';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
+import { cn } from '@/lib/utils';
 
 // Al guardar un pedido (SaveOrderDialog) se le agrega al final de las notas
 // una etiqueta técnica entre corchetes (ej. "[COMPRA AQUÍ]") para que otras
