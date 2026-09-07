@@ -37,7 +37,6 @@ import { ShopperProfileDialog } from '@/components/store/ShopperProfileDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useShopperOrders } from '@/hooks/useShopperOrders';
 import { useChatNotifications } from '@/hooks/useChatNotifications';
-import { MobileDock, TabId } from '@/components/store/MobileDock';
 
 interface CartItem {
   product: Product;
@@ -101,35 +100,7 @@ const Tienda: React.FC = () => {
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [activeMobileTab, setActiveMobileTab] = useState<TabId>('home');
-
-  useEffect(() => {
-    if (!showCart && activeMobileTab === 'cart') {
-      setActiveMobileTab('home');
-    }
-  }, [showCart, activeMobileTab]);
-
-  useEffect(() => {
-    if (!showProfileDialog && activeMobileTab === 'profile') {
-      setActiveMobileTab('home');
-    }
-  }, [showProfileDialog, activeMobileTab]);
-
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const handleTabChange = (tab: TabId) => {
-    setActiveMobileTab(tab);
-    if (tab === 'cart') {
-      setShowCart(true);
-    } else if (tab === 'profile') {
-      setShowProfileDialog(true);
-    } else if (tab === 'search') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
-    }
-  };
 
   const [profileDialogView, setProfileDialogView] = useState<'orders' | 'settings'>('orders');
   const [loyaltyData, setLoyaltyData] = useState<{ points: number, code: string } | null>(null);
@@ -760,7 +731,7 @@ const Tienda: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-50/70 dark:bg-zinc-950 font-sans text-slate-900 dark:text-zinc-100 pb-24 selection:bg-emerald-500/20 selection:text-emerald-600 pt-16">
+    <div className="min-h-screen bg-slate-50/70 dark:bg-zinc-950 font-sans text-slate-900 dark:text-zinc-100 pb-12 selection:bg-emerald-500/20 selection:text-emerald-600 pt-16">
       {/* Sleek Minimalist Header - Fixed on top */}
       <header className="fixed top-0 left-0 right-0 z-50 w-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-zinc-800/80 shadow-xs transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -838,14 +809,15 @@ const Tienda: React.FC = () => {
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
 
-            {/* Desktop Cart Button */}
+            {/* Cart Button (Always visible on mobile and desktop) */}
             <Button
               variant="outline"
               onClick={() => setShowCart(true)}
-              className="relative h-9 px-3.5 rounded-xl border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800/80 gap-2 text-slate-700 dark:text-zinc-200 hidden sm:flex items-center font-bold text-xs"
+              className="relative h-9 px-2.5 sm:px-3.5 rounded-xl border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800/80 gap-1.5 sm:gap-2 text-slate-700 dark:text-zinc-200 flex items-center font-bold text-xs"
+              title="Ver Carrito"
             >
               <ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Carrito</span>
+              <span className="hidden sm:inline">Carrito</span>
               {cartItemCount > 0 && (
                 <span className="bg-emerald-600 text-white text-[10px] font-black h-5 min-w-[20px] px-1 rounded-full flex items-center justify-center">
                   {cartItemCount}
@@ -1271,7 +1243,7 @@ const Tienda: React.FC = () => {
 
   {/* Sticky Floating Cart Bar */}
   {cartItemCount > 0 && (
-    <div className="fixed bottom-24 md:bottom-6 left-4 right-4 max-w-md mx-auto z-40 animate-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-6 left-4 right-4 max-w-md mx-auto z-40 animate-in slide-in-from-bottom-5 duration-300">
       <div 
         onClick={() => setShowCart(true)}
         className="bg-slate-900/95 dark:bg-zinc-900/95 backdrop-blur-xl text-white p-3.5 pl-4 rounded-2xl shadow-[0_15px_35px_-5px_rgba(0,0,0,0.4)] border border-white/10 flex items-center justify-between cursor-pointer hover:bg-slate-900 dark:hover:bg-zinc-900 transition-all group active:scale-[0.99]"
@@ -1296,13 +1268,6 @@ const Tienda: React.FC = () => {
       </div>
     </div>
   )}
-
-  {/* Mobile Spotlight Dock */}
-  <MobileDock
-    activeTab={activeMobileTab}
-    setActiveTab={handleTabChange}
-    cartItemCount={cartItemCount}
-  />
 
   {/* Cart Dialog */}
   <Dialog open={showCart} onOpenChange={setShowCart}>
