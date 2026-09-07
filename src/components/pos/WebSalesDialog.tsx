@@ -5,7 +5,7 @@ import {
   Store,
   ShoppingCart,
   Check,
-  Trash2,
+  XCircle,
   Printer,
   MessageCircle,
   Search,
@@ -13,16 +13,17 @@ import {
   ChevronUp,
   ChefHat,
   Truck,
-  Phone
+  Phone,
+  AlertTriangle
 } from 'lucide-react';
 import OrderChatPanel from './OrderChatPanel';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -42,11 +43,20 @@ interface WebSalesDialogProps {
   currentLoadedOrderId?: string | null;
 }
 
+const QUICK_REJECTION_REASONS = [
+  'Producto sin stock / agotado',
+  'Dirección fuera de la zona de cobertura',
+  'Comprobante de pago inválido o no recibido',
+  'Negocio cerrado temporalmente',
+  'No fue posible contactar al cliente'
+];
+
 const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoadToCart, currentLoadedOrderId }) => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [activeChatOrderId, setActiveChatOrderId] = useState<string | null>(null);
-  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [orderToReject, setOrderToReject] = useState<any | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { toast } = useToast();
@@ -160,29 +170,41 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     };
   }, [isOpen, userStore?.id, queryClient]);
 
-  const deleteOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const { error: itemsError } = await supabase
-        .from('open_order_items')
-        .delete()
-        .eq('order_id', orderId);
+  const rejectOrderMutation = useMutation({
+    mutationFn: async ({ order, reason }: { order: any; reason: string }) => {
+      const cleanReason = reason.trim();
 
-      if (itemsError) throw itemsError;
-
+      // 1. Actualizar estado del pedido a cancelado y guardar motivo en notes
       const { error: orderError } = await supabase
         .from('open_orders')
-        .delete()
-        .eq('id', orderId);
+        .update({
+          order_status: 'cancelled',
+          notes: cleanReason
+        })
+        .eq('id', order.id);
 
       if (orderError) throw orderError;
+
+      // 2. Enviar mensaje al chat del pedido informando al cliente
+      try {
+        await supabase.from('chat_messages').insert({
+          order_id: order.id,
+          store_id: order.store_id,
+          sender_role: 'store',
+          sender_name: userStore?.store_name || 'Negocio',
+          message: `❌ Pedido rechazado. Motivo: ${cleanReason}`,
+        });
+      } catch (chatErr) {
+        console.warn('No se pudo insertar mensaje automático en chat:', chatErr);
+      }
     },
-    onMutate: async (orderId: string) => {
+    onMutate: async ({ order, reason }) => {
       await queryClient.cancelQueries({ queryKey: ['web-orders', userStore?.id] });
       const previousOrders = queryClient.getQueryData(['web-orders', userStore?.id]);
 
       queryClient.setQueryData(['web-orders', userStore?.id], (old: any[] | undefined) => {
         if (!old) return [];
-        return old.filter((o: any) => String(o.id) !== String(orderId));
+        return old.filter((o: any) => String(o.id) !== String(order.id));
       });
 
       return { previousOrders };
@@ -191,23 +213,25 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
       queryClient.refetchQueries({ queryKey: ['web-orders'] });
       queryClient.invalidateQueries({ queryKey: ['web-orders-count'] });
+      queryClient.invalidateQueries({ queryKey: ['shopper-orders'] });
       toast({
-        title: "Pedido eliminado",
-        description: "El pedido ha sido eliminado correctamente"
+        title: "Pedido rechazado",
+        description: "El cliente podrá ver el motivo del rechazo en el seguimiento de su pedido."
       });
-      setOrderToDelete(null);
+      setOrderToReject(null);
+      setRejectionReason('');
       setSelectedOrderId(null);
     },
-    onError: (error, _orderId, context: any) => {
+    onError: (error: any, _vars, context: any) => {
       if (context?.previousOrders) {
         queryClient.setQueryData(['web-orders', userStore?.id], context.previousOrders);
       }
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo eliminar el pedido"
+        title: "Error al rechazar",
+        description: "No se pudo actualizar el estado del pedido"
       });
-      console.error('Error deleting order:', error);
+      console.error('Error rejecting order:', error);
     }
   });
 
@@ -284,9 +308,23 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     handleLoadToCart(order);
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, orderId: string) => {
+  const handleRejectClick = (e: React.MouseEvent, order: any) => {
     e.stopPropagation();
-    setOrderToDelete(orderId);
+    setOrderToReject(order);
+    setRejectionReason('');
+  };
+
+  const handleConfirmReject = () => {
+    if (!orderToReject) return;
+    if (!rejectionReason.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Motivo requerido",
+        description: "Por favor indica el motivo del rechazo para informar al cliente."
+      });
+      return;
+    }
+    rejectOrderMutation.mutate({ order: orderToReject, reason: rejectionReason.trim() });
   };
 
   const handlePrint = async (e: React.MouseEvent, order: any) => {
@@ -444,6 +482,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
               size="icon"
               className="h-7 w-7 text-muted-foreground"
               onClick={(e) => handlePrint(e, order)}
+              title="Imprimir"
             >
               <Printer className="h-3.5 w-3.5" />
             </Button>
@@ -452,6 +491,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
               size="icon"
               className="h-7 w-7 text-muted-foreground relative"
               onClick={(e) => { e.stopPropagation(); setActiveChatOrderId(order.id); }}
+              title="Chat"
             >
               <MessageCircle className="h-3.5 w-3.5" />
               {unreadCounts[order.id] > 0 && (
@@ -462,9 +502,10 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-destructive hover:bg-destructive/10"
-              onClick={(e) => handleDeleteClick(e, order.id)}
+              onClick={(e) => handleRejectClick(e, order)}
+              title="Rechazar pedido"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <XCircle className="h-3.5 w-3.5" />
             </Button>
           </div>
         </CardContent>
@@ -607,10 +648,10 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => handleDeleteClick(e, order.id)}
-                        title="Eliminar"
+                        onClick={(e) => handleRejectClick(e, order)}
+                        title="Rechazar pedido"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <XCircle className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>
@@ -759,26 +800,95 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para confirmación de eliminación */}
-      <AlertDialog open={!!orderToDelete} onOpenChange={() => setOrderToDelete(null)}>
-        <AlertDialogContent className="rounded-xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-base">¿Eliminar pedido?</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
-              Esta acción no se puede deshacer. El pedido será eliminado permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs h-8">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs h-8"
-              onClick={() => orderToDelete && deleteOrderMutation.mutate(orderToDelete)}
+      {/* Modal para Rechazar Pedido con Motivo */}
+      <Dialog
+        open={!!orderToReject}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOrderToReject(null);
+            setRejectionReason('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-md w-full rounded-2xl p-5 sm:p-6">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <DialogTitle className="text-base font-semibold">
+                Rechazar Pedido #{orderToReject?.order_number}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              Indica el motivo por el cual no se puede procesar este pedido. El cliente podrá ver esta explicación al consultar el estado de su orden.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {/* Quick chips */}
+            <div>
+              <label className="text-[11px] font-semibold text-muted-foreground block mb-1.5">
+                Motivos frecuentes (haz clic para seleccionar):
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_REJECTION_REASONS.map((reason, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setRejectionReason(reason)}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all text-left ${
+                      rejectionReason === reason
+                        ? 'bg-destructive/15 border-destructive text-destructive font-medium'
+                        : 'bg-muted/40 border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Reason Textarea */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">
+                Explicación para el cliente:
+              </label>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Escribe aquí el motivo detallado del rechazo..."
+                rows={3}
+                className="text-xs resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-row justify-end gap-2 pt-2 border-t mt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setOrderToReject(null);
+                setRejectionReason('');
+              }}
+              className="text-xs h-8"
+              disabled={rejectOrderMutation.isPending}
             >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmReject}
+              disabled={!rejectionReason.trim() || rejectOrderMutation.isPending}
+              className="text-xs h-8 gap-1.5 font-medium"
+            >
+              {rejectOrderMutation.isPending ? 'Rechazando...' : 'Rechazar Pedido'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

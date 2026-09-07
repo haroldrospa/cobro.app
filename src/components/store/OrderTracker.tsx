@@ -18,9 +18,8 @@ import { cn } from '@/lib/utils';
 interface OrderTrackerProps {
     status: string;
     shopType?: string;
+    notes?: string | null;
 }
-
-
 
 const getStatusIndex = (status: string) => {
     switch (status) {
@@ -35,7 +34,7 @@ const getStatusIndex = (status: string) => {
     }
 };
 
-export const OrderTracker: React.FC<OrderTrackerProps> = ({ status, shopType }) => {
+export const OrderTracker: React.FC<OrderTrackerProps> = ({ status, shopType, notes }) => {
     const currentIndex = getStatusIndex(status);
     const isCancelled = status === 'cancelled';
 
@@ -54,10 +53,18 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ status, shopType }) 
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-6 p-4 rounded-[1.5rem] bg-red-500/5 border border-red-500/20 flex items-center gap-3 text-red-500"
+                className="mt-4 p-4 rounded-2xl bg-destructive/10 border border-destructive/25 flex flex-col gap-2.5 text-destructive"
             >
-                <Ban className="h-5 w-5" />
-                <span className="font-black text-xs uppercase tracking-widest">Pedido Cancelado</span>
+                <div className="flex items-center gap-2">
+                    <Ban className="h-5 w-5 shrink-0" />
+                    <span className="font-bold text-xs uppercase tracking-wider">Pedido Rechazado</span>
+                </div>
+                {notes && (
+                    <div className="text-xs text-foreground bg-background/90 dark:bg-card p-3 rounded-xl border border-destructive/20 mt-0.5">
+                        <span className="font-semibold text-destructive block mb-1">Motivo del rechazo:</span>
+                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{notes}</p>
+                    </div>
+                )}
             </motion.div>
         );
     }
