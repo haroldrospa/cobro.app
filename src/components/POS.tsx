@@ -161,7 +161,7 @@ const POSContent: React.FC = () => {
   const [showSaveOrderDialog, setShowSaveOrderDialog] = useState(false);
   const [currentWebOrderId, setCurrentWebOrderId] = useState<string | null>(null);
   const [currentOrderInfo, setCurrentOrderInfo] = useState<{ orderNumber: string; customerName: string; notes?: string } | null>(null);
-  const [currentOrderSource, setCurrentOrderSource] = useState<'pos' | 'web'>('pos');
+  const [currentOrderSource, setCurrentOrderSource] = useState<'pos' | 'web' | 'pedidosya'>('pos');
   const [posOrderType, setPosOrderType] = useState<'dine-in' | 'takeout'>('dine-in');
   const [showDailySalesDialog, setShowDailySalesDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
@@ -1011,7 +1011,7 @@ const POSContent: React.FC = () => {
     }
   };
 
-  const handleLoadWebOrder = (items: CartItem[], orderId?: string, customerName?: string, orderNumber?: string, source?: 'pos' | 'web', notes?: string) => {
+  const handleLoadWebOrder = (items: CartItem[], orderId?: string, customerName?: string, orderNumber?: string, source?: 'pos' | 'web' | 'pedidosya', notes?: string) => {
     // If items is an array of CartItem, use directly
     if (Array.isArray(items) && items.length > 0) {
       setCart(items);

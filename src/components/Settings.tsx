@@ -28,6 +28,7 @@ import SettingsStoreSection from '@/components/settings/SettingsStoreSection';
 import BannerSettingsSection from '@/components/settings/BannerSettingsSection';
 import StoreHoursSection from '@/components/settings/StoreHoursSection';
 import { AiSettingsSection } from '@/components/settings/AiSettingsSection';
+import { PedidosYaSettingsSection } from '@/components/settings/PedidosYaSettingsSection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InvoiceSequenceInput } from '@/components/settings/InvoiceSequenceInput';
@@ -2076,6 +2077,9 @@ const Settings = () => {
                 <Sparkles className="h-4 w-4" />
                 Inteligencia Artificial
               </TabsTrigger>
+              <TabsTrigger value="pedidosya" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center gap-1.5">
+                🛵 PedidosYa
+              </TabsTrigger>
               <TabsTrigger value="system" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Apariencia</TabsTrigger>
               <TabsTrigger value="advanced" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Avanzado</TabsTrigger>
               
@@ -3703,6 +3707,11 @@ const Settings = () => {
                 </Button>
               </CardContent>
             </Card>
+        </TabsContent>
+
+        {/* PedidosYa Integration Tab */}
+        <TabsContent value="pedidosya" className="space-y-6 mt-0">
+          <PedidosYaSettingsSection userStore={userStore} />
         </TabsContent>
           </div>
         </Tabs>

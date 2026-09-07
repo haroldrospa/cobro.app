@@ -64,7 +64,7 @@ export const useWebOrderNotifications = ({
             playNotificationSound(soundType, soundEnabled, soundVolume);
 
             // Optimistically update the count if it matches
-            if (newOrder.source?.toLowerCase() === 'web') {
+            if (newOrder.source?.toLowerCase() === 'web' || newOrder.source?.toLowerCase() === 'pedidosya') {
               queryClient.setQueryData(['web-orders-count', storeId], (old: number | undefined) => (old || 0) + 1);
             }
 

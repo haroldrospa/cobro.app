@@ -39,7 +39,7 @@ import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 interface WebSalesDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoadToCart?: (items: CartItem[], orderId: string, customerName: string, orderNumber: string, source: 'pos' | 'web', notes?: string) => void;
+  onLoadToCart?: (items: CartItem[], orderId: string, customerName: string, orderNumber: string, source: 'pos' | 'web' | 'pedidosya', notes?: string) => void;
   currentLoadedOrderId?: string | null;
 }
 
@@ -90,7 +90,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
           )
         `)
         .eq('store_id', userStore.id)
-        .eq('source', 'web')
+        .in('source', ['web', 'pedidosya'])
         .in('order_status', ['pending', 'confirmed', 'preparing', 'shipped', 'completed'])
         .order('created_at', { ascending: false })
         .limit(30);
@@ -360,6 +360,17 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     }
   };
 
+  const getSourceBadge = (source?: string) => {
+    if (source === 'pedidosya') {
+      return (
+        <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-none font-bold text-[10px] px-1.5 py-0.5">
+          🛵 PedidosYa
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   const selectedOrder = validOrders.find((o: any) => o.id === selectedOrderId);
 
   const openWhatsApp = (e: React.MouseEvent, phone: string, orderNumber: string) => {
@@ -411,8 +422,9 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
       >
         <CardContent className="p-3.5 space-y-2.5">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-semibold text-xs text-foreground">#{order.order_number}</span>
+              {getSourceBadge(order.source)}
               {getOrderStatusBadge(order.order_status)}
             </div>
             <span className="font-bold text-sm text-foreground">
@@ -550,7 +562,10 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
                     )}
                   </TableCell>
                   <TableCell className="py-2.5 font-medium text-foreground text-xs">
-                    #{order.order_number}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>#{order.order_number}</span>
+                      {getSourceBadge(order.source)}
+                    </div>
                   </TableCell>
                   <TableCell className="py-2.5 text-xs text-muted-foreground whitespace-nowrap">
                     {format(new Date(order.created_at), 'dd/MM/yy · HH:mm', { locale: es })}

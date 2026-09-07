@@ -18,7 +18,7 @@ export const useWebOrdersCount = () => {
         .from('open_orders')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', userStore.id)
-        .ilike('source', 'web')
+        .in('source', ['web', 'pedidosya'])
         .in('order_status', ['pending', 'confirmed', 'preparing', 'shipped']);
 
       if (error) {

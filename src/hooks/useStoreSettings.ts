@@ -113,6 +113,14 @@ export type StoreSettings = {
   meta_whatsapp_phone_number_id?: string;
   meta_whatsapp_access_token?: string;
 
+  // PedidosYa Integration Settings
+  pedidosya_enabled?: boolean;
+  pedidosya_store_id?: string;
+  pedidosya_client_id?: string;
+  pedidosya_client_secret?: string;
+  pedidosya_webhook_secret?: string;
+  pedidosya_auto_accept?: boolean;
+
   // Kitchen Display Settings
   kitchen_yellow_threshold?: number;
   kitchen_red_threshold?: number;
@@ -340,7 +348,8 @@ export const useStoreSettings = () => {
       'invoice_font_size', 'show_barcode', 'logo_width', 'business_hours',
       'use_delivery', 'use_kitchen', 'shop_type',
       'meta_whatsapp_enabled', 'meta_whatsapp_phone_number_id', 'meta_whatsapp_access_token',
-      'bank_accounts'
+      'bank_accounts',
+      'pedidosya_enabled', 'pedidosya_store_id', 'pedidosya_client_id', 'pedidosya_client_secret', 'pedidosya_webhook_secret', 'pedidosya_auto_accept'
     ];
     
     try {

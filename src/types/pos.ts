@@ -67,7 +67,7 @@ export interface SavedCartData {
     orderNumber: string;
     customerName: string;
     notes?: string;
-    source: 'pos' | 'web';
+    source: 'pos' | 'web' | 'pedidosya';
   };
   globalDiscount?: GlobalDiscount;
   selectedCustomer?: string;
