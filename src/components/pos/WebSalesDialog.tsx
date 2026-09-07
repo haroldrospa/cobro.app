@@ -6,27 +6,14 @@ import {
   ShoppingCart,
   Check,
   Trash2,
-  Calendar,
-  User,
-  Package,
-  Phone,
-  MapPin,
-  ChefHat,
-  Truck,
   Printer,
   MessageCircle,
   Search,
-  RefreshCw,
   ChevronDown,
   ChevronUp,
-  CreditCard,
-  Banknote,
-  Landmark,
-  Clock,
-  ExternalLink,
-  Receipt,
-  Sparkles,
-  MessageSquare
+  ChefHat,
+  Truck,
+  Phone
 } from 'lucide-react';
 import OrderChatPanel from './OrderChatPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -61,7 +48,6 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
   const [activeChatOrderId, setActiveChatOrderId] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'preparing' | 'shipped' | 'completed'>('all');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -71,7 +57,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
   const { companyInfo, printSettings } = usePrintSettings();
   const isMarket = isStore || isSupermarket;
 
-  const { data: orders = [], isLoading, isFetching, refetch } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ['web-orders', userStore?.id],
     queryFn: async () => {
       if (!userStore?.id) return [];
@@ -114,32 +100,20 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     return orders.filter((order: any) => String(order.id) !== String(currentLoadedOrderId));
   }, [orders, currentLoadedOrderId]);
 
-  // Search & Status filtering
+  // Search filtering
   const filteredOrders = useMemo(() => {
-    return validOrders.filter((order: any) => {
-      const matchesStatus = statusFilter === 'all' || order.order_status === statusFilter;
-      const query = searchQuery.trim().toLowerCase();
-      if (!query) return matchesStatus;
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return validOrders;
 
-      const matchesQuery =
+    return validOrders.filter((order: any) => {
+      return (
         order.order_number?.toLowerCase().includes(query) ||
         order.customer_name?.toLowerCase().includes(query) ||
         order.customer_phone?.toLowerCase().includes(query) ||
-        order.customer_address?.toLowerCase().includes(query);
-
-      return matchesStatus && matchesQuery;
+        order.customer_address?.toLowerCase().includes(query)
+      );
     });
-  }, [validOrders, statusFilter, searchQuery]);
-
-  const statusCounts = useMemo(() => {
-    return {
-      all: validOrders.length,
-      pending: validOrders.filter((o: any) => o.order_status === 'pending').length,
-      preparing: validOrders.filter((o: any) => o.order_status === 'preparing' || o.order_status === 'confirmed').length,
-      shipped: validOrders.filter((o: any) => o.order_status === 'shipped').length,
-      completed: validOrders.filter((o: any) => o.order_status === 'completed').length,
-    };
-  }, [validOrders]);
+  }, [validOrders, searchQuery]);
 
   const { data: unreadCounts = {} } = useUnreadCounts(
     validOrders.map((o: any) => o.id),
@@ -284,7 +258,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
       toast({
         variant: "destructive",
         title: "Selecciona un pedido",
-        description: "Haz clic en un pedido para cargarlo al carrito del POS"
+        description: "Haz clic en un pedido para cargarlo al POS"
       });
       return;
     }
@@ -334,79 +308,17 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
   const getOrderStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return (
-          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 gap-1.5 font-medium px-2.5 py-0.5 shadow-none">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Completado
-          </Badge>
-        );
+        return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none font-medium text-xs">Completado</Badge>;
       case 'pending':
-        return (
-          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 gap-1.5 font-medium px-2.5 py-0.5 shadow-none animate-pulse">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            Esperando
-          </Badge>
-        );
+        return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-none font-medium text-xs">Esperando</Badge>;
       case 'confirmed':
-        return (
-          <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 gap-1.5 font-medium px-2.5 py-0.5 shadow-none">
-            <Check className="h-3 w-3 text-blue-500" />
-            Confirmado
-          </Badge>
-        );
+        return <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-none font-medium text-xs">Confirmado</Badge>;
       case 'preparing':
-        return (
-          <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/30 gap-1.5 font-medium px-2.5 py-0.5 shadow-none">
-            <ChefHat className="h-3 w-3 text-orange-500" />
-            {isMarket ? 'Preparando' : 'En cocina'}
-          </Badge>
-        );
+        return <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border-none font-medium text-xs">{isMarket ? 'Preparando' : 'En cocina'}</Badge>;
       case 'shipped':
-        return (
-          <Badge className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30 gap-1.5 font-medium px-2.5 py-0.5 shadow-none">
-            <Truck className="h-3 w-3 text-sky-500" />
-            En camino
-          </Badge>
-        );
-      case 'processing':
-        return (
-          <Badge className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 gap-1.5 font-medium px-2.5 py-0.5 shadow-none">
-            Procesando
-          </Badge>
-        );
-      case 'cancelled':
-        return (
-          <Badge className="bg-destructive/10 text-destructive border border-destructive/30 gap-1.5 font-medium px-2.5 py-0.5 shadow-none">
-            Cancelado
-          </Badge>
-        );
+        return <Badge className="bg-sky-500/15 text-sky-600 dark:text-sky-400 border-none font-medium text-xs">En camino</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const getPaymentBadge = (method?: string) => {
-    switch (method) {
-      case 'cash':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded font-medium">
-            <Banknote className="h-3 w-3 text-emerald-600" /> Efectivo
-          </span>
-        );
-      case 'transfer':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded font-medium">
-            <Landmark className="h-3 w-3 text-sky-600" /> Transf.
-          </span>
-        );
-      case 'card':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded font-medium">
-            <CreditCard className="h-3 w-3 text-indigo-600" /> Tarjeta
-          </span>
-        );
-      default:
-        return null;
+        return <Badge variant="secondary" className="text-xs">{status}</Badge>;
     }
   };
 
@@ -416,37 +328,31 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     e.stopPropagation();
     const cleanPhone = phone.replace(/\D/g, '');
     const phoneWithCode = cleanPhone.length === 10 ? `1${cleanPhone}` : cleanPhone;
-    const message = encodeURIComponent(`¡Hola! Te contactamos de ${userStore?.store_name || 'nuestro negocio'} respecto a tu pedido #${orderNumber}.`);
+    const message = encodeURIComponent(`¡Hola! Te contactamos respecto a tu pedido #${orderNumber}.`);
     window.open(`https://wa.me/${phoneWithCode}?text=${message}`, '_blank');
   };
 
   const renderOrderItemsPreview = (order: any) => {
     const items = order.open_order_items || [];
     return (
-      <div className="bg-muted/40 p-3.5 rounded-xl border border-border/50 text-xs space-y-2 mt-2">
-        <div className="flex items-center justify-between font-semibold text-muted-foreground pb-1 border-b border-border/40">
-          <span>Detalle de productos ({items.length})</span>
-          <span>Precio / Subtotal</span>
+      <div className="bg-muted/30 p-3 rounded-lg text-xs space-y-1.5 my-2 border border-border/40">
+        <div className="font-medium text-muted-foreground pb-1 border-b border-border/30 flex justify-between">
+          <span>Productos ({items.length})</span>
+          <span>Importe</span>
         </div>
-        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-          {items.map((item: any, idx: number) => (
-            <div key={idx} className="flex justify-between items-center py-0.5">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[11px]">
-                  {item.quantity}x
-                </span>
-                <span className="font-medium text-foreground">{item.product_name}</span>
-              </div>
-              <span className="font-mono text-muted-foreground">
-                ${Number(item.total || item.unit_price * item.quantity).toFixed(2)}
-              </span>
-            </div>
-          ))}
-        </div>
+        {items.map((item: any, idx: number) => (
+          <div key={idx} className="flex justify-between items-center py-0.5">
+            <span>
+              <strong className="text-foreground font-semibold">{item.quantity}x</strong> {item.product_name}
+            </span>
+            <span className="text-muted-foreground font-mono">
+              ${Number(item.total || item.unit_price * item.quantity).toFixed(2)}
+            </span>
+          </div>
+        ))}
         {order.notes && (
-          <div className="pt-2 border-t border-border/40 flex items-start gap-1.5 text-amber-600 dark:text-amber-400 bg-amber-500/5 p-2 rounded-lg">
-            <span className="font-semibold">Nota:</span>
-            <span className="italic">{order.notes}</span>
+          <div className="pt-1.5 text-muted-foreground border-t border-border/30">
+            <span className="font-semibold text-foreground">Nota:</span> {order.notes}
           </div>
         )}
       </div>
@@ -460,174 +366,103 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     return (
       <Card
         key={order.id}
-        className={`cursor-pointer transition-all duration-200 border ${
-          isSelected
-            ? 'ring-2 ring-primary border-primary bg-primary/[0.03] shadow-sm'
-            : 'hover:border-border/80 hover:bg-muted/30 bg-card'
-        } ${order.order_status === 'completed' ? 'opacity-70' : ''}`}
+        className={`cursor-pointer transition-all border ${
+          isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted/30'
+        }`}
         onClick={() => setSelectedOrderId(order.id)}
-        onDoubleClick={() => handleRowDoubleClick(order)}
       >
-        <CardContent className="p-4 space-y-3">
-          {/* Header row */}
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono font-bold text-xs bg-muted px-2.5 py-1 rounded-md border text-foreground">
-                #{order.order_number}
-              </span>
+        <CardContent className="p-3.5 space-y-2.5">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-xs text-foreground">#{order.order_number}</span>
               {getOrderStatusBadge(order.order_status)}
-              {getPaymentBadge(order.payment_method)}
             </div>
-            <div className="text-right">
-              <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
-                ${Number(order.total || 0).toFixed(2)}
-              </span>
+            <span className="font-bold text-sm text-foreground">
+              ${Number(order.total || 0).toFixed(2)}
+            </span>
+          </div>
+
+          <div className="text-xs space-y-1 text-muted-foreground">
+            <div className="font-medium text-foreground">{order.customer_name}</div>
+            <div className="flex justify-between items-center">
+              <span>{order.customer_phone || format(new Date(order.created_at), 'dd/MM HH:mm', { locale: es })}</span>
+              <button
+                type="button"
+                className="text-primary text-xs hover:underline flex items-center gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedOrderId(isExpanded ? null : order.id);
+                }}
+              >
+                {order.open_order_items?.length || 0} items
+                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
             </div>
           </div>
 
-          {/* Customer & Info */}
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 font-medium text-foreground">
-                <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <span className="truncate">{order.customer_name}</span>
-              </div>
-              <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                <Clock className="h-3 w-3" />
-                {format(new Date(order.created_at), 'dd/MM HH:mm', { locale: es })}
-              </span>
-            </div>
+          {isExpanded && renderOrderItemsPreview(order)}
 
-            {order.customer_phone && (
-              <div className="flex items-center justify-between text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                  <span>{order.customer_phone}</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 text-[11px] gap-1"
-                  onClick={(e) => openWhatsApp(e, order.customer_phone, order.order_number)}
-                >
-                  <MessageCircle className="h-3 w-3" /> WhatsApp
-                </Button>
-              </div>
-            )}
-
-            {order.customer_address && (
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <span className="truncate">{order.customer_address}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Products Toggle */}
-          <div className="pt-1">
-            <button
-              type="button"
-              className="flex items-center justify-between w-full text-xs font-medium text-muted-foreground hover:text-foreground py-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpandedOrderId(isExpanded ? null : order.id);
-              }}
-            >
-              <span className="flex items-center gap-1.5">
-                <Package className="h-3.5 w-3.5 text-primary" />
-                {order.open_order_items?.length || 0} producto(s)
-              </span>
-              <span className="text-primary text-[11px] flex items-center gap-0.5">
-                {isExpanded ? 'Ocultar' : 'Ver productos'}
-                {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              </span>
-            </button>
-            {isExpanded && renderOrderItemsPreview(order)}
-          </div>
-
-          {/* Action Row */}
-          <div className="flex items-center gap-1.5 pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between pt-2 border-t border-border/40 gap-2">
             {order.order_status === 'pending' && (
               <Button
                 size="sm"
-                className="flex-1 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs h-8"
+                className="h-7 text-xs flex-1 bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   updateStatusMutation.mutate({ orderId: order.id, status: 'preparing' });
                 }}
               >
-                <ChefHat className="h-3.5 w-3.5" /> Aceptar pedido
+                Aceptar
               </Button>
             )}
             {order.order_status === 'preparing' && (
               <Button
                 size="sm"
-                className="flex-1 gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs h-8"
+                className="h-7 text-xs flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   updateStatusMutation.mutate({ orderId: order.id, status: 'shipped' });
                 }}
               >
-                <Truck className="h-3.5 w-3.5" /> Despachar
+                Despachar
               </Button>
             )}
-            {order.order_status === 'shipped' && (
-              <Button
-                size="sm"
-                className="flex-1 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs h-8"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLoadToCart(order);
-                }}
-              >
-                <ShoppingCart className="h-3.5 w-3.5" /> Cobrar en POS
-              </Button>
-            )}
-            {order.order_status === 'completed' && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 gap-1.5 font-medium text-xs h-8"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLoadToCart(order);
-                }}
-              >
-                <ShoppingCart className="h-3.5 w-3.5" /> Recargar al POS
-              </Button>
-            )}
-
             <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={(e) => handlePrint(e, order)}
-              title="Imprimir Pre-cuenta"
+              size="sm"
+              variant={order.order_status === 'pending' || order.order_status === 'preparing' ? 'outline' : 'default'}
+              className="h-7 text-xs flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLoadToCart(order);
+              }}
             >
-              <Printer className="h-3.5 w-3.5" />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 text-primary hover:bg-primary/10 relative"
-              onClick={(e) => { e.stopPropagation(); setActiveChatOrderId(order.id); }}
-              title="Chat con cliente"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              {unreadCounts[order.id] > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-background animate-pulse">
-                  {unreadCounts[order.id]}
-                </span>
-              )}
+              Cargar al POS
             </Button>
 
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="h-7 w-7 text-muted-foreground"
+              onClick={(e) => handlePrint(e, order)}
+            >
+              <Printer className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground relative"
+              onClick={(e) => { e.stopPropagation(); setActiveChatOrderId(order.id); }}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              {unreadCounts[order.id] > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:bg-destructive/10"
               onClick={(e) => handleDeleteClick(e, order.id)}
-              title="Eliminar pedido"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -638,18 +473,18 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
   };
 
   const renderDesktopTable = () => (
-    <div className="rounded-xl border border-border/60 overflow-hidden shadow-sm bg-card">
+    <div className="rounded-lg border border-border/50 overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40 text-xs">
-            <TableHead className="w-[45px]"></TableHead>
-            <TableHead className="font-semibold text-muted-foreground uppercase tracking-wider text-[11px]">Pedido</TableHead>
-            <TableHead className="font-semibold text-muted-foreground uppercase tracking-wider text-[11px]">Fecha</TableHead>
-            <TableHead className="font-semibold text-muted-foreground uppercase tracking-wider text-[11px] min-w-[180px]">Cliente</TableHead>
-            <TableHead className="font-semibold text-muted-foreground uppercase tracking-wider text-[11px]">Productos</TableHead>
-            <TableHead className="font-semibold text-muted-foreground uppercase tracking-wider text-[11px]">Estado</TableHead>
-            <TableHead className="text-right font-semibold text-muted-foreground uppercase tracking-wider text-[11px] w-[110px]">Total</TableHead>
-            <TableHead className="w-[230px] text-center font-semibold text-muted-foreground uppercase tracking-wider text-[11px]">Acciones</TableHead>
+          <TableRow className="bg-muted/30 hover:bg-muted/30 text-xs">
+            <TableHead className="w-[36px]"></TableHead>
+            <TableHead className="font-medium text-muted-foreground">Pedido</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Fecha</TableHead>
+            <TableHead className="font-medium text-muted-foreground min-w-[160px]">Cliente</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Items</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Estado</TableHead>
+            <TableHead className="text-right font-medium text-muted-foreground">Total</TableHead>
+            <TableHead className="w-[200px] text-right font-medium text-muted-foreground pr-4">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -661,177 +496,128 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
               <React.Fragment key={order.id}>
                 <TableRow
                   className={`cursor-pointer transition-colors text-sm ${
-                    isSelected
-                      ? 'bg-primary/5 hover:bg-primary/10 border-l-4 border-l-primary'
-                      : 'hover:bg-muted/40'
-                  } ${order.order_status === 'completed' ? 'opacity-60' : ''}`}
+                    isSelected ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/30'
+                  }`}
                   onClick={() => setSelectedOrderId(order.id)}
                   onDoubleClick={() => handleRowDoubleClick(order)}
                 >
-                  <TableCell className="py-3 px-2 text-center">
-                    <div
-                      className={`h-4 w-4 rounded-full border flex items-center justify-center mx-auto transition-colors ${
-                        isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/30'
-                      }`}
-                    >
-                      {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                    </div>
+                  <TableCell className="py-2.5 px-2 text-center">
+                    {isSelected ? (
+                      <Check className="h-4 w-4 text-primary mx-auto" />
+                    ) : (
+                      <span className="h-2 w-2 rounded-full bg-muted-foreground/30 inline-block" />
+                    )}
                   </TableCell>
-                  <TableCell className="py-3 font-mono font-semibold">
-                    <span className="bg-muted px-2 py-0.5 rounded text-xs border text-foreground">
-                      #{order.order_number}
-                    </span>
+                  <TableCell className="py-2.5 font-medium text-foreground text-xs">
+                    #{order.order_number}
                   </TableCell>
-                  <TableCell className="py-3 text-xs text-muted-foreground whitespace-nowrap">
-                    <div className="font-medium text-foreground">
-                      {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: es })}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {format(new Date(order.created_at), 'hh:mm a', { locale: es })}
-                    </div>
+                  <TableCell className="py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                    {format(new Date(order.created_at), 'dd/MM/yy · HH:mm', { locale: es })}
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div className="font-semibold text-foreground flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5 text-muted-foreground/80 flex-shrink-0" />
-                      <span>{order.customer_name}</span>
-                    </div>
+                  <TableCell className="py-2.5">
+                    <div className="font-medium text-foreground text-xs">{order.customer_name}</div>
                     {order.customer_phone && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                        <Phone className="h-3 w-3" />
-                        <span>{order.customer_phone}</span>
-                        <button
-                          type="button"
-                          className="text-emerald-600 hover:text-emerald-700 ml-1 hover:underline text-[11px]"
-                          onClick={(e) => openWhatsApp(e, order.customer_phone, order.order_number)}
-                          title="Abrir WhatsApp"
-                        >
-                          (WhatsApp)
-                        </button>
-                      </div>
-                    )}
-                    {order.customer_address && (
-                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate max-w-[200px] mt-0.5">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{order.customer_address}</span>
+                      <div className="text-[11px] text-muted-foreground">
+                        {order.customer_phone}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="py-3">
+                  <TableCell className="py-2.5">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 text-xs font-medium bg-muted/60 hover:bg-muted px-2 py-1 rounded-md transition-colors border border-border/40"
+                      className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 hover:underline"
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedOrderId(isExpanded ? null : order.id);
                       }}
-                      title="Clic para ver detalle"
                     >
-                      <Package className="h-3.5 w-3.5 text-primary" />
-                      <span>{order.open_order_items?.length || 0} items</span>
+                      {order.open_order_items?.length || 0} prod.
                       {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                     </button>
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div className="flex flex-col gap-1 items-start">
-                      {getOrderStatusBadge(order.order_status)}
-                      {getPaymentBadge(order.payment_method)}
-                    </div>
+                  <TableCell className="py-2.5">
+                    {getOrderStatusBadge(order.order_status)}
                   </TableCell>
-                  <TableCell className="py-3 text-right font-bold text-base text-emerald-600 dark:text-emerald-400">
+                  <TableCell className="py-2.5 text-right font-semibold text-xs text-foreground">
                     ${Number(order.total || 0).toFixed(2)}
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div className="flex items-center justify-center gap-1.5">
+                  <TableCell className="py-2.5 pr-3">
+                    <div className="flex items-center justify-end gap-1">
                       {order.order_status === 'pending' && (
                         <Button
                           size="sm"
-                          className="h-8 px-2.5 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs whitespace-nowrap shadow-sm"
+                          className="h-7 px-2.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium"
                           onClick={(e) => {
                             e.stopPropagation();
                             updateStatusMutation.mutate({ orderId: order.id, status: 'preparing' });
                           }}
                         >
-                          <ChefHat className="h-3.5 w-3.5" /> Aceptar
+                          Aceptar
                         </Button>
                       )}
                       {order.order_status === 'preparing' && (
                         <Button
                           size="sm"
-                          className="h-8 px-2.5 gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs whitespace-nowrap shadow-sm"
+                          className="h-7 px-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium"
                           onClick={(e) => {
                             e.stopPropagation();
                             updateStatusMutation.mutate({ orderId: order.id, status: 'shipped' });
                           }}
                         >
-                          <Truck className="h-3.5 w-3.5" /> Despachar
-                        </Button>
-                      )}
-                      {order.order_status === 'shipped' && (
-                        <Button
-                          size="sm"
-                          className="h-8 px-2.5 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs whitespace-nowrap shadow-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLoadToCart(order);
-                          }}
-                        >
-                          <ShoppingCart className="h-3.5 w-3.5" /> Cobrar
-                        </Button>
-                      )}
-                      {order.order_status === 'completed' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2.5 gap-1.5 font-medium text-xs whitespace-nowrap"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLoadToCart(order);
-                          }}
-                        >
-                          <ShoppingCart className="h-3.5 w-3.5" /> Cargar
+                          Despachar
                         </Button>
                       )}
 
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
                         onClick={(e) => handlePrint(e, order)}
                         title="Imprimir Pre-cuenta"
                       >
-                        <Printer className="h-4 w-4" />
+                        <Printer className="h-3.5 w-3.5" />
                       </Button>
 
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10 relative rounded-lg"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground relative"
                         onClick={(e) => { e.stopPropagation(); setActiveChatOrderId(order.id); }}
-                        title="Chat con cliente"
+                        title="Chat"
                       >
-                        <MessageCircle className="h-4 w-4" />
+                        <MessageCircle className="h-3.5 w-3.5" />
                         {unreadCounts[order.id] > 0 && (
-                          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-background animate-pulse">
-                            {unreadCounts[order.id]}
-                          </span>
+                          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                         )}
                       </Button>
 
+                      {order.customer_phone && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                          onClick={(e) => openWhatsApp(e, order.customer_phone, order.order_number)}
+                          title="WhatsApp"
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={(e) => handleDeleteClick(e, order.id)}
-                        title="Eliminar pedido"
+                        title="Eliminar"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
                 {isExpanded && (
-                  <TableRow className="bg-muted/20 hover:bg-muted/20">
-                    <TableCell colSpan={8} className="p-4 pt-1">
+                  <TableRow className="bg-muted/15 hover:bg-muted/15">
+                    <TableCell colSpan={8} className="p-3">
                       {renderOrderItemsPreview(order)}
                     </TableCell>
                   </TableRow>
@@ -848,141 +634,57 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="max-w-[95vw] sm:max-w-4xl lg:max-w-5xl w-full max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-2xl border bg-card shadow-2xl"
+          className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full max-h-[85vh] flex flex-col p-6 rounded-xl border bg-background shadow-xl"
         >
           {/* Header */}
-          <div className="p-5 sm:p-6 pb-4 border-b bg-muted/20 flex flex-col gap-4">
+          <DialogHeader className="pb-3 border-b flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
-                  <Store className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <DialogTitle className="text-xl font-bold tracking-tight">
-                      Pedidos Web
-                    </DialogTitle>
-                    {validOrders.length > 0 && (
-                      <Badge variant="secondary" className="font-semibold text-xs px-2 py-0.5 rounded-full">
-                        {validOrders.length} {validOrders.length === 1 ? 'pedido' : 'pedidos'}
-                      </Badge>
-                    )}
-                    <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      En vivo
-                    </span>
-                  </div>
-                  <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                    {activeChatOrderId
-                      ? 'Conversación directa con el cliente'
-                      : 'Gestiona, acepta y factura los pedidos recibidos desde tu tienda online'}
-                  </DialogDescription>
-                </div>
+              <div className="flex items-center gap-2">
+                <Store className="h-5 w-5 text-muted-foreground" />
+                <DialogTitle className="text-lg font-semibold">
+                  Pedidos Web
+                </DialogTitle>
+                {validOrders.length > 0 && (
+                  <Badge variant="secondary" className="text-xs font-normal">
+                    {validOrders.length}
+                  </Badge>
+                )}
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hidden sm:inline-flex"
-                title="Actualizar lista de pedidos"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-                <span>Actualizar</span>
-              </Button>
-            </div>
-
-            {/* Controls Bar (Filter tabs + Search) */}
-            {!activeChatOrderId && validOrders.length > 0 && (
-              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-1">
-                {/* Status tabs */}
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'all' ? 'default' : 'outline'}
-                    className="h-8 text-xs rounded-lg px-3 gap-1.5"
-                    onClick={() => setStatusFilter('all')}
-                  >
-                    Todos
-                    <span className="opacity-70 text-[11px]">({statusCounts.all})</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'pending' ? 'default' : 'outline'}
-                    className="h-8 text-xs rounded-lg px-3 gap-1.5 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                    onClick={() => setStatusFilter('pending')}
-                  >
-                    Esperando
-                    <span className="opacity-70 text-[11px]">({statusCounts.pending})</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'preparing' ? 'default' : 'outline'}
-                    className="h-8 text-xs rounded-lg px-3 gap-1.5 text-orange-600 dark:text-orange-400 border-orange-500/30"
-                    onClick={() => setStatusFilter('preparing')}
-                  >
-                    {isMarket ? 'Preparando' : 'Cocina'}
-                    <span className="opacity-70 text-[11px]">({statusCounts.preparing})</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'shipped' ? 'default' : 'outline'}
-                    className="h-8 text-xs rounded-lg px-3 gap-1.5 text-sky-600 dark:text-sky-400 border-sky-500/30"
-                    onClick={() => setStatusFilter('shipped')}
-                  >
-                    En camino
-                    <span className="opacity-70 text-[11px]">({statusCounts.shipped})</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'completed' ? 'default' : 'outline'}
-                    className="h-8 text-xs rounded-lg px-3 gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                    onClick={() => setStatusFilter('completed')}
-                  >
-                    Completados
-                    <span className="opacity-70 text-[11px]">({statusCounts.completed})</span>
-                  </Button>
-                </div>
-
-                {/* Search */}
-                <div className="relative w-full sm:w-64">
+              {!activeChatOrderId && validOrders.length > 2 && (
+                <div className="relative w-48 hidden sm:block">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar pedido, cliente..."
+                    placeholder="Buscar..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 pl-8 text-xs rounded-lg bg-background"
+                    className="h-7 pl-8 text-xs bg-muted/40"
                   />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      ×
-                    </button>
-                  )}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              {activeChatOrderId
+                ? 'Conversación con el cliente'
+                : 'Selecciona un pedido para cargarlo al POS o gestiona su estado.'}
+            </DialogDescription>
+          </DialogHeader>
 
-          {/* Main Body */}
-          <div className="p-4 sm:p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+          {/* Content */}
+          <div className="py-3 flex-1 min-h-0 overflow-hidden flex flex-col">
             {activeChatOrderId ? (
               <div className="flex-1 flex flex-col min-h-0">
-                <div className="mb-3">
+                <div className="mb-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setActiveChatOrderId(null)}
-                    className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    className="gap-1 px-0 text-xs text-muted-foreground hover:bg-transparent"
                   >
-                    ← Volver a la lista de pedidos
+                    ← Volver a la lista
                   </Button>
                 </div>
-                <div className="flex-1 min-h-0 border rounded-xl overflow-hidden shadow-inner">
+                <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
                   {(() => {
                     const order = orders.find((o: any) => o.id === activeChatOrderId);
                     if (!order) return null;
@@ -998,45 +700,31 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
                 </div>
               </div>
             ) : isLoading ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-sm font-medium">Cargando pedidos web...</span>
+              <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">
+                Cargando pedidos...
               </div>
             ) : validOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4 border">
-                  <Store className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-base font-bold text-foreground">No hay pedidos web registrados</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground max-w-sm mt-1">
-                  Cuando tus clientes hagan pedidos desde tu catálogo online, aparecerán aquí en tiempo real para ser procesados y facturados.
-                </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <Store className="h-8 w-8 mb-2 opacity-50" />
+                <p className="text-sm font-medium">No hay pedidos web registrados</p>
+                <p className="text-xs opacity-75 mt-0.5">Los nuevos pedidos aparecerán aquí automáticamente.</p>
               </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                <div className="h-12 w-12 rounded-xl bg-muted/40 flex items-center justify-center mb-3">
-                  <Search className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">No se encontraron pedidos</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  No hay pedidos que coincidan con los filtros o búsqueda actuales.
-                </p>
+              <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                <p className="text-xs">No se encontraron pedidos con "{searchQuery}"</p>
                 <Button
-                  variant="outline"
+                  variant="link"
                   size="sm"
-                  onClick={() => {
-                    setStatusFilter('all');
-                    setSearchQuery('');
-                  }}
-                  className="mt-3 text-xs"
+                  onClick={() => setSearchQuery('')}
+                  className="text-xs mt-1"
                 >
-                  Limpiar filtros
+                  Limpiar búsqueda
                 </Button>
               </div>
             ) : (
-              <ScrollArea className="flex-1 min-h-0 pr-1">
+              <ScrollArea className="flex-1 min-h-0">
                 {isMobile ? (
-                  <div className="space-y-3 pb-2">
+                  <div className="space-y-2.5 pb-2">
                     {filteredOrders.map((order: any) => renderMobileCard(order))}
                   </div>
                 ) : (
@@ -1047,38 +735,25 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
           </div>
 
           {/* Footer */}
-          {!activeChatOrderId && validOrders.length > 0 && (
-            <div className="p-4 sm:p-5 border-t bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-xs text-muted-foreground text-center sm:text-left">
-                {selectedOrder ? (
-                  <span className="flex items-center gap-1.5 font-medium text-foreground">
-                    <Check className="h-3.5 w-3.5 text-primary" />
-                    Seleccionado: <strong className="font-mono">#{selectedOrder.order_number}</strong> — {selectedOrder.customer_name} (${Number(selectedOrder.total || 0).toFixed(2)})
-                  </span>
-                ) : (
-                  <span className="hidden sm:inline">
-                    💡 Selecciona un pedido o haz doble clic para cargarlo directamente al POS
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  onClick={onClose}
-                  className="flex-1 sm:flex-none text-xs h-9 px-4 rounded-lg"
-                >
-                  Cerrar
-                </Button>
-                <Button
-                  onClick={() => handleLoadToCart()}
-                  disabled={!selectedOrder}
-                  className="flex-1 sm:flex-none gap-2 text-xs h-9 px-5 rounded-lg font-medium shadow-sm"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  Cargar al POS
-                </Button>
-              </div>
+          {!activeChatOrderId && (
+            <div className="pt-3 border-t flex justify-end gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="text-xs h-8"
+              >
+                Cerrar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleLoadToCart()}
+                disabled={!selectedOrder}
+                className="text-xs h-8 gap-1.5 font-medium"
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                Cargar al POS
+              </Button>
             </div>
           )}
         </DialogContent>
@@ -1086,20 +761,20 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
 
       {/* Dialog para confirmación de eliminación */}
       <AlertDialog open={!!orderToDelete} onOpenChange={() => setOrderToDelete(null)}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar pedido web?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. El pedido seleccionado y sus productos asociados serán eliminados permanentemente.
+            <AlertDialogTitle className="text-base">¿Eliminar pedido?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              Esta acción no se puede deshacer. El pedido será eliminado permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-lg">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="text-xs h-8">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs h-8"
               onClick={() => orderToDelete && deleteOrderMutation.mutate(orderToDelete)}
             >
-              Eliminar pedido
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
