@@ -27,3 +27,29 @@ export function useIsMobile() {
 
   return isMobile
 }
+
+export function useIsLandscape() {
+  const [isLandscape, setIsLandscape] = React.useState<boolean>(
+    () => typeof window !== "undefined" && window.innerWidth > window.innerHeight
+  )
+
+  React.useEffect(() => {
+    const check = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight)
+    }
+    window.addEventListener("resize", check)
+    window.addEventListener("orientationchange", check)
+    return () => {
+      window.removeEventListener("resize", check)
+      window.removeEventListener("orientationchange", check)
+    }
+  }, [])
+
+  return isLandscape
+}
+
+export function useIsMobilePortrait() {
+  const isMobile = useIsMobile()
+  const isLandscape = useIsLandscape()
+  return isMobile && !isLandscape
+}

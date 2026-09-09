@@ -72,6 +72,8 @@ import MobilePOSLayout from './pos/MobilePOSLayout';
 import MobileProductSearch from './pos/MobileProductSearch';
 import MobileCartView from './pos/MobileCartView';
 import MobilePaymentView from './pos/MobilePaymentView';
+import POSResizableSplitter from './pos/POSResizableSplitter';
+import { useIsLandscape, useIsMobilePortrait } from '@/hooks/use-mobile';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import { useRecipeAvailability } from '@/hooks/useRecipeAvailability';
 import { useAwardLoyaltyPoints, calculatePointsValue } from '@/hooks/useLoyaltyPoints';
@@ -116,6 +118,8 @@ class SimpleErrorBoundary extends React.Component<{ children: React.ReactNode },
 const POSContent: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const isLandscape = useIsLandscape();
+  const isMobilePortrait = isMobile && !isLandscape;
   const { skipKitchenStep, isStore, isSupermarket, orderTypeLabels, orderTypeTags } = useBusinessType();
   const recipeAvailability = useRecipeAvailability();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -138,6 +142,40 @@ const POSContent: React.FC = () => {
   const handleMobileViewModeChange = useCallback((mode: 'grid' | 'list') => {
     setMobileViewMode(mode);
     localStorage.setItem('pos_mobile_view_mode', mode);
+  }, []);
+
+  // Ancho ajustable del panel derecho (persistente y fluido para landscape móvil y desktop)
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pos_right_panel_width');
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 240 && parsed <= 700) {
+          return parsed;
+        }
+      }
+      return window.innerWidth < 1024 ? 340 : 410;
+    }
+    return 410;
+  });
+  const [isDraggingSplitter, setIsDraggingSplitter] = useState(false);
+
+  const handleSplitterResize = useCallback((width: number) => {
+    const maxWidth = Math.min(650, window.innerWidth - 260);
+    const minWidth = 240;
+    const clamped = Math.max(minWidth, Math.min(maxWidth, width));
+    setRightPanelWidth(clamped);
+    try {
+      localStorage.setItem('pos_right_panel_width', clamped.toString());
+    } catch {}
+  }, []);
+
+  const handleSplitterReset = useCallback(() => {
+    const defaultWidth = window.innerWidth < 1024 ? 340 : 410;
+    setRightPanelWidth(defaultWidth);
+    try {
+      localStorage.setItem('pos_right_panel_width', defaultWidth.toString());
+    } catch {}
   }, []);
 
   const [globalDiscount, setGlobalDiscount] = useState<GlobalDiscount>({ value: 0, type: 'percentage' });
@@ -1717,7 +1755,7 @@ const POSContent: React.FC = () => {
 
 
 
-  if (isMobile) {
+  if (isMobilePortrait) {
     return (
       <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background">
         <MobilePOSLayout
@@ -2026,13 +2064,16 @@ const POSContent: React.FC = () => {
 
   return (
     <SimpleErrorBoundary>
-      <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background">
-        <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 min-h-0 overflow-hidden pb-3 md:pb-3">
+      <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+        <div className={cn(
+          "flex-1 flex flex-row min-h-0 overflow-hidden p-1.5 sm:p-2.5 gap-0",
+          isDraggingSplitter && "select-none cursor-col-resize"
+        )}>
 
           {isClassicLayout ? (
             /* --- CLASSIC LAYOUT (Search top-left, Cart bottom-left, Payment right) --- */
             <>
-              <div className="shrink-0 lg:flex-1 flex flex-col min-h-0 gap-3 lg:overflow-hidden">
+              <div className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-3 overflow-hidden pr-0.5">
                 <div className="flex-shrink-0 z-20 relative">
                   <ProductSearchList
                     ref={searchInputRef}
@@ -2070,7 +2111,7 @@ const POSContent: React.FC = () => {
                   )}
                 </div>
 
-                <div id="pos-cart-area" className="flex-1 min-h-[150px] md:min-h-[250px] overflow-hidden rounded-xl border bg-card shadow-sm z-10">
+                <div id="pos-cart-area" className="flex-1 min-h-[140px] md:min-h-[250px] overflow-hidden rounded-xl border bg-card shadow-sm z-10">
                   <CartSummary
                     cart={cartWithOffers}
                     onUpdateQuantity={updateQuantity}
@@ -2089,8 +2130,20 @@ const POSContent: React.FC = () => {
                 </div>
               </div>
 
+              {/* Divisor arrastrable interactivo */}
+              <POSResizableSplitter
+                onResize={handleSplitterResize}
+                onReset={handleSplitterReset}
+                isDragging={isDraggingSplitter}
+                setIsDragging={setIsDraggingSplitter}
+              />
+
               {/* Right Panel: Payment Only */}
-              <div id="pos-payment-area" className="w-full lg:w-[400px] xl:w-[450px] flex-shrink-0 min-h-0 flex flex-col">
+              <div 
+                id="pos-payment-area" 
+                style={{ width: `${rightPanelWidth}px` }} 
+                className="flex-shrink-0 min-w-[240px] max-w-[85vw] min-h-0 flex flex-col overflow-y-auto pl-1"
+              >
                 <PaymentSummary
                   totals={totals}
                   selectedCustomer={selectedCustomer}
@@ -2118,7 +2171,7 @@ const POSContent: React.FC = () => {
             /* --- CATALOG LAYOUT (Products Left, Cart+Payment Right) --- */
             <>
               {/* Panel principal - Catálogo de productos */}
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm pr-0">
                 <ProductSearchList
                   ref={searchInputRef}
                   products={products}
@@ -2153,10 +2206,22 @@ const POSContent: React.FC = () => {
                 )}
               </div>
 
+              {/* Divisor arrastrable interactivo */}
+              <POSResizableSplitter
+                onResize={handleSplitterResize}
+                onReset={handleSplitterReset}
+                isDragging={isDraggingSplitter}
+                setIsDragging={setIsDraggingSplitter}
+              />
+
               {/* Panel derecho - Carrito y Totales */}
-              <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col gap-3 flex-shrink-0 min-h-0">
+              <div 
+                id="pos-right-sidebar"
+                style={{ width: `${rightPanelWidth}px` }} 
+                className="flex flex-col gap-2 flex-shrink-0 min-w-[240px] max-w-[85vw] min-h-0 overflow-y-auto pl-1"
+              >
                 {/* Carrito */}
-                <div id="pos-cart-area" className="flex-1 min-h-[150px] md:min-h-[250px] overflow-hidden rounded-xl shadow-sm border bg-card">
+                <div id="pos-cart-area" className="flex-1 min-h-[140px] md:min-h-[200px] overflow-hidden rounded-xl shadow-sm border bg-card">
                   <CartSummary
                     cart={cartWithOffers}
                     onUpdateQuantity={updateQuantity}
@@ -2175,7 +2240,7 @@ const POSContent: React.FC = () => {
                 </div>
 
                 {/* Resumen de Pago */}
-                <div id="pos-payment-area" className="flex-shrink min-h-0">
+                <div id="pos-payment-area" className="flex-shrink-0">
                   <PaymentSummary
                     totals={totals}
                     selectedCustomer={selectedCustomer}
