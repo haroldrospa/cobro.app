@@ -8,6 +8,7 @@ import CartItemComponent from './CartItemComponent';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import LoyaltyPanel from './LoyaltyPanel';
+import { cn } from '@/lib/utils';
 
 interface CartSummaryProps {
   cart: CartItem[];
@@ -65,35 +66,41 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   return (
     <Card className="h-full flex flex-col overflow-hidden">
       {/* ── Header ── */}
-      <CardHeader className="pb-1 flex-shrink-0 px-3 pt-2 space-y-1">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base font-bold">
-            <ShoppingCart className="h-4 w-4 shrink-0" />
-            <span className="truncate">Carrito ({cart.length})</span>
+      <CardHeader className="p-2 sm:px-3 sm:py-2 flex-shrink-0 space-y-1">
+        <div className="flex items-center justify-between gap-1.5">
+          <CardTitle className="flex items-center gap-1.5 text-xs sm:text-sm font-bold shrink-0">
+            <ShoppingCart className="h-3.5 w-3.5 shrink-0" />
+            <span>Carrito ({cart.length})</span>
           </CardTitle>
 
           {/* Order type toggle for restaurants, stores, or supermarkets */}
           {onOrderTypeChange && (isRestaurant || isStore || isSupermarket) && (
-            <div className="flex bg-muted/50 p-1 rounded-md shrink-0 gap-1 border border-border/50">
+            <div className="flex bg-muted/60 p-0.5 rounded-md shrink-0 gap-0.5 border border-border/40">
               <button
+                type="button"
                 onClick={() => onOrderTypeChange('dine-in')}
-                className={`flex items-center justify-center gap-2 py-1.5 px-4 rounded text-[13px] font-bold transition-all ${orderType === 'dine-in'
-                  ? 'bg-background shadow-md text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                className={cn(
+                  "flex items-center justify-center gap-1 py-1 px-2 rounded text-[11px] font-bold transition-all",
+                  orderType === 'dine-in'
+                    ? "bg-background shadow-xs text-primary font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                {(isStore || isSupermarket) ? <Tag className="h-4 w-4" /> : <Utensils className="h-4 w-4" />}
-                {orderTypeLabels['dine-in']}
+                {(isStore || isSupermarket) ? <Tag className="h-3 w-3" /> : <Utensils className="h-3 w-3" />}
+                <span>{orderTypeLabels['dine-in']}</span>
               </button>
               <button
+                type="button"
                 onClick={() => onOrderTypeChange('takeout')}
-                className={`flex items-center justify-center gap-2 py-1.5 px-4 rounded text-[13px] font-bold transition-all ${orderType === 'takeout'
-                  ? 'bg-background shadow-md text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                className={cn(
+                  "flex items-center justify-center gap-1 py-1 px-2 rounded text-[11px] font-bold transition-all",
+                  orderType === 'takeout'
+                    ? "bg-background shadow-xs text-primary font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                <ShoppingBag className="h-4 w-4" />
-                {orderTypeLabels['takeout']}
+                <ShoppingBag className="h-3 w-3" />
+                <span>{orderTypeLabels['takeout']}</span>
               </button>
             </div>
           )}

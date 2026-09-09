@@ -50,131 +50,223 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
     }
   };
   return (
-    <div className="group relative flex items-center gap-3 p-2.5 rounded-lg border border-border/40 hover:border-primary/40 bg-card hover:bg-accent/5 transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2">
-      {/* 1. Info del Producto (Izquierda) */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 leading-none flex-wrap">
-          <h4 className="font-black text-[15px] text-foreground break-words group-hover:text-primary transition-colors tracking-tight" title={item.name}>
-            {item.name}
-          </h4>
-          {onUpdateComment && (
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Agregar nota"
-              onClick={() => setIsEditingComment(!isEditingComment)}
-              className={cn(
-                "h-5 w-5 flex-shrink-0 transition-all",
-                item.comment ? 'text-primary' : 'text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-primary'
-              )}
+    <div className="group relative flex flex-col gap-1 p-2 rounded-lg border border-border/50 hover:border-primary/50 bg-card hover:bg-accent/5 transition-all duration-200 shadow-xs">
+      {/* Fila 1: Nombre del producto + Precio total + Botón eliminar */}
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <h4
+          className="font-bold text-xs sm:text-sm text-foreground truncate group-hover:text-primary transition-colors tracking-tight flex-1 min-w-0"
+          title={item.name}
+        >
+          {item.name}
+        </h4>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs sm:text-sm font-extrabold text-foreground tabular-nums">
+            ${calculateItemTotal(item).toFixed(2)}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRemove(item.cartItemId || item.id)}
+            className="h-5 w-5 text-muted-foreground/60 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all shrink-0 -mr-0.5"
+            title="Eliminar del carrito"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Fila 2: Detalles (precio ud, extras, notas, desc) + Selector de cantidad compacto */}
+      <div className="flex items-center justify-between gap-2 text-[11px] min-w-0">
+        {/* Izquierda: Precio unitario y accesos rápidos */}
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          <span className="text-muted-foreground font-medium tabular-nums text-[11px]">
+            ${(item.price || 0).toFixed(2)}/ud
+          </span>
+
+          {item.offerApplied && (
+            <Badge
+              variant="outline"
+              className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[9px] py-0 px-1 h-4 font-bold uppercase tracking-tight"
             >
-              <MessageSquare className="h-3 w-3" />
-            </Button>
-          )}
-          {onUpdateDiscount && (
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Aplicar descuento"
-              onClick={() => setIsEditingDiscount(!isEditingDiscount)}
-              className={cn(
-                "h-5 w-5 flex-shrink-0 transition-all ml-1",
-                item.discount && item.discount.value > 0 ? 'text-emerald-500' : 'text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-emerald-500'
-              )}
-            >
-              <Percent className="h-3 w-3" />
-            </Button>
+              PROMO
+            </Badge>
           )}
 
-          {/* Botón Adicionales / Extra [➕] - Solo visible para restaurantes */}
+          {/* Botón Adicionales / Extra [➕] - Solo restaurantes */}
           {isRestaurant && (
-            <Button
-              variant="outline"
-              size="sm"
-              title="Adicionar ingrediente extra a este plato"
+            <button
+              type="button"
+              title="Adicionar ingrediente extra"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsSelectExtraOpen(true);
               }}
-              className="h-6 px-1.5 text-[10px] font-bold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 bg-emerald-500/10 rounded-md gap-1 shrink-0 ml-1"
+              className="h-4.5 px-1.5 text-[9px] font-bold border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 bg-emerald-500/10 rounded flex items-center gap-0.5 shrink-0 transition-colors"
             >
-              <PlusCircle className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Adicional</span>
-            </Button>
+              <PlusCircle className="h-2.5 w-2.5 text-emerald-500" />
+              <span>Extra</span>
+            </button>
+          )}
+
+          {/* Botón Nota */}
+          {onUpdateComment && (
+            <button
+              type="button"
+              title={item.comment ? `Nota: "${item.comment}"` : "Agregar nota"}
+              onClick={() => setIsEditingComment(!isEditingComment)}
+              className={cn(
+                "h-4.5 px-1 text-[9px] rounded flex items-center gap-0.5 transition-colors shrink-0",
+                item.comment
+                  ? "text-primary bg-primary/10 font-medium"
+                  : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
+              )}
+            >
+              <MessageSquare className="h-2.5 w-2.5" />
+              {item.comment && <span className="max-w-[80px] truncate">{item.comment}</span>}
+            </button>
+          )}
+
+          {/* Botón Descuento */}
+          {onUpdateDiscount && (
+            <button
+              type="button"
+              title="Aplicar descuento individual"
+              onClick={() => setIsEditingDiscount(!isEditingDiscount)}
+              className={cn(
+                "h-4.5 px-1 text-[9px] rounded flex items-center gap-0.5 transition-colors shrink-0",
+                item.discount && item.discount.value > 0
+                  ? "text-emerald-500 bg-emerald-500/10 font-bold"
+                  : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
+              )}
+            >
+              <Percent className="h-2.5 w-2.5" />
+              {item.discount && item.discount.value > 0 && (
+                <span>{item.discount.type === 'percentage' ? `${item.discount.value}%` : `$${item.discount.value}`}</span>
+              )}
+            </button>
           )}
         </div>
 
-        {/* Selected Extras List */}
-        {item.selectedExtras && item.selectedExtras.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {item.selectedExtras.map((extra, idx) => (
-              <Badge
-                key={`${extra.id}-${idx}`}
-                variant="outline"
-                className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 text-[10px] py-0 px-1.5 gap-1 font-bold"
-              >
-                <span>+ {extra.quantity > 1 ? `${extra.quantity}x ` : ''}{extra.name} (${extra.price.toFixed(2)} c/u = +${(extra.price * (extra.quantity || 1)).toFixed(2)})</span>
-                {onRemoveExtra && (
-                  <X
-                    className="h-3 w-3 cursor-pointer hover:text-destructive text-emerald-400/70"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveExtra(item.cartItemId || item.id, extra.id);
-                    }}
-                  />
-                )}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-[10px] font-medium text-muted-foreground/70">
-            ${(item.price || 0).toFixed(2)} / ud
+        {/* Derecha: Selector de Cantidad compacto */}
+        <div className="flex items-center bg-muted/60 rounded-md border border-border/40 p-0.5 shadow-xs shrink-0">
+          <button
+            type="button"
+            onClick={() => onUpdateQuantity(item.cartItemId || item.id, item.quantity - 1)}
+            className="h-5 w-5 rounded hover:bg-background flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors active:scale-95"
+            title="Disminuir"
+          >
+            <Minus className="h-2.5 w-2.5" />
+          </button>
+          <span
+            onClick={() => setIsQuantityDialogOpen(true)}
+            className="text-xs font-black px-1.5 min-w-[20px] text-center cursor-pointer select-none hover:text-primary transition-colors"
+            title="Clic para ingresar cantidad exacta"
+          >
+            {item.quantity}
           </span>
-          {item.offerApplied && (
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] py-0 px-1 h-3.5 font-bold uppercase tracking-tighter">
-              PROMO
-            </Badge>
-          )}
+          <button
+            type="button"
+            onClick={() => onUpdateQuantity(item.cartItemId || item.id, item.quantity + 1)}
+            className="h-5 w-5 rounded hover:bg-background flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors active:scale-95"
+            title="Aumentar"
+          >
+            <Plus className="h-2.5 w-2.5" />
+          </button>
         </div>
-        {item.comment && !isEditingComment && (
-          <div className="mt-1 text-[10px] text-muted-foreground italic truncate max-w-[150px]">
-             "{item.comment}"
-          </div>
-        )}
       </div>
 
-      {/* Select Extra Dialog */}
-      {isSelectExtraOpen && (
-        <SelectExtraDialog
-          isOpen={isSelectExtraOpen}
-          onClose={() => setIsSelectExtraOpen(false)}
-          onAddExtra={(extra) => onAddExtra?.(item.cartItemId || item.id, extra)}
-          itemName={item.name}
-        />
+      {/* Extras seleccionados (si existen) */}
+      {item.selectedExtras && item.selectedExtras.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-0.5">
+          {item.selectedExtras.map((extra, idx) => (
+            <Badge
+              key={`${extra.id}-${idx}`}
+              variant="outline"
+              className="bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[9px] py-0 px-1.5 gap-1 font-semibold"
+            >
+              <span>+ {extra.quantity > 1 ? `${extra.quantity}x ` : ''}{extra.name} (${(extra.price * (extra.quantity || 1)).toFixed(2)})</span>
+              {onRemoveExtra && (
+                <X
+                  className="h-2.5 w-2.5 cursor-pointer hover:text-destructive text-emerald-500/70"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveExtra(item.cartItemId || item.id, extra.id);
+                  }}
+                />
+              )}
+            </Badge>
+          ))}
+        </div>
       )}
 
-
-      
-      {/* 2. Selector de Cantidad (Derecha - Centro) */}
-      <div className="flex items-center bg-muted/40 rounded-full border border-border/30 p-0.5 shadow-inner w-[100px] flex-shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onUpdateQuantity(item.cartItemId || item.id, item.quantity - 1)}
-          className="h-6 w-6 rounded-full hover:bg-background hover:shadow-sm text-muted-foreground hover:text-foreground transition-all active:scale-90"
-        >
-          <Minus className="h-3 w-3" />
-        </Button>
-        
-        <div 
-          className="flex-1 text-center text-[13px] font-black select-none cursor-pointer hover:text-primary transition-colors pr-0.5"
-          onClick={() => setIsQuantityDialogOpen(true)}
-        >
-          {item.quantity}
+      {/* Editor de comentario inline */}
+      {isEditingComment && onUpdateComment && (
+        <div className="mt-1 animate-in slide-in-from-top-1 duration-200">
+          <div className="flex gap-1 items-center">
+            <Input
+              value={item.comment || ''}
+              onChange={(e) => onUpdateComment(item.cartItemId || item.id, e.target.value)}
+              placeholder="Nota para cocina o comanda..."
+              className="h-6 text-xs bg-background border-muted-foreground/20 focus:border-primary shadow-xs"
+              autoFocus
+              onBlur={() => !item.comment && setIsEditingComment(false)}
+              onKeyDown={(e) => e.key === 'Enter' && setIsEditingComment(false)}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-primary hover:bg-primary/10"
+              onClick={() => setIsEditingComment(false)}
+            >
+              <Check className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
+      )}
 
+      {/* Editor de descuento inline */}
+      {isEditingDiscount && onUpdateDiscount && (
+        <div className="mt-1 animate-in slide-in-from-top-1 duration-200">
+          <div className="flex gap-1 items-center bg-muted/40 p-1 rounded-md border border-border/30">
+            <Percent className="h-3 w-3 text-emerald-500 shrink-0" />
+            <Input
+              type="number"
+              value={tempDiscountValue}
+              onChange={(e) => setTempDiscountValue(e.target.value)}
+              placeholder="0"
+              className="h-6 w-14 text-center text-xs bg-background border-border/30 rounded"
+              autoFocus
+            />
+            <select
+              value={tempDiscountType}
+              onChange={(e) => setTempDiscountType(e.target.value as 'percentage' | 'amount')}
+              className="h-6 bg-background border border-border/30 rounded text-[11px] px-1 focus:ring-0"
+            >
+              <option value="percentage">%</option>
+              <option value="amount">$</option>
+            </select>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold"
+              onClick={handleApplyDiscount}
+            >
+              Ok
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 text-muted-foreground hover:text-foreground text-[10px]"
+              onClick={() => setIsEditingDiscount(false)}
+            >
+              ✕
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modales de soporte */}
+      {isQuantityDialogOpen && (
         <QuantityDialog
           isOpen={isQuantityDialogOpen}
           onClose={() => setIsQuantityDialogOpen(false)}
@@ -182,142 +274,15 @@ const CartItemComponent: React.FC<CartItemComponentProps> = ({
           itemName={item.name}
           currentQuantity={item.quantity}
         />
-        
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onUpdateQuantity(item.cartItemId || item.id, item.quantity + 1)}
-          className="h-6 w-6 rounded-full hover:bg-background hover:shadow-sm text-muted-foreground hover:text-foreground transition-all active:scale-90"
-        >
-          <Plus className="h-3 w-3" />
-        </Button>
-      </div>
-
-      {/* 3. Precio Total (Derecha) */}
-      <div className="text-right flex-shrink-0 min-w-[90px]">
-        <div className="text-[18px] font-black text-primary tracking-tighter tabular-nums">
-          ${calculateItemTotal(item).toFixed(2)}
-        </div>
-        {item.offerApplied && (
-          <div className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-100 inline-block">
-            {item.offerApplied.quantity}x
-          </div>
-        )}
-      </div>
-
-      {/* 4. Botón Eliminar (Extremo Derecho) */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onRemove(item.cartItemId || item.id)}
-        className="h-9 w-9 text-red-500/60 hover:text-red-600 hover:bg-red-500/10 rounded-full transition-all flex-shrink-0"
-        title="Eliminar"
-      >
-        <Trash2 className="h-4.5 w-4.5" />
-      </Button>
-
-
-      {onUpdateComment && (
-        <div className={`mt-1 animate-in slide-in-from-top-1 duration-200 ${!isEditingComment && !item.comment ? 'hidden' : ''}`}>
-          {isEditingComment ? (
-            <div className="flex gap-1 items-center">
-              <Input
-                value={item.comment || ''}
-                onChange={(e) => onUpdateComment(item.cartItemId || item.id, e.target.value)}
-                placeholder="Nota para factura..."
-                className="h-7 text-xs bg-background/50 border-muted-foreground/20 focus:border-primary shadow-sm"
-                autoFocus
-                onBlur={() => !item.comment && setIsEditingComment(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setIsEditingComment(false)}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-primary hover:bg-primary/10"
-                onClick={() => setIsEditingComment(false)}
-              >
-                <MessageSquare className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : item.comment && (
-            <div
-              className="text-[10px] text-muted-foreground bg-muted/40 px-2 py-1 rounded inline-flex items-center gap-1 cursor-pointer hover:bg-muted/60 transition-colors w-full"
-              onClick={() => setIsEditingComment(true)}
-              title="Click para editar"
-            >
-              <MessageSquare className="h-2.5 w-2.5 opacity-50" />
-              <span className="truncate">{item.comment}</span>
-            </div>
-          )}
-        </div>
       )}
 
-      {/* Discount Section below comment */}
-      {(isEditingDiscount || (item.discount && item.discount.value > 0)) && (
-        <div className={`mt-1.5 animate-in slide-in-from-top-1 duration-200 ${!isEditingDiscount && (!item.discount || item.discount.value === 0) ? 'hidden' : ''}`}>
-          {isEditingDiscount ? (
-            <div className="flex gap-1.5 items-center bg-muted/30 p-1.5 rounded-lg border border-border/20">
-              <Percent className="h-3 w-3 text-emerald-500" />
-              <Input
-                type="number"
-                value={tempDiscountValue}
-                onChange={(e) => setTempDiscountValue(e.target.value)}
-                placeholder="0"
-                className="h-7 w-16 text-center text-xs bg-background border-border/20 rounded-md"
-                autoFocus
-              />
-              <select
-                value={tempDiscountType}
-                onChange={(e) => setTempDiscountType(e.target.value as 'percentage' | 'amount')}
-                className="h-7 bg-background border border-border/20 rounded-md text-[11px] px-1 focus:ring-0 focus:border-border/30"
-              >
-                <option value="percentage">%</option>
-                <option value="amount">$</option>
-              </select>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-bold"
-                onClick={handleApplyDiscount}
-              >
-                Ok
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-1.5 text-muted-foreground hover:text-foreground text-[10px]"
-                onClick={() => setIsEditingDiscount(false)}
-              >
-                X
-              </Button>
-            </div>
-          ) : item.discount && item.discount.value > 0 && (
-            <div
-              className="text-[10px] text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 px-2 py-1 rounded-md inline-flex items-center justify-between gap-2 border border-emerald-100 dark:border-emerald-900/30 cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-colors w-full"
-              onClick={() => {
-                setTempDiscountValue(String(item.discount?.value || ''));
-                setTempDiscountType(item.discount?.type || 'percentage');
-                setIsEditingDiscount(true);
-              }}
-              title="Click para editar"
-            >
-              <span className="flex items-center gap-1">
-                <Percent className="h-3 w-3 opacity-70" />
-                <span>Descuento: {item.discount.type === 'percentage' ? `${item.discount.value}%` : `$${item.discount.value}`}</span>
-              </span>
-              <span 
-                className="text-[9px] text-muted-foreground hover:text-red-500 font-semibold"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateDiscount?.(item.cartItemId || item.id, 0, 'percentage');
-                  setTempDiscountValue('');
-                }}
-              >
-                Quitar
-              </span>
-            </div>
-          )}
-        </div>
+      {isSelectExtraOpen && (
+        <SelectExtraDialog
+          isOpen={isSelectExtraOpen}
+          onClose={() => setIsSelectExtraOpen(false)}
+          onAddExtra={(extra) => onAddExtra?.(item.cartItemId || item.id, extra)}
+          itemName={item.name}
+        />
       )}
     </div>
   );
