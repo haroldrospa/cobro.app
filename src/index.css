@@ -154,6 +154,19 @@
     padding-top: max(0.75rem, env(safe-area-inset-top));
   }
 
+  .safe-area-left {
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+  }
+
+  .safe-area-right {
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+  }
+
+  .safe-area-x {
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+  }
+
   #root {
     min-height: 100vh;
     width: 100%;

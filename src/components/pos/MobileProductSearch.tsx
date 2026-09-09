@@ -369,13 +369,13 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   return (
     <div className="h-full flex flex-col bg-background relative">
       {/* ── PREMIUM EBONY & EMERALD SEARCH BAR ── */}
-      <div className="px-3 py-2 space-y-2 bg-card border-b border-emerald-500/10 sticky top-0 z-40">
-        {/* Top Header Row: Menu, Profile, Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <div className="px-3 py-2 mobile-landscape:py-1.5 space-y-2 mobile-landscape:space-y-0 mobile-landscape:flex mobile-landscape:items-center mobile-landscape:gap-2 bg-card border-b border-emerald-500/10 sticky top-0 z-40">
+        {/* Top Header Section: Menu, Profile, Actions */}
+        <div className="flex items-center justify-between mobile-landscape:contents">
+          <div className="flex items-center gap-2 shrink-0">
             {menuButton && <div className="shrink-0">{menuButton}</div>}
             {companyLogo && (
-              <div className="hidden sm:flex h-10 w-10 relative shrink-0 rounded-xl overflow-hidden bg-muted border border-border items-center justify-center p-1 shadow-xl">
+              <div className="hidden sm:flex mobile-landscape:flex h-10 w-10 mobile-landscape:h-8 mobile-landscape:w-8 relative shrink-0 rounded-xl overflow-hidden bg-muted border border-border items-center justify-center p-1 shadow-xl">
                 <img 
                   src={companyLogo} 
                   alt="Logo" 
@@ -384,30 +384,30 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
               </div>
             )}
             {userName && (
-              <div className="hidden sm:flex flex-col shrink-0">
-                <span className="text-[9px] text-emerald-500/60 font-black uppercase tracking-widest leading-none mb-1">Cajero(a)</span>
-                <span className="text-[12px] font-bold text-foreground/90 truncate max-w-[150px] leading-none">{userName}</span>
+              <div className="hidden sm:flex mobile-landscape:hidden min-[760px]:mobile-landscape:flex flex-col shrink-0">
+                <span className="text-[9px] mobile-landscape:text-[8px] text-emerald-500/60 font-black uppercase tracking-widest leading-none mb-0.5">Cajero(a)</span>
+                <span className="text-[12px] mobile-landscape:text-[11px] font-bold text-foreground/90 truncate max-w-[130px] leading-none">{userName}</span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0 mobile-landscape:order-last">
             {actionButton && <div className="flex shrink-0 mr-1">{actionButton}</div>}
             {onRefresh && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 rounded-xl transition-colors"
+                className="h-9 w-9 mobile-landscape:h-8 mobile-landscape:w-8 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 rounded-xl transition-colors"
                 onClick={onRefresh}
                 disabled={isLoading}
               >
-                <RefreshCcw className={cn("h-4 w-4", isLoading && "animate-spin text-emerald-500")} />
+                <RefreshCcw className={cn("h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5", isLoading && "animate-spin text-emerald-500")} />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted text-muted-foreground">
-                  <Settings2 className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-9 w-9 mobile-landscape:h-8 mobile-landscape:w-8 rounded-xl hover:bg-muted text-muted-foreground">
+                  <Settings2 className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 p-3 rounded-[2rem] bg-popover border-emerald-500/20 shadow-2xl">
@@ -425,14 +425,14 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
           </div>
         </div>
 
-        {/* Search Bar Row */}
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        {/* Search Bar Row (flex-1 in mobile-landscape) */}
+        <div className="relative w-full mobile-landscape:flex-1 mobile-landscape:min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             ref={searchInputRef}
             type="text"
             placeholder="Escanear o buscar producto..."
-            className="pl-9 pr-11 h-10 bg-muted/50 border-transparent focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10 transition-colors rounded-xl font-medium text-xs tracking-tight placeholder:text-muted-foreground text-foreground w-full"
+            className="pl-9 pr-11 mobile-landscape:pl-8 mobile-landscape:pr-9 h-10 mobile-landscape:h-8 bg-muted/50 border-transparent focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10 transition-colors rounded-xl font-medium text-xs tracking-tight placeholder:text-muted-foreground text-foreground w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -442,10 +442,10 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 mobile-landscape:h-6 mobile-landscape:w-6 flex items-center justify-center rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
             title="Escanear código de barras o QR"
           >
-            <ScanBarcode className="h-4 w-4" />
+            <ScanBarcode className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5" />
           </button>
         </div>
 
@@ -459,7 +459,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
 
       {/* ── PRODUCTS FEED ── */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth overscroll-contain">
-        <div className={cn("px-2 pt-4", cart && cart.length > 0 ? "pb-28" : "pb-6")}>
+        <div className={cn("px-2 pt-4 mobile-landscape:pt-2", cart && cart.length > 0 ? "pb-28 mobile-landscape:pb-16" : "pb-6 mobile-landscape:pb-12")}>
           {filteredProducts.length === 0 ? (
             cart && cart.length > 0 ? (
               <div className="flex flex-col gap-3 py-6 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full min-w-0 max-w-full overflow-x-hidden">
@@ -666,12 +666,12 @@ const ProductGrid = React.memo<ProductGridProps>(function ProductGrid({
     <div
       className={cn(
         "grid",
-        viewMode === 'list' ? "grid-cols-1 gap-2" : {
+        viewMode === 'list' ? "grid-cols-1 gap-2 mobile-landscape:grid-cols-2" : {
           1: "grid-cols-1 gap-3",
-          2: "grid-cols-2 gap-2",
-          3: "grid-cols-3 gap-1.5",
-          4: "grid-cols-2 min-[420px]:grid-cols-3 gap-1.5"
-        }[gridCols] || "grid-cols-2 min-[420px]:grid-cols-3 gap-1.5"
+          2: "grid-cols-2 gap-2 mobile-landscape:grid-cols-3 min-[800px]:mobile-landscape:grid-cols-4",
+          3: "grid-cols-3 gap-1.5 mobile-landscape:grid-cols-4 min-[800px]:mobile-landscape:grid-cols-5",
+          4: "grid-cols-2 min-[420px]:grid-cols-3 mobile-landscape:grid-cols-4 min-[800px]:mobile-landscape:grid-cols-5 gap-1.5"
+        }[gridCols] || "grid-cols-2 min-[420px]:grid-cols-3 mobile-landscape:grid-cols-4 min-[800px]:mobile-landscape:grid-cols-5 gap-1.5"
       )}
     >
       {filteredProducts.map((product) => (
@@ -726,12 +726,12 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
         "group text-left relative flex transition-colors duration-200 cursor-pointer",
         viewMode === 'list'
           ? cn(
-              "rounded-2xl flex-row h-[4.25rem] items-center",
+              "rounded-2xl flex-row h-[4.25rem] mobile-landscape:h-14 items-center",
               cartQty > 0 ? "bg-emerald-500/[0.08] dark:bg-emerald-500/[0.12]" : "bg-muted/50 hover:bg-muted/80"
             )
           : cn(
               "overflow-hidden border shadow-sm",
-              gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl flex-col",
+              gridCols >= 4 ? "rounded-xl flex-col" : "rounded-2xl mobile-landscape:rounded-xl flex-col",
               cartQty > 0
                 ? "border-emerald-500/30 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08]"
                 : "border-border/60 bg-card hover:border-emerald-500/20 hover:shadow-md"
@@ -751,8 +751,8 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
       <div className={cn(
         "relative bg-muted overflow-hidden shrink-0 flex items-center justify-center",
         viewMode === 'list'
-          ? "w-12 h-12 rounded-xl ml-3"
-          : "aspect-square w-full border-b border-border"
+          ? "w-12 h-12 mobile-landscape:w-10 mobile-landscape:h-10 rounded-xl ml-3 mobile-landscape:ml-2"
+          : "aspect-square mobile-landscape:aspect-[16/10] mobile-landscape:h-20 w-full border-b border-border"
       )}>
         {product.image_url ? (
           <img
@@ -772,10 +772,6 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
         {product.track_inventory !== false && viewMode !== 'list' && (
           <div className="absolute top-1.5 left-1.5">
             <span className={cn(
-              // Sin backdrop-blur: esta insignia se repite en cada tarjeta
-              // de la grilla (hasta 80 en pantalla) y el fondo ya es
-              // semitransparente de por sí — el blur no se nota pero sí
-              // cuesta caro recomponerlo en cada render en GPUs débiles.
               "inline-flex items-center h-3.5 px-1.5 text-[7px] font-bold uppercase tracking-tight rounded-md shadow-sm",
               (product.stock || 0) > 10
                 ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10"
@@ -790,12 +786,16 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
       {/* Content Area */}
       <div className={cn(
         "flex min-w-0 flex-1",
-        viewMode === 'list' ? "flex-row items-center justify-between pl-3 pr-4 py-1.5 h-full" : (gridCols >= 4 ? "flex-col justify-between p-2 h-22 sm:h-18 gap-1" : "flex-col justify-between p-3 h-28 gap-2")
+        viewMode === 'list'
+          ? "flex-row items-center justify-between pl-3 pr-4 py-1.5 h-full"
+          : (gridCols >= 4
+              ? "flex-col justify-between p-2 mobile-landscape:p-1.5 h-22 sm:h-18 mobile-landscape:h-auto mobile-landscape:min-h-[58px] gap-1"
+              : "flex-col justify-between p-3 mobile-landscape:p-1.5 h-28 mobile-landscape:h-auto mobile-landscape:min-h-[58px] gap-2 mobile-landscape:gap-1")
       )}>
         <div className={cn("min-w-0", viewMode === 'list' ? "flex flex-col justify-center" : "space-y-0.5")}>
           <h4 className={cn(
             "font-semibold leading-snug line-clamp-2 tracking-tight text-foreground group-hover:text-emerald-500 transition-colors duration-200",
-            viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[9px]" : "text-[11px]")
+            viewMode === 'list' ? "text-xs" : (gridCols >= 4 ? "text-[9px]" : "text-[11px] mobile-landscape:text-[10px] mobile-landscape:line-clamp-1")
           )}>
             {product.name}
           </h4>
@@ -815,7 +815,7 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
             </div>
           )}
           {product.category?.name && gridCols < 4 && viewMode !== 'list' && (
-            <p className="text-[8px] font-bold uppercase tracking-wider text-emerald-600/60 truncate">
+            <p className="text-[8px] font-bold uppercase tracking-wider text-emerald-600/60 truncate mobile-landscape:hidden">
               {product.category.name}
             </p>
           )}
@@ -823,12 +823,12 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
 
         <div className={cn(
           "flex items-center",
-          viewMode === 'list' ? "ml-2 shrink-0" : "justify-between mt-auto border-t border-border/50 pt-1.5 w-full"
+          viewMode === 'list' ? "ml-2 shrink-0" : "justify-between mt-auto border-t border-border/50 pt-1.5 mobile-landscape:pt-1 w-full"
         )}>
           {viewMode !== 'list' && (
             <span className={cn(
               "font-bold text-emerald-600 dark:text-emerald-400 tracking-tight",
-              gridCols >= 4 ? "text-xs" : "text-sm"
+              gridCols >= 4 ? "text-xs mobile-landscape:text-[11px]" : "text-sm mobile-landscape:text-xs"
             )}>
               ${(product.price || 0).toLocaleString()}
             </span>
@@ -847,7 +847,7 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
                 }}
                 className={cn(
                   "flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-card rounded-full transition-all active:scale-90",
-                  viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+                  viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6 mobile-landscape:h-4.5 mobile-landscape:w-4.5")
                 )}
               >
                 <Minus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
@@ -859,7 +859,7 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
                 }}
                 className={cn(
                   "text-center font-bold text-foreground shrink-0 cursor-pointer hover:text-emerald-500 transition-colors active:scale-95",
-                  viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px]")
+                  viewMode === 'list' ? "w-6 text-xs" : (gridCols >= 4 ? "w-4 text-[9px]" : "w-5 text-[11px] mobile-landscape:w-4 mobile-landscape:text-[9px]")
                 )}
               >
                 {cartQty}
@@ -872,7 +872,7 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
                 }}
                 className={cn(
                   "flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:bg-card rounded-full transition-all active:scale-90",
-                  viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+                  viewMode === 'list' ? "h-8 w-8" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6 mobile-landscape:h-4.5 mobile-landscape:w-4.5")
                 )}
               >
                 <Plus className={cn(viewMode === 'list' ? "h-3.5 w-3.5" : "h-2.5 w-2.5")} />
@@ -886,11 +886,11 @@ const ProductCard = React.memo<ProductCardProps>(function ProductCard({
               }}
               className={cn(
                 "rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-sm active:scale-90 transition-all duration-150 cursor-pointer",
-                viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6")
+                viewMode === 'list' ? "h-7 w-7" : (gridCols >= 4 ? "h-4.5 w-4.5" : "h-6 w-6 mobile-landscape:h-4.5 mobile-landscape:w-4.5")
               )}>
               <Plus className={cn(
                 "text-white",
-                viewMode === 'list' ? "h-3.5 w-3.5" : (gridCols >= 4 ? "h-3 w-3" : "h-4 w-4")
+                viewMode === 'list' ? "h-3.5 w-3.5" : (gridCols >= 4 ? "h-3 w-3" : "h-4 w-4 mobile-landscape:h-2.5 mobile-landscape:w-2.5")
               )} strokeWidth={2.5} />
             </div>
           )}

@@ -140,18 +140,18 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   const displayDebt = customerBalance?.totalDebt || 0;
 
   return (
-    <div className="min-h-full flex flex-col bg-background p-3 sm:p-4 pb-4 sm:pb-6 gap-3 sm:gap-4 overflow-x-hidden">
+    <div className="min-h-full flex flex-col mobile-landscape:grid mobile-landscape:grid-cols-2 mobile-landscape:grid-rows-[auto_1fr] bg-background p-3 sm:p-4 mobile-landscape:p-2.5 pb-4 sm:pb-6 mobile-landscape:pb-2 gap-3 sm:gap-4 mobile-landscape:gap-2.5 overflow-x-hidden">
       {/* ── TOTALS CARD (Modern Glassmorphism - More Compact) ── */}
-      <Card className="bg-card border border-border relative overflow-hidden shadow-md rounded-2xl">
+      <Card className="bg-card border border-border relative overflow-hidden shadow-md rounded-2xl mobile-landscape:rounded-xl mobile-landscape:col-start-2 mobile-landscape:row-start-1">
         <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 blur-[60px] rounded-full -mr-16 -mt-16" />
-        <CardContent className="p-3.5 sm:p-5 relative z-10">
-          <div className="flex flex-col gap-2.5 sm:gap-3.5">
+        <CardContent className="p-3.5 sm:p-5 mobile-landscape:p-2.5 relative z-10">
+          <div className="flex flex-col gap-2.5 sm:gap-3.5 mobile-landscape:gap-1.5">
             <div className="flex items-center justify-between opacity-60">
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Resumen de Cargo</span>
               <Calculator className="h-4 w-4 text-green-500" />
             </div>
             
-            <div className="space-y-1.5 sm:space-y-2.5">
+            <div className="space-y-1.5 sm:space-y-2.5 mobile-landscape:space-y-1">
               <div className="flex justify-between text-muted-foreground">
                 <span className="text-xs sm:text-sm font-medium">Subtotal Bruto</span>
                 <span className="text-xs sm:text-sm font-black text-foreground">${totals.subtotal}</span>
@@ -208,12 +208,12 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
       </Card>
 
       {/* ── CUSTOMER & SETTINGS (Compact Direct Selects) ── */}
-      <div className="flex flex-col gap-3 sm:gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4 mobile-landscape:gap-2 mobile-landscape:col-start-1 mobile-landscape:row-start-1 mobile-landscape:row-span-2">
         {/* ── INVOICE TYPE (Tipo de Comprobante) ── */}
         <div className="flex flex-col gap-1">
           <span className="text-[9px] uppercase font-black tracking-widest text-muted-foreground px-1">Comprobante Fiscal</span>
           <Select value={selectedInvoiceType} onValueChange={onInvoiceTypeChange}>
-            <SelectTrigger className="w-full h-auto bg-card border border-border hover:bg-accent/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all">
+            <SelectTrigger className="w-full h-auto bg-card border border-border hover:bg-accent/10 rounded-2xl mobile-landscape:rounded-xl p-3 sm:p-4 mobile-landscape:p-2.5 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 sm:p-2 rounded-xl bg-green-500/10 text-green-500">
                   <FileText className="h-4 w-4" />
@@ -255,7 +255,7 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
               setCustomerSearchQuery('');
               setIsCustomerSelectOpen(true);
             }}
-            className="w-full h-auto bg-card border border-border hover:bg-accent/10 rounded-2xl p-3 sm:p-4 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all"
+            className="w-full h-auto bg-card border border-border hover:bg-accent/10 rounded-2xl mobile-landscape:rounded-xl p-3 sm:p-4 mobile-landscape:p-2.5 flex items-center justify-between font-bold text-left focus:ring-1 focus:ring-green-500/20 active:scale-[0.99] transition-all"
           >
             <div className="flex items-center gap-2.5">
               <div className={cn("p-1.5 sm:p-2 rounded-xl transition-colors", selectedCustomer ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground")}>
@@ -379,40 +379,40 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
       </div>
 
       {/* ── CHECKOUT BUTTON (Impact) ── */}
-      <AnimatePresence>
-        {!canCheckout && requiresCustomer && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 justify-center py-1.5"
-          >
-            <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-[9px] uppercase font-black text-red-500/75 tracking-widest">
-              Selecciona un cliente para {selectedType?.code || 'B01'}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="mt-auto pt-1 mobile-landscape:pt-0 mobile-landscape:col-start-2 mobile-landscape:row-start-2 mobile-landscape:mt-0 flex flex-col justify-end">
+        <AnimatePresence>
+          {!canCheckout && requiresCustomer && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 justify-center py-1.5 mobile-landscape:py-0.5"
+            >
+              <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-[9px] uppercase font-black text-red-500/75 tracking-widest">
+                Selecciona un cliente para {selectedType?.code || 'B01'}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="mt-auto pt-1">
         <Button
           onClick={onCheckout}
           disabled={!canCheckout || isInvoiceLimitReached}
           className={cn(
-            "w-full h-14 sm:h-16 rounded-2xl text-sm sm:text-base font-black group transition-all relative overflow-hidden",
+            "w-full h-14 sm:h-16 mobile-landscape:h-11 rounded-2xl mobile-landscape:rounded-xl text-sm sm:text-base mobile-landscape:text-xs font-black group transition-all relative overflow-hidden",
             canCheckout
               ? "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-[0_0_40px_rgba(34,197,94,0.3)]"
               : "bg-muted text-muted-foreground border border-border"
           )}
         >
-          <div className="flex items-center justify-between w-full gap-2 px-4">
+          <div className="flex items-center justify-between w-full gap-2 px-4 mobile-landscape:px-2.5">
             <div className="flex items-center gap-2 min-w-0">
-              <CreditCard className="h-5 w-5 shrink-0" />
+              <CreditCard className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 shrink-0" />
               <span className="truncate">Finalizar</span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-base sm:text-lg">${totals.total}</span>
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              <span className="text-base sm:text-lg mobile-landscape:text-sm">${totals.total}</span>
+              <ArrowRight className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
         </Button>

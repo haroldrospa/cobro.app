@@ -49,22 +49,22 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
 
   if (cart.length === 0) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-700">
-        <div className="relative mb-10 group">
+      <div className="h-[60vh] mobile-landscape:h-auto flex flex-col items-center justify-center p-8 mobile-landscape:py-4 mobile-landscape:px-2 text-center animate-in fade-in zoom-in duration-700">
+        <div className="relative mb-10 mobile-landscape:mb-2 group">
           {/* Glowing backdrops */}
           <div className="absolute inset-0 bg-green-500/20 blur-[80px] rounded-full animate-pulse opacity-50" />
           <div className="absolute -inset-4 bg-green-500/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
           
           {/* Main icon container */}
-          <div className="relative bg-card rounded-[3rem] p-10 border border-border shadow-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
-            <PackageSearch className="h-20 w-20 text-green-500/40 relative z-10" />
-            <div className="absolute -top-2 -right-2 bg-green-500 h-8 w-8 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/40 border border-white/20">
-              <ShoppingCart className="h-4 w-4 text-white" />
+          <div className="relative bg-card rounded-[3rem] mobile-landscape:rounded-2xl p-10 mobile-landscape:p-3 border border-border shadow-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+            <PackageSearch className="h-20 w-20 mobile-landscape:h-8 mobile-landscape:w-8 text-green-500/40 relative z-10" />
+            <div className="absolute -top-2 -right-2 bg-green-500 h-8 w-8 mobile-landscape:h-5 mobile-landscape:w-5 rounded-xl mobile-landscape:rounded-md flex items-center justify-center shadow-lg shadow-green-500/40 border border-white/20">
+              <ShoppingCart className="h-4 w-4 mobile-landscape:h-2.5 mobile-landscape:w-2.5 text-white" />
             </div>
           </div>
         </div>
 
-        <h3 className="text-3xl font-black text-foreground uppercase tracking-tighter italic mb-3">
+        <h3 className="text-3xl mobile-landscape:text-base font-black text-foreground uppercase tracking-tighter italic mb-3 mobile-landscape:mb-1">
           Carrito Vacío
         </h3>
         <div className="space-y-1 max-w-[240px]">
