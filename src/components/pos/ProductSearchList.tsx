@@ -351,16 +351,36 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     barcodeAutoAddedRef.current = false;
   }, [searchTerm]);
 
-  // Exponer método de foco al padre
+  // Exponer método de foco al padre (respetando si es dispositivo táctil/móvil)
   React.useImperativeHandle(ref, () => ({
     focus: () => {
-      searchInputRef.current?.focus();
+      const isTouchOrMobile = typeof window !== 'undefined' && (
+        window.matchMedia('(pointer: coarse)').matches ||
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.innerWidth < 1024
+      );
+      if (!isTouchOrMobile) {
+        searchInputRef.current?.focus();
+      }
     }
   }));
 
-  // Focus on mount
+  // Focus on mount solo en escritorio con teclado físico; nunca en móviles/táctiles para evitar desplegar el teclado virtual
   useEffect(() => {
-    searchInputRef.current?.focus();
+    if (typeof window === 'undefined') return;
+    const isTouchOrMobile = (
+      window.matchMedia('(pointer: coarse)').matches ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      window.innerWidth < 1024
+    );
+
+    if (!isTouchOrMobile) {
+      searchInputRef.current?.focus();
+    }
   }, []);
 
   // Debounce search term for better performance (150ms = fast but smooth)

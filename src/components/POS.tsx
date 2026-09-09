@@ -227,9 +227,15 @@ const POSContent: React.FC = () => {
   const searchInputRef = React.useRef<any>(null);
   const mobileSearchRef = React.useRef<any>(null);
 
-  // Focus search input when PrintOptionsDialog is closed (only on desktop to prevent mobile keyboard from opening)
+  // Focus search input when PrintOptionsDialog is closed (only on non-touch desktop to prevent mobile keyboard from opening)
   useEffect(() => {
-    if (!showPrintOptionsDialog && !isMobile) {
+    const isTouchOrMobile = isMobile || (typeof window !== 'undefined' && (
+      window.matchMedia('(pointer: coarse)').matches ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    ));
+    if (!showPrintOptionsDialog && !isTouchOrMobile) {
       const timer = setTimeout(() => {
         searchInputRef.current?.focus();
       }, 150);
