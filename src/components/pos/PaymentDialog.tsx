@@ -137,15 +137,20 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   useEffect(() => {
     if (isOpen && paymentMethod === 'cash') {
-      const focusInput = () => {
-        if (amountInputRef.current) {
-          amountInputRef.current.focus();
-          amountInputRef.current.select();
-        }
-      };
-      focusInput();
-      const timer = setTimeout(focusInput, 150);
-      return () => clearTimeout(timer);
+      const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      // Solo hacer auto-focus en dispositivos de escritorio (con teclado físico).
+      // En tablets y móviles evita que el teclado virtual tape la ventana al abrir.
+      if (!isTouchDevice) {
+        const focusInput = () => {
+          if (amountInputRef.current) {
+            amountInputRef.current.focus();
+            amountInputRef.current.select();
+          }
+        };
+        focusInput();
+        const timer = setTimeout(focusInput, 150);
+        return () => clearTimeout(timer);
+      }
     }
   }, [isOpen, paymentMethod]);
 
@@ -391,9 +396,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
             )}
 
             {(paymentMethod === 'cash' || paymentMethod === 'split') && (
-              <div className="space-y-2.5 animate-in fade-in slide-in-from-top-1 flex flex-col justify-end flex-1">
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-1 flex flex-col shrink-0">
                 {paymentMethod === 'split' && (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 shrink-0">
                     <div className="space-y-0.5">
                       <label className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground ml-0.5">Restante en</label>
                       <select
@@ -415,14 +420,15 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 )}
 
                 {paymentMethod === 'split' && splitMethod === 'transfer' && (
-                  <div className="p-2.5 bg-muted/30 rounded-xl border border-border space-y-2">
+                  <div className="p-2.5 bg-muted/30 rounded-xl border border-border space-y-2 shrink-0">
                     <BankAccountsList totalAmount={Math.max(0, fullTotal - currentReceived)} />
                   </div>
                 )}
 
-                <div className="space-y-1.5">
+                {/* Input Monto Recibido */}
+                <div className="space-y-1.5 shrink-0">
                   <div className="flex items-center justify-between px-0.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       {paymentMethod === 'split' ? 'Efectivo Recibido' : 'Monto Recibido'}
                     </label>
                     {webChangeInfo && (
@@ -432,9 +438,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     )}
                   </div>
                   
-                  <div className="relative group mt-0.5">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-sm font-black text-muted-foreground/60 group-focus-within:text-primary transition-colors">RD$</span>
+                  <div className="relative group shrink-0">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <span className="text-sm font-black text-muted-foreground/60 group-focus-within:text-emerald-500 transition-colors">RD$</span>
                     </div>
                     <Input
                       ref={amountInputRef}
@@ -448,16 +454,33 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                           onProcessPayment(includeDebt, splitMethod);
                         }
                       }}
-                      className="h-11 pl-12 text-xl font-black bg-background border border-border focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary rounded-lg text-foreground transition-all shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="h-12 min-h-[48px] pl-14 pr-9 text-2xl font-black bg-background border-2 border-border/80 focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/20 rounded-xl text-foreground transition-all shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
                     />
+                    {localAmount && (
+                      <button
+                        type="button"
+                        onClick={() => handleAmountChange('')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                        title="Borrar monto"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
 
+                  {/* Botones de sugerencias / billetes rápidos */}
                   {paymentMethod === 'cash' && (
-                    <div className="flex flex-wrap gap-1.5 justify-center pt-0.5">
+                    <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto py-0.5 scrollbar-none">
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-7 px-2 rounded-md border-border bg-background hover:bg-muted text-[10px] font-bold uppercase flex-1 min-w-[15%]"
+                        size="sm"
+                        className={cn(
+                          "h-8 px-2.5 rounded-lg border text-xs font-bold transition-all shrink-0",
+                          currentReceived === fullTotal
+                            ? "bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black shadow-xs"
+                            : "border-border/70 bg-background hover:bg-muted text-muted-foreground"
+                        )}
                         onClick={() => handleAmountChange(fullTotal.toString())}
                       >
                         Exacto
@@ -467,40 +490,70 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                           key={amt}
                           type="button"
                           variant="outline"
-                          className="h-7 px-2 rounded-md border-border bg-background hover:bg-muted text-[10px] font-bold uppercase flex-1 min-w-[15%]"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-2.5 rounded-lg border text-xs font-bold transition-all tabular-nums shrink-0",
+                            currentReceived === amt
+                              ? "bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black shadow-xs"
+                              : "border-border/70 bg-background hover:bg-muted text-foreground"
+                          )}
                           onClick={() => handleAmountChange(amt.toString())}
                         >
-                          {amt}
+                          RD$ {amt.toLocaleString()}
                         </Button>
                       ))}
                     </div>
                   )}
 
-                  {paymentMethod === 'cash' && currentReceived >= 0 && (() => {
-                    const actualChange = currentChange;
-                    return (
-                      <div
-                        className={cn(
-                          "py-2.5 px-3 rounded-lg border transition-colors flex items-center justify-between shadow-sm w-full mt-1.5",
-                          actualChange >= 0 ? "bg-muted/40 border-border" : "bg-amber-500/10 border-amber-500/20"
-                        )}
-                      >
-                        <span className={cn(
-                          "text-[10px] font-bold uppercase tracking-widest",
-                          actualChange >= 0 ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400"
-                        )}>
-                          {actualChange >= 0 ? "Cambio a devolver" : "Falta por Recibir"}
-                        </span>
-                        <span className={cn(
-                          "text-xl font-black tracking-tight flex items-baseline leading-none",
-                          actualChange >= 0 ? "text-primary" : "text-amber-600 dark:text-amber-400"
-                        )}>
-                          <span className="text-xs mr-0.5 text-inherit">RD$</span>
-                          {Math.abs(actualChange).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    );
-                  })()}
+                  {/* Tarjeta Destacada de Devolver / Cambio */}
+                  {paymentMethod === 'cash' && (
+                    <div className="shrink-0 pt-1">
+                      {currentReceived > fullTotal ? (
+                        <div className="p-3 rounded-2xl bg-emerald-500/15 dark:bg-emerald-950/40 border-2 border-emerald-500/40 dark:border-emerald-500/50 shadow-sm flex items-center justify-between transition-all">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                              <Banknote className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block leading-tight">
+                                Cambio a Devolver
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                Entregar al cliente
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mr-1">RD$</span>
+                            <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight tabular-nums">
+                              {currentChange.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                      ) : currentReceived === fullTotal ? (
+                        <div className="py-2.5 px-3 rounded-xl bg-muted/40 border border-border/80 flex items-center justify-between text-xs transition-all">
+                          <div className="flex items-center gap-2 text-muted-foreground font-semibold">
+                            <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                            <span>Pago Completo (Exacto)</span>
+                          </div>
+                          <span className="font-bold text-muted-foreground tabular-nums">
+                            Sin cambio (RD$ 0.00)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="py-2.5 px-3 rounded-xl bg-amber-500/15 dark:bg-amber-950/40 border border-amber-500/30 flex items-center justify-between text-xs transition-all">
+                          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            <span className="text-[10px] uppercase tracking-wider">Falta por recibir:</span>
+                          </div>
+                          <div className="text-right font-black text-base text-amber-700 dark:text-amber-400 tabular-nums">
+                            <span className="text-xs mr-0.5">RD$</span>
+                            {(fullTotal - currentReceived).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
