@@ -7,8 +7,8 @@ import { useToast } from './use-toast';
 export interface Supplier {
     id: string;
     name: string;
-    rnc: string | null;
-    contact: string | null;
+    rnc?: string | null;
+    contact?: string | null;
     phone?: string | null;
     payment_method?: 'cash' | 'transfer' | string | null;
     bank_name?: string | null;
@@ -52,8 +52,8 @@ export const useSuppliers = () => {
                 .insert({
                     store_id: userStore.id,
                     name: newSupplier.name,
-                    rnc: newSupplier.rnc,
-                    contact: newSupplier.contact,
+                    rnc: newSupplier.rnc || null,
+                    contact: newSupplier.contact || null,
                     phone: newSupplier.phone || null,
                     payment_method: newSupplier.payment_method || 'transfer',
                     bank_name: newSupplier.bank_name || null,
