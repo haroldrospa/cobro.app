@@ -595,21 +595,21 @@ const QuickNotesSection: React.FC = () => {
                                     className={cn(
                                         "group flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition-all text-xs",
                                         isOverdue
-                                            ? "bg-destructive/[0.07] border-destructive/30 hover:border-destructive/50"
+                                            ? "bg-rose-500/[0.08] dark:bg-rose-950/30 border-rose-500/40 hover:border-rose-500/60"
                                             : isToday
-                                            ? "bg-emerald-500/[0.07] border-emerald-500/30 hover:border-emerald-500/50"
+                                            ? "bg-emerald-500/[0.08] dark:bg-emerald-950/30 border-emerald-500/40 hover:border-emerald-500/60"
                                             : "bg-background/80 border-border/50 hover:border-border hover:bg-background"
                                     )}
                                 >
                                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 min-w-0">
                                             {isOverdue && (
-                                                <span className="text-[9px] font-bold uppercase tracking-wider bg-destructive/15 text-destructive px-1.5 py-0.5 rounded shrink-0">
+                                                <span className="text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded shrink-0">
                                                     Vencido
                                                 </span>
                                             )}
                                             {isToday && !isOverdue && (
-                                                <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded shrink-0">
+                                                <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0">
                                                     Hoy
                                                 </span>
                                             )}
@@ -636,14 +636,14 @@ const QuickNotesSection: React.FC = () => {
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         <span className={cn(
                                             "font-bold text-xs tabular-nums",
-                                            isOverdue ? "text-destructive" : isToday ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                                            isOverdue ? "text-rose-600 dark:text-rose-300 font-extrabold" : isToday ? "text-emerald-600 dark:text-emerald-300 font-bold" : "text-foreground"
                                         )}>
                                             ${(note.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                         </span>
                                         <Button 
                                             size="icon" 
                                             variant="ghost" 
-                                            className="h-6 w-6 p-0 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                                            className="h-6 w-6 p-0 text-muted-foreground/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-md transition-colors"
                                             onClick={() => removeNote(note.id)}
                                             disabled={isRemoving}
                                             title="Eliminar"
@@ -660,11 +660,11 @@ const QuickNotesSection: React.FC = () => {
                     {notes.length > 0 && (
                         <div className="pt-2 border-t border-border/40 space-y-1.5 text-xs">
                             {todayTotal > 0 && (
-                                <div className="flex justify-between items-center px-2.5 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
-                                    <span className="text-[11px] font-semibold flex items-center gap-1.5">
-                                        <CalendarIcon className="h-3 w-3" /> Pagar Hoy / Vencido:
+                                <div className="flex justify-between items-center px-3 py-2 rounded-xl bg-rose-500/15 dark:bg-rose-950/50 border border-rose-500/40 text-rose-600 dark:text-rose-300 shadow-xs">
+                                    <span className="text-[11px] font-bold flex items-center gap-1.5">
+                                        <CalendarIcon className="h-3.5 w-3.5 text-rose-500 dark:text-rose-300" /> Pagar Hoy / Vencido:
                                     </span>
-                                    <span className="font-bold tabular-nums">
+                                    <span className="font-extrabold text-xs tabular-nums text-rose-600 dark:text-rose-200">
                                         ${todayTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
