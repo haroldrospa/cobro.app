@@ -65,7 +65,8 @@ export function initGlobalKeyboardAvoid() {
       const activeTag = document.activeElement?.tagName?.toLowerCase();
       const isInputFocused = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
 
-      if (!isInputFocused && currentHeight > initialHeight) {
+      // Cuando ningún input tiene el foco, la altura actual es la altura real sin teclado
+      if (!isInputFocused) {
         initialHeight = currentHeight;
       }
 
@@ -75,14 +76,26 @@ export function initGlobalKeyboardAvoid() {
         if (!document.body.classList.contains('keyboard-open')) {
           document.body.classList.add('keyboard-open');
         }
+        document.documentElement.style.setProperty('--visual-viewport-height', `${Math.round(currentHeight)}px`);
       } else {
         if (document.body.classList.contains('keyboard-open')) {
           document.body.classList.remove('keyboard-open');
         }
+        document.documentElement.style.removeProperty('--visual-viewport-height');
       }
     };
 
+    const onOrientationChange = () => {
+      setTimeout(() => {
+        if (window.visualViewport) {
+          initialHeight = window.visualViewport.height;
+        }
+      }, 100);
+    };
+
     window.visualViewport.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onOrientationChange);
+    window.addEventListener('resize', onResize);
 
     const handleFocusOut = () => {
       setTimeout(() => {
@@ -90,6 +103,7 @@ export function initGlobalKeyboardAvoid() {
         const isInput = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
         if (!isInput) {
           document.body.classList.remove('keyboard-open');
+          document.documentElement.style.removeProperty('--visual-viewport-height');
         }
       }, 100);
     };
@@ -98,8 +112,11 @@ export function initGlobalKeyboardAvoid() {
 
     return () => {
       window.visualViewport?.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onOrientationChange);
+      window.removeEventListener('resize', onResize);
       document.removeEventListener('focusout', handleFocusOut);
       document.body.classList.remove('keyboard-open');
+      document.documentElement.style.removeProperty('--visual-viewport-height');
     };
   }
 }

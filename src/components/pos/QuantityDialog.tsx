@@ -51,7 +51,7 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent hideCloseButton className="w-[calc(100%-1rem)] max-w-[380px] bg-card border border-border p-0 overflow-hidden rounded-2xl shadow-2xl">
+      <DialogContent hideCloseButton className="w-[calc(100%-1rem)] max-w-[380px] bg-card border border-border p-0 overflow-y-auto max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] rounded-2xl shadow-2xl overscroll-contain">
         <div className="relative">
           {/* Header Area */}
           <div className="p-4 sm:p-5 pb-3 border-b border-border/60">

@@ -175,7 +175,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent 
-          className="max-w-[420px] w-[calc(100%-1.5rem)] sm:w-full p-0 overflow-hidden bg-card border border-border rounded-2xl shadow-2xl max-h-[calc(100vh-2rem)] sm:max-h-[90vh] flex flex-col [@media(max-height:580px)]:max-h-[98vh]"
+          className="max-w-[420px] w-[calc(100%-1.5rem)] sm:w-full p-0 overflow-hidden bg-card border border-border rounded-2xl shadow-2xl max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] flex flex-col [@media(max-height:580px)]:max-h-[98vh] overscroll-contain"
         >
           {/* Header & Total Area */}
           <div className="p-3.5 pb-0 flex-shrink-0">

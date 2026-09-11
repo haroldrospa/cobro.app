@@ -55,7 +55,7 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-[calc(100%-1rem)] max-w-md p-0 overflow-y-auto max-h-[calc(100vh-2rem)] rounded-2xl">
+            <DialogContent className="w-[calc(100%-1rem)] max-w-md p-0 overflow-y-auto max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] rounded-2xl overscroll-contain">
                 <div className="flex flex-col">
                     <div className="p-4 sm:p-5 pb-1 shrink-0">
                         <DialogHeader>
@@ -101,7 +101,9 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                                         }
                                     }}
                                     onFocus={(e) => {
-                                        e.target.select();
+                                        requestAnimationFrame(() => {
+                                            e.target.select();
+                                        });
                                     }}
                                     onKeyDown={handleKeyDown}
                                     className="text-2xl sm:text-3xl font-black h-12 w-full max-w-[240px] text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/40 tracking-tight"

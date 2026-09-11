@@ -679,6 +679,19 @@ body.keyboard-open .hide-on-keyboard {
   display: none !important;
 }
 
+/* Prevenir scroll del fondo y saltos visuales en dialogos */
+[data-radix-dialog-content] {
+  overscroll-behavior: contain;
+}
+
+/* Manejo seguro de dialogos en tablets y móviles cuando el teclado virtual está abierto */
+body.keyboard-open [data-radix-dialog-content],
+body.keyboard-open [role="dialog"] {
+  top: 0.5rem !important;
+  transform: translateX(-50%) !important;
+  max-height: calc(var(--visual-viewport-height, 100dvh) - 1rem) !important;
+}
+
 /*
  * Fallback para navegadores antiguos que no soportan la propiedad 'gap' en Flexbox (ej. Android 8 / Chrome antiguo)
  */

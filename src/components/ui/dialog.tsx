@@ -46,11 +46,11 @@ const DialogContent = React.forwardRef<
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
-        // ── Layout (Positioned near top on mobile to avoid keyboard overlap, centered on desktop) ──
+        // ── Layout (Anclado arriba en móviles y tablets para evitar solapamiento/parpadeo con teclado virtual; centrado solo en PC de escritorio con mouse y pantalla alta) ──
         centerOnMobile ? (
-          "left-1/2 top-4 sm:top-6 md:top-1/2 -translate-x-1/2 md:-translate-y-1/2 w-[calc(100%-1rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(100vh-2rem)] md:max-h-[85vh] overflow-y-auto overflow-x-hidden"
+          "left-1/2 top-3 sm:top-4 md:top-6 -translate-x-1/2 translate-y-0 lg:[@media(min-height:820px)_and_(pointer:fine)]:top-1/2 lg:[@media(min-height:820px)_and_(pointer:fine)]:-translate-y-1/2 w-[calc(100%-1rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] overflow-y-auto overflow-x-hidden overscroll-contain"
         ) : (
-          "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto overflow-x-hidden data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4 sm:inset-x-auto sm:left-1/2 sm:bottom-auto sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6 sm:max-h-[85vh]"
+          "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4 sm:inset-x-auto sm:left-1/2 sm:bottom-auto sm:top-6 sm:-translate-x-1/2 sm:translate-y-0 lg:[@media(min-height:820px)_and_(pointer:fine)]:top-1/2 lg:[@media(min-height:820px)_and_(pointer:fine)]:-translate-y-1/2 sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6 sm:max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh]"
         ),
         className
       )}
