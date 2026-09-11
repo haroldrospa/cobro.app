@@ -175,7 +175,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent 
-          className="max-w-[420px] w-[calc(100%-1.5rem)] sm:w-full p-0 overflow-hidden bg-card border border-border rounded-2xl shadow-2xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col [@media(max-height:580px)]:max-h-[98dvh]"
+          className="max-w-[420px] w-[calc(100%-1.5rem)] sm:w-full p-0 overflow-hidden bg-card border border-border rounded-2xl shadow-2xl max-h-[calc(100vh-2rem)] sm:max-h-[90vh] flex flex-col [@media(max-height:580px)]:max-h-[98vh]"
         >
           {/* Header & Total Area */}
           <div className="p-3.5 pb-0 flex-shrink-0">
@@ -247,7 +247,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                         placeholder="Buscar por nombre, RNC o teléfono..." 
                         value={customerSearch}
                         onValueChange={setCustomerSearch}
-                        className="h-9 text-xs text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
+                        className="h-9 text-base sm:text-xs text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
                       />
                       <CommandList className="max-h-[220px] overflow-y-auto p-1 scrollbar-thin">
                         <CommandEmpty className="p-4 text-xs text-muted-foreground text-center">
@@ -404,7 +404,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       <select
                         value={splitMethod}
                         onChange={e => setSplitMethod(e.target.value)}
-                        className="w-full h-8 bg-background border border-border rounded-md text-xs font-semibold px-2 text-foreground outline-none focus:border-primary"
+                        className="w-full h-8 bg-background border border-border rounded-md text-base sm:text-xs font-semibold px-2 text-foreground outline-none focus:border-primary"
                       >
                         <option value="card">Tarjeta</option>
                         <option value="transfer">Transferencia</option>

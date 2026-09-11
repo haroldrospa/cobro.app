@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => ({
     }),
     mode === 'development' && componentTagger(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'placeholder.svg', 'icon-192.png', 'icon-512.png', 'cobro-logo.png', 'logo-dark.png', 'offline.html'],
       manifest: {
         name: 'Cobro POS',

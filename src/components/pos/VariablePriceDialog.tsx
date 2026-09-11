@@ -55,7 +55,7 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-[calc(100%-1rem)] max-w-md p-0 overflow-y-auto max-h-[90dvh] rounded-2xl">
+            <DialogContent className="w-[calc(100%-1rem)] max-w-md p-0 overflow-y-auto max-h-[calc(100vh-2rem)] rounded-2xl">
                 <div className="flex flex-col">
                     <div className="p-4 sm:p-5 pb-1 shrink-0">
                         <DialogHeader>
@@ -75,7 +75,7 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                                 type="text"
                                 value={customName}
                                 onChange={(e) => setCustomName(e.target.value)}
-                                className="bg-muted/50 border-transparent text-xs rounded-xl h-10 focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10"
+                                className="bg-muted/50 border-transparent text-base sm:text-xs rounded-xl h-10 focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10"
                                 placeholder="Nombre del producto"
                                 autoComplete="off"
                             />
