@@ -28,12 +28,15 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
       setQuantity(currentQuantity.toString());
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          inputRef.current.select();
-        }
-      }, 150);
+      const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      if (!isTouch) {
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus({ preventScroll: true });
+            inputRef.current.select();
+          }
+        }, 150);
+      }
     }
   }, [isOpen, currentQuantity]);
 
@@ -96,9 +99,7 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
                     }
                   }}
                   onFocus={(e) => {
-                    setTimeout(() => {
-                      e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                    }, 100);
+                    e.target.select();
                   }}
                   className="text-3xl sm:text-4xl font-black h-14 text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/30"
                   placeholder="0.000"
@@ -114,7 +115,7 @@ const QuantityDialog: React.FC<QuantityDialogProps> = ({
                     variant="outline"
                     onClick={() => {
                         setQuantity(quickVal.toString());
-                        inputRef.current?.focus();
+                        inputRef.current?.focus({ preventScroll: true });
                     }}
                     className="h-10 bg-background border-border hover:bg-muted font-bold text-xs rounded-xl transition-all"
                   >

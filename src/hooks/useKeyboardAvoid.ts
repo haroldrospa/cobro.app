@@ -56,75 +56,50 @@ export function initGlobalKeyboardAvoid() {
 
   if (!isTouchDevice) return;
 
-  let keyboardOpen = false;
+  if (window.visualViewport) {
+    let initialHeight = window.visualViewport.height;
 
-  const handleFocus = (e: FocusEvent) => {
-    const target = e.target as HTMLElement;
-    if (!target) return;
+    const onResize = () => {
+      if (!window.visualViewport) return;
+      const currentHeight = window.visualViewport.height;
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      const isInputFocused = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
 
-    const tag = target.tagName.toLowerCase();
-    const isInput =
-      tag === 'input' ||
-      tag === 'textarea' ||
-      tag === 'select' ||
-      target.isContentEditable;
+      if (!isInputFocused && currentHeight > initialHeight) {
+        initialHeight = currentHeight;
+      }
 
-    if (!isInput) return;
+      const isKeyboardOpen = isInputFocused && (initialHeight - currentHeight > 150);
 
-    // Add class on focus initially
-    document.body.classList.add('keyboard-open');
-    keyboardOpen = true;
-    
-    // Verify with visualViewport if supported
-    if (window.visualViewport) {
-      const initialHeight = window.visualViewport.height;
-
-      const onViewportResize = () => {
-        if (!window.visualViewport) return;
-        const newHeight = window.visualViewport.height;
-        // Si el viewport se redujo más de 150px, es el teclado
-        if (initialHeight - newHeight > 150) {
+      if (isKeyboardOpen) {
+        if (!document.body.classList.contains('keyboard-open')) {
           document.body.classList.add('keyboard-open');
-          keyboardOpen = true;
-        } else if (newHeight >= initialHeight - 50) {
-          // Teclado cerrado
-          document.body.classList.remove('keyboard-open');
-          keyboardOpen = false;
         }
-      };
+      } else {
+        if (document.body.classList.contains('keyboard-open')) {
+          document.body.classList.remove('keyboard-open');
+        }
+      }
+    };
 
-      window.visualViewport.addEventListener('resize', onViewportResize);
+    window.visualViewport.addEventListener('resize', onResize);
 
-      // Limpiar al perder el foco
-      const handleBlur = () => {
-        setTimeout(() => {
-          if (!document.activeElement || !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
-            document.body.classList.remove('keyboard-open');
-            keyboardOpen = false;
-          }
-        }, 100);
-        target.removeEventListener('blur', handleBlur);
-        window.visualViewport?.removeEventListener('resize', onViewportResize);
-      };
-      
-      target.addEventListener('blur', handleBlur, { once: true });
-    } else {
-      // Fallback si no hay visualViewport
-      const handleBlur = () => {
-        setTimeout(() => {
-          if (!document.activeElement || !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
-            document.body.classList.remove('keyboard-open');
-          }
-        }, 100);
-      };
-      target.addEventListener('blur', handleBlur, { once: true });
-    }
-  };
+    const handleFocusOut = () => {
+      setTimeout(() => {
+        const activeTag = document.activeElement?.tagName?.toLowerCase();
+        const isInput = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
+        if (!isInput) {
+          document.body.classList.remove('keyboard-open');
+        }
+      }, 100);
+    };
 
-  document.addEventListener('focusin', handleFocus, { passive: true });
+    document.addEventListener('focusout', handleFocusOut, { passive: true });
 
-  return () => {
-    document.removeEventListener('focusin', handleFocus);
-    document.body.classList.remove('keyboard-open');
-  };
+    return () => {
+      window.visualViewport?.removeEventListener('resize', onResize);
+      document.removeEventListener('focusout', handleFocusOut);
+      document.body.classList.remove('keyboard-open');
+    };
+  }
 }

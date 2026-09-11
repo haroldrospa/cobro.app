@@ -28,10 +28,12 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
         if (isOpen) {
             setPrice('');
             setCustomName(product?.name || '');
-            setTimeout(() => {
-                inputRef.current?.focus();
-                inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            }, 150);
+            const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+            if (!isTouch) {
+                setTimeout(() => {
+                    inputRef.current?.focus({ preventScroll: true });
+                }, 150);
+            }
         }
     }, [isOpen, product]);
 
@@ -99,9 +101,7 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                                         }
                                     }}
                                     onFocus={(e) => {
-                                        setTimeout(() => {
-                                            e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                                        }, 100);
+                                        e.target.select();
                                     }}
                                     onKeyDown={handleKeyDown}
                                     className="text-2xl sm:text-3xl font-black h-12 w-full max-w-[240px] text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/40 tracking-tight"
