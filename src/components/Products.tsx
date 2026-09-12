@@ -1,4 +1,5 @@
 import { useState, useRef, FC, ChangeEvent, useEffect, useMemo, useCallback, memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Package, Plus, Search, Edit, Trash2, Upload, Download, Hash, Barcode, Tag, DollarSign, AlertTriangle, Printer, Loader2, ImageIcon, Pencil, ChefHat, FlaskConical, RefreshCw, Asterisk, Sparkles, Check, PlusCircle, ChevronDown, ChevronUp, Save, History, FolderCog, Key, Eye, EyeOff, CheckCircle2, XCircle, Settings2, ExternalLink } from 'lucide-react';
 import { resolveActiveAiApiKey, scanInvoiceStock, testGroqApiKey, cleanAiKey, AiApiKeyTestResult } from '@/utils/aiService';
 import {
@@ -6,11 +7,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
 
 import { LoadingLogo } from '@/components/ui/loading-logo';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +60,7 @@ type ProductsTab = 'products' | 'inventory' | 'history' | 'settings';
 type SearchType = 'all' | 'name' | 'id' | 'barcode' | 'category';
 
 const Products: FC = () => {
+  const navigate = useNavigate();
   const { isRestaurant } = useBusinessType();
   const [activeTab, setActiveTab] = useState<ProductsTab>('products');
   const [historySearch, setHistorySearch] = useState('');
@@ -1419,12 +1422,13 @@ const Products: FC = () => {
       <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] mb-1 px-2">
         <div className="flex items-center gap-1 p-1 bg-muted/20 border border-border/30 rounded-2xl backdrop-blur-sm w-max mx-auto flex-nowrap">
           <Button
+            type="button"
             variant={activeTab === 'products' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('products')}
             className={cn(
-              "rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shrink-0",
-              activeTab === 'products' && "bg-background shadow-lg"
+              "rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest shrink-0 cursor-pointer active:scale-95 transition-all",
+              activeTab === 'products' && "bg-background shadow-lg text-emerald-600 dark:text-emerald-400"
             )}
           >
             <Package className="mr-2 h-3.5 w-3.5" />
@@ -1432,12 +1436,13 @@ const Products: FC = () => {
           </Button>
           {isRestaurant && (
             <Button
+              type="button"
               variant={activeTab === 'inventory' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveTab('inventory')}
               className={cn(
-                "rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shrink-0",
-                activeTab === 'inventory' && "bg-background shadow-lg"
+                "rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest shrink-0 cursor-pointer active:scale-95 transition-all",
+                activeTab === 'inventory' && "bg-background shadow-lg text-emerald-600 dark:text-emerald-400"
               )}
             >
               <FlaskConical className="mr-2 h-3.5 w-3.5" />
@@ -1445,23 +1450,25 @@ const Products: FC = () => {
             </Button>
           )}
           <Button
+            type="button"
             variant={activeTab === 'history' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('history')}
             className={cn(
-              "rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shrink-0",
-              activeTab === 'history' && "bg-background shadow-lg"
+              "rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest shrink-0 cursor-pointer active:scale-95 transition-all",
+              activeTab === 'history' && "bg-background shadow-lg text-emerald-600 dark:text-emerald-400"
             )}
           >
             <History className="mr-2 h-3.5 w-3.5" />
             Historial de Cambios
           </Button>
           <Button
+            type="button"
             variant={activeTab === 'settings' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('settings')}
             className={cn(
-              "rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest shrink-0",
+              "rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest shrink-0 cursor-pointer active:scale-95 transition-all",
               activeTab === 'settings' && "bg-background shadow-lg text-emerald-600 dark:text-emerald-400"
             )}
           >
@@ -2083,13 +2090,28 @@ const Products: FC = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           <Card className="border border-border/50 bg-card/60 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
             <CardHeader className="border-b border-border/40 pb-5">
-              <CardTitle className="flex items-center text-xl font-bold tracking-tight">
-                <Package className="mr-2.5 h-5 w-5 text-emerald-500" />
-                Configuración de Productos
-              </CardTitle>
-              <CardDescription>
-                Gestiona categorías y configuración de inventario
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center text-xl font-bold tracking-tight">
+                    <Package className="mr-2.5 h-5 w-5 text-emerald-500" />
+                    Configuración de Productos
+                  </CardTitle>
+                  <CardDescription>
+                    Gestiona categorías y configuración de inventario
+                  </CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/settings')}
+                  className="rounded-xl font-bold text-xs gap-1.5 h-9 border-border/60 hover:bg-muted shrink-0 w-fit cursor-pointer"
+                >
+                  <Settings2 className="h-3.5 w-3.5 text-emerald-500" />
+                  Configuración General
+                  <ExternalLink className="h-3 w-3 opacity-60 ml-0.5" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               {/* Alertas de Stock Bajo */}
