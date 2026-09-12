@@ -688,7 +688,11 @@ body.keyboard-open .hide-on-keyboard {
 body.keyboard-open [data-radix-dialog-content],
 body.keyboard-open [role="dialog"] {
   top: 0.5rem !important;
-  transform: translateX(-50%) !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  transform: none !important;
   max-height: calc(var(--visual-viewport-height, 100dvh) - 1rem) !important;
 }
 

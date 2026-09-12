@@ -28,28 +28,63 @@ export function useIsMobile() {
   return isMobile
 }
 
+function checkIsLandscape(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const isTouch = typeof navigator !== "undefined" && (
+    navigator.maxTouchPoints > 0 ||
+    (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches)
+  );
+
+  // En dispositivos táctiles (móviles y tablets), usar SIEMPRE la orientación física del dispositivo.
+  // Esto previene que la apertura del teclado virtual (que reduce innerHeight en un 50%)
+  // haga creer a la app erróneamente que la tablet giró a horizontal.
+  if (isTouch) {
+    if (window.screen?.orientation?.type) {
+      return window.screen.orientation.type.startsWith("landscape");
+    }
+    if (typeof (window as any).orientation === "number") {
+      return Math.abs((window as any).orientation) === 90;
+    }
+    if (window.screen?.width && window.screen?.height) {
+      return window.screen.width > window.screen.height;
+    }
+  }
+
+  // En PC / navegadores de escritorio sin pantalla táctil: basarse en la proporción de la ventana
+  return window.innerWidth > window.innerHeight;
+}
+
 export function useIsLandscape() {
-  const [isLandscape, setIsLandscape] = React.useState<boolean>(
-    () => typeof window !== "undefined" && window.innerWidth > window.innerHeight
-  )
+  const [isLandscape, setIsLandscape] = React.useState<boolean>(() => checkIsLandscape());
 
   React.useEffect(() => {
-    const check = () => {
-      setIsLandscape(window.innerWidth > window.innerHeight)
-    }
-    window.addEventListener("resize", check)
-    window.addEventListener("orientationchange", check)
-    return () => {
-      window.removeEventListener("resize", check)
-      window.removeEventListener("orientationchange", check)
-    }
-  }, [])
+    const update = () => {
+      setIsLandscape(checkIsLandscape());
+    };
 
-  return isLandscape
+    // Escuchar cambio físico de orientación de pantalla
+    if (window.screen?.orientation) {
+      window.screen.orientation.addEventListener("change", update);
+    }
+    window.addEventListener("orientationchange", update);
+    window.addEventListener("resize", update);
+
+    return () => {
+      if (window.screen?.orientation) {
+        window.screen.orientation.removeEventListener("change", update);
+      }
+      window.removeEventListener("orientationchange", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return isLandscape;
 }
 
 export function useIsMobilePortrait() {
-  const isMobile = useIsMobile()
-  const isLandscape = useIsLandscape()
-  return isMobile && !isLandscape
+  const isMobile = useIsMobile();
+  const isLandscape = useIsLandscape();
+  return isMobile && !isLandscape;
 }
+
