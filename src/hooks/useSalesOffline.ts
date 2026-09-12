@@ -38,24 +38,77 @@ export const useCreateSaleOffline = () => {
     return useMutation({
         mutationFn: async (saleData: CreateSaleData) => {
             const saleId = crypto.randomUUID();
-            const localInvoiceNumber = await generateLocalInvoiceNumber(saleData.invoice_type_id);
 
-            // Obtener store_id local
-            const storeId = await getLocalStoreId();
-
-            // Obtener usuario actual para profile_id de forma local/rápida sin peticiones de red
+            // Obtener store_id y profile_id de forma directa
+            const storeId = saleData.store_id || await getLocalStoreId();
             let profileId = saleData.profile_id;
             if (!profileId) {
                 const { data: sessionData } = await supabase.auth.getSession();
                 profileId = sessionData.session?.user?.id || null;
             }
 
-            // Preparar la venta completa
-            const completeSale = {
+            if (isOnline) {
+                // Modo ONLINE: Facturación directa y ultrarrápida via RPC de 1 roundtrip
+                console.log('🌐 Dispositivo online, facturando directamente...');
+                try {
+                    const result = await saveSaleToSupabase({
+                        ...saleData,
+                        id: saleId,
+                        store_id: storeId || undefined,
+                        profile_id: profileId || undefined
+                    });
+
+                    const completeSale = {
+                        ...saleData,
+                        id: result.id || saleId,
+                        invoice_number: result.encf || result.invoice_number,
+                        customer_id: saleData.customer_id || null,
+                        profile_id: profileId,
+                        invoice_type_id: saleData.invoice_type_id,
+                        subtotal: saleData.subtotal,
+                        discount_total: saleData.discount_total,
+                        tax_total: saleData.tax_total,
+                        total: saleData.total,
+                        payment_method: saleData.payment_method,
+                        amount_received: saleData.amount_received,
+                        change_amount: saleData.change_amount,
+                        split_cash: saleData.split_cash,
+                        split_method: saleData.split_method,
+                        payment_status: saleData.payment_status || 'paid',
+                        due_date: saleData.due_date || null,
+                        created_at: result.created_at || new Date().toISOString(),
+                        synced: true,
+                        store_id: storeId,
+                        items: saleData.items,
+                        is_electronic: result.is_electronic || false,
+                        estado_fiscal: result.estado_fiscal || null,
+                        encf: result.encf || null,
+                        codigo_seguridad: result.codigo_seguridad || null,
+                        qrcode_url: result.qrcode_url || null,
+                        fecha_firma: result.fecha_firma || null,
+                    };
+
+                    // Persistir en IndexedDB de forma no bloqueante
+                    offlineDB.put(OfflineStore.SALES, completeSale).catch(console.error);
+                    updateLocalSequenceFromOnlineSale(saleData.invoice_type_id, result.invoice_number).catch(console.error);
+
+                    console.log('✅ Venta completada y sincronizada:', result.encf || result.invoice_number);
+                    return completeSale;
+                } catch (error: any) {
+                    console.error('❌ Error en facturación online directa, pasando a cola offline:', error);
+                    // Si falla la conexión durante la subida, se continúa con el modo offline abajo
+                }
+            }
+
+            // Modo OFFLINE (o fallback de red): Guardar localmente y encolar
+            console.warn('🔌 Guardando venta localmente en IndexedDB...');
+            const localInvoiceNumber = await generateLocalInvoiceNumber(saleData.invoice_type_id);
+
+            const completeOfflineSale = {
                 id: saleId,
                 invoice_number: localInvoiceNumber,
                 customer_id: saleData.customer_id || null,
-                profile_id: profileId, // Guardar ID del usuario creador
+                profile_id: profileId,
                 invoice_type_id: saleData.invoice_type_id,
                 subtotal: saleData.subtotal,
                 discount_total: saleData.discount_total,
@@ -69,107 +122,39 @@ export const useCreateSaleOffline = () => {
                 payment_status: saleData.payment_status || 'paid',
                 due_date: saleData.due_date || null,
                 created_at: new Date().toISOString(),
-                synced: false, // Marca para saber si se sincronizó
-                store_id: storeId, // Agregamos store_id
-                items: saleData.items, // Guardamos los items con la venta
+                synced: false,
+                store_id: storeId,
+                items: saleData.items,
             };
 
-            // Guardar venta en IndexedDB siempre primero
-            await offlineDB.put(OfflineStore.SALES, completeSale);
-            console.log('💾 Venta guardada localmente:', localInvoiceNumber);
+            await offlineDB.put(OfflineStore.SALES, completeOfflineSale);
+            await offlineDB.addToSyncQueue({
+                store: OfflineStore.SALES,
+                operation: 'CREATE',
+                data: completeOfflineSale,
+            });
 
-            // Actualizar stock local en paralelo (Optimizado con Promise.all + putBulk) y registrar movimientos
+            // Actualizar stock localmente para modo offline
             const validItems = saleData.items.filter(item => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id));
             if (validItems.length > 0) {
                 const fetchedProducts = await Promise.all(
                     validItems.map(item => offlineDB.get<any>(OfflineStore.PRODUCTS, item.id))
                 );
-
                 const productsToUpdate: any[] = [];
-                const movementsToInsert: any[] = [];
-                const syncQueuePromises: Promise<any>[] = [];
-                const userName = 'Sistema';
-
                 for (let i = 0; i < validItems.length; i++) {
                     const item = validItems[i];
                     const product = fetchedProducts[i];
                     if (product) {
-                        const previousStock = product.stock || 0;
-                        const newStock = Math.max(0, previousStock - item.quantity);
-                        
-                        product.stock = newStock;
+                        product.stock = Math.max(0, (product.stock || 0) - item.quantity);
                         productsToUpdate.push(product);
-
-                        // Crear movimiento de historial de inventario
-                        const newMovement = {
-                            id: crypto.randomUUID(),
-                            store_id: storeId,
-                            product_id: item.id,
-                            profile_id: profileId,
-                            user_name: userName,
-                            quantity_changed: -item.quantity,
-                            previous_stock: previousStock,
-                            new_stock: newStock,
-                            reason: `Venta #${localInvoiceNumber}`,
-                            created_at: new Date().toISOString(),
-                        };
-                        movementsToInsert.push(newMovement);
-
-                        syncQueuePromises.push(
-                            offlineDB.addToSyncQueue({
-                                store: OfflineStore.INVENTORY_MOVEMENTS,
-                                operation: 'CREATE',
-                                data: newMovement,
-                            })
-                        );
                     }
                 }
-
-                await Promise.all([
-                    productsToUpdate.length > 0 ? offlineDB.putBulk(OfflineStore.PRODUCTS, productsToUpdate) : Promise.resolve(),
-                    movementsToInsert.length > 0 ? offlineDB.putBulk(OfflineStore.INVENTORY_MOVEMENTS, movementsToInsert) : Promise.resolve(),
-                    ...syncQueuePromises
-                ]);
-            }
-
-            if (isOnline) {
-                // Modo ONLINE: Forzar subida directa y fallar si hay errores (nada en segundo plano)
-                console.log('🌐 Dispositivo online, guardando venta directamente en Supabase...');
-                try {
-                    const result = await saveSaleToSupabase({ ...saleData, id: saleId, store_id: storeId || undefined });
-
-                    const updatedCompleteSale = {
-                        ...completeSale,
-                        invoice_number: result.encf || result.invoice_number,
-                        is_electronic: result.is_electronic || false,
-                        estado_fiscal: result.estado_fiscal || null,
-                        encf: result.encf || null,
-                        codigo_seguridad: result.codigo_seguridad || null,
-                        qrcode_url: result.qrcode_url || null,
-                        fecha_firma: result.fecha_firma || null,
-                        synced: true
-                    };
-                    await offlineDB.put(OfflineStore.SALES, updatedCompleteSale);
-                    await updateLocalSequenceFromOnlineSale(saleData.invoice_type_id, result.invoice_number);
-                    console.log('✅ Venta sincronizada con Supabase:', result.encf || result.invoice_number);
-                    return updatedCompleteSale;
-                } catch (error: any) {
-                    console.error('❌ Error crítico guardando en Supabase en modo online:', error);
-                    // Lanzar el error para que la UI muestre el fallo real y no continúe como si hubiera tenido éxito
-                    throw error;
+                if (productsToUpdate.length > 0) {
+                    await offlineDB.putBulk(OfflineStore.PRODUCTS, productsToUpdate);
                 }
-            } else {
-                // Modo OFFLINE: Guardar localmente y encolar para sincronización posterior
-                console.warn('🔌 Dispositivo offline, guardando venta localmente en cola de sincronización...');
-                await offlineDB.addToSyncQueue({
-                    store: OfflineStore.SALES,
-                    operation: 'CREATE',
-                    data: completeSale,
-                });
-                return completeSale;
             }
 
-            return completeSale;
+            return completeOfflineSale;
         },
         onMutate: async (newSale) => {
             // Cancelar queries para evitar sobreescritura
@@ -342,21 +327,11 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     }
     if (!profileId) throw new Error('Usuario no autenticado');
 
-    // 0. VERIFICACIÓN PREVENTIVA: Si ya tenemos un ID, revisar si ya existe la venta
-    if (saleData.id) {
-        const { data: existingSale } = await supabase
-            .from('sales')
-            .select('*')
-            .eq('id', saleData.id)
-            .maybeSingle();
-
-        if (existingSale) {
-            console.log('✅ Factura ya registrada anteriormente (ID duplicado evitado):', existingSale.invoice_number);
-            return existingSale;
-        }
-    }
-
     let storeId = saleData.store_id;
+    if (!storeId) {
+        const localSettings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'user_profile');
+        storeId = localSettings?.store_id;
+    }
 
     if (!storeId) {
         const { data: profile } = await supabase
@@ -369,26 +344,18 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     }
 
     if (!storeId) {
-        const localSettings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'user_profile');
-        if (localSettings?.store_id) {
-            storeId = localSettings.store_id;
-        }
-
-        if (!storeId) {
-            console.error('CRITICAL: Intentando guardar venta sin store_id');
-            throw new Error('No se pudo identificar la tienda (store_id) para esta venta. Por favor recarga la página.');
-        }
+        console.error('CRITICAL: Intentando guardar venta sin store_id');
+        throw new Error('No se pudo identificar la tienda (store_id) para esta venta. Por favor recarga la página.');
     }
 
-    // --- RPC PATH: Intentar facturación atómica de 1 roundtrip ---
+    // --- RPC PATH: Facturación atómica en 1 solo roundtrip ---
     try {
         console.log('⚡ Ejecutando facturación rápida via RPC...');
-        // Filter out virtual/special items that don't have real product UUIDs.
-        // These are display-only line items (card surcharge, previous debt payment)
-        // and are NOT stored in sale_items table, so they must NOT be sent to the RPC.
         const VIRTUAL_ITEM_IDS = ['surcharge-card', 'previous-debt-payment'];
+        const isValidUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
         const rpcItems = saleData.items
-            .filter(item => !VIRTUAL_ITEM_IDS.includes(item.id))
+            .filter(item => !VIRTUAL_ITEM_IDS.includes(item.id) && isValidUuid(item.id))
             .map(item => ({
                 id: item.id,
                 price: item.price,
@@ -471,7 +438,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     }
 
     let attempts = 0;
-    const maxAttempts = 50;
+    const maxAttempts = 3;
     let finalSale = null;
     let highestTriedNumber = 0;
 

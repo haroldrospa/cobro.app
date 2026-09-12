@@ -243,6 +243,13 @@ const POSContent: React.FC = () => {
     }
   }, [showPrintOptionsDialog, isMobile]);
 
+  // Precargar el módulo pesado de impresión (jsPDF, html2canvas) mientras el cajero completa el cobro
+  useEffect(() => {
+    if (showPaymentDialog) {
+      import('./pos/PrintOptionsDialog');
+    }
+  }, [showPaymentDialog]);
+
   // When a customer is found via RNC in the loyalty panel, also select them
   // as the invoice customer so credit payment works without manual re-selection.
   const handleLoyaltyCustomerFound = useCallback((customerId: string) => {
