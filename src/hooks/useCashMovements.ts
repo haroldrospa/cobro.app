@@ -15,13 +15,45 @@ export interface CashMovement {
     };
 }
 
-export const useCashMovements = (dateFrom?: Date | string, userId?: string, options?: { enabled?: boolean }) => {
-    const dateStr = typeof dateFrom === 'string' 
-        ? (dateFrom.includes('T') ? dateFrom.split('T')[0] : dateFrom)
-        : dateFrom?.toISOString().split('T')[0];
+export const useCashMovements = (
+    dateFrom?: Date | string, 
+    userId?: string, 
+    options?: { enabled?: boolean; refetchInterval?: number | false }
+) => {
+    let dateFilterIso: string | null = null;
+    let queryDateKey: string | null = null;
+
+    if (dateFrom) {
+        if (dateFrom instanceof Date) {
+            const buffer = new Date(dateFrom);
+            buffer.setHours(buffer.getHours() - 12);
+            dateFilterIso = buffer.toISOString();
+            queryDateKey = dateFrom.toISOString().split('T')[0];
+        } else if (typeof dateFrom === 'string') {
+            if (dateFrom.includes('T')) {
+                const d = new Date(dateFrom);
+                if (!isNaN(d.getTime())) {
+                    d.setHours(d.getHours() - 12);
+                    dateFilterIso = d.toISOString();
+                } else {
+                    dateFilterIso = dateFrom;
+                }
+                queryDateKey = dateFrom.split('T')[0];
+            } else {
+                const d = new Date(dateFrom + 'T00:00:00');
+                if (!isNaN(d.getTime())) {
+                    d.setHours(d.getHours() - 12);
+                    dateFilterIso = d.toISOString();
+                } else {
+                    dateFilterIso = dateFrom;
+                }
+                queryDateKey = dateFrom;
+            }
+        }
+    }
 
     return useQuery({
-        queryKey: ['cash-movements', dateStr, userId],
+        queryKey: ['cash-movements', queryDateKey, userId],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return [];
@@ -44,8 +76,8 @@ export const useCashMovements = (dateFrom?: Date | string, userId?: string, opti
                 query = query.eq('profile_id', userId);
             }
 
-            if (dateStr) {
-                query = query.gte('created_at', dateStr);
+            if (dateFilterIso) {
+                query = query.gte('created_at', dateFilterIso);
             }
 
             const { data, error } = await query;
@@ -54,6 +86,7 @@ export const useCashMovements = (dateFrom?: Date | string, userId?: string, opti
             return data as CashMovement[];
         },
         enabled: options?.enabled !== undefined ? options.enabled : true,
+        refetchInterval: options?.refetchInterval !== undefined ? options.refetchInterval : false,
     });
 };
 
@@ -92,6 +125,8 @@ export const useCreateCashMovement = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
             queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
+            queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
+            queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
         },
     });
 };
@@ -111,6 +146,8 @@ export const useDeleteCashMovement = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
             queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
+            queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
+            queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
         },
     });
 };

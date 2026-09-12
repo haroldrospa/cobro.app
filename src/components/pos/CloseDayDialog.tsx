@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,6 +34,7 @@ interface CloseDayDialogProps {
 
 const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoToPOS }) => {
     const [activeTab, setActiveTab] = useState<'close' | 'history'>('close');
+    const [card2Tab, setCard2Tab] = useState<'shifts' | 'movements'>('shifts');
     const [actualCash, setActualCash] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [showCashCount, setShowCashCount] = useState(false);
@@ -141,6 +142,63 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         fetchBlockingOrders();
     }, [isOpen, userData?.id, activeSessionUserId]);
 
+    // Realtime synchronization & fast refresh while CloseDayDialog is open
+    useEffect(() => {
+        if (!isOpen || !userData?.id) return;
+
+        // Invalidate immediately upon dialog opening for instant fresh state
+        queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+        queryClient.invalidateQueries({ queryKey: ['sales'] });
+        queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
+        queryClient.invalidateQueries({ queryKey: ['active-cash-session'] });
+
+        const channel = supabase
+            .channel(`close-day-realtime-${userData.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'cash_movements',
+                    filter: `store_id=eq.${userData.id}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'sales',
+                    filter: `store_id=eq.${userData.id}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['sales'] });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'cash_sessions',
+                    filter: `store_id=eq.${userData.id}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
+                    queryClient.invalidateQueries({ queryKey: ['active-cash-session'] });
+                    queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isOpen, userData?.id, queryClient]);
+
     const effectiveStart = useMemo(() => {
         if (!activeSession) {
             const today = new Date();
@@ -174,7 +232,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
     
     const { data: movements = [] } = useCashMovements(
         earliestStart, 
-        currentUserProfile?.role === 'admin' ? 'all' : (currentUserProfile?.id || 'all')
+        'all',
+        { enabled: isOpen, refetchInterval: isOpen ? 3000 : false }
     );
     const { companyInfo } = usePrintSettings();
     const closeSession = useCloseSession();
@@ -222,12 +281,13 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
     const sessionMovements = useMemo(() => {
         if (!activeSession) return [];
         const bufferStart = new Date(activeSession.opened_at);
-        bufferStart.setMinutes(bufferStart.getMinutes() - 1);
+        bufferStart.setMinutes(bufferStart.getMinutes() - 2);
 
         return movements.filter(m => {
             const mDate = new Date(m.created_at);
-            const isWithinTime = mDate >= bufferStart;
-            return isWithinTime;
+            const isAfterStart = mDate >= bufferStart;
+            const isBeforeEnd = !activeSession.closed_at || mDate <= new Date(activeSession.closed_at);
+            return isAfterStart && isBeforeEnd;
         });
     }, [movements, activeSession]);
 
@@ -267,8 +327,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         const deposits = sessionMovements.filter(m => m.type === 'deposit').reduce((acc, m) => acc + Number(m.amount), 0);
         const withdrawals = sessionMovements.filter(m => m.type === 'withdrawal').reduce((acc, m) => acc + Number(m.amount), 0);
 
-        const initialCash = activeSession?.initial_cash || 0;
-        const expectedCash = cashSales + deposits - withdrawals;
+        const initialCash = Number(activeSession?.initial_cash || 0);
+        const expectedCash = initialCash + cashSales + deposits - withdrawals;
 
         return {
             salesCount: sessionSales.length,
@@ -280,8 +340,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             deposits,
             withdrawals,
             initialCash,
-            cashToWithdraw: Math.max(0, cashSales + deposits - withdrawals),
-            expectedCash: cashSales + deposits - withdrawals,
+            cashToWithdraw: Math.max(0, expectedCash),
+            expectedCash,
             totalSales: cashSales + cardSales + transferSales + otherSales
         };
     }, [sessionSales, sessionMovements, activeSession]);
@@ -475,20 +535,42 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                     </div>
                                     <p className="text-xs font-black text-foreground truncate">RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
                                 </div>
-                                <div className="bg-green-500/10 border border-green-500/20 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
-                                    <div className="flex items-center gap-1.5 text-green-500">
-                                        <TrendingUp className="h-3 w-3" />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider">Entradas</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setCard2Tab('movements')}
+                                    className={cn(
+                                        "bg-green-500/10 border p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm transition-all text-left cursor-pointer hover:bg-green-500/15 active:scale-[0.98]",
+                                        card2Tab === 'movements' ? "border-green-500 ring-1 ring-green-500/30" : "border-green-500/20"
+                                    )}
+                                    title="Click para ver lista de entradas"
+                                >
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-1.5 text-green-500">
+                                            <TrendingUp className="h-3 w-3" />
+                                            <span className="text-[9px] font-bold uppercase tracking-wider">Entradas</span>
+                                        </div>
+                                        <span className="text-[8px] text-green-500/80 font-bold underline">Ver</span>
                                     </div>
                                     <p className="text-xs font-black text-green-500 truncate">RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
-                                </div>
-                                <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
-                                    <div className="flex items-center gap-1.5 text-red-500">
-                                        <TrendingDown className="h-3 w-3" />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider">Salidas</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCard2Tab('movements')}
+                                    className={cn(
+                                        "bg-red-500/10 border p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm transition-all text-left cursor-pointer hover:bg-red-500/15 active:scale-[0.98]",
+                                        card2Tab === 'movements' ? "border-red-500 ring-1 ring-red-500/30" : "border-red-500/20"
+                                    )}
+                                    title="Click para ver lista de salidas"
+                                >
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-1.5 text-red-500">
+                                            <TrendingDown className="h-3 w-3" />
+                                            <span className="text-[9px] font-bold uppercase tracking-wider">Salidas</span>
+                                        </div>
+                                        <span className="text-[8px] text-red-500/80 font-bold underline">Ver</span>
                                     </div>
                                     <p className="text-xs font-black text-red-500 truncate">RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
-                                </div>
+                                </button>
                             </div>
 
                             {/* Middle Details: Breakdown + Active Shifts/Movements */}
@@ -525,87 +607,192 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                 {/* Card 2: Turnos & Movimientos */}
                                 <div className="bg-card/60 border border-border/40 p-3 rounded-xl flex flex-col min-h-0 overflow-hidden">
-                                    <div className="flex items-center justify-between border-b border-border/30 pb-1.5">
-                                        <div className="flex items-center gap-1.5 text-green-500">
-                                            <Clock className="h-3 w-3" />
-                                            <span className="text-[9px] font-bold uppercase tracking-wider">Turnos Abiertos</span>
+                                    <div className="flex items-center justify-between border-b border-border/30 pb-1.5 shrink-0">
+                                        <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCard2Tab('shifts')}
+                                                className={cn(
+                                                    "px-2 py-0.5 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
+                                                    card2Tab === 'shifts'
+                                                        ? "bg-background text-foreground shadow-sm"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                <Clock className="h-2.5 w-2.5 text-green-500" />
+                                                Turnos ({openSessions.length})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCard2Tab('movements')}
+                                                className={cn(
+                                                    "px-2 py-0.5 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
+                                                    card2Tab === 'movements'
+                                                        ? "bg-background text-foreground shadow-sm"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                <Wallet className="h-2.5 w-2.5 text-amber-500" />
+                                                Movimientos ({sessionMovements.length})
+                                            </button>
                                         </div>
-                                        <Badge variant="outline" className="text-[9px] py-0 h-4 border-green-500/30 text-green-500 font-bold">
-                                            {openSessions.length} Activos
-                                        </Badge>
-                                    </div>
 
-                                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 py-1.5">
-                                        {isLoading ? (
-                                            <div className="flex items-center justify-center py-4 text-muted-foreground">
-                                                <RefreshCcw className="h-3 w-3 animate-spin mr-1.5 opacity-50" />
-                                                <span className="text-[9px]">Cargando...</span>
-                                            </div>
-                                        ) : openSessions.length > 0 ? (
-                                            openSessions.map((session: any) => (
-                                                <div key={session.id} className={cn(
-                                                    "flex items-center justify-between p-1.5 rounded-lg border text-xs transition-all",
-                                                    session.id === activeSession?.id ? "border-green-500/30 bg-green-500/5" : "border-border/30 bg-muted/40"
-                                                )}>
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <div className={cn(
-                                                            "h-6 w-6 rounded-full flex items-center justify-center font-bold text-[9px] shrink-0",
-                                                            session.id === activeSession?.id ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
-                                                        )}>
-                                                            {(session.opener?.full_name || 'U').charAt(0)}
-                                                        </div>
-                                                        <div className="truncate flex flex-col">
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="font-bold truncate text-[11px]">{session.opener?.full_name || 'Cajero'}</span>
-                                                                {session.id === activeSession?.id && <span className="text-[7px] bg-green-500 text-white px-1 rounded-full font-black">TÚ</span>}
-                                                            </div>
-                                                            <span className="text-[8px] text-muted-foreground">
-                                                                {Math.floor((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60 * 60))}h {Math.floor(((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60)) % 60)}m
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 shrink-0">
-                                                        <span className="text-[10px] font-bold text-foreground">
-                                                            RD$ {getSessionTotal(session).toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                                        </span>
-                                                        {session.id !== activeSession?.id && (
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
-                                                                className="h-5 px-1 text-[8px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    if (!confirm(`¿Cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
-                                                                    try {
-                                                                        const sessionUserId = session.opener?.id || (typeof session.opened_by === 'object' && session.opened_by !== null ? session.opened_by.id : session.opened_by) || session.user_id;
-                                                                        const { error } = await supabase
-                                                                            .from('cash_sessions')
-                                                                            .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: currentUserProfile?.id })
-                                                                            .eq('id', session.id);
-                                                                        if (error) throw error;
-                                                                        queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
-                                                                        queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
-                                                                        toast({ title: 'Turno cerrado' });
-                                                                    } catch (err: any) {
-                                                                        toast({ variant: 'destructive', title: 'Error', description: err.message });
-                                                                    }
-                                                                }}
-                                                            >
-                                                                Cerrar
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))
+                                        {card2Tab === 'shifts' ? (
+                                            <Badge variant="outline" className="text-[9px] py-0 h-4 border-green-500/30 text-green-500 font-bold">
+                                                {openSessions.length} Activos
+                                            </Badge>
                                         ) : (
-                                            <p className="text-[10px] text-muted-foreground text-center py-2 italic">Sin otros turnos.</p>
+                                            <Badge variant="outline" className={cn(
+                                                "text-[9px] py-0 h-4 font-bold",
+                                                sessionMovements.length > 0 ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30 text-muted-foreground"
+                                            )}>
+                                                {sessionMovements.length} Registrados
+                                            </Badge>
                                         )}
                                     </div>
 
-                                    {sessionMovements.length > 0 && (
-                                        <div className="pt-1.5 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground">
-                                            <span>Movimientos de caja:</span>
-                                            <span className="font-bold text-foreground">{sessionMovements.length} registradas</span>
+                                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 py-1.5">
+                                        {card2Tab === 'shifts' ? (
+                                            isLoading ? (
+                                                <div className="flex items-center justify-center py-4 text-muted-foreground">
+                                                    <RefreshCcw className="h-3 w-3 animate-spin mr-1.5 opacity-50" />
+                                                    <span className="text-[9px]">Cargando...</span>
+                                                </div>
+                                            ) : openSessions.length > 0 ? (
+                                                openSessions.map((session: any) => (
+                                                    <div key={session.id} className={cn(
+                                                        "flex items-center justify-between p-1.5 rounded-lg border text-xs transition-all",
+                                                        session.id === activeSession?.id ? "border-green-500/30 bg-green-500/5" : "border-border/30 bg-muted/40"
+                                                    )}>
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <div className={cn(
+                                                                "h-6 w-6 rounded-full flex items-center justify-center font-bold text-[9px] shrink-0",
+                                                                session.id === activeSession?.id ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
+                                                            )}>
+                                                                {(session.opener?.full_name || 'U').charAt(0)}
+                                                            </div>
+                                                            <div className="truncate flex flex-col">
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="font-bold truncate text-[11px]">{session.opener?.full_name || 'Cajero'}</span>
+                                                                    {session.id === activeSession?.id && <span className="text-[7px] bg-green-500 text-white px-1 rounded-full font-black">TÚ</span>}
+                                                                </div>
+                                                                <span className="text-[8px] text-muted-foreground">
+                                                                    {Math.floor((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60 * 60))}h {Math.floor(((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60)) % 60)}m
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                            <span className="text-[10px] font-bold text-foreground">
+                                                                RD$ {getSessionTotal(session).toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                            </span>
+                                                            {session.id !== activeSession?.id && (
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="sm" 
+                                                                    className="h-5 px-1 text-[8px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        if (!confirm(`¿Cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
+                                                                        try {
+                                                                            const sessionUserId = session.opener?.id || (typeof session.opened_by === 'object' && session.opened_by !== null ? session.opened_by.id : session.opened_by) || session.user_id;
+                                                                            const { error } = await supabase
+                                                                                .from('cash_sessions')
+                                                                                .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: currentUserProfile?.id })
+                                                                                .eq('id', session.id);
+                                                                            if (error) throw error;
+                                                                            queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
+                                                                            queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
+                                                                            toast({ title: 'Turno cerrado' });
+                                                                        } catch (err: any) {
+                                                                            toast({ variant: 'destructive', title: 'Error', description: err.message });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    Cerrar
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-[10px] text-muted-foreground text-center py-2 italic">Sin otros turnos.</p>
+                                            )
+                                        ) : (
+                                            /* Tab Movimientos */
+                                            sessionMovements.length > 0 ? (
+                                                sessionMovements.map((m: any) => {
+                                                    const isDeposit = m.type === 'deposit';
+                                                    return (
+                                                        <div 
+                                                            key={m.id} 
+                                                            className={cn(
+                                                                "flex items-center justify-between p-2 rounded-lg border text-xs transition-all",
+                                                                isDeposit ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"
+                                                            )}
+                                                        >
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <div className={cn(
+                                                                    "h-6 w-6 rounded-full flex items-center justify-center shrink-0",
+                                                                    isDeposit ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
+                                                                )}>
+                                                                    {isDeposit ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                                                                </div>
+                                                                <div className="truncate flex flex-col">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="font-bold truncate text-[11px]">{m.reason || (isDeposit ? 'Entrada de caja' : 'Salida de caja')}</span>
+                                                                        <span className={cn(
+                                                                            "text-[7px] px-1 rounded-full font-black uppercase",
+                                                                            isDeposit ? "bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-500/20 text-red-600 dark:text-red-400"
+                                                                        )}>
+                                                                            {isDeposit ? 'Entrada' : 'Salida'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5 text-[8px] text-muted-foreground">
+                                                                        <span>{m.profile?.full_name || 'Cajero'}</span>
+                                                                        <span>•</span>
+                                                                        <span>{format(new Date(m.created_at), 'hh:mm a', { locale: es })}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="shrink-0 text-right">
+                                                                <span className={cn(
+                                                                    "text-[11px] font-black",
+                                                                    isDeposit ? "text-green-500" : "text-red-500"
+                                                                )}>
+                                                                    {isDeposit ? '+' : '-'} RD$ {Number(m.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center py-6 text-muted-foreground space-y-1">
+                                                    <Wallet className="h-5 w-5 opacity-40 mb-1" />
+                                                    <p className="text-[10px] italic">Sin entradas ni salidas en este turno.</p>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {card2Tab === 'shifts' ? (
+                                        sessionMovements.length > 0 && (
+                                            <div className="pt-1.5 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
+                                                <span className="cursor-pointer hover:underline text-amber-500" onClick={() => setCard2Tab('movements')}>
+                                                    Ver movimientos ({sessionMovements.length}):
+                                                </span>
+                                                <span className="font-bold text-foreground">
+                                                    +RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 0 })} / -RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                                                </span>
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div className="pt-1.5 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
+                                            <span className="text-green-500 font-semibold">
+                                                Entradas: RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                            </span>
+                                            <span className="text-red-500 font-semibold">
+                                                Salidas: RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
