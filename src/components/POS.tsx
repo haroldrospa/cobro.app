@@ -987,7 +987,7 @@ const POSContent: React.FC = () => {
               id: orderId,
               order_number: orderNumber,
               customer_name: capturedCustomerName,
-              payment_status: capturedPaymentMethod === 'credit' ? 'pending' : 'paid',
+              payment_status: 'paid',
               payment_method: capturedPaymentMethod,
               order_status: 'preparing',
               subtotal: parseFloat(currentTotals.subtotal) + surchargeAmount,
