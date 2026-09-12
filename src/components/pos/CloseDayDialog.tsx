@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2 } from 'lucide-react';
+import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2, ChevronDown } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
@@ -35,6 +35,7 @@ interface CloseDayDialogProps {
 const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoToPOS }) => {
     const [activeTab, setActiveTab] = useState<'close' | 'history'>('close');
     const [card2Tab, setCard2Tab] = useState<'shifts' | 'movements'>('shifts');
+    const [showDetails, setShowDetails] = useState(false);
     const [actualCash, setActualCash] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [showCashCount, setShowCashCount] = useState(false);
@@ -541,7 +542,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                         {/* Left Column: Financial Overview */}
                         <div className="lg:col-span-7 flex flex-col gap-3 min-h-0">
                             {/* 4 Stats Cards in 2x2 grid on mobile, 4x1 on desktop */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
+                            <div className="order-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
                                 <div className="bg-card/70 border border-border/50 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm">
                                     <div className="flex items-center gap-1.5 text-muted-foreground">
                                         <Wallet className="h-3.5 w-3.5 text-muted-foreground/80" />
@@ -564,10 +565,13 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                 <button
                                     type="button"
-                                    onClick={() => setCard2Tab('movements')}
+                                    onClick={() => {
+                                        setCard2Tab('movements');
+                                        setShowDetails(true);
+                                    }}
                                     className={cn(
                                         "p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
-                                        card2Tab === 'movements'
+                                        card2Tab === 'movements' && showDetails
                                             ? "bg-green-500/15 border-2 border-green-500 ring-2 ring-green-500/20"
                                             : "bg-green-500/10 border border-green-500/30 hover:bg-green-500/15"
                                     )}
@@ -589,10 +593,13 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                 <button
                                     type="button"
-                                    onClick={() => setCard2Tab('movements')}
+                                    onClick={() => {
+                                        setCard2Tab('movements');
+                                        setShowDetails(true);
+                                    }}
                                     className={cn(
                                         "p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
-                                        card2Tab === 'movements'
+                                        card2Tab === 'movements' && showDetails
                                             ? "bg-red-500/15 border-2 border-red-500 ring-2 ring-red-500/20"
                                             : "bg-red-500/10 border border-red-500/30 hover:bg-red-500/15"
                                     )}
@@ -613,10 +620,33 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                 </button>
                             </div>
 
+                            {/* Mobile Accordion Toggle for Breakdown and Movements */}
+                            <div className="order-3 lg:hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDetails(!showDetails)}
+                                    className="w-full py-2.5 px-3.5 rounded-xl bg-card/80 hover:bg-card border border-border/60 flex items-center justify-between text-xs font-bold text-muted-foreground hover:text-foreground transition-all active:scale-[0.99] shadow-sm"
+                                >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <FileText className="h-4 w-4 text-green-500 shrink-0" />
+                                        <span className="truncate">
+                                            {showDetails ? 'Ocultar desglose y turnos' : `Ver desglose por métodos y movimientos (${sessionMovements.length})`}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[11px] text-green-500 font-bold shrink-0 ml-2">
+                                        <span>{showDetails ? 'Cerrar' : 'Ver'}</span>
+                                        <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", showDetails && "rotate-180")} />
+                                    </div>
+                                </button>
+                            </div>
+
                             {/* Middle Details: Breakdown + Active Shifts/Movements */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 flex-1 min-h-0">
+                            <div className={cn(
+                                "order-3 lg:order-2 gap-2.5 sm:gap-3 shrink-0 lg:shrink lg:flex-1 lg:min-h-0",
+                                showDetails ? "grid grid-cols-1 sm:grid-cols-2" : "hidden lg:grid lg:grid-cols-2"
+                            )}>
                                 {/* Card 1: Desglose por Método */}
-                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col justify-between overflow-hidden">
+                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col justify-between overflow-hidden shrink-0 min-h-fit">
                                     <div className="flex items-center gap-1.5 text-muted-foreground border-b border-border/40 pb-2">
                                         <FileText className="h-3.5 w-3.5 text-green-500" />
                                         <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Desglose por Métodos</span>
@@ -646,7 +676,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                 </div>
 
                                 {/* Card 2: Turnos & Movimientos */}
-                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col min-h-0 overflow-hidden">
+                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col min-h-[220px] lg:min-h-0 overflow-hidden shrink-0">
                                     <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
                                         <div className="flex items-center gap-1 bg-muted/80 p-0.5 rounded-lg">
                                             <button
@@ -691,7 +721,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                         )}
                                     </div>
 
-                                    <div className="flex-1 min-h-[120px] max-h-48 sm:max-h-56 overflow-y-auto no-scrollbar space-y-1.5 py-2">
+                                    <div className="flex-1 min-h-[130px] max-h-48 sm:max-h-56 overflow-y-auto no-scrollbar space-y-1.5 py-2">
                                         {card2Tab === 'shifts' ? (
                                             isLoading ? (
                                                 <div className="flex items-center justify-center py-6 text-muted-foreground">
@@ -839,7 +869,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             </div>
 
                             {/* Bottom Hero: Expected Cash */}
-                            <div className="bg-gradient-to-r from-green-500/15 via-green-500/10 to-transparent border border-green-500/25 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center justify-between shrink-0 shadow-sm">
+                            <div className="order-2 lg:order-3 bg-gradient-to-r from-green-500/15 via-green-500/10 to-transparent border border-green-500/25 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center justify-between shrink-0 shadow-sm">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                     <div className="bg-green-500/20 p-2 rounded-xl text-green-500 shrink-0">
                                         <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
