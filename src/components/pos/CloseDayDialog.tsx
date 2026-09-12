@@ -472,116 +472,156 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             />
             <DialogContent 
                 hideCloseButton 
-                className="max-w-[95vw] sm:max-w-4xl lg:max-w-5xl w-full h-[90vh] max-h-[660px] p-0 overflow-hidden bg-background/95 backdrop-blur-2xl border-border/40 flex flex-col rounded-3xl shadow-2xl"
+                className="max-w-[96vw] sm:max-w-4xl lg:max-w-5xl w-full max-h-[94vh] sm:max-h-[90vh] lg:h-[88vh] lg:max-h-[740px] p-0 overflow-hidden bg-background/95 backdrop-blur-2xl border border-border/50 flex flex-col rounded-2xl sm:rounded-3xl shadow-2xl"
                 centerOnMobile={true}
             >
-                {/* Header with integrated tabs */}
-                <div className="px-5 py-3 border-b border-border/40 bg-gradient-to-r from-green-500/10 via-transparent to-transparent flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-green-500/20 p-2 rounded-xl text-green-500">
-                            <Lock className="h-4 w-4" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <DialogTitle className="text-lg font-black text-foreground tracking-tight">
+                {/* Responsive Header with integrated tabs */}
+                <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 border-b border-border/40 bg-gradient-to-r from-green-500/10 via-transparent to-transparent shrink-0">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="bg-green-500/20 p-2 rounded-xl text-green-500 shrink-0">
+                                <Lock className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                                <DialogTitle className="text-base sm:text-lg font-black text-foreground tracking-tight truncate">
                                     Control de Caja
                                 </DialogTitle>
                                 {activeSession && (
-                                    <Badge variant="outline" className="text-[10px] font-semibold text-muted-foreground border-border/40 py-0 h-5 gap-1">
-                                        <Clock className="h-2.5 w-2.5 text-green-500" />
-                                        {format(new Date(activeSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}
-                                    </Badge>
+                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1 sm:hidden">
+                                        <Clock className="h-2.5 w-2.5 text-green-500 shrink-0" />
+                                        <span>{format(new Date(activeSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}</span>
+                                    </p>
                                 )}
                             </div>
-                            <DialogDescription className="sr-only">Cierre de sesión y arqueo de caja</DialogDescription>
+                            {activeSession && (
+                                <Badge variant="outline" className="hidden sm:inline-flex text-[10px] font-semibold text-muted-foreground border-border/40 py-0 h-5 gap-1 shrink-0">
+                                    <Clock className="h-2.5 w-2.5 text-green-500" />
+                                    {format(new Date(activeSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}
+                                </Badge>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                            <div className="hidden sm:block">
+                                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
+                                    <TabsList className="bg-muted/80 p-0.5 rounded-xl h-8">
+                                        <TabsTrigger value="close" className="rounded-lg text-xs font-bold px-3 h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
+                                            Cierre de Sesión
+                                        </TabsTrigger>
+                                        <TabsTrigger value="history" className="rounded-lg text-xs font-bold px-3 h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
+                                            Historial
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </Tabs>
+                            </div>
+
+                            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground shrink-0">
+                                <X className="h-4 w-4" />
+                            </Button>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/* Mobile tabs bar */}
+                    <div className="sm:hidden mt-2 pt-2 border-t border-border/20">
                         <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
-                            <TabsList className="bg-muted/80 p-0.5 rounded-xl h-8">
-                                <TabsTrigger value="close" className="rounded-lg text-xs font-bold px-3 h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
+                            <TabsList className="bg-muted/80 p-0.5 rounded-xl h-8 w-full grid grid-cols-2">
+                                <TabsTrigger value="close" className="rounded-lg text-xs font-bold h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
                                     Cierre de Sesión
                                 </TabsTrigger>
-                                <TabsTrigger value="history" className="rounded-lg text-xs font-bold px-3 h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
+                                <TabsTrigger value="history" className="rounded-lg text-xs font-bold h-7 data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">
                                     Historial
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>
-
-                        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground">
-                            <X className="h-4 w-4" />
-                        </Button>
                     </div>
                 </div>
 
                 <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    <TabsContent value="close" className="m-0 p-4 flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-3.5 outline-none">
+                    <TabsContent value="close" className="m-0 p-3 sm:p-4 lg:p-5 flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 outline-none">
                         {/* Left Column: Financial Overview */}
-                        <div className="lg:col-span-7 flex flex-col justify-between gap-2.5 min-h-0 h-full overflow-hidden">
-                            {/* 4 Stats Cards in 1 Row */}
-                            <div className="grid grid-cols-4 gap-2 shrink-0">
-                                <div className="bg-card/60 border border-border/40 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
+                        <div className="lg:col-span-7 flex flex-col gap-3 min-h-0">
+                            {/* 4 Stats Cards in 2x2 grid on mobile, 4x1 on desktop */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
+                                <div className="bg-card/70 border border-border/50 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm">
                                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                                        <Wallet className="h-3 w-3" />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80">Fondo</span>
+                                        <Wallet className="h-3.5 w-3.5 text-muted-foreground/80" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Fondo</span>
                                     </div>
-                                    <p className="text-xs font-black text-foreground truncate">RD$ {stats.initialCash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-xs sm:text-sm font-black text-foreground truncate">
+                                        RD$ {stats.initialCash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                    </p>
                                 </div>
-                                <div className="bg-card/60 border border-border/40 p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm">
+
+                                <div className="bg-card/70 border border-border/50 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm">
                                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                                        <Calculator className="h-3 w-3" />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80">Ventas</span>
+                                        <Calculator className="h-3.5 w-3.5 text-muted-foreground/80" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Ventas</span>
                                     </div>
-                                    <p className="text-xs font-black text-foreground truncate">RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-xs sm:text-sm font-black text-foreground truncate">
+                                        RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                    </p>
                                 </div>
+
                                 <button
                                     type="button"
                                     onClick={() => setCard2Tab('movements')}
                                     className={cn(
-                                        "bg-green-500/10 border p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm transition-all text-left cursor-pointer hover:bg-green-500/15 active:scale-[0.98]",
-                                        card2Tab === 'movements' ? "border-green-500 ring-1 ring-green-500/30" : "border-green-500/20"
+                                        "p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
+                                        card2Tab === 'movements'
+                                            ? "bg-green-500/15 border-2 border-green-500 ring-2 ring-green-500/20"
+                                            : "bg-green-500/10 border border-green-500/30 hover:bg-green-500/15"
                                     )}
-                                    title="Click para ver lista de entradas"
+                                    title="Ver lista de entradas"
                                 >
                                     <div className="flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-1.5 text-green-500">
-                                            <TrendingUp className="h-3 w-3" />
-                                            <span className="text-[9px] font-bold uppercase tracking-wider">Entradas</span>
+                                        <div className="flex items-center gap-1.5 text-green-500 font-bold">
+                                            <TrendingUp className="h-3.5 w-3.5" />
+                                            <span className="text-[10px] uppercase tracking-wider">Entradas</span>
                                         </div>
-                                        <span className="text-[8px] text-green-500/80 font-bold underline">Ver</span>
+                                        <span className="text-[8px] font-bold text-green-600 dark:text-green-400 bg-green-500/15 px-1.5 py-0.5 rounded-full">
+                                            Ver
+                                        </span>
                                     </div>
-                                    <p className="text-xs font-black text-green-500 truncate">RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-xs sm:text-sm font-black text-green-500 truncate">
+                                        RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                    </p>
                                 </button>
+
                                 <button
                                     type="button"
                                     onClick={() => setCard2Tab('movements')}
                                     className={cn(
-                                        "bg-red-500/10 border p-2.5 rounded-xl flex flex-col justify-between h-14 backdrop-blur-sm transition-all text-left cursor-pointer hover:bg-red-500/15 active:scale-[0.98]",
-                                        card2Tab === 'movements' ? "border-red-500 ring-1 ring-red-500/30" : "border-red-500/20"
+                                        "p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
+                                        card2Tab === 'movements'
+                                            ? "bg-red-500/15 border-2 border-red-500 ring-2 ring-red-500/20"
+                                            : "bg-red-500/10 border border-red-500/30 hover:bg-red-500/15"
                                     )}
-                                    title="Click para ver lista de salidas"
+                                    title="Ver lista de salidas"
                                 >
                                     <div className="flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-1.5 text-red-500">
-                                            <TrendingDown className="h-3 w-3" />
-                                            <span className="text-[9px] font-bold uppercase tracking-wider">Salidas</span>
+                                        <div className="flex items-center gap-1.5 text-red-500 font-bold">
+                                            <TrendingDown className="h-3.5 w-3.5" />
+                                            <span className="text-[10px] uppercase tracking-wider">Salidas</span>
                                         </div>
-                                        <span className="text-[8px] text-red-500/80 font-bold underline">Ver</span>
+                                        <span className="text-[8px] font-bold text-red-600 dark:text-red-400 bg-red-500/15 px-1.5 py-0.5 rounded-full">
+                                            Ver
+                                        </span>
                                     </div>
-                                    <p className="text-xs font-black text-red-500 truncate">RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-xs sm:text-sm font-black text-red-500 truncate">
+                                        RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                    </p>
                                 </button>
                             </div>
 
                             {/* Middle Details: Breakdown + Active Shifts/Movements */}
-                            <div className="grid grid-cols-2 gap-2.5 flex-1 min-h-0 overflow-hidden">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 flex-1 min-h-0">
                                 {/* Card 1: Desglose por Método */}
-                                <div className="bg-card/60 border border-border/40 p-3 rounded-xl flex flex-col justify-between overflow-hidden">
-                                    <div className="flex items-center gap-1.5 text-muted-foreground border-b border-border/30 pb-1.5">
-                                        <FileText className="h-3 w-3" />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider">Desglose Métodos</span>
+                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col justify-between overflow-hidden">
+                                    <div className="flex items-center gap-1.5 text-muted-foreground border-b border-border/40 pb-2">
+                                        <FileText className="h-3.5 w-3.5 text-green-500" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Desglose por Métodos</span>
                                     </div>
-                                    <div className="space-y-1.5 py-1">
+                                    <div className="space-y-2 py-2">
                                         <div className="flex justify-between items-center text-xs">
                                             <span className="text-muted-foreground font-medium">Efectivo</span>
                                             <span className="font-bold text-foreground">RD$ {stats.cashSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
@@ -599,21 +639,21 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                             <span className="font-bold text-foreground">RD$ {stats.otherSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
-                                    <div className="pt-1.5 border-t border-border/30 flex justify-between items-center text-[10px] text-muted-foreground">
+                                    <div className="pt-2 border-t border-border/30 flex justify-between items-center text-[10px] text-muted-foreground">
                                         <span>Total Facturas:</span>
-                                        <span className="font-bold text-foreground">{stats.salesCount}</span>
+                                        <span className="font-bold text-foreground bg-muted/60 px-2 py-0.5 rounded-md">{stats.salesCount}</span>
                                     </div>
                                 </div>
 
                                 {/* Card 2: Turnos & Movimientos */}
-                                <div className="bg-card/60 border border-border/40 p-3 rounded-xl flex flex-col min-h-0 overflow-hidden">
-                                    <div className="flex items-center justify-between border-b border-border/30 pb-1.5 shrink-0">
-                                        <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg">
+                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col min-h-0 overflow-hidden">
+                                    <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
+                                        <div className="flex items-center gap-1 bg-muted/80 p-0.5 rounded-lg">
                                             <button
                                                 type="button"
                                                 onClick={() => setCard2Tab('shifts')}
                                                 className={cn(
-                                                    "px-2 py-0.5 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
+                                                    "px-2 py-1 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
                                                     card2Tab === 'shifts'
                                                         ? "bg-background text-foreground shadow-sm"
                                                         : "text-muted-foreground hover:text-foreground"
@@ -626,7 +666,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                 type="button"
                                                 onClick={() => setCard2Tab('movements')}
                                                 className={cn(
-                                                    "px-2 py-0.5 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
+                                                    "px-2 py-1 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
                                                     card2Tab === 'movements'
                                                         ? "bg-background text-foreground shadow-sm"
                                                         : "text-muted-foreground hover:text-foreground"
@@ -651,17 +691,17 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                         )}
                                     </div>
 
-                                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 py-1.5">
+                                    <div className="flex-1 min-h-[120px] max-h-48 sm:max-h-56 overflow-y-auto no-scrollbar space-y-1.5 py-2">
                                         {card2Tab === 'shifts' ? (
                                             isLoading ? (
-                                                <div className="flex items-center justify-center py-4 text-muted-foreground">
-                                                    <RefreshCcw className="h-3 w-3 animate-spin mr-1.5 opacity-50" />
-                                                    <span className="text-[9px]">Cargando...</span>
+                                                <div className="flex items-center justify-center py-6 text-muted-foreground">
+                                                    <RefreshCcw className="h-4 w-4 animate-spin mr-1.5 opacity-50 text-green-500" />
+                                                    <span className="text-xs">Cargando turnos...</span>
                                                 </div>
                                             ) : openSessions.length > 0 ? (
                                                 openSessions.map((session: any) => (
                                                     <div key={session.id} className={cn(
-                                                        "flex items-center justify-between p-1.5 rounded-lg border text-xs transition-all",
+                                                        "flex items-center justify-between p-2 rounded-lg border text-xs transition-all",
                                                         session.id === activeSession?.id ? "border-green-500/30 bg-green-500/5" : "border-border/30 bg-muted/40"
                                                     )}>
                                                         <div className="flex items-center gap-2 min-w-0">
@@ -689,7 +729,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                                 <Button 
                                                                     variant="ghost" 
                                                                     size="sm" 
-                                                                    className="h-5 px-1 text-[8px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                                    className="h-5 px-1.5 text-[8px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10"
                                                                     onClick={async (e) => {
                                                                         e.stopPropagation();
                                                                         if (!confirm(`¿Cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
@@ -715,7 +755,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                     </div>
                                                 ))
                                             ) : (
-                                                <p className="text-[10px] text-muted-foreground text-center py-2 italic">Sin otros turnos.</p>
+                                                <p className="text-xs text-muted-foreground text-center py-4 italic">Sin otros turnos activos.</p>
                                             )
                                         ) : (
                                             /* Tab Movimientos */
@@ -767,8 +807,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                 })
                                             ) : (
                                                 <div className="flex flex-col items-center justify-center py-6 text-muted-foreground space-y-1">
-                                                    <Wallet className="h-5 w-5 opacity-40 mb-1" />
-                                                    <p className="text-[10px] italic">Sin entradas ni salidas en este turno.</p>
+                                                    <Wallet className="h-6 w-6 opacity-40 mb-1 text-muted-foreground" />
+                                                    <p className="text-xs italic">Sin entradas ni salidas en este turno.</p>
                                                 </div>
                                             )
                                         )}
@@ -776,8 +816,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                     {card2Tab === 'shifts' ? (
                                         sessionMovements.length > 0 && (
-                                            <div className="pt-1.5 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
-                                                <span className="cursor-pointer hover:underline text-amber-500" onClick={() => setCard2Tab('movements')}>
+                                            <div className="pt-2 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
+                                                <span className="cursor-pointer hover:underline text-amber-500 font-semibold" onClick={() => setCard2Tab('movements')}>
                                                     Ver movimientos ({sessionMovements.length}):
                                                 </span>
                                                 <span className="font-bold text-foreground">
@@ -786,7 +826,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                             </div>
                                         )
                                     ) : (
-                                        <div className="pt-1.5 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
+                                        <div className="pt-2 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
                                             <span className="text-green-500 font-semibold">
                                                 Entradas: RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                             </span>
@@ -799,72 +839,83 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             </div>
 
                             {/* Bottom Hero: Expected Cash */}
-                            <div className="bg-gradient-to-r from-green-500/15 via-green-500/10 to-transparent border border-green-500/20 p-3 rounded-xl flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-2">
-                                    <div className="bg-green-500/20 p-1.5 rounded-lg text-green-500">
-                                        <CheckCircle className="h-4 w-4" />
+                            <div className="bg-gradient-to-r from-green-500/15 via-green-500/10 to-transparent border border-green-500/25 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center justify-between shrink-0 shadow-sm">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="bg-green-500/20 p-2 rounded-xl text-green-500 shrink-0">
+                                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                                     </div>
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase text-muted-foreground tracking-wider">Efectivo Esperado en Caja</p>
-                                        <p className="text-[10px] text-muted-foreground">Fondo + Ventas Efectivo + Entradas - Salidas</p>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] sm:text-[10px] font-black uppercase text-green-600 dark:text-green-400 tracking-wider">
+                                            Efectivo Esperado en Caja
+                                        </p>
+                                        <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
+                                            Fondo + Ventas + Entradas - Salidas
+                                        </p>
                                     </div>
                                 </div>
-                                <p className="text-2xl font-black text-green-500 tracking-tight">
+                                <p className="text-xl sm:text-2xl font-black text-green-500 tracking-tight shrink-0">
                                     RD$ {stats.expectedCash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                 </p>
                             </div>
                         </div>
 
                         {/* Right Column: Declaration & Closing Actions */}
-                        <div className="lg:col-span-5 bg-card/40 border border-border/40 p-3.5 rounded-2xl flex flex-col justify-between gap-2.5 min-h-0 h-full overflow-hidden">
+                        <div className="lg:col-span-5 bg-card/50 border border-border/50 p-3.5 sm:p-4 rounded-2xl flex flex-col justify-between gap-3 min-h-0">
                             {/* Declaration Header & Input */}
                             <div className="space-y-2 shrink-0">
                                 <div className="flex justify-between items-center">
                                     <Label className="text-xs font-black text-foreground uppercase tracking-wider">Declaración de Efectivo</Label>
-                                    <Button variant="outline" size="sm" onClick={() => setShowCashCount(true)} className="h-6 gap-1 bg-background/80 border-border/60 text-[9px] font-bold rounded-lg active:scale-95 transition-all px-2">
-                                        <Calculator className="h-2.5 w-2.5 text-green-500" /> Conteo
+                                    <Button variant="outline" size="sm" onClick={() => setShowCashCount(true)} className="h-7 gap-1 bg-background/80 border-border/60 text-[10px] font-bold rounded-lg active:scale-95 transition-all px-2.5">
+                                        <Calculator className="h-3 w-3 text-green-500" /> Conteo
                                     </Button>
                                 </div>
 
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500/60 text-sm font-black">RD$</span>
+                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-green-500 text-sm font-black pointer-events-none">
+                                        RD$
+                                    </span>
                                     <Input
                                         id="actualCash"
                                         type="number"
+                                        inputMode="decimal"
+                                        step="any"
                                         placeholder="0.00"
-                                        className="pl-11 h-10 text-lg font-black bg-background/80 border-border/60 rounded-xl focus-visible:ring-green-500/30 text-foreground placeholder:text-muted-foreground/40"
+                                        className="pl-12 h-11 text-lg sm:text-xl font-black bg-background/80 border-border/60 rounded-xl focus-visible:ring-green-500/30 text-foreground placeholder:text-muted-foreground/40"
                                         value={actualCash}
                                         onChange={(e) => setActualCash(e.target.value)}
                                     />
                                 </div>
 
-                                {/* Compact Difference Indicator */}
+                                {/* Difference Indicator */}
                                 {actualCash ? (
                                     <div className={cn(
-                                        "p-2 rounded-xl border flex items-center justify-between text-xs transition-all",
+                                        "p-2.5 rounded-xl border flex items-center justify-between text-xs transition-all",
                                         difference === 0 ? "bg-green-500/10 border-green-500/20 text-green-500" :
                                         difference > 0 ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
                                         "bg-red-500/10 border-red-500/20 text-red-500"
                                     )}>
-                                        <div className="flex items-center gap-1 font-bold text-[10px]">
-                                            <span>{difference === 0 ? '¡Cuadre Perfecto!' : difference < 0 ? 'Faltante:' : 'Sobrante:'}</span>
+                                        <div className="flex items-center gap-1.5 font-bold text-xs">
+                                            {difference === 0 ? <CheckCircle className="h-4 w-4" /> : difference < 0 ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+                                            <span>{difference === 0 ? '¡Cuadre Perfecto!' : difference < 0 ? 'Faltante en Caja:' : 'Sobrante en Caja:'}</span>
                                         </div>
-                                        <span className="font-black text-sm">
+                                        <span className="font-black text-sm sm:text-base">
                                             {difference > 0 ? '+' : ''}RD$ {Math.abs(difference).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 ) : (
-                                    <p className="text-[9px] text-muted-foreground text-center italic">Ingresa el total contado de ventas y entradas.</p>
+                                    <p className="text-[10px] text-muted-foreground text-center italic py-0.5">
+                                        Ingresa el monto físico contado para calcular la diferencia.
+                                    </p>
                                 )}
                             </div>
 
                             {/* Middle section: Blocking Orders or Notes */}
-                            <div className="flex-1 min-h-0 flex flex-col justify-center gap-2 overflow-hidden">
+                            <div className="flex-1 min-h-0 flex flex-col justify-center gap-2.5">
                                 {blockingOrders.length > 0 ? (
                                     <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl space-y-1.5 flex-1 min-h-0 flex flex-col justify-between">
                                         <div className="flex items-center justify-between text-red-500">
                                             <div className="flex items-center gap-1.5">
-                                                <Lock className="h-3 w-3 shrink-0" />
+                                                <Lock className="h-3.5 w-3.5 shrink-0" />
                                                 <span className="text-[10px] font-black uppercase">Ventas Pendientes ({blockingOrders.length})</span>
                                             </div>
                                             <Button
@@ -912,12 +963,12 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                 ) : null}
 
                                 <div className="space-y-1">
-                                    <Label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                        <FileText className="h-2.5 w-2.5" /> Observaciones / Notas
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                        <FileText className="h-3 w-3" /> Observaciones / Notas
                                     </Label>
                                     <Input 
                                         placeholder="Escribe aquí observaciones del cierre (opcional)..." 
-                                        className="h-8 bg-background/60 border-border/40 rounded-lg text-xs" 
+                                        className="h-9 bg-background/60 border-border/40 rounded-lg text-xs" 
                                         value={notes} 
                                         onChange={(e) => setNotes(e.target.value)} 
                                     />
@@ -925,30 +976,30 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             </div>
 
                             {/* Bottom: Options and Action Buttons */}
-                            <div className="space-y-2 shrink-0 pt-1 border-t border-border/30">
-                                <div className="flex items-center justify-between bg-muted/40 px-2.5 py-1 rounded-lg border border-border/30">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1 cursor-pointer" onClick={() => setDownloadPdf(!downloadPdf)}>
-                                            <Checkbox id="pdf-opt" checked={downloadPdf} onCheckedChange={(c) => setDownloadPdf(!!c)} className="w-3 h-3 border-border data-[state=checked]:bg-green-600" />
-                                            <Label htmlFor="pdf-opt" className="text-[9px] font-bold text-muted-foreground cursor-pointer">PDF</Label>
+                            <div className="space-y-2.5 shrink-0 pt-2 border-t border-border/30">
+                                <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5 rounded-xl border border-border/30">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setDownloadPdf(!downloadPdf)}>
+                                            <Checkbox id="pdf-opt" checked={downloadPdf} onCheckedChange={(c) => setDownloadPdf(!!c)} className="w-3.5 h-3.5 border-border data-[state=checked]:bg-green-600" />
+                                            <Label htmlFor="pdf-opt" className="text-[10px] font-bold text-muted-foreground cursor-pointer">PDF</Label>
                                         </div>
-                                        <div className="flex items-center gap-1 cursor-pointer" onClick={() => setSendEmail(!sendEmail)}>
-                                            <Checkbox id="email-opt" checked={sendEmail} onCheckedChange={(c) => setSendEmail(!!c)} className="w-3 h-3 border-border data-[state=checked]:bg-green-600" />
-                                            <Label htmlFor="email-opt" className="text-[9px] font-bold text-muted-foreground cursor-pointer">Email</Label>
+                                        <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setSendEmail(!sendEmail)}>
+                                            <Checkbox id="email-opt" checked={sendEmail} onCheckedChange={(c) => setSendEmail(!!c)} className="w-3.5 h-3.5 border-border data-[state=checked]:bg-green-600" />
+                                            <Label htmlFor="email-opt" className="text-[10px] font-bold text-muted-foreground cursor-pointer">Email</Label>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-1 cursor-pointer" onClick={() => setPrintReport(!printReport)}>
-                                        <Checkbox id="print-opt" checked={printReport} onCheckedChange={(c) => setPrintReport(!!c)} className="w-3 h-3 border-border data-[state=checked]:bg-green-600" />
-                                        <Label htmlFor="print-opt" className="text-[9px] font-bold text-muted-foreground cursor-pointer">Ticket</Label>
+                                    <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setPrintReport(!printReport)}>
+                                        <Checkbox id="print-opt" checked={printReport} onCheckedChange={(c) => setPrintReport(!!c)} className="w-3.5 h-3.5 border-border data-[state=checked]:bg-green-600" />
+                                        <Label htmlFor="print-opt" className="text-[10px] font-bold text-muted-foreground cursor-pointer">Ticket</Label>
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2">
-                                    <Button variant="ghost" className="flex-1 h-9 rounded-xl font-bold text-muted-foreground hover:text-foreground text-[10px] uppercase tracking-wider" onClick={onClose}>
+                                <div className="flex gap-2.5">
+                                    <Button variant="ghost" className="flex-1 h-10 rounded-xl font-bold text-muted-foreground hover:text-foreground text-xs uppercase tracking-wider" onClick={onClose}>
                                         Cancelar
                                     </Button>
                                     <Button 
-                                        className="flex-[2] h-9 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-xs tracking-wider uppercase shadow-md shadow-green-600/20" 
+                                        className="flex-[2] h-10 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-xs tracking-wider uppercase shadow-md shadow-green-600/20" 
                                         disabled={!actualCash || closeSession.isPending} 
                                         onClick={handleCloseDay}
                                     >
