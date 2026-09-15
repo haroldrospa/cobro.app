@@ -329,7 +329,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         const withdrawals = sessionMovements.filter(m => m.type === 'withdrawal').reduce((acc, m) => acc + Number(m.amount), 0);
 
         const initialCash = Number(activeSession?.initial_cash || 0);
-        const expectedCash = initialCash + cashSales + deposits - withdrawals;
+        const expectedCash = cashSales + deposits - withdrawals;
 
         return {
             salesCount: sessionSales.length,
@@ -879,7 +879,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                             Efectivo Esperado en Caja
                                         </p>
                                         <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
-                                            Fondo + Ventas + Entradas - Salidas
+                                            Ventas + Entradas - Salidas (Sin fondo)
                                         </p>
                                     </div>
                                 </div>
