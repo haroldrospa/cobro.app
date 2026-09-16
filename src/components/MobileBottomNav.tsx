@@ -181,6 +181,7 @@ export const MobileBottomNav: React.FC = () => {
                 onClick={() => {
                   triggerHaptic('light');
                   setMoreOpen(false);
+                  navigate(item.href);
                 }}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 rounded-[1.25rem] border transition-all duration-200 active:scale-[0.93] group select-none',
@@ -229,6 +230,7 @@ export const MobileBottomNav: React.FC = () => {
                 onClick={() => {
                   triggerHaptic('light');
                   setMoreOpen(false);
+                  navigate(item.href);
                 }}
                 className={cn(
                   'relative flex-1 flex flex-col items-center justify-center py-3 min-h-[64px] gap-1 transition-all duration-200 active:scale-[0.92]',

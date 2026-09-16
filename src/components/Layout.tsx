@@ -319,53 +319,43 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Header pegado arriba con menú principal y banner de vencimiento adosado debajo */}
       <header className="sticky top-0 w-full z-40 shadow-xs bg-card/95 backdrop-blur-md border-b border-border flex flex-col">
         <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 h-13 sm:h-16">
-          {/* Left: Page Title / Navigation */}
+          {/* Left: Page Title / Navigation Menu (Mobile & Desktop) */}
           <div className="flex items-center gap-2.5 min-w-0">
-            {/* Mobile View: Clean page title */}
-            <div className="flex items-center gap-2 md:hidden min-w-0">
-              <h1 className="font-extrabold text-base tracking-tight text-foreground truncate">
-                {getCurrentPageName()}
-              </h1>
-            </div>
-
-            {/* Desktop view: Dropdown Navigation Menu */}
-            <div className="hidden md:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 px-3 h-10 hover:bg-muted/70 rounded-xl">
-                    <Menu className="h-4 w-4" />
-                    <span className="font-bold text-sm">{getCurrentPageName()}</span>
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto rounded-xl shadow-xl p-1.5">
-                  {navigation.map(item => {
-                    const Icon = item.icon;
-                    return (
-                      <DropdownMenuItem key={item.name} asChild className="rounded-lg">
-                        <Link
-                          to={item.href}
-                          onMouseEnter={() => handlePrefetch(item.href)}
-                          className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-primary/10 text-primary font-bold' : ''
-                            }`}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          <span>{item.name}</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={handleLogout}
-                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
-                  >
-                    <LogOut className="h-4 w-4 shrink-0" />
-                    <span>Cerrar Sesión</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 px-2.5 sm:px-3 h-10 hover:bg-muted/70 rounded-xl cursor-pointer">
+                  <Menu className="h-4 w-4 shrink-0" />
+                  <span className="font-bold text-sm truncate max-w-[140px] sm:max-w-none">{getCurrentPageName()}</span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto rounded-xl shadow-xl p-1.5 z-50">
+                {navigation.map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={item.name}
+                      onSelect={() => navigate(item.href)}
+                      onClick={() => navigate(item.href)}
+                      onMouseEnter={() => handlePrefetch(item.href)}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-primary/10 text-primary font-bold' : ''
+                        }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{item.name}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={handleLogout}
+                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                >
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  <span>Cerrar Sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Right Side: Store Badge & User / Profile Actions */}
@@ -421,15 +411,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       )}
                     </div>
 
-                    <DropdownMenuItem asChild className="rounded-xl">
-                      <Link to="/subscription" className="cursor-pointer text-xs font-semibold py-2">
-                        <User className="h-4 w-4 mr-2 text-primary" /> Mi Perfil y Plan
-                      </Link>
+                    <DropdownMenuItem
+                      onSelect={() => navigate('/subscription')}
+                      onClick={() => navigate('/subscription')}
+                      className="cursor-pointer text-xs font-semibold py-2 rounded-xl"
+                    >
+                      <User className="h-4 w-4 mr-2 text-primary" /> Mi Perfil y Plan
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="rounded-xl">
-                      <Link to="/settings" className="cursor-pointer text-xs font-semibold py-2">
-                        <Settings className="h-4 w-4 mr-2 text-primary" /> Configuración
-                      </Link>
+                    <DropdownMenuItem
+                      onSelect={() => navigate('/settings')}
+                      onClick={() => navigate('/settings')}
+                      className="cursor-pointer text-xs font-semibold py-2 rounded-xl"
+                    >
+                      <Settings className="h-4 w-4 mr-2 text-primary" /> Configuración
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="my-1" />
                     <DropdownMenuItem

@@ -873,12 +873,16 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          <Link to="/pos" className="w-full sm:w-auto">
-            <Button size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-12 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95">
-              <ShoppingCart className="h-5 w-5" />
+          <Button
+            asChild
+            size="lg"
+            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-12 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95 cursor-pointer"
+          >
+            <Link to="/pos">
+              <ShoppingCart className="h-5 w-5 mr-1" />
               Punto de Venta
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -1079,6 +1083,7 @@ const Dashboard: React.FC = () => {
                       {/* Month navigator */}
                       <div className="flex items-center justify-between">
                         <button
+                          type="button"
                           onClick={() => setCalendarMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() - 1); return n; })}
                           className="p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors"
                         >
@@ -1088,6 +1093,7 @@ const Dashboard: React.FC = () => {
                           {format(calendarMonth, 'MMMM yyyy', { locale: es })}
                         </p>
                         <button
+                          type="button"
                           onClick={() => setCalendarMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() + 1); return n; })}
                           className="p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors"
                           disabled={calendarMonth >= new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
