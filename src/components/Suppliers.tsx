@@ -19,6 +19,12 @@ import {
   X,
   MessageCircle,
   Download,
+  LayoutGrid,
+  List,
+  CreditCard,
+  User,
+  ArrowUpRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +65,7 @@ export const Suppliers: React.FC = () => {
   // State: Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [debtFilter, setDebtFilter] = useState<'all' | 'with_debt' | 'no_debt'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // State: Dialogs
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
@@ -247,32 +254,30 @@ export const Suppliers: React.FC = () => {
   const isLoading = loadingSuppliers || loadingDebts;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-20 max-w-7xl mx-auto px-2 sm:px-4">
+    <div className="space-y-5 animate-fade-in pb-24 max-w-7xl mx-auto px-3 sm:px-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <Truck className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-                Proveedores
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Gestión de cuentas por pagar, compras, facturación y catálogo bancario.
-              </p>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shadow-xs">
+            <Truck className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+              Proveedores
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Cuentas por pagar, compras y datos bancarios
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="rounded-xl h-11 px-3.5 text-xs font-bold gap-1.5 border-border/60 hover:bg-muted"
-            title="Exportar a CSV"
+            className="rounded-xl h-10 px-3 text-xs font-semibold gap-1.5 border-border/60 hover:bg-muted"
+            title="Exportar proveedores a CSV"
           >
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Exportar</span>
@@ -280,95 +285,130 @@ export const Suppliers: React.FC = () => {
 
           <Button
             onClick={handleOpenCreateSupplier}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-11 px-5 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 gap-2 active:scale-95 transition-all"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-10 px-4 font-bold text-xs shadow-md shadow-emerald-500/20 gap-2 active:scale-95 transition-all flex-1 sm:flex-initial"
           >
             <Plus className="h-4 w-4" />
-            Nuevo Proveedor
+            <span>Nuevo Proveedor</span>
           </Button>
         </div>
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Total Proveedores */}
-        <Card className="bg-card/60 border-border/40 backdrop-blur-sm shadow-xs hover:border-emerald-500/30 transition-all">
-          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-              Total Proveedores
-            </CardTitle>
-            <div className="p-1.5 bg-muted rounded-lg text-muted-foreground">
-              <Building2 className="h-4 w-4" />
+        <Card
+          onClick={() => setDebtFilter('all')}
+          className={`bg-card/70 border-border/50 backdrop-blur-sm shadow-xs rounded-2xl cursor-pointer hover:border-emerald-500/40 transition-all ${
+            debtFilter === 'all' ? 'ring-1 ring-emerald-500/40 border-emerald-500/40 bg-emerald-500/[0.03]' : ''
+          }`}
+        >
+          <CardContent className="p-3.5 sm:p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                Total
+              </span>
+              <div className="p-1.5 bg-muted/80 rounded-xl text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-3.5 pt-0">
-            <div className="text-2xl font-black tracking-tight text-foreground">{stats.totalSuppliers}</div>
+            <div className="text-2xl font-black tracking-tight text-foreground mt-1">
+              {stats.totalSuppliers}
+            </div>
             <p className="text-[10px] text-muted-foreground mt-0.5">Empresas registradas</p>
           </CardContent>
         </Card>
 
         {/* Con Deuda Pendiente */}
-        <Card className="bg-card/60 border-border/40 backdrop-blur-sm shadow-xs hover:border-red-500/30 transition-all">
-          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-red-500">
-              Con Cuentas por Pagar
-            </CardTitle>
-            <div className="p-1.5 bg-red-500/10 rounded-lg text-red-500">
-              <AlertCircle className="h-4 w-4" />
+        <Card
+          onClick={() => setDebtFilter('with_debt')}
+          className={`bg-card/70 border-border/50 backdrop-blur-sm shadow-xs rounded-2xl cursor-pointer hover:border-rose-500/40 transition-all ${
+            debtFilter === 'with_debt' ? 'ring-1 ring-rose-500/40 border-rose-500/40 bg-rose-500/[0.03]' : ''
+          }`}
+        >
+          <CardContent className="p-3.5 sm:p-4">
+            <div className="flex items-center justify-between">
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                stats.withDebtCount > 0 ? 'text-rose-500' : 'text-muted-foreground'
+              }`}>
+                Con Deuda
+              </span>
+              <div className={`p-1.5 rounded-xl ${
+                stats.withDebtCount > 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-muted/80 text-muted-foreground'
+              }`}>
+                <AlertCircle className="h-4 w-4" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-3.5 pt-0">
-            <div className="text-2xl font-black tracking-tight text-red-500">{stats.withDebtCount}</div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Proveedores con saldo</p>
+            <div className={`text-2xl font-black tracking-tight mt-1 ${
+              stats.withDebtCount > 0 ? 'text-rose-500' : 'text-foreground'
+            }`}>
+              {stats.withDebtCount}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {stats.withDebtCount > 0 ? 'Con saldo pendiente' : 'Sin saldos pendientes'}
+            </p>
           </CardContent>
         </Card>
 
         {/* Deuda Total Acumulada */}
-        <Card className="bg-card/60 border-border/40 backdrop-blur-sm shadow-xs hover:border-red-500/30 transition-all">
-          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-red-500">
-              Deuda Total por Pagar
-            </CardTitle>
-            <div className="p-1.5 bg-red-500/10 rounded-lg text-red-500">
-              <TrendingDown className="h-4 w-4" />
+        <Card
+          onClick={() => setDebtFilter('with_debt')}
+          className={`bg-card/70 border-border/50 backdrop-blur-sm shadow-xs rounded-2xl cursor-pointer hover:border-amber-500/40 transition-all ${
+            debtFilter === 'with_debt' ? 'ring-1 ring-amber-500/40 border-amber-500/40 bg-amber-500/[0.03]' : ''
+          }`}
+        >
+          <CardContent className="p-3.5 sm:p-4">
+            <div className="flex items-center justify-between">
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                stats.totalOutstanding > 0 ? 'text-amber-500' : 'text-muted-foreground'
+              }`}>
+                Por Pagar
+              </span>
+              <div className={`p-1.5 rounded-xl ${
+                stats.totalOutstanding > 0 ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
+              }`}>
+                {stats.totalOutstanding > 0 ? <TrendingDown className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-3.5 pt-0">
-            <div className="text-2xl font-black tracking-tight text-red-500 font-mono">
-              RD$ {stats.totalOutstanding.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+            <div className={`text-xl sm:text-2xl font-black tracking-tight mt-1 font-mono truncate ${
+              stats.totalOutstanding > 0 ? 'text-amber-500' : 'text-emerald-500'
+            }`}>
+              RD$ {stats.totalOutstanding.toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Pendiente de saldar</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {stats.totalOutstanding > 0 ? 'Monto pendiente' : 'Al día'}
+            </p>
           </CardContent>
         </Card>
 
         {/* Compras / Egresos Realizados */}
-        <Card className="bg-card/60 border-border/40 backdrop-blur-sm shadow-xs hover:border-blue-500/30 transition-all">
-          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-blue-500">
-              Total Compras Pagadas
-            </CardTitle>
-            <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-500">
-              <DollarSign className="h-4 w-4" />
+        <Card className="bg-card/70 border-border/50 backdrop-blur-sm shadow-xs rounded-2xl">
+          <CardContent className="p-3.5 sm:p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                Pagado
+              </span>
+              <div className="p-1.5 bg-blue-500/10 rounded-xl text-blue-500">
+                <DollarSign className="h-4 w-4" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-3.5 pt-0">
-            <div className="text-2xl font-black tracking-tight text-blue-500 font-mono">
-              RD$ {stats.totalSpentWithSuppliers.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+            <div className="text-xl sm:text-2xl font-black tracking-tight text-blue-500 font-mono mt-1 truncate">
+              RD$ {stats.totalSpentWithSuppliers.toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Egresos amortizados</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Compras amortizadas</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Controls: Search and Status Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+      {/* Controls: Search, Filters, and View Toggle */}
+      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
         {/* Search */}
-        <div className="relative flex-1 w-full">
+        <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por proveedor, RNC, banco, número de cuenta o teléfono..."
+            placeholder="Buscar proveedor, RNC, banco o teléfono..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-9 h-11 bg-card/70 border-border/50 rounded-2xl text-xs font-medium focus-visible:ring-emerald-500/30"
+            className="pl-10 pr-9 h-10 bg-card border-border/60 rounded-xl text-xs font-medium focus-visible:ring-emerald-500/30"
           />
           {searchTerm && (
             <button
@@ -380,44 +420,63 @@ export const Suppliers: React.FC = () => {
           )}
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-2xl border border-border/40 shrink-0 w-full sm:w-auto justify-center">
-          <Button
-            size="sm"
-            variant={debtFilter === 'all' ? 'default' : 'ghost'}
-            className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all ${
-              debtFilter === 'all'
-                ? 'bg-background shadow-xs text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            onClick={() => setDebtFilter('all')}
-          >
-            Todos ({suppliers.length})
-          </Button>
-          <Button
-            size="sm"
-            variant={debtFilter === 'with_debt' ? 'default' : 'ghost'}
-            className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all ${
-              debtFilter === 'with_debt'
-                ? 'bg-red-500/10 text-red-500 border border-red-500/30 shadow-xs'
-                : 'text-muted-foreground hover:text-red-500'
-            }`}
-            onClick={() => setDebtFilter('with_debt')}
-          >
-            Con Deuda ({stats.withDebtCount})
-          </Button>
-          <Button
-            size="sm"
-            variant={debtFilter === 'no_debt' ? 'default' : 'ghost'}
-            className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all ${
-              debtFilter === 'no_debt'
-                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 shadow-xs'
-                : 'text-muted-foreground hover:text-emerald-500'
-            }`}
-            onClick={() => setDebtFilter('no_debt')}
-          >
-            Al Día ({suppliers.length - stats.withDebtCount})
-          </Button>
+        {/* Filters and View Switch */}
+        <div className="flex items-center gap-2 justify-between sm:justify-start">
+          {/* Status Filter Pills */}
+          <div className="inline-flex items-center p-1 bg-muted/50 rounded-xl border border-border/50 text-xs">
+            <button
+              onClick={() => setDebtFilter('all')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                debtFilter === 'all'
+                  ? 'bg-background shadow-xs text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Todos ({suppliers.length})
+            </button>
+            <button
+              onClick={() => setDebtFilter('with_debt')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                debtFilter === 'with_debt'
+                  ? 'bg-rose-500/10 text-rose-500 shadow-xs'
+                  : 'text-muted-foreground hover:text-rose-500'
+              }`}
+            >
+              Con Deuda ({stats.withDebtCount})
+            </button>
+            <button
+              onClick={() => setDebtFilter('no_debt')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                debtFilter === 'no_debt'
+                  ? 'bg-emerald-500/10 text-emerald-500 shadow-xs'
+                  : 'text-muted-foreground hover:text-emerald-500'
+              }`}
+            >
+              Al Día ({suppliers.length - stats.withDebtCount})
+            </button>
+          </div>
+
+          {/* View Mode Toggle (Cards vs Table) */}
+          <div className="hidden sm:inline-flex items-center p-1 bg-muted/50 rounded-xl border border-border/50">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition-all ${
+                viewMode === 'grid' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="Vista en tarjetas"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg transition-all ${
+                viewMode === 'table' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="Vista en tabla"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -425,7 +484,7 @@ export const Suppliers: React.FC = () => {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mb-3" />
-          <p className="text-xs font-semibold">Cargando directorio de proveedores...</p>
+          <p className="text-xs font-semibold">Cargando proveedores...</p>
         </div>
       ) : filteredSuppliers.length === 0 ? (
         <div className="text-center py-16 px-4 bg-muted/20 border border-border/40 rounded-3xl">
@@ -433,8 +492,8 @@ export const Suppliers: React.FC = () => {
           <h3 className="text-base font-bold text-foreground">No se encontraron proveedores</h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
             {searchTerm || debtFilter !== 'all'
-              ? 'Prueba con otros términos de búsqueda o ajusta los filtros seleccionados.'
-              : 'Aún no has registrado ningún proveedor. Agrega el primero con el botón superior.'}
+              ? 'Prueba con otros términos de búsqueda o restablece los filtros.'
+              : 'Aún no has registrado ningún proveedor. Agrega el primero ahora.'}
           </p>
           {searchTerm || debtFilter !== 'all' ? (
             <Button
@@ -458,24 +517,234 @@ export const Suppliers: React.FC = () => {
             </Button>
           )}
         </div>
+      ) : viewMode === 'grid' ? (
+        /* ================= VISTA DE TARJETAS (MÓVIL & DEFAULT) ================= */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+          {filteredSuppliers.map((supplier) => {
+            const outstanding = getSupplierOutstandingDebt(supplier.id);
+            const hasDebt = outstanding > 0;
+            const isTransfer = (supplier.payment_method || 'transfer') === 'transfer';
+
+            return (
+              <div
+                key={supplier.id}
+                onClick={() => handleOpenViewDetails(supplier)}
+                className="bg-card border border-border/50 hover:border-emerald-500/40 rounded-2xl p-4 shadow-xs transition-all hover:shadow-md cursor-pointer flex flex-col justify-between group relative overflow-hidden"
+              >
+                {/* Accent top line if has debt */}
+                {hasDebt && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-amber-500" />
+                )}
+
+                <div>
+                  {/* Top: Avatar, Name, Badges and Debt Status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 text-base font-black shadow-xs ${
+                          hasDebt
+                            ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                            : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                        }`}
+                      >
+                        {supplier.name?.charAt(0).toUpperCase() || 'P'}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-base text-foreground group-hover:text-emerald-500 transition-colors truncate">
+                          {supplier.name}
+                        </h3>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {isTransfer ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                              Transferencia
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                              Efectivo
+                            </span>
+                          )}
+
+                          {supplier.rnc && (
+                            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                              RNC: {supplier.rnc}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Pill */}
+                    <div className="shrink-0 text-right">
+                      {hasDebt ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-black text-rose-500 font-mono bg-rose-500/10 px-2.5 py-1 rounded-xl border border-rose-500/20">
+                            RD$ {outstanding.toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                          </span>
+                          <span className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-1">
+                            Por Pagar
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                          <CheckCircle className="h-3 w-3" /> Al Día
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Middle Info: Bank & Contacts */}
+                  <div className="mt-3.5 space-y-2">
+                    {/* Bank Account Info Box */}
+                    {(supplier.bank_name || supplier.bank_account_number) && (
+                      <div
+                        className="bg-muted/40 rounded-xl p-2.5 border border-border/40 flex items-center justify-between text-xs"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <span className="font-semibold text-foreground text-[11px] truncate block">
+                              {supplier.bank_name || 'Cuenta Bancaria'}
+                            </span>
+                            {supplier.bank_account_number && (
+                              <span className="font-mono text-[11px] text-muted-foreground">
+                                {supplier.bank_account_number}
+                                {supplier.bank_account_type ? ` (${supplier.bank_account_type})` : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {supplier.bank_account_number && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyBankAccount(supplier.bank_account_number!)}
+                            className="h-7 px-2 rounded-lg text-[10px] font-bold gap-1 text-muted-foreground hover:text-foreground shrink-0 ml-2"
+                            title="Copiar número de cuenta"
+                          >
+                            <Copy className="h-3 w-3" /> Copiar
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Contact & Phone */}
+                    {(supplier.phone || supplier.contact || supplier.contact_phone) && (
+                      <div
+                        className="flex items-center justify-between flex-wrap gap-2 text-xs pt-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {supplier.contact ? (
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] truncate">
+                              <User className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate font-medium text-foreground">{supplier.contact}</span>
+                            </div>
+                          ) : supplier.phone ? (
+                            <div className="flex items-center gap-1.5 text-muted-foreground font-mono text-[11px]">
+                              <Phone className="h-3.5 w-3.5 shrink-0" />
+                              <span>{supplier.phone}</span>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {/* Direct Contact Action Buttons */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {(supplier.phone || supplier.contact_phone) && (
+                            <>
+                              <a
+                                href={`tel:${cleanPhone(supplier.contact_phone || supplier.phone)}`}
+                                className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                                title="Llamar"
+                              >
+                                <Phone className="h-3.5 w-3.5" />
+                              </a>
+                              <a
+                                href={`https://wa.me/${cleanPhone(supplier.contact_phone || supplier.phone)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                                title="WhatsApp"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5" />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Card Actions */}
+                <div
+                  className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenAddDebt(supplier)}
+                      className="h-8 px-2.5 rounded-xl text-[11px] font-bold gap-1 text-rose-500 border-rose-500/20 hover:bg-rose-500/10 hover:border-rose-500/30"
+                    >
+                      <Plus className="h-3 w-3" /> Deuda
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleOpenViewDetails(supplier)}
+                      className="h-8 px-2.5 rounded-xl text-[11px] font-bold gap-1 text-foreground hover:bg-muted"
+                    >
+                      <Eye className="h-3 w-3 text-emerald-500" /> Ficha
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-0.5">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleOpenEditSupplier(supplier)}
+                      className="h-8 w-8 rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
+                      title="Editar proveedor"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleDeleteSupplier(supplier)}
+                      className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                      title="Eliminar proveedor"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
-        <div className="rounded-3xl border border-border/50 overflow-hidden bg-card shadow-sm">
+        /* ================= VISTA DE TABLA (DESKTOP) ================= */
+        <div className="rounded-2xl border border-border/50 overflow-hidden bg-card shadow-xs">
           <Table className="border-collapse">
             <TableHeader>
-              <TableRow className="border-b border-border/50 hover:bg-transparent bg-muted/30">
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 pl-5">
+              <TableRow className="border-b border-border/50 hover:bg-transparent bg-muted/40">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3 pl-4">
                   Proveedor
                 </TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3">
                   RNC / Cédula
                 </TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3">
                   Contacto / Teléfono
                 </TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 text-right">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3 text-right">
                   Cuentas por Pagar
                 </TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 text-center pr-5">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3 text-center pr-4">
                   Acciones
                 </TableHead>
               </TableRow>
@@ -493,12 +762,12 @@ export const Suppliers: React.FC = () => {
                     className="hover:bg-muted/30 transition-colors border-b border-border/30 group cursor-pointer"
                   >
                     {/* Nombre y Datos Bancarios */}
-                    <TableCell className="py-4 pl-5">
+                    <TableCell className="py-3.5 pl-4">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 text-sm font-black shadow-xs ${
+                          className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-black shadow-xs ${
                             hasDebt
-                              ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
                               : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                           }`}
                         >
@@ -506,7 +775,7 @@ export const Suppliers: React.FC = () => {
                         </div>
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                            <span className="font-bold text-sm text-foreground group-hover:text-emerald-500 transition-colors">
                               {supplier.name}
                             </span>
                             {isTransfer ? (
@@ -534,7 +803,7 @@ export const Suppliers: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleCopyBankAccount(supplier.bank_account_number!)}
-                                  className="p-1 hover:text-primary transition-colors"
+                                  className="p-1 hover:text-emerald-500 transition-colors"
                                   title="Copiar cuenta bancaria"
                                 >
                                   <Copy className="h-3 w-3" />
@@ -547,14 +816,13 @@ export const Suppliers: React.FC = () => {
                     </TableCell>
 
                     {/* RNC */}
-                    <TableCell className="py-4 font-mono text-xs text-muted-foreground">
+                    <TableCell className="py-3.5 font-mono text-xs text-muted-foreground">
                       {supplier.rnc || <span className="text-muted-foreground/40">—</span>}
                     </TableCell>
 
                     {/* Contacto y Teléfono */}
-                    <TableCell className="py-4 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex flex-col gap-1.5">
-                        {/* Teléfono Empresa */}
+                    <TableCell className="py-3.5 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col gap-1">
                         {supplier.phone && (
                           <div className="flex items-center gap-1.5">
                             <span className="font-semibold text-foreground font-mono flex items-center gap-1 text-[11px]">
@@ -564,7 +832,7 @@ export const Suppliers: React.FC = () => {
                             <a
                               href={`tel:${cleanPhone(supplier.phone)}`}
                               className="p-1 hover:text-emerald-500 transition-colors"
-                              title="Llamar a empresa"
+                              title="Llamar"
                             >
                               <Phone className="h-3 w-3" />
                             </a>
@@ -573,79 +841,50 @@ export const Suppliers: React.FC = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-1 hover:text-emerald-500 transition-colors"
-                              title="WhatsApp empresa"
+                              title="WhatsApp"
                             >
                               <MessageCircle className="h-3 w-3" />
                             </a>
                           </div>
                         )}
 
-                        {/* Contacto y Teléfono de Contacto */}
-                        {(supplier.contact || supplier.contact_phone) && (
-                          <div className="flex flex-col gap-0.5">
-                            {supplier.contact && (
-                              <span className="text-[11px] font-medium text-foreground truncate max-w-[190px]">
-                                {supplier.contact}
-                              </span>
-                            )}
-                            {supplier.contact_phone && (
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
-                                  <Phone className="h-2.5 w-2.5" />
-                                  {supplier.contact_phone}
-                                </span>
-                                <a
-                                  href={`tel:${cleanPhone(supplier.contact_phone)}`}
-                                  className="p-0.5 hover:text-emerald-500 transition-colors"
-                                  title="Llamar al contacto"
-                                >
-                                  <Phone className="h-2.5 w-2.5 text-emerald-500" />
-                                </a>
-                                <a
-                                  href={`https://wa.me/${cleanPhone(supplier.contact_phone)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-0.5 hover:text-emerald-500 transition-colors"
-                                  title="WhatsApp al contacto"
-                                >
-                                  <MessageCircle className="h-2.5 w-2.5 text-emerald-500" />
-                                </a>
-                              </div>
-                            )}
-                          </div>
+                        {supplier.contact && (
+                          <span className="text-[11px] font-medium text-foreground truncate max-w-[180px]">
+                            {supplier.contact}
+                          </span>
                         )}
 
-                        {!supplier.phone && !supplier.contact && !supplier.contact_phone && (
+                        {!supplier.phone && !supplier.contact && (
                           <span className="text-muted-foreground/40">—</span>
                         )}
                       </div>
                     </TableCell>
 
                     {/* Cuentas por Pagar (Deuda) */}
-                    <TableCell className="py-4 text-right">
+                    <TableCell className="py-3.5 text-right">
                       {hasDebt ? (
                         <div className="flex flex-col items-end">
-                          <span className="inline-flex items-center gap-1 text-sm font-black text-red-500 bg-red-500/10 px-2.5 py-1 rounded-xl font-mono">
-                            ${outstanding.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          <span className="inline-flex items-center gap-1 text-sm font-black text-rose-500 bg-rose-500/10 px-2.5 py-1 rounded-xl font-mono">
+                            RD$ {outstanding.toLocaleString('es-DO', { minimumFractionDigits: 0 })}
                           </span>
-                          <span className="text-[9px] text-red-500 font-bold uppercase tracking-wider mt-0.5">
+                          <span className="text-[9px] text-rose-500 font-bold uppercase tracking-wider mt-0.5">
                             Por Pagar
                           </span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-xl">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl">
                           <CheckCircle className="h-3.5 w-3.5" /> Al Día
                         </span>
                       )}
                     </TableCell>
 
                     {/* Acciones */}
-                    <TableCell className="py-4 pr-5" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="py-3.5 pr-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-red-500 hover:bg-red-500/10"
+                          className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-rose-500 hover:bg-rose-500/10"
                           onClick={() => handleOpenAddDebt(supplier)}
                           title="Registrar Cuenta por Pagar"
                         >
@@ -658,7 +897,7 @@ export const Suppliers: React.FC = () => {
                           onClick={() => handleOpenViewDetails(supplier)}
                           title="Ver Ficha Completa e Historial"
                         >
-                          <Eye className="h-3.5 w-3.5 text-primary" /> Ficha
+                          <Eye className="h-3.5 w-3.5 text-emerald-500" /> Ficha
                         </Button>
                         <Button
                           size="sm"
