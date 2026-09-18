@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { lookupRnc } from '@/lib/rncLookup';
 import { resolveActiveAiApiKey, scanInvoiceExpense, cleanAiKey, testGroqApiKey } from '@/utils/aiService';
+import { PurchaseReceiptsTab } from '@/components/accounting/PurchaseReceiptsTab';
 
 
 const CATEGORIES = [
@@ -1730,11 +1731,12 @@ function AccountingContent() {
 
             <Tabs id="accounting-tabs" defaultValue="expenses" className="space-y-4">
                 <div className="flex justify-center w-full">
-                    <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1">
-                        <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Gastos</TabsTrigger>
-                        <TabsTrigger value="fixed-expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Gastos Fijos</TabsTrigger>
-                        <TabsTrigger value="suppliers" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Proveedores</TabsTrigger>
-                        <TabsTrigger value="reports" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all">Reportes</TabsTrigger>
+                    <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1 overflow-x-auto max-w-full">
+                        <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Gastos</TabsTrigger>
+                        <TabsTrigger value="fixed-expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Gastos Fijos</TabsTrigger>
+                        <TabsTrigger value="suppliers" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Proveedores</TabsTrigger>
+                        <TabsTrigger value="purchase-receipts" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Comprobantes e-CF 41</TabsTrigger>
+                        <TabsTrigger value="reports" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Reportes</TabsTrigger>
                     </TabsList>
                 </div>
 
@@ -2575,6 +2577,10 @@ function AccountingContent() {
                             </TableBody>
                         </Table>
                     </div>
+                </TabsContent>
+
+                <TabsContent value="purchase-receipts" className="space-y-6 animate-in fade-in duration-300 outline-none">
+                    <PurchaseReceiptsTab currentDate={currentDate} />
                 </TabsContent>
             </Tabs>
 

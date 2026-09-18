@@ -76,6 +76,7 @@ export const InvoiceSequenceInput = ({
             case 'B02': displayTypeId = 'E32'; break;
             case 'B03': displayTypeId = 'E33'; break;
             case 'B04': displayTypeId = 'E34'; break;
+            case 'B11': displayTypeId = 'E41'; break;
             case 'B14': displayTypeId = 'E44'; break;
             case 'B15': displayTypeId = 'E45'; break;
             case 'B16': displayTypeId = 'E46'; break;

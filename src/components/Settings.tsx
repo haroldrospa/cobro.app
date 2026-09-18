@@ -2379,7 +2379,7 @@ const Settings = () => {
               ) : (
                 <div className="space-y-2.5">
                   {invoiceSequences
-                    ?.filter(seq => ['B01', 'B02', 'B03', 'B04', 'B14', 'B15', 'B16'].includes(seq.invoice_type_id))
+                    ?.filter(seq => ['B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16'].includes(seq.invoice_type_id))
                     .map((sequence) => {
                       const invoiceType = invoiceTypes?.find(type => type.id === sequence.invoice_type_id);
                       
@@ -2404,6 +2404,10 @@ const Settings = () => {
                             case 'B04':
                                displayId = 'E34';
                                displayName = 'Nota de Crédito Electrónica';
+                               break;
+                            case 'B11':
+                               displayId = 'E41';
+                               displayName = 'Comprobante de Compras Electrónico';
                                break;
                             case 'B14':
                                displayId = 'E44';

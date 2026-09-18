@@ -29,6 +29,7 @@ export const useInvoiceTypes = () => {
             { id: 'B01', code: 'B01', name: 'Crédito Fiscal' },
             { id: 'B02', code: 'B02', name: 'Consumidor Final' },
             { id: 'B04', code: 'B04', name: 'Nota de Débito' },
+            { id: 'B11', code: 'B11', name: 'Comprobante de Compras' },
             { id: 'B15', code: 'B15', name: 'Gubernamental' },
           ] as InvoiceType[];
         }
