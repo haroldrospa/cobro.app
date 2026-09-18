@@ -17,6 +17,7 @@ import {
   User,
   Database,
   LogOut,
+  Truck,
 } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
@@ -77,6 +78,7 @@ export const MobileBottomNav: React.FC = () => {
     if (isAccountant) {
       return [
         { name: 'Contabilidad', href: '/accounting', icon: FileText },
+        { name: 'Proveedores', href: '/suppliers', icon: Truck },
         { name: 'Reportes', href: '/reports', icon: BarChart },
         { name: 'Facturas', href: '/invoices', icon: FileText },
       ];
@@ -111,6 +113,7 @@ export const MobileBottomNav: React.FC = () => {
       { name: 'Facturas', href: '/invoices', icon: FileText },
       { name: 'Reportes', href: '/reports', icon: BarChart },
       { name: 'Clientes', href: '/customers', icon: Users },
+      { name: 'Proveedores', href: '/suppliers', icon: Truck },
       { name: 'Empleados', href: '/employees', icon: Users },
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
       { name: 'Mi Cuenta', href: '/subscription', icon: User },

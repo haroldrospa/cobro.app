@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat } from 'lucide-react';
+import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
@@ -120,10 +120,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       ];
     }
 
-    // Contador: Solo Contabilidad, Reportes y Facturas
+    // Contador: Solo Contabilidad, Proveedores, Reportes y Facturas
     if (profile?.role === 'accountant') {
       return [
         { name: 'Contabilidad', href: '/accounting', icon: FileText },
+        { name: 'Proveedores', href: '/suppliers', icon: Truck },
         { name: 'Reportes', href: '/reports', icon: BarChart },
         { name: 'Facturas', href: '/invoices', icon: FileText },
       ];
@@ -148,6 +149,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       { name: 'Dashboard', href: '/dashboard', icon: Home },
       { name: 'Productos', href: '/products', icon: Package },
       { name: 'Clientes', href: '/customers', icon: Users },
+      { name: 'Proveedores', href: '/suppliers', icon: Truck },
       { name: 'Facturas', href: '/invoices', icon: FileText },
       { name: 'Reportes', href: '/reports', icon: BarChart },
       { name: 'Contabilidad', href: '/accounting', icon: FileText },
@@ -196,9 +198,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       return;
     }
 
-    // Contador: solo contabilidad, reportes, facturas
+    // Contador: solo contabilidad, proveedores, reportes, facturas
     if (profile?.role === 'accountant') {
-      const allowedPaths = ['/accounting', '/reports', '/invoices', '/app'];
+      const allowedPaths = ['/accounting', '/suppliers', '/reports', '/invoices', '/app'];
       const isAllowed = allowedPaths.some(path =>
         location.pathname === path || (path !== '/' && location.pathname.startsWith(path))
       );
@@ -237,6 +239,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         break;
       case '/customers':
         queryClient.prefetchQuery({ queryKey: ['customers'] });
+        break;
+      case '/suppliers':
+        queryClient.prefetchQuery({ queryKey: ['suppliers'] });
         break;
       case '/invoices':
         queryClient.prefetchQuery({ queryKey: ['sales'] });

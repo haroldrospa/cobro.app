@@ -21,6 +21,7 @@ const Dashboard = lazy(() => import("./components/Dashboard"));
 const POS = lazy(() => import("./components/POS"));
 const Products = lazy(() => import("./components/Products"));
 const Customers = lazy(() => import("./components/Customers"));
+const Suppliers = lazy(() => import("./components/Suppliers"));
 const Invoices = lazy(() => import("./components/Invoices"));
 const Reports = lazy(() => import("./components/Reports"));
 const Settings = lazy(() => import("./components/Settings"));
@@ -243,6 +244,7 @@ const App = () => {
                           <Route path="/pos" element={<POS />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/customers" element={<Customers />} />
+                          <Route path="/suppliers" element={<Suppliers />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/reports" element={<Reports />} />
                           <Route path="/settings" element={<Settings />} />
