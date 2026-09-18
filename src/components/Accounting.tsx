@@ -1883,71 +1883,17 @@ function AccountingContent() {
                                     </div>
                                 </PopoverContent>
                             </Popover>
-                        </div>
-
-                        {/* Quick Filter Badges / Chips */}
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mr-1">Rápidos:</span>
-                            
-                            <button
-                                onClick={() => {
-                                    setExpenseCategoryFilter('all');
-                                    setExpenseTypeFilter('all');
-                                    setExpenseHasReceiptFilter('all');
-                                }}
-                                className={cn(
-                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
-                                    !hasActiveExpenseFilters && !expenseSearchQuery
-                                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                                        : "bg-card/60 hover:bg-muted/40 text-muted-foreground border-border/40"
-                                )}
-                            >
-                                Todos ({filteredExpenses.length})
-                            </button>
-
-                            <button
-                                onClick={() => setExpenseCategoryFilter(expenseCategoryFilter === 'Inventario' ? 'all' : 'Inventario')}
-                                className={cn(
-                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
-                                    expenseCategoryFilter === 'Inventario'
-                                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                        : "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20"
-                                )}
-                            >
-                                Inventario
-                            </button>
-
-                            <button
-                                onClick={() => setExpenseTypeFilter(expenseTypeFilter === 'operativo' ? 'all' : 'operativo')}
-                                className={cn(
-                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
-                                    expenseTypeFilter === 'operativo'
-                                        ? "bg-orange-600 text-white border-orange-600 shadow-sm"
-                                        : "bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border-orange-500/20"
-                                )}
-                            >
-                                Operativos
-                            </button>
-
-                            <button
-                                onClick={() => setExpenseHasReceiptFilter(expenseHasReceiptFilter === 'with_receipt' ? 'all' : 'with_receipt')}
-                                className={cn(
-                                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border",
-                                    expenseHasReceiptFilter === 'with_receipt'
-                                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20"
-                                )}
-                            >
-                                Con Factura
-                            </button>
-
                             {hasActiveExpenseFilters && (
-                                <button
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
                                     onClick={clearExpenseFilters}
-                                    className="px-2 py-1 rounded-lg text-[10px] font-bold text-destructive hover:bg-destructive/10 border border-destructive/20 transition-all ml-auto flex items-center gap-1"
+                                    className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-xl gap-1 shrink-0"
+                                    title="Limpiar filtros activos"
                                 >
-                                    <X className="h-3 w-3" /> Limpiar
-                                </button>
+                                    <X className="h-3.5 w-3.5" />
+                                    <span>Limpiar</span>
+                                </Button>
                             )}
                         </div>
                     </div>
