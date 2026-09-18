@@ -70,7 +70,8 @@ export function initGlobalKeyboardAvoid() {
         initialHeight = currentHeight;
       }
 
-      const isKeyboardOpen = isInputFocused && (initialHeight - currentHeight > 150);
+      const threshold = window.innerWidth > window.innerHeight ? 80 : 120;
+      const isKeyboardOpen = isInputFocused && (initialHeight - currentHeight > threshold);
 
       if (isKeyboardOpen) {
         if (!document.body.classList.contains('keyboard-open')) {
@@ -90,10 +91,11 @@ export function initGlobalKeyboardAvoid() {
         if (window.visualViewport) {
           initialHeight = window.visualViewport.height;
         }
-      }, 100);
+      }, 150);
     };
 
     window.visualViewport.addEventListener('resize', onResize);
+    window.visualViewport.addEventListener('scroll', onResize);
     window.addEventListener('orientationchange', onOrientationChange);
     window.addEventListener('resize', onResize);
 

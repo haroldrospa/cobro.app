@@ -684,16 +684,26 @@ body.keyboard-open .hide-on-keyboard {
   overscroll-behavior: contain;
 }
 
-/* Manejo seguro de dialogos en tablets y móviles cuando el teclado virtual está abierto */
+/* Manejo seguro de dialogos en tablets y móviles cuando el teclado virtual está abierto o en modo horizontal */
 body.keyboard-open [data-radix-dialog-content],
-body.keyboard-open [role="dialog"] {
+body.keyboard-open [role="dialog"],
+body.keyboard-open div[role="dialog"] {
   top: 0.5rem !important;
   left: 0 !important;
   right: 0 !important;
   margin-left: auto !important;
   margin-right: auto !important;
   transform: none !important;
-  max-height: calc(var(--visual-viewport-height, 100dvh) - 1rem) !important;
+  max-height: calc(var(--visual-viewport-height, 100dvh) - 0.75rem) !important;
+}
+
+@media (orientation: landscape) and (max-height: 700px) {
+  [data-radix-dialog-content],
+  [role="dialog"] {
+    top: 0.5rem !important;
+    transform: none !important;
+    max-height: calc(var(--visual-viewport-height, 100dvh) - 1rem) !important;
+  }
 }
 
 /*
