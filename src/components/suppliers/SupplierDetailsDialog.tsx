@@ -163,14 +163,14 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
             </div>
 
             {/* Quick Contact & Bank Bar */}
-            <div className="mt-4 pt-3.5 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              {/* Phone & Contact */}
+            <div className="mt-4 pt-3.5 border-t border-border/40 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+              {/* Phone Empresa */}
               <div className="flex items-center gap-2 bg-background/60 p-2.5 rounded-xl border border-border/40">
                 <Phone className="h-4 w-4 text-emerald-500 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Contacto</span>
-                  <span className="font-bold truncate block">
-                    {supplier.phone || supplier.contact || 'No especificado'}
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Tel. Empresa</span>
+                  <span className="font-bold truncate font-mono block text-xs">
+                    {supplier.phone || 'No especificado'}
                   </span>
                 </div>
                 {supplier.phone && (
@@ -178,7 +178,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                     <a
                       href={`tel:${getCleanPhone(supplier.phone)}`}
                       className="p-1.5 bg-muted/60 hover:bg-emerald-500/10 text-emerald-500 rounded-lg transition-colors"
-                      title="Llamar"
+                      title="Llamar a Empresa"
                     >
                       <Phone className="h-3.5 w-3.5" />
                     </a>
@@ -187,7 +187,40 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1.5 bg-muted/60 hover:bg-emerald-500/10 text-emerald-500 rounded-lg transition-colors"
-                      title="WhatsApp"
+                      title="WhatsApp Empresa"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Contact & Contact Phone */}
+              <div className="flex items-center gap-2 bg-background/60 p-2.5 rounded-xl border border-border/40">
+                <MessageCircle className="h-4 w-4 text-teal-500 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">
+                    Contacto: {supplier.contact || 'No registrado'}
+                  </span>
+                  <span className="font-bold truncate font-mono block text-xs">
+                    {supplier.contact_phone || (supplier.contact ? 'Sin teléfono directo' : 'No especificado')}
+                  </span>
+                </div>
+                {supplier.contact_phone && (
+                  <div className="flex gap-1">
+                    <a
+                      href={`tel:${getCleanPhone(supplier.contact_phone)}`}
+                      className="p-1.5 bg-muted/60 hover:bg-teal-500/10 text-teal-500 rounded-lg transition-colors"
+                      title="Llamar al Contacto"
+                    >
+                      <Phone className="h-3.5 w-3.5" />
+                    </a>
+                    <a
+                      href={`https://wa.me/${getCleanPhone(supplier.contact_phone)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-muted/60 hover:bg-teal-500/10 text-teal-500 rounded-lg transition-colors"
+                      title="WhatsApp al Contacto"
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
                     </a>
@@ -200,7 +233,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 <Landmark className="h-4 w-4 text-blue-500 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Cuenta Bancaria</span>
-                  <span className="font-mono font-bold truncate block">
+                  <span className="font-mono font-bold truncate block text-xs">
                     {supplier.bank_name ? `${supplier.bank_name} • ` : ''}
                     {supplier.bank_account_number || 'Sin cuenta'}
                   </span>

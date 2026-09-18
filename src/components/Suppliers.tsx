@@ -121,6 +121,7 @@ export const Suppliers: React.FC = () => {
           (s.rnc || '').toLowerCase().includes(term) ||
           (s.contact || '').toLowerCase().includes(term) ||
           (s.phone || '').toLowerCase().includes(term) ||
+          (s.contact_phone || '').toLowerCase().includes(term) ||
           (s.bank_name || '').toLowerCase().includes(term) ||
           (s.bank_account_number || '').toLowerCase().includes(term);
 
@@ -217,12 +218,13 @@ export const Suppliers: React.FC = () => {
       return;
     }
 
-    const headers = ['Nombre', 'RNC', 'Teléfono', 'Contacto', 'Método Pago', 'Banco', 'No. Cuenta', 'Tipo Cuenta', 'Deuda Pendiente'];
+    const headers = ['Nombre', 'RNC', 'Tel. Empresa', 'Contacto', 'Tel. Contacto', 'Método Pago', 'Banco', 'No. Cuenta', 'Tipo Cuenta', 'Deuda Pendiente'];
     const rows = filteredSuppliers.map(s => [
       `"${s.name.replace(/"/g, '""')}"`,
       `"${(s.rnc || '').replace(/"/g, '""')}"`,
       `"${(s.phone || '').replace(/"/g, '""')}"`,
       `"${(s.contact || '').replace(/"/g, '""')}"`,
+      `"${(s.contact_phone || '').replace(/"/g, '""')}"`,
       s.payment_method === 'transfer' ? 'Transferencia' : 'Efectivo',
       `"${(s.bank_name || '').replace(/"/g, '""')}"`,
       `"${(s.bank_account_number || '').replace(/"/g, '""')}"`,
@@ -551,17 +553,18 @@ export const Suppliers: React.FC = () => {
 
                     {/* Contacto y Teléfono */}
                     <TableCell className="py-4 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex flex-col gap-1">
-                        {supplier.phone ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-foreground font-mono flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-emerald-500" />
+                      <div className="flex flex-col gap-1.5">
+                        {/* Teléfono Empresa */}
+                        {supplier.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-foreground font-mono flex items-center gap-1 text-[11px]">
+                              <Phone className="h-3 w-3 text-muted-foreground" />
                               {supplier.phone}
                             </span>
                             <a
                               href={`tel:${cleanPhone(supplier.phone)}`}
                               className="p-1 hover:text-emerald-500 transition-colors"
-                              title="Llamar"
+                              title="Llamar a empresa"
                             >
                               <Phone className="h-3 w-3" />
                             </a>
@@ -570,20 +573,49 @@ export const Suppliers: React.FC = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-1 hover:text-emerald-500 transition-colors"
-                              title="WhatsApp"
+                              title="WhatsApp empresa"
                             >
                               <MessageCircle className="h-3 w-3" />
                             </a>
                           </div>
-                        ) : null}
+                        )}
 
-                        {supplier.contact ? (
-                          <span className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                            {supplier.contact}
-                          </span>
-                        ) : null}
+                        {/* Contacto y Teléfono de Contacto */}
+                        {(supplier.contact || supplier.contact_phone) && (
+                          <div className="flex flex-col gap-0.5">
+                            {supplier.contact && (
+                              <span className="text-[11px] font-medium text-foreground truncate max-w-[190px]">
+                                {supplier.contact}
+                              </span>
+                            )}
+                            {supplier.contact_phone && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                                  <Phone className="h-2.5 w-2.5" />
+                                  {supplier.contact_phone}
+                                </span>
+                                <a
+                                  href={`tel:${cleanPhone(supplier.contact_phone)}`}
+                                  className="p-0.5 hover:text-emerald-500 transition-colors"
+                                  title="Llamar al contacto"
+                                >
+                                  <Phone className="h-2.5 w-2.5 text-emerald-500" />
+                                </a>
+                                <a
+                                  href={`https://wa.me/${cleanPhone(supplier.contact_phone)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-0.5 hover:text-emerald-500 transition-colors"
+                                  title="WhatsApp al contacto"
+                                >
+                                  <MessageCircle className="h-2.5 w-2.5 text-emerald-500" />
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
-                        {!supplier.phone && !supplier.contact && (
+                        {!supplier.phone && !supplier.contact && !supplier.contact_phone && (
                           <span className="text-muted-foreground/40">—</span>
                         )}
                       </div>

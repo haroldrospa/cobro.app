@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Search, Loader2, Landmark, DollarSign } from 'lucide-react';
+import { Building2, Search, Loader2, Landmark, DollarSign, Phone, User } from 'lucide-react';
 import { lookupRnc } from '@/lib/rncLookup';
 import { useToast } from '@/hooks/use-toast';
 import { Supplier } from '@/hooks/useSuppliers';
@@ -31,6 +31,7 @@ export const SupplierDialog: React.FC<SupplierDialogProps> = ({
     rnc: '',
     phone: '',
     contact: '',
+    contact_phone: '',
     payment_method: 'transfer' as 'transfer' | 'cash',
     bank_name: '',
     bank_account_number: '',
@@ -44,6 +45,7 @@ export const SupplierDialog: React.FC<SupplierDialogProps> = ({
         rnc: supplierToEdit.rnc || '',
         phone: supplierToEdit.phone || '',
         contact: supplierToEdit.contact || '',
+        contact_phone: supplierToEdit.contact_phone || '',
         payment_method: (supplierToEdit.payment_method as any) || 'transfer',
         bank_name: supplierToEdit.bank_name || '',
         bank_account_number: supplierToEdit.bank_account_number || '',
@@ -55,6 +57,7 @@ export const SupplierDialog: React.FC<SupplierDialogProps> = ({
         rnc: '',
         phone: '',
         contact: '',
+        contact_phone: '',
         payment_method: 'transfer',
         bank_name: '',
         bank_account_number: '',
@@ -112,6 +115,7 @@ export const SupplierDialog: React.FC<SupplierDialogProps> = ({
         rnc: formData.rnc.trim() || null,
         phone: formData.phone.trim() || null,
         contact: formData.contact.trim() || null,
+        contact_phone: formData.contact_phone.trim() || null,
         payment_method: formData.payment_method,
         bank_name: formData.bank_name.trim() || null,
         bank_account_number: formData.bank_account_number.trim() || null,
@@ -194,11 +198,11 @@ export const SupplierDialog: React.FC<SupplierDialogProps> = ({
             />
           </div>
 
-          {/* Teléfono y Contacto */}
+          {/* Teléfono Empresa y Nombre Contacto */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Teléfono / Celular
+              <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Phone className="h-3 w-3" /> Teléfono Empresa / Oficina
               </Label>
               <Input
                 id="phone"
@@ -209,17 +213,31 @@ export const SupplierDialog: React.FC<SupplierDialogProps> = ({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="contact" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Persona Contacto / Correo
+              <Label htmlFor="contact" className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <User className="h-3 w-3" /> Persona de Contacto
               </Label>
               <Input
                 id="contact"
-                placeholder="Ej. Lic. Pedro Méndez"
+                placeholder="Ej. Rafael Rosa"
                 value={formData.contact}
                 onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
                 className="h-10 rounded-xl text-sm"
               />
             </div>
+          </div>
+
+          {/* Teléfono del Contacto */}
+          <div className="space-y-1.5">
+            <Label htmlFor="contact_phone" className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <Phone className="h-3 w-3 text-emerald-500" /> Teléfono / Celular del Contacto
+            </Label>
+            <Input
+              id="contact_phone"
+              placeholder="Ej. 829-555-4321 (Celular o WhatsApp del contacto)"
+              value={formData.contact_phone}
+              onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+              className="h-10 rounded-xl text-sm font-mono"
+            />
           </div>
 
           {/* Método de Pago Preferido */}
