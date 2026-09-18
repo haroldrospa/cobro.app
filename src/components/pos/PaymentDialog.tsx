@@ -460,11 +460,24 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       {paymentMethod === 'split' ? 'Efectivo Recibido' : 'Monto Recibido'}
                     </label>
-                    {webChangeInfo && (
-                      <div className="bg-amber-500/10 text-amber-600 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-widest">
-                        {webChangeInfo.type === 'exact' ? 'Exacto' : `+RD$ ${webChangeInfo.amount}`}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {localAmount && (
+                        <button
+                          type="button"
+                          onClick={() => handleAmountChange('')}
+                          className="text-[9px] sm:text-[10px] font-bold text-muted-foreground hover:text-destructive flex items-center gap-0.5 transition-colors"
+                          title="Borrar monto"
+                        >
+                          <X className="h-3 w-3" />
+                          <span>Limpiar</span>
+                        </button>
+                      )}
+                      {webChangeInfo && (
+                        <div className="bg-amber-500/10 text-amber-600 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-widest">
+                          {webChangeInfo.type === 'exact' ? 'Exacto' : `+RD$ ${webChangeInfo.amount}`}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="relative group shrink-0">
@@ -483,23 +496,26 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                           onProcessPayment(includeDebt, splitMethod);
                         }
                       }}
-                      className="h-10 min-h-[40px] pl-11 pr-8 text-xl font-black bg-background border border-border/80 focus-visible:border-emerald-500 focus-visible:ring-1 focus-visible:ring-emerald-500/20 rounded-xl text-foreground transition-all shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
+                      className="h-10 min-h-[40px] pl-11 pr-3 text-xl font-black bg-background border border-border/80 focus-visible:border-emerald-500 focus-visible:ring-1 focus-visible:ring-emerald-500/20 rounded-xl text-foreground transition-all shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
                     />
-                    {localAmount && (
-                      <button
-                        type="button"
-                        onClick={() => handleAmountChange('')}
-                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                        title="Borrar monto"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
                   </div>
 
                   {/* Botones de sugerencias / billetes rápidos */}
                   {paymentMethod === 'cash' && (
                     <div className="flex items-center gap-1 shrink-0 overflow-x-auto py-0.5 scrollbar-none">
+                      {localAmount && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 rounded-lg border border-border/70 text-[11px] font-bold text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-all shrink-0 gap-1"
+                          onClick={() => handleAmountChange('')}
+                          title="Borrar monto"
+                        >
+                          <X className="h-3 w-3" />
+                          Borrar
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         variant="outline"
