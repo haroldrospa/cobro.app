@@ -1736,28 +1736,28 @@ function AccountingContent() {
                             value="expenses" 
                             className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
                         >
-                            <Receipt className="h-4 w-4 shrink-0 text-emerald-500" />
+                            <Receipt className="h-4 w-4 shrink-0" />
                             <span>Gastos</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="fixed-expenses" 
                             className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
                         >
-                            <Calendar className="h-4 w-4 shrink-0 text-blue-500" />
+                            <Calendar className="h-4 w-4 shrink-0" />
                             <span>Gastos Fijos</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="purchase-receipts" 
                             className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
                         >
-                            <FileText className="h-4 w-4 shrink-0 text-amber-500" />
+                            <FileText className="h-4 w-4 shrink-0" />
                             <span>Comprobantes e-CF 41</span>
                         </TabsTrigger>
                         <TabsTrigger 
                             value="reports" 
                             className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
                         >
-                            <BarChart3 className="h-4 w-4 shrink-0 text-purple-500" />
+                            <BarChart3 className="h-4 w-4 shrink-0" />
                             <span>Reportes</span>
                         </TabsTrigger>
                     </TabsList>
