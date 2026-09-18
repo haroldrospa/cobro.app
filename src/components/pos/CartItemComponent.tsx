@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Trash2, MessageSquare, Tag, Percent, PlusCircle, X } from 'lucide-react';
+import { Plus, Minus, Trash2, MessageSquare, Tag, Percent, PlusCircle, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CartItem, CartItemExtra } from '@/types/pos';
