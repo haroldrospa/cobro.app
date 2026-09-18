@@ -2061,39 +2061,176 @@ function AccountingContent() {
 
 
 
-                <TabsContent value="reports" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Estado de Resultados</CardTitle>
-                            <CardDescription>Resumen de Ganancias y Pérdidas del Periodo</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="flex justify-between py-2 border-b items-center">
-                                    <span className="font-medium">Ingresos por Ventas (Cobrados)</span>
-                                    {loadingSales ? <Skeleton className="h-5 w-24" /> : <span className="text-green-600 font-bold">${Number(collectedSales || 0).toLocaleString()}</span>}
-                                </div>
-                                <div className="flex justify-between py-2 border-b items-center">
-                                    <span className="font-medium flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
-                                        Reinversión (Inventario/Mercancía)
-                                    </span>
-                                    {loadingExpenses ? <Skeleton className="h-5 w-24" /> : <span className="text-blue-500 font-bold">-${Number(reinvestmentExpenses || 0).toLocaleString()}</span>}
-                                </div>
-                                <div className="flex justify-between py-2 border-b items-center">
-                                    <span className="font-medium flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />
-                                        Gastos Operativos (Alquiler, Nómina, etc.)
-                                    </span>
-                                    {loadingExpenses ? <Skeleton className="h-5 w-24" /> : <span className="text-orange-500 font-bold">-${Number(operationalExpenses || 0).toLocaleString()}</span>}
-                                </div>
-                                <div className="flex justify-between py-4 border-t-2 border-black items-center">
-                                    <span className="text-lg font-bold">Utilidad Neta (Flujo Caja)</span>
-                                    {loadingSales || loadingExpenses ? <Skeleton className="h-6 w-28" /> : (
-                                        <span className={`text-lg font-bold ${netIncome >= 0 ? 'text-primary' : 'text-red-600'}`}>
-                                            ${Number(netIncome || 0).toLocaleString()}
+                <TabsContent value="reports" className="space-y-5 animate-in fade-in duration-300">
+                    <Card className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden">
+                        <CardHeader className="p-5 sm:p-6 border-b border-border/40 bg-muted/20">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <CardTitle className="text-lg sm:text-xl font-black tracking-tight">Estado de Resultados</CardTitle>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase border border-border/50">
+                                            {currentDate ? format(currentDate, 'MMMM yyyy', { locale: es }) : 'Periodo actual'}
                                         </span>
-                                    )}
+                                    </div>
+                                    <CardDescription className="text-xs text-muted-foreground mt-1">
+                                        Resumen ejecutivo de ingresos, egresos y utilidad neta en flujo de caja.
+                                    </CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <div className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
+                                        netIncome >= 0 
+                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                                            : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                    }`}>
+                                        <span>Margen Neto:</span>
+                                        <span className="font-mono font-black">
+                                            {collectedSales > 0 ? ((netIncome / collectedSales) * 100).toFixed(1) : '0.0'}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardHeader>
+
+                        <CardContent className="p-5 sm:p-6 space-y-6">
+                            {/* Mini KPIs Strip */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="p-3.5 rounded-xl bg-muted/20 border border-border/40 flex flex-col justify-between">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Cobrado</span>
+                                    <div className="mt-1.5">
+                                        {loadingSales ? (
+                                            <Skeleton className="h-6 w-24 rounded-md" />
+                                        ) : (
+                                            <p className="text-base sm:text-lg font-black text-emerald-500 font-mono">
+                                                RD$ {Number(collectedSales || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="p-3.5 rounded-xl bg-muted/20 border border-border/40 flex flex-col justify-between">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Egresos</span>
+                                    <div className="mt-1.5">
+                                        {loadingExpenses ? (
+                                            <Skeleton className="h-6 w-24 rounded-md" />
+                                        ) : (
+                                            <p className="text-base sm:text-lg font-black text-foreground font-mono">
+                                                RD$ {Number(totalExpenses || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className={`p-3.5 rounded-xl border flex flex-col justify-between ${
+                                    netIncome >= 0 
+                                        ? 'bg-emerald-500/5 border-emerald-500/20' 
+                                        : 'bg-rose-500/5 border-rose-500/20'
+                                }`}>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Utilidad Neta</span>
+                                    <div className="mt-1.5">
+                                        {loadingSales || loadingExpenses ? (
+                                            <Skeleton className="h-6 w-24 rounded-md" />
+                                        ) : (
+                                            <p className={`text-base sm:text-lg font-black font-mono ${netIncome >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                RD$ {Number(netIncome || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Desglose Detallado */}
+                            <div className="space-y-4">
+                                {/* Sección: Ingresos */}
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                                        1. Ingresos Operativos
+                                    </p>
+                                    <div className="rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden bg-card/40">
+                                        <div className="flex items-center justify-between p-3 text-xs sm:text-sm">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-foreground">Ventas Cobradas</span>
+                                                <span className="text-[10px] text-muted-foreground">Ingresos reales ingresados a caja y banco</span>
+                                            </div>
+                                            <span className="font-mono font-bold text-emerald-500">
+                                                {loadingSales ? <Skeleton className="h-5 w-20" /> : `+ RD$ ${Number(collectedSales || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                            </span>
+                                        </div>
+                                        {Number(pendingCreditSales || 0) > 0 && (
+                                            <div className="flex items-center justify-between p-3 text-xs sm:text-sm bg-muted/10">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-muted-foreground">Ventas a Crédito Pendientes</span>
+                                                    <span className="text-[10px] text-muted-foreground">Pendientes de cobro (no suman a caja actual)</span>
+                                                </div>
+                                                <span className="font-mono font-semibold text-muted-foreground">
+                                                    RD$ {Number(pendingCreditSales || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Sección: Costos y Gastos */}
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                                        2. Costos y Gastos Operativos
+                                    </p>
+                                    <div className="rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden bg-card/40">
+                                        <div className="flex items-center justify-between p-3 text-xs sm:text-sm">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-foreground">Reinversión (Inventario / Mercancía)</span>
+                                                <span className="text-[10px] text-muted-foreground">Compra de stock y productos para la venta</span>
+                                            </div>
+                                            <span className="font-mono font-bold text-foreground">
+                                                {loadingExpenses ? <Skeleton className="h-5 w-20" /> : `- RD$ ${Number(reinvestmentExpenses || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 text-xs sm:text-sm">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-foreground">Gastos Operativos</span>
+                                                <span className="text-[10px] text-muted-foreground">Alquiler, nómina, servicios públicos, mantenimiento, etc.</span>
+                                            </div>
+                                            <span className="font-mono font-bold text-foreground">
+                                                {loadingExpenses ? <Skeleton className="h-5 w-20" /> : `- RD$ ${Number(operationalExpenses || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 text-xs sm:text-sm bg-muted/20 font-bold">
+                                            <span className="text-muted-foreground">Subtotal Egresos del Periodo</span>
+                                            <span className="font-mono text-foreground">
+                                                {loadingExpenses ? <Skeleton className="h-5 w-20" /> : `- RD$ ${Number(totalExpenses || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Resultado Final / Utilidad Neta */}
+                                <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                                    netIncome >= 0
+                                        ? 'bg-emerald-500/10 border-emerald-500/30'
+                                        : 'bg-rose-500/10 border-rose-500/30'
+                                }`}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-wider text-foreground">
+                                                Utilidad Neta (Flujo de Caja Real)
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                {netIncome >= 0 
+                                                    ? 'Rendimiento positivo disponible en el negocio tras todos los desembolsos' 
+                                                    : 'Déficit del periodo: los egresos superaron las ventas cobradas'}
+                                            </p>
+                                        </div>
+                                        <div className="text-left sm:text-right">
+                                            {loadingSales || loadingExpenses ? (
+                                                <Skeleton className="h-8 w-32 rounded-lg" />
+                                            ) : (
+                                                <p className={`text-xl sm:text-2xl font-black font-mono tracking-tight ${
+                                                    netIncome >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                                                }`}>
+                                                    RD$ {Number(netIncome || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
