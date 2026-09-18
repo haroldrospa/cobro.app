@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw, Pencil, Wallet, ArrowUpRight, ArrowDownRight, Layers, CreditCard, Phone, Landmark, Copy } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, TrendingUp, Building2, Calendar, FileText, Search, Filter, Trash2, Camera, Loader2, Check, CheckCheck, ChevronsUpDown, ChevronDown, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Receipt, Sparkles, PenTool, Eye, EyeOff, Settings2, Upload, X, Download, ZoomIn, ZoomOut, RotateCw, RefreshCw, Pencil, Wallet, ArrowUpRight, ArrowDownRight, Layers, CreditCard, Phone, Landmark, Copy, BarChart3 } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1730,12 +1730,36 @@ function AccountingContent() {
             )}
 
             <Tabs id="accounting-tabs" defaultValue="expenses" className="space-y-4">
-                <div className="flex justify-center w-full">
-                    <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1 overflow-x-auto max-w-full">
-                        <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Gastos</TabsTrigger>
-                        <TabsTrigger value="fixed-expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Gastos Fijos</TabsTrigger>
-                        <TabsTrigger value="purchase-receipts" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Comprobantes e-CF 41</TabsTrigger>
-                        <TabsTrigger value="reports" className="rounded-lg px-3.5 h-7 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all whitespace-nowrap">Reportes</TabsTrigger>
+                <div className="flex justify-center w-full px-2">
+                    <TabsList className="bg-muted/60 dark:bg-card/70 backdrop-blur-md p-1.5 rounded-2xl border border-border/60 shadow-sm h-auto w-fit max-w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar overflow-y-hidden">
+                        <TabsTrigger 
+                            value="expenses" 
+                            className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
+                        >
+                            <Receipt className="h-4 w-4 shrink-0 text-emerald-500" />
+                            <span>Gastos</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="fixed-expenses" 
+                            className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
+                        >
+                            <Calendar className="h-4 w-4 shrink-0 text-blue-500" />
+                            <span>Gastos Fijos</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="purchase-receipts" 
+                            className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
+                        >
+                            <FileText className="h-4 w-4 shrink-0 text-amber-500" />
+                            <span>Comprobantes e-CF 41</span>
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="reports" 
+                            className="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-background/40 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 data-[state=active]:font-bold select-none"
+                        >
+                            <BarChart3 className="h-4 w-4 shrink-0 text-purple-500" />
+                            <span>Reportes</span>
+                        </TabsTrigger>
                     </TabsList>
                 </div>
 
