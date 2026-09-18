@@ -254,41 +254,41 @@ export const Suppliers: React.FC = () => {
   const isLoading = loadingSuppliers || loadingDebts;
 
   return (
-    <div className="space-y-5 animate-fade-in pb-24 max-w-7xl mx-auto px-3 sm:px-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shadow-xs">
-            <Truck className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-              Proveedores
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Cuentas por pagar, compras y datos bancarios
+    <div className="space-y-6 animate-fade-in pb-24 max-w-7xl mx-auto px-3 sm:px-5">
+      {/* Centered Premium Header (Estilo Inventario) */}
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-6 sm:gap-8 py-4 sm:py-6">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.15em] leading-normal py-1">
+            Proveedores
+          </h1>
+          <div className="flex items-center justify-center gap-4 text-primary/80">
+            <div className="h-px w-10 bg-primary/30" />
+            <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+              Gestión de Catálogo y Cuentas por Pagar
             </p>
+            <div className="h-px w-10 bg-primary/30" />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            className="rounded-xl h-10 px-3 text-xs font-semibold gap-1.5 border-border/60 hover:bg-muted"
-            title="Exportar proveedores a CSV"
+            size="lg"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-8 sm:px-12 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
+            onClick={handleOpenCreateSupplier}
           >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Exportar</span>
+            <Plus className="h-5 w-5" />
+            Nuevo Proveedor
           </Button>
 
           <Button
-            onClick={handleOpenCreateSupplier}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-10 px-4 font-bold text-xs shadow-md shadow-emerald-500/20 gap-2 active:scale-95 transition-all flex-1 sm:flex-initial"
+            variant="outline"
+            size="lg"
+            onClick={handleExportCSV}
+            className="rounded-2xl h-14 px-6 text-xs font-black uppercase tracking-widest gap-2 border-border/60 hover:bg-muted"
+            title="Exportar proveedores a CSV"
           >
-            <Plus className="h-4 w-4" />
-            <span>Nuevo Proveedor</span>
+            <Download className="h-4 w-4" />
+            Exportar
           </Button>
         </div>
       </div>
