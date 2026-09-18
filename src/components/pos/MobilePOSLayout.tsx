@@ -57,12 +57,12 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
       {/* ── FLOATING PAYMENT BAR — CSS animated, no Framer Motion ── */}
       <div
         className={cn(
-          "absolute bottom-6 left-4 right-4 z-40",
-          "mobile-landscape:bottom-2 mobile-landscape:left-3 mobile-landscape:right-3",
+          "absolute bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-40",
+          "mobile-landscape:bottom-[calc(0.5rem+env(safe-area-inset-bottom))] mobile-landscape:left-3 mobile-landscape:right-3",
           "transition-all duration-300 ease-out will-change-transform",
           hasItems && !isPaymentOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
-            : "translate-y-24 opacity-0 pointer-events-none"
+            : "translate-y-36 opacity-0 pointer-events-none"
         )}
       >
         <div className="w-full flex items-center justify-between bg-zinc-900/95 dark:bg-zinc-100/10 backdrop-blur-xl border border-white/10 rounded-2xl mobile-landscape:rounded-xl p-4 mobile-landscape:py-2 mobile-landscape:px-3 shadow-2xl shadow-black/40">
@@ -107,7 +107,7 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
         aria-hidden={!isPaymentOpen}
       >
         <div className="h-full flex flex-col">
-          <header className="relative flex items-center p-3 mobile-landscape:p-2 border-b border-border/10 flex-shrink-0">
+          <header className="relative flex items-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))] mobile-landscape:p-2 border-b border-border/10 flex-shrink-0">
             <Button
               variant="ghost"
               onClick={() => setIsPaymentOpen(false)}

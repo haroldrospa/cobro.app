@@ -2077,7 +2077,7 @@ const POSContent: React.FC = () => {
 
   return (
     <SimpleErrorBoundary>
-      <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+      <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background pt-[max(0.25rem,env(safe-area-inset-top))] pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))]">
         <div className={cn(
           "flex-1 flex flex-row min-h-0 overflow-hidden p-1.5 sm:p-2.5 gap-0",
           isDraggingSplitter && "select-none cursor-col-resize"

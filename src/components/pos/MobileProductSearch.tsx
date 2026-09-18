@@ -367,9 +367,9 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   };
 
   return (
-    <div className="h-full flex flex-col bg-background relative">
+    <div className="h-full flex flex-col bg-background relative overflow-hidden">
       {/* ── PREMIUM EBONY & EMERALD SEARCH BAR ── */}
-      <div className="px-3 py-2 mobile-landscape:py-1.5 space-y-2 mobile-landscape:space-y-0 mobile-landscape:flex mobile-landscape:items-center mobile-landscape:gap-2 bg-card border-b border-emerald-500/10 sticky top-0 z-40">
+      <div className="px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 mobile-landscape:pt-1.5 mobile-landscape:pb-1.5 space-y-2 mobile-landscape:space-y-0 mobile-landscape:flex mobile-landscape:items-center mobile-landscape:gap-2 bg-card border-b border-emerald-500/10 sticky top-0 z-40 shrink-0">
         {/* Top Header Section: Menu, Profile, Actions */}
         <div className="flex items-center justify-between mobile-landscape:contents">
           <div className="flex items-center gap-2 shrink-0">
@@ -459,7 +459,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
 
       {/* ── PRODUCTS FEED ── */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth overscroll-contain">
-        <div className={cn("px-2 pt-4 mobile-landscape:pt-2", cart && cart.length > 0 ? "pb-28 mobile-landscape:pb-16" : "pb-6 mobile-landscape:pb-12")}>
+        <div className={cn("px-2 pt-3 mobile-landscape:pt-2", cart && cart.length > 0 ? "pb-[calc(10rem+env(safe-area-inset-bottom))] mobile-landscape:pb-[calc(5rem+env(safe-area-inset-bottom))]" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] mobile-landscape:pb-[calc(3rem+env(safe-area-inset-bottom))]")}>
           {filteredProducts.length === 0 ? (
             cart && cart.length > 0 ? (
               <div className="flex flex-col gap-3 py-6 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full min-w-0 max-w-full overflow-x-hidden">

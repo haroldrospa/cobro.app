@@ -19,6 +19,7 @@ import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useUserStore } from '@/hooks/useUserStore';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { SubscriptionWarningBanner } from '@/components/SubscriptionWarningBanner';
+import { cn } from '@/lib/utils';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -279,14 +280,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   if (isFullScreenApp) {
+    const isPOS = location.pathname === '/pos';
     return (
-      <div className="h-screen h-[100dvh] w-full overflow-hidden flex flex-col bg-background">
+      <div className="h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col bg-background">
         {!isOnline && (
           <div className="bg-destructive text-destructive-foreground p-1 text-center text-xs font-semibold safe-area-top shrink-0 z-50">
             Sin conexión - Trabajando offline
           </div>
         )}
-        <div className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto">
+        <div className={cn("flex-1 min-h-0 w-full flex flex-col", isPOS ? "overflow-hidden" : "overflow-y-auto")}>
           {children}
         </div>
       </div>
@@ -322,7 +324,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* Header pegado arriba con menú principal y banner de vencimiento adosado debajo */}
-      <header className="sticky top-0 w-full z-40 shadow-xs bg-card/95 backdrop-blur-md border-b border-border flex flex-col">
+      <header className="sticky top-0 w-full z-40 shadow-xs bg-card/95 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 h-13 sm:h-16">
           {/* Left: Page Title / Navigation Menu (Mobile & Desktop) */}
           <div className="flex items-center gap-2.5 min-w-0">
@@ -451,7 +453,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Contenido principal - flujo natural sin tapar nada */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto pb-20 md:pb-6 lg:pb-8">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6 lg:pb-8">
         {children}
       </main>
 
