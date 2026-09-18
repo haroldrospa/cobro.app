@@ -206,120 +206,148 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           <div className="p-3.5 space-y-3 flex-1 min-h-0 flex flex-col overflow-y-auto">
             {/* Cliente */}
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 block ml-0.5">
-                Cliente
-              </label>
-              <div className="flex gap-2">
-                <Popover open={openCustomerPopover} onOpenChange={setOpenCustomerPopover}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full bg-background border-border rounded-lg text-xs font-semibold justify-between shadow-sm px-3 transition-all h-9",
-                        (paymentMethod === 'credit' && !selectedCustomer) || (requiresCustomer && (!selectedCustomer || !selectedCustomerData?.rnc))
-                          ? "border-destructive/50 bg-destructive/5 text-destructive"
-                          : "hover:bg-accent text-foreground"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 overflow-hidden text-left min-w-0">
-                        <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate text-xs font-medium">
-                          {selectedCustomer ? selectedCustomerLabel : "Consumidor Final"}
-                        </span>
-                        {selectedCustomer && selectedCustomerData?.rnc && (
-                          <span className="text-[10px] font-mono text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                            RNC: {selectedCustomerData.rnc}
-                          </span>
-                        )}
-                      </div>
-                      <ChevronsUpDown className="h-3.5 w-3.5 opacity-40 shrink-0 ml-1" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    side="bottom" 
-                    sideOffset={6} 
-                    collisionPadding={12} 
-                    className="w-[calc(100vw-2.5rem)] sm:w-[320px] max-w-[340px] p-0 bg-popover border border-border rounded-xl shadow-xl z-[150] overflow-hidden" 
-                    align="start"
+              <div className="flex items-center justify-between mb-1 ml-0.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Cliente
+                </label>
+                {selectedCustomer && (
+                  <button
+                    type="button"
+                    onClick={() => onCustomerChange?.("")}
+                    className="text-[10px] font-semibold text-primary hover:underline"
                   >
-                    <Command className="bg-transparent border-none">
-                      <CommandInput 
-                        placeholder="Buscar por nombre, RNC o teléfono..." 
-                        value={customerSearch}
-                        onValueChange={setCustomerSearch}
-                        className="h-9 text-base sm:text-xs text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
-                      />
-                      <CommandList className="max-h-[220px] overflow-y-auto p-1 scrollbar-thin">
-                        <CommandEmpty className="p-4 text-xs text-muted-foreground text-center">
-                          No se encontraron clientes
-                        </CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem
-                            value="general-consumidor-final"
-                            onSelect={() => { onCustomerChange?.(""); setOpenCustomerPopover(false); setCustomerSearch(''); }}
-                            className={cn(
-                              "p-2 cursor-pointer rounded-lg mx-0.5 my-0.5 text-xs transition-all flex items-center justify-between",
-                              !selectedCustomer ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2">
-                              <User className="h-3.5 w-3.5 opacity-70" />
-                              <span className="truncate">Consumidor Final</span>
-                            </div>
-                            {!selectedCustomer && <Check className="h-4 w-4 text-primary shrink-0" />}
-                          </CommandItem>
+                    Restablecer
+                  </button>
+                )}
+              </div>
 
-                          {filteredCustomers.map((customer) => {
-                            const isSelected = selectedCustomer === customer.id;
-                            return (
-                              <CommandItem
-                                key={customer.id}
-                                value={`${customer.name} ${customer.rnc || ''} ${customer.phone || ''} ${customer.id}`}
-                                onSelect={() => { onCustomerChange?.(customer.id); setOpenCustomerPopover(false); setCustomerSearch(''); }}
-                                className={cn(
-                                  "p-2 cursor-pointer rounded-lg mx-0.5 my-0.5 text-xs transition-all flex items-center justify-between",
-                                  isSelected ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent text-foreground"
-                                )}
-                              >
-                                <div className="flex flex-col min-w-0 flex-1 pr-2 text-left">
-                                  <span className="truncate text-xs font-semibold">{customer.name}</span>
-                                  {customer.rnc && (
-                                    <span className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                                      RNC: {customer.rnc}
-                                    </span>
+              <div className="flex items-center gap-1.5 w-full">
+                <div className="flex-1 min-w-0">
+                  <Popover open={openCustomerPopover} onOpenChange={setOpenCustomerPopover}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full bg-background border-border rounded-lg text-xs font-semibold justify-between shadow-sm px-2.5 transition-all h-8 sm:h-8.5",
+                          (paymentMethod === 'credit' && !selectedCustomer) || (requiresCustomer && (!selectedCustomer || !selectedCustomerData?.rnc))
+                            ? "border-destructive/50 bg-destructive/5 text-destructive"
+                            : "hover:bg-accent text-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 overflow-hidden text-left min-w-0 flex-1">
+                          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate text-xs font-medium">
+                            {selectedCustomer ? selectedCustomerLabel : "Consumidor Final"}
+                          </span>
+                          {selectedCustomer && selectedCustomerData?.rnc && (
+                            <span className="text-[9px] font-mono text-primary font-bold bg-primary/10 px-1 py-0.2 rounded shrink-0">
+                              RNC: {selectedCustomerData.rnc}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronsUpDown className="h-3 w-3 opacity-40 shrink-0 ml-1" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      side="bottom" 
+                      sideOffset={6} 
+                      collisionPadding={12} 
+                      className="w-[calc(100vw-2.5rem)] sm:w-[320px] max-w-[340px] p-0 bg-popover border border-border rounded-xl shadow-xl z-[150] overflow-hidden" 
+                      align="start"
+                    >
+                      <Command className="bg-transparent border-none">
+                        <CommandInput 
+                          placeholder="Buscar por nombre, RNC o teléfono..." 
+                          value={customerSearch}
+                          onValueChange={setCustomerSearch}
+                          className="h-9 text-base sm:text-xs text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
+                        />
+                        <CommandList className="max-h-[220px] overflow-y-auto p-1 scrollbar-thin">
+                          <CommandEmpty className="p-4 text-xs text-muted-foreground text-center">
+                            No se encontraron clientes
+                          </CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="general-consumidor-final"
+                              onSelect={() => { onCustomerChange?.(""); setOpenCustomerPopover(false); setCustomerSearch(''); }}
+                              className={cn(
+                                "p-2 cursor-pointer rounded-lg mx-0.5 my-0.5 text-xs transition-all flex items-center justify-between",
+                                !selectedCustomer ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent text-foreground"
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <User className="h-3.5 w-3.5 opacity-70" />
+                                <span className="truncate">Consumidor Final</span>
+                              </div>
+                              {!selectedCustomer && <Check className="h-4 w-4 text-primary shrink-0" />}
+                            </CommandItem>
+
+                            {filteredCustomers.map((customer) => {
+                              const isSelected = selectedCustomer === customer.id;
+                              return (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={`${customer.name} ${customer.rnc || ''} ${customer.phone || ''} ${customer.id}`}
+                                  onSelect={() => { onCustomerChange?.(customer.id); setOpenCustomerPopover(false); setCustomerSearch(''); }}
+                                  className={cn(
+                                    "p-2 cursor-pointer rounded-lg mx-0.5 my-0.5 text-xs transition-all flex items-center justify-between",
+                                    isSelected ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent text-foreground"
                                   )}
-                                </div>
-                                {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                                >
+                                  <div className="flex flex-col min-w-0 flex-1 pr-2 text-left">
+                                    <span className="truncate text-xs font-semibold">{customer.name}</span>
+                                    {customer.rnc && (
+                                      <span className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                                        RNC: {customer.rnc}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {selectedCustomer && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0 rounded-lg hover:bg-muted"
+                    onClick={() => onCustomerChange?.("")}
+                    title="Volver a Consumidor Final"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
 
                 <Button
+                  type="button"
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9 bg-background border-border rounded-lg hover:bg-primary/10 hover:text-primary transition-colors shrink-0"
+                  className="h-8 w-8 sm:h-8.5 sm:w-8.5 bg-background border-border rounded-lg hover:bg-primary/10 hover:text-primary transition-colors shrink-0"
                   onClick={() => setIsAddCustomerOpen(true)}
                   title="Nuevo cliente"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
 
               {previousDebt > 0 && (
-                <div className="mt-1.5 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+                <div className="mt-1.5 p-1.5 px-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <AlertCircle className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                    <div>
+                    <div className="truncate">
                       <p className="text-[8px] font-bold uppercase tracking-widest text-blue-500">Deuda Pendiente</p>
                       <p className="text-xs font-black text-foreground leading-none">RD$ {previousDebt.toLocaleString()}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 rounded border border-blue-500/20">
+                  <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 rounded border border-blue-500/20 shrink-0 ml-2">
                     <label htmlFor="include-debt" className="text-[9px] font-bold uppercase text-muted-foreground cursor-pointer">Incluir</label>
                     <input
                       type="checkbox"
