@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[calc(100%-2rem)] flex-col gap-2 sm:left-auto sm:translate-x-0 sm:right-4 sm:max-w-[280px]",
+      "fixed bottom-20 sm:bottom-6 right-0 sm:right-6 left-0 sm:left-auto z-[200] flex max-h-screen w-full sm:w-auto px-4 sm:px-0 flex-col gap-3 outline-none pointer-events-none items-center sm:items-end",
       className
     )}
     {...props}
@@ -22,28 +22,25 @@ const ToastViewport = React.forwardRef<
 ))
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
-// Diseño minimalista: chip chico y sólido en vez de la tarjeta grande con
-// blur/glow/blob que había antes — sigue el mismo pedido que el resto del
-// rediseño (profesional, simple, futurista) y de paso evita backdrop-blur
-// en un elemento que aparece en cada pantalla (ver la nota de rendimiento
-// sobre backdrop-blur en MobileProductSearch.tsx).
+// Estilo minimalista y moderno: glassmorphism sutil, tipografía nítida y animación elástica
 const toastVariants = cva(
   [
-    "group pointer-events-auto relative flex w-full items-center gap-2.5 overflow-hidden",
-    "rounded-xl border shadow-lg shadow-black/30 transition-all duration-300",
-    "px-3 py-2.5",
+    "group pointer-events-auto relative flex w-full sm:w-[360px] items-center gap-3 overflow-hidden",
+    "rounded-2xl border backdrop-blur-xl transition-all duration-300",
+    "p-3.5 sm:p-4",
     "data-[swipe=cancel]:translate-x-0",
     "data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]",
     "data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none",
-    "data-[state=open]:animate-in data-[state=closed]:animate-out",
-    "data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full",
-    "data-[state=open]:slide-in-from-bottom-3 data-[state=open]:fade-in-0",
+    "data-[state=open]:animate-toast-in data-[state=closed]:animate-toast-out",
+    "hover:scale-[1.02] active:scale-[0.98]",
   ].join(" "),
   {
     variants: {
       variant: {
-        default: "bg-zinc-950 border-white/[0.06] text-zinc-100",
-        destructive: "bg-zinc-950 border-white/[0.06] text-red-100",
+        default:
+          "bg-zinc-950/90 border-white/[0.12] text-zinc-100 shadow-[0_20px_45px_-12px_rgba(0,0,0,0.85)]",
+        destructive:
+          "bg-zinc-950/90 border-rose-500/30 text-rose-50 shadow-[0_20px_45px_-12px_rgba(0,0,0,0.85),0_0_25px_-5px_rgba(244,63,94,0.25)]",
       },
     },
     defaultVariants: {
