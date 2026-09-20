@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
@@ -53,12 +53,12 @@ export const useBankClosings = (options?: { dateFrom?: Date | null; dateTo?: Dat
   const { profile } = useUserProfile();
   const storeId = profile?.store_id;
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['bank-closings', storeId, options?.dateFrom?.toISOString(), options?.dateTo?.toISOString()],
     queryFn: async (): Promise<BankSessionItem[]> => {
       if (!storeId) return [];
 
-      let query = supabase
+      let q = supabase
         .from('cash_sessions')
         .select(`
           id,
@@ -89,13 +89,13 @@ export const useBankClosings = (options?: { dateFrom?: Date | null; dateTo?: Dat
         .limit(100);
 
       if (options?.dateFrom) {
-        query = query.gte('opened_at', options.dateFrom.toISOString());
+        q = q.gte('opened_at', options.dateFrom.toISOString());
       }
       if (options?.dateTo) {
-        query = query.lte('opened_at', options.dateTo.toISOString());
+        q = q.lte('opened_at', options.dateTo.toISOString());
       }
 
-      const { data, error } = await query;
+      const { data, error } = await q;
       if (error) {
         console.error('Error fetching bank closings:', error);
         throw error;
@@ -106,6 +106,16 @@ export const useBankClosings = (options?: { dateFrom?: Date | null; dateTo?: Dat
     enabled: !!storeId,
     staleTime: 1000 * 60 * 3,
   });
+
+  return {
+    sessions: query.data || [],
+    isLoading: query.isLoading,
+    refetch: query.refetch,
+    fetchSessionSales: (session: BankSessionItem) =>
+      fetchSessionSales(storeId || '', session.opened_at, session.closed_at),
+    fetchSessionMovements: (session: BankSessionItem) =>
+      fetchSessionMovements(storeId || '', session.opened_at, session.closed_at),
+  };
 };
 
 export const fetchSessionSales = async (
@@ -149,7 +159,7 @@ export const fetchSessionMovements = async (
 
   let query = supabase
     .from('cash_movements')
-    .select('id, type, amount, reason, created_at, user:user_id(full_name)')
+    .select('id, type, amount, reason, created_at, profile:profiles(full_name)')
     .eq('store_id', storeId)
     .gte('created_at', start.toISOString())
     .order('created_at', { ascending: false })

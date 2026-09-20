@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useBankClosings } from '@/hooks/useBankClosings';
 import type { BankSessionItem, SessionDetailSales, SessionDetailMovement } from '@/hooks/useBankClosings';
 import { generateCloseDayPDF } from '@/utils/closeDayPdfGenerator';
 import { useUserStore } from '@/hooks/useUserStore';
 import { 
   Building2, 
-  Calendar, 
-  DollarSign, 
   Receipt, 
-  FileText, 
   ArrowUpRight, 
   ArrowDownLeft, 
   AlertCircle, 
@@ -17,20 +14,18 @@ import {
   User, 
   Eye, 
   Download, 
-  RefreshCw,
-  Search,
-  Filter,
-  CreditCard,
-  Wallet,
-  TrendingUp,
-  Landmark,
-  X,
-  ChevronRight
+  RefreshCw, 
+  Search, 
+  CreditCard, 
+  Wallet, 
+  TrendingUp, 
+  Landmark, 
+  DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -38,10 +33,8 @@ import { es } from 'date-fns/locale';
 export default function Bank() {
   const { data: userStore } = useUserStore();
   const { 
-    sessions, 
+    sessions = [], 
     isLoading, 
-    filterBranchId, 
-    setFilterBranchId, 
     refetch, 
     fetchSessionSales, 
     fetchSessionMovements 
@@ -54,14 +47,21 @@ export default function Bank() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
+  // Helper getters for session fields
+  const getSessionCashier = (s: BankSessionItem) => s.opener?.full_name || s.closer?.full_name || 'Cajero';
+  const getSessionTotalSales = (s: BankSessionItem) => 
+    (s.total_sales_cash || 0) + (s.total_sales_card || 0) + (s.total_sales_transfer || 0) + (s.total_sales_other || 0);
+  const getSessionActualCash = (s: BankSessionItem) => s.actual_cash ?? s.expected_cash ?? 0;
+  const getSessionDiscrepancy = (s: BankSessionItem) => s.difference ?? 0;
+
   // Open details dialog
   const handleOpenDetails = async (session: BankSessionItem) => {
     setSelectedSession(session);
     setLoadingDetails(true);
     try {
       const [sales, movements] = await Promise.all([
-        fetchSessionSales(session.id),
-        fetchSessionMovements(session.id)
+        fetchSessionSales(session),
+        fetchSessionMovements(session)
       ]);
       setSessionSales(sales);
       setSessionMovements(movements);
@@ -80,35 +80,35 @@ export default function Bank() {
       let movements = sessionMovements;
       if (!selectedSession || selectedSession.id !== session.id) {
         const [fetchedSales, fetchedMovements] = await Promise.all([
-          fetchSessionSales(session.id),
-          fetchSessionMovements(session.id)
+          fetchSessionSales(session),
+          fetchSessionMovements(session)
         ]);
         sales = fetchedSales;
         movements = fetchedMovements;
       }
 
       await generateCloseDayPDF({
-        branchName: session.branch_name || userStore?.store_name || 'Sucursal',
-        cashierName: session.user_name || 'Cajero',
+        branchName: userStore?.store_name || 'Sucursal Principal',
+        cashierName: getSessionCashier(session),
         businessName: userStore?.store_name || 'Sistema de Cobro',
         businessRnc: userStore?.rnc || '',
         phone: userStore?.phone || '',
         openedAt: session.opened_at,
         closedAt: session.closed_at || new Date().toISOString(),
-        openingCash: session.opening_cash,
-        cashSales: session.cash_sales,
-        cardSales: session.card_sales,
-        transferSales: session.transfer_sales,
-        totalSales: session.total_sales,
-        totalIncomeMovements: session.total_incomes,
-        totalExpensesMovements: session.total_expenses,
-        expectedCash: session.expected_cash,
-        actualCash: session.actual_cash ?? session.expected_cash,
-        discrepancy: session.discrepancy ?? 0,
-        discrepancyReason: session.discrepancy_reason || '',
+        openingCash: session.initial_cash || 0,
+        cashSales: session.total_sales_cash || 0,
+        cardSales: session.total_sales_card || 0,
+        transferSales: session.total_sales_transfer || 0,
+        totalSales: getSessionTotalSales(session),
+        totalIncomeMovements: session.total_cash_in || 0,
+        totalExpensesMovements: session.total_cash_out || 0,
+        expectedCash: session.expected_cash || 0,
+        actualCash: getSessionActualCash(session),
+        discrepancy: getSessionDiscrepancy(session),
+        discrepancyReason: session.notes || '',
         invoices: sales.map(s => ({
           invoice_number: s.invoice_number,
-          client_name: s.client_name,
+          client_name: s.customer_name,
           payment_method: s.payment_method,
           total: s.total,
           created_at: s.created_at
@@ -128,18 +128,23 @@ export default function Bank() {
   };
 
   // Metrics summary
-  const totalSettled = sessions.reduce((acc, s) => acc + (s.actual_cash ?? s.expected_cash), 0);
-  const totalSales = sessions.reduce((acc, s) => acc + s.total_sales, 0);
-  const totalDiscrepancies = sessions.reduce((acc, s) => acc + Math.abs(s.discrepancy ?? 0), 0);
+  const safeSessions = useMemo(() => Array.isArray(sessions) ? sessions : [], [sessions]);
+  const totalSettled = safeSessions.reduce((acc, s) => acc + getSessionActualCash(s), 0);
+  const totalSales = safeSessions.reduce((acc, s) => acc + getSessionTotalSales(s), 0);
 
   // Filtered sessions
-  const filteredSessions = sessions.filter(s => {
-    const q = searchQuery.toLowerCase();
-    const branchMatch = (s.branch_name || '').toLowerCase().includes(q);
-    const userMatch = (s.user_name || '').toLowerCase().includes(q);
-    const dateMatch = format(new Date(s.opened_at), 'dd/MM/yyyy').includes(q);
-    return branchMatch || userMatch || dateMatch;
-  });
+  const filteredSessions = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return safeSessions;
+    return safeSessions.filter(s => {
+      const cashierMatch = getSessionCashier(s).toLowerCase().includes(q);
+      let dateMatch = false;
+      try {
+        dateMatch = format(new Date(s.opened_at), 'dd/MM/yyyy').includes(q);
+      } catch { /* ignore */ }
+      return cashierMatch || dateMatch;
+    });
+  }, [safeSessions, searchQuery]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20 pt-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -187,7 +192,7 @@ export default function Bank() {
             </div>
           </div>
           <p className="text-2xl font-bold text-slate-900 mt-2">
-            {sessions.length}
+            {safeSessions.length}
           </p>
           <p className="text-xs text-slate-500 mt-1">
             Sesiones de caja registradas
@@ -204,7 +209,7 @@ export default function Bank() {
             </div>
           </div>
           <p className="text-2xl font-bold text-emerald-600 mt-2">
-            ${totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            RD$ {totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-xs text-slate-500 mt-1">
             Facturado en todas las sesiones
@@ -221,7 +226,7 @@ export default function Bank() {
             </div>
           </div>
           <p className="text-2xl font-bold text-indigo-600 mt-2">
-            ${totalSettled.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            RD$ {totalSettled.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-xs text-slate-500 mt-1">
             Total recaudado físicamente
@@ -234,7 +239,7 @@ export default function Bank() {
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Buscar por sucursal, cajero o fecha..."
+            placeholder="Buscar por cajero o fecha (dd/mm/aaaa)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 rounded-xl border-slate-200 text-sm focus-visible:ring-indigo-500"
@@ -243,7 +248,7 @@ export default function Bank() {
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Badge variant="outline" className="px-3 py-1.5 font-normal text-slate-600 border-slate-200 rounded-xl">
-            {filteredSessions.length} {filteredSessions.length === 1 ? 'cierre encontrado' : 'cierres encontrados'}
+            {filteredSessions.length} {filteredSessions.length === 1 ? 'cierre registrado' : 'cierres registrados'}
           </Badge>
         </div>
       </div>
@@ -268,8 +273,8 @@ export default function Bank() {
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50/80 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
-                  <th className="py-4 px-4 sm:px-6">Fecha & Estado</th>
-                  <th className="py-4 px-4 sm:px-6">Sucursal / Cajero</th>
+                  <th className="py-4 px-4 sm:px-6">Fecha & Turno</th>
+                  <th className="py-4 px-4 sm:px-6">Cajero Responsable</th>
                   <th className="py-4 px-4 sm:px-6 text-right">Fondo Apertura</th>
                   <th className="py-4 px-4 sm:px-6 text-right">Ventas Totales</th>
                   <th className="py-4 px-4 sm:px-6 text-right">Efectivo Cierre</th>
@@ -280,8 +285,10 @@ export default function Bank() {
               <tbody className="divide-y divide-slate-100">
                 {filteredSessions.map((session) => {
                   const isClosed = session.status === 'closed';
-                  const discrepancy = session.discrepancy ?? 0;
+                  const discrepancy = getSessionDiscrepancy(session);
                   const hasDiscrepancy = Math.abs(discrepancy) > 0.01;
+                  const totalSalesAmount = getSessionTotalSales(session);
+                  const cashierName = getSessionCashier(session);
 
                   return (
                     <tr 
@@ -315,32 +322,31 @@ export default function Bank() {
 
                       <td className="py-4 px-4 sm:px-6">
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
+                          <User className="h-4 w-4 text-slate-400 shrink-0" />
                           <span className="font-medium text-slate-900 truncate">
-                            {session.branch_name || 'Sucursal Principal'}
+                            {cashierName}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                          <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{session.user_name || 'Cajero'}</span>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          {userStore?.store_name || 'Sucursal Principal'}
                         </div>
                       </td>
 
                       <td className="py-4 px-4 sm:px-6 text-right font-mono text-slate-700">
-                        ${session.opening_cash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                        RD$ {(session.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                       </td>
 
                       <td className="py-4 px-4 sm:px-6 text-right">
                         <span className="font-semibold text-slate-900 font-mono">
-                          ${session.total_sales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          RD$ {totalSalesAmount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                         </span>
                         <div className="text-[11px] text-slate-400 mt-0.5">
-                          Efectivo: ${session.cash_sales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          Efectivo: RD$ {(session.total_sales_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                         </div>
                       </td>
 
                       <td className="py-4 px-4 sm:px-6 text-right font-mono font-semibold text-slate-900">
-                        ${(session.actual_cash ?? session.expected_cash).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                        RD$ {getSessionActualCash(session).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                       </td>
 
                       <td className="py-4 px-4 sm:px-6 text-right">
@@ -351,7 +357,7 @@ export default function Bank() {
                               : 'bg-blue-50 text-blue-700 border border-blue-200/50'
                           }`}>
                             <AlertCircle className="h-3 w-3" />
-                            {discrepancy < 0 ? '-' : '+'}${Math.abs(discrepancy).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                            {discrepancy < 0 ? '-' : '+'}RD$ {Math.abs(discrepancy).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
@@ -410,7 +416,7 @@ export default function Bank() {
                     <p className="text-xs text-slate-400 mt-1">
                       {format(new Date(selectedSession.opened_at), "EEEE, dd 'de' MMMM yyyy", { locale: es })}
                       {' • '}
-                      {selectedSession.branch_name || 'Sucursal Principal'}
+                      Cajero: {getSessionCashier(selectedSession)}
                     </p>
                   </div>
 
@@ -435,31 +441,31 @@ export default function Bank() {
                   <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
                     <span className="text-[11px] font-semibold text-slate-400 uppercase">Fondo Inicial</span>
                     <p className="text-base font-bold text-slate-800 font-mono mt-0.5">
-                      ${selectedSession.opening_cash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      RD$ {(selectedSession.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
                     <span className="text-[11px] font-semibold text-slate-400 uppercase">Ventas Totales</span>
                     <p className="text-base font-bold text-emerald-600 font-mono mt-0.5">
-                      ${selectedSession.total_sales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      RD$ {getSessionTotalSales(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
                     <span className="text-[11px] font-semibold text-slate-400 uppercase">Efectivo Contado</span>
                     <p className="text-base font-bold text-indigo-600 font-mono mt-0.5">
-                      ${(selectedSession.actual_cash ?? selectedSession.expected_cash).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      RD$ {getSessionActualCash(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
                     <span className="text-[11px] font-semibold text-slate-400 uppercase">Diferencia</span>
                     <p className={`text-base font-bold font-mono mt-0.5 ${
-                      (selectedSession.discrepancy ?? 0) < 0 
+                      getSessionDiscrepancy(selectedSession) < 0 
                         ? 'text-rose-600' 
-                        : (selectedSession.discrepancy ?? 0) > 0 
+                        : getSessionDiscrepancy(selectedSession) > 0 
                         ? 'text-blue-600' 
                         : 'text-emerald-600'
                     }`}>
-                      ${(selectedSession.discrepancy ?? 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      RD$ {getSessionDiscrepancy(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -477,7 +483,7 @@ export default function Bank() {
                       <div>
                         <p className="text-[11px] text-slate-500">Efectivo</p>
                         <p className="text-sm font-bold text-slate-800 font-mono">
-                          ${selectedSession.cash_sales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          RD$ {(selectedSession.total_sales_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
@@ -489,7 +495,7 @@ export default function Bank() {
                       <div>
                         <p className="text-[11px] text-slate-500">Tarjeta</p>
                         <p className="text-sm font-bold text-slate-800 font-mono">
-                          ${selectedSession.card_sales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          RD$ {(selectedSession.total_sales_card || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
@@ -501,16 +507,16 @@ export default function Bank() {
                       <div>
                         <p className="text-[11px] text-slate-500">Transferencia</p>
                         <p className="text-sm font-bold text-slate-800 font-mono">
-                          ${selectedSession.transfer_sales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          RD$ {(selectedSession.total_sales_transfer || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {selectedSession.discrepancy_reason && (
+                  {selectedSession.notes && (
                     <div className="mt-4 p-3 bg-amber-50 border border-amber-200/70 rounded-lg text-xs text-amber-900">
                       <span className="font-semibold">Nota o motivo de discrepancia: </span>
-                      {selectedSession.discrepancy_reason}
+                      {selectedSession.notes}
                     </div>
                   )}
                 </div>
@@ -555,7 +561,7 @@ export default function Bank() {
                                   {s.invoice_number || 'S/N'}
                                 </td>
                                 <td className="py-2.5 px-3 text-slate-600">
-                                  {s.client_name || 'Consumidor Final'}
+                                  {s.customer_name || 'Consumidor Final'}
                                 </td>
                                 <td className="py-2.5 px-3">
                                   <span className="capitalize px-2 py-0.5 bg-slate-100 rounded-md font-medium">
@@ -566,7 +572,7 @@ export default function Bank() {
                                   {format(new Date(s.created_at), 'hh:mm a')}
                                 </td>
                                 <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-800">
-                                  ${s.total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                  RD$ {s.total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                 </td>
                               </tr>
                             ))}
@@ -599,7 +605,7 @@ export default function Bank() {
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {sessionMovements.map((m) => {
-                              const isIncome = m.type === 'income';
+                              const isIncome = m.type === 'deposit' || m.type === 'income';
                               return (
                                 <tr key={m.id} className="hover:bg-slate-50/50">
                                   <td className="py-2.5 px-3">
@@ -615,7 +621,7 @@ export default function Bank() {
                                     {format(new Date(m.created_at), 'hh:mm a')}
                                   </td>
                                   <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-800">
-                                    ${m.amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                    RD$ {m.amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                   </td>
                                 </tr>
                               );
