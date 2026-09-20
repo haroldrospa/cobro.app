@@ -68,7 +68,7 @@ export default function Bank() {
   } = useBankClosings();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [cashierFilter, setCashierFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('all');
@@ -177,7 +177,7 @@ export default function Bank() {
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (searchQuery.trim()) count++;
-    if (dateFilter !== 'all') count++;
+    if (dateFilter !== 'month') count++;
     if (cashierFilter !== 'all') count++;
     if (statusFilter !== 'all') count++;
     if (discrepancyFilter !== 'all') count++;
@@ -186,10 +186,10 @@ export default function Bank() {
 
   const hasActiveFilters = activeFiltersCount > 0;
 
-  // Clear all filters
+  // Clear all filters (resets to default: current month)
   const handleClearFilters = () => {
     setSearchQuery('');
-    setDateFilter('all');
+    setDateFilter('month');
     setDateRange(undefined);
     setCashierFilter('all');
     setStatusFilter('all');
@@ -201,7 +201,7 @@ export default function Bank() {
     if (range?.from) {
       setDateFilter('custom');
     } else {
-      setDateFilter('all');
+      setDateFilter('month');
     }
   };
 
@@ -313,7 +313,7 @@ export default function Bank() {
             <p className="text-xs text-muted-foreground">
               {hasActiveFilters 
                 ? `Filtrados de ${safeSessions.length} registrados`
-                : 'Sesiones de caja registradas'}
+                : 'Sesiones de caja este mes'}
             </p>
           </CardContent>
         </Card>
@@ -332,7 +332,7 @@ export default function Bank() {
             <p className="text-xs text-muted-foreground">
               {hasActiveFilters 
                 ? `En los ${filteredSessions.length} ${filteredSessions.length === 1 ? 'cierre' : 'cierres'} filtrados` 
-                : 'Facturado en todas las sesiones'}
+                : 'Facturado este mes'}
             </p>
           </CardContent>
         </Card>
@@ -351,7 +351,7 @@ export default function Bank() {
             <p className="text-xs text-muted-foreground">
               {hasActiveFilters 
                 ? `Recaudado en la selección actual`
-                : 'Total recaudado físicamente'}
+                : 'Total recaudado este mes'}
             </p>
           </CardContent>
         </Card>
