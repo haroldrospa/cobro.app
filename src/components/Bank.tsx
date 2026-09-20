@@ -5,6 +5,7 @@ import { useBankClosings } from '@/hooks/useBankClosings';
 import type { BankSessionItem, SessionDetailSales, SessionDetailMovement } from '@/hooks/useBankClosings';
 import { generateCloseDayPDF } from '@/utils/closeDayPdfGenerator';
 import { useUserStore } from '@/hooks/useUserStore';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useProducts } from '@/hooks/useProducts';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { 
@@ -98,58 +99,10 @@ export default function Bank() {
   // Sessions list
   const safeSessions = useMemo(() => Array.isArray(sessions) ? sessions : [], [sessions]);
 
-  // Date bounds covering visible sessions for single query fetch
-  const { minOpenedAt, maxClosedAt } = useMemo(() => {
-    if (safeSessions.length === 0) return { minOpenedAt: null, maxClosedAt: null };
-    let min = safeSessions[0].opened_at;
-    let max = safeSessions[0].closed_at || new Date().toISOString();
-    let hasOpen = false;
+  const { profile } = useUserProfile();
+  const targetStoreId = userStore?.id || profile?.store_id || safeSessions[0]?.store_id;
 
-    for (const s of safeSessions) {
-      if (s.opened_at < min) min = s.opened_at;
-      if (!s.closed_at || s.status === 'open') {
-        hasOpen = true;
-      } else if (s.closed_at > max) {
-        max = s.closed_at;
-      }
-    }
-
-    return {
-      minOpenedAt: min,
-      maxClosedAt: hasOpen ? new Date().toISOString() : max
-    };
-  }, [safeSessions]);
-
-  // Single efficient query to fetch sales with items for all sessions
-  const { data: closingsSales = [] } = useQuery({
-    queryKey: ['bank-closings-sales', userStore?.id, minOpenedAt, maxClosedAt],
-    enabled: !!userStore?.id && !!minOpenedAt && !!maxClosedAt,
-    staleTime: 1000 * 60 * 3,
-    queryFn: async () => {
-      if (!userStore?.id || !minOpenedAt || !maxClosedAt) return [];
-      const start = new Date(minOpenedAt);
-      start.setMinutes(start.getMinutes() - 2);
-
-      const end = new Date(maxClosedAt);
-      end.setMinutes(end.getMinutes() + 2);
-
-      const { data, error } = await supabase
-        .from('sales')
-        .select('id, total, created_at, status, payment_method, sale_items(product_id, quantity, total)')
-        .eq('store_id', userStore.id)
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString())
-        .neq('status', 'cancelled');
-
-      if (error) {
-        console.error('Error fetching closings sales for profit calculation:', error);
-        return [];
-      }
-      return data || [];
-    }
-  });
-
-  // Map products by ID for fast cost lookups
+  // Map products by ID for fast cost lookups fallback
   const productsMap = useMemo(() => {
     const map = new Map<string, any>();
     products.forEach(p => {
@@ -157,46 +110,6 @@ export default function Bank() {
     });
     return map;
   }, [products]);
-
-  // Precalculate profit, cost, and percentages for every session
-  const sessionsProfitMap = useMemo(() => {
-    const map = new Map<string, { cost: number; profit: number; profitPct: number; costPct: number }>();
-    if (!safeSessions.length) return map;
-
-    safeSessions.forEach(session => {
-      const sessionStart = new Date(session.opened_at).getTime() - 60000;
-      const sessionEnd = session.closed_at 
-        ? new Date(session.closed_at).getTime() + 60000 
-        : Infinity;
-
-      let cost = 0;
-      closingsSales.forEach((sale: any) => {
-        if (!sale.created_at) return;
-        const saleTime = new Date(sale.created_at).getTime();
-        if (saleTime >= sessionStart && saleTime <= sessionEnd) {
-          sale.sale_items?.forEach((item: any) => {
-            const product = productsMap.get(item.product_id);
-            if (product && product.cost) {
-              if (product.is_variable_price) {
-                cost += (product.cost / 100) * (item.total || 0);
-              } else {
-                cost += (product.cost as number) * (item.quantity || 0);
-              }
-            }
-          });
-        }
-      });
-
-      const totalSales = getSessionTotalSales(session);
-      const profit = Math.max(0, totalSales - cost);
-      const profitPct = totalSales > 0 ? (profit / totalSales) * 100 : 0;
-      const costPct = totalSales > 0 ? (cost / totalSales) * 100 : 0;
-
-      map.set(session.id, { cost, profit, profitPct, costPct });
-    });
-
-    return map;
-  }, [safeSessions, closingsSales, productsMap]);
 
   // Open details dialog
   const handleOpenDetails = async (session: BankSessionItem) => {
@@ -356,6 +269,101 @@ export default function Bank() {
       return true;
     });
   }, [safeSessions, searchQuery, cashierFilter, statusFilter, discrepancyFilter, dateFilter, dateRange]);
+
+  // Date bounds covering visible sessions for single query fetch
+  const { minOpenedAt, maxClosedAt } = useMemo(() => {
+    const sessionsToCover = filteredSessions.length > 0 ? filteredSessions : safeSessions.slice(0, 30);
+    if (sessionsToCover.length === 0) return { minOpenedAt: null, maxClosedAt: null };
+
+    let min = sessionsToCover[0].opened_at;
+    let max = sessionsToCover[0].closed_at || new Date().toISOString();
+    let hasOpen = false;
+
+    for (const s of sessionsToCover) {
+      if (s.opened_at < min) min = s.opened_at;
+      if (!s.closed_at || s.status === 'open') {
+        hasOpen = true;
+      } else if (s.closed_at > max) {
+        max = s.closed_at;
+      }
+    }
+
+    return {
+      minOpenedAt: min,
+      maxClosedAt: hasOpen ? new Date().toISOString() : max
+    };
+  }, [filteredSessions, safeSessions]);
+
+  // Single efficient query to fetch sales with joined product items for all sessions
+  const { data: closingsSales = [] } = useQuery({
+    queryKey: ['bank-closings-sales', targetStoreId, minOpenedAt, maxClosedAt],
+    enabled: !!targetStoreId && !!minOpenedAt && !!maxClosedAt,
+    staleTime: 1000 * 60 * 3,
+    queryFn: async () => {
+      if (!targetStoreId || !minOpenedAt || !maxClosedAt) return [];
+      const start = new Date(minOpenedAt);
+      start.setMinutes(start.getMinutes() - 5);
+
+      const end = new Date(maxClosedAt);
+      end.setMinutes(end.getMinutes() + 5);
+
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, total, created_at, status, payment_method, sale_items(product_id, quantity, total, product:products(id, name, cost, is_variable_price))')
+        .eq('store_id', targetStoreId)
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
+        .limit(3000);
+
+      if (error) {
+        console.error('Error fetching closings sales for profit calculation:', error);
+        return [];
+      }
+      return data || [];
+    }
+  });
+
+  // Precalculate profit, cost, and percentages for every session
+  const sessionsProfitMap = useMemo(() => {
+    const map = new Map<string, { cost: number; profit: number; profitPct: number; costPct: number }>();
+    if (!safeSessions.length) return map;
+
+    safeSessions.forEach(session => {
+      const sessionStart = new Date(session.opened_at).getTime() - 120000;
+      const sessionEnd = session.closed_at 
+        ? new Date(session.closed_at).getTime() + 120000 
+        : Infinity;
+
+      let cost = 0;
+      closingsSales.forEach((sale: any) => {
+        if (!sale.created_at) return;
+        const saleTime = new Date(sale.created_at).getTime();
+        if (saleTime >= sessionStart && saleTime <= sessionEnd) {
+          sale.sale_items?.forEach((item: any) => {
+            const product = item.product || productsMap.get(item.product_id);
+            if (product && product.cost) {
+              if (product.is_variable_price) {
+                cost += (product.cost / 100) * (item.total || 0);
+              } else {
+                cost += Number(product.cost) * (item.quantity || 0);
+              }
+            }
+          });
+        }
+      });
+
+      const totalSales = getSessionTotalSales(session);
+      const profit = Math.max(0, totalSales - cost);
+      const profitPct = totalSales > 0 ? (profit / totalSales) * 100 : 0;
+      const costPct = totalSales > 0 ? (cost / totalSales) * 100 : 0;
+
+      map.set(session.id, { cost, profit, profitPct, costPct });
+    });
+
+    return map;
+  }, [safeSessions, closingsSales, productsMap]);
 
   // Metrics summary calculated over filtered sessions
   const totalSettled = useMemo(() => filteredSessions.reduce((acc, s) => acc + getSessionActualCash(s), 0), [filteredSessions]);
@@ -840,12 +848,36 @@ export default function Bank() {
       <Dialog open={!!selectedSession} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 rounded-3xl border-border/50 bg-card text-card-foreground shadow-2xl">
           {selectedSession && (() => {
-            const selectedProfitInfo = sessionsProfitMap.get(selectedSession.id) || {
+            const totalSales = getSessionTotalSales(selectedSession);
+            let selectedProfitInfo = sessionsProfitMap.get(selectedSession.id) || {
               cost: 0,
-              profit: getSessionTotalSales(selectedSession),
-              profitPct: getSessionTotalSales(selectedSession) > 0 ? 100 : 0,
+              profit: totalSales,
+              profitPct: totalSales > 0 ? 100 : 0,
               costPct: 0
             };
+
+            // If we have detailed sessionSales fetched for this modal, use it for exact calculation
+            if (sessionSales && sessionSales.length > 0) {
+              let modalCost = 0;
+              sessionSales.forEach((sale: any) => {
+                sale.sale_items?.forEach((item: any) => {
+                  const product = item.product || productsMap.get(item.product_id);
+                  if (product && product.cost) {
+                    if (product.is_variable_price) {
+                      modalCost += (product.cost / 100) * (item.total || 0);
+                    } else {
+                      modalCost += Number(product.cost) * (item.quantity || 0);
+                    }
+                  }
+                });
+              });
+              if (modalCost > 0 || selectedProfitInfo.cost === 0) {
+                const profit = Math.max(0, totalSales - modalCost);
+                const profitPct = totalSales > 0 ? (profit / totalSales) * 100 : 0;
+                const costPct = totalSales > 0 ? (modalCost / totalSales) * 100 : 0;
+                selectedProfitInfo = { cost: modalCost, profit, profitPct, costPct };
+              }
+            }
 
             return (
               <div>

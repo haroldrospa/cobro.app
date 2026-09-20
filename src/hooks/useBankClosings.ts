@@ -38,6 +38,7 @@ export interface SessionDetailSales {
   split_method?: string;
   created_at: string;
   status?: string;
+  sale_items?: any[];
 }
 
 export interface SessionDetailMovement {
@@ -112,9 +113,9 @@ export const useBankClosings = (options?: { dateFrom?: Date | null; dateTo?: Dat
     isLoading: query.isLoading,
     refetch: query.refetch,
     fetchSessionSales: (session: BankSessionItem) =>
-      fetchSessionSales(storeId || '', session.opened_at, session.closed_at),
+      fetchSessionSales(session.store_id || storeId || '', session.opened_at, session.closed_at),
     fetchSessionMovements: (session: BankSessionItem) =>
-      fetchSessionMovements(storeId || '', session.opened_at, session.closed_at),
+      fetchSessionMovements(session.store_id || storeId || '', session.opened_at, session.closed_at),
   };
 };
 
@@ -124,20 +125,37 @@ export const fetchSessionSales = async (
   closedAt?: string
 ): Promise<SessionDetailSales[]> => {
   const start = new Date(openedAt);
-  start.setMinutes(start.getMinutes() - 1);
+  start.setMinutes(start.getMinutes() - 2);
 
   let query = supabase
     .from('sales')
-    .select('id, invoice_number, ncf, customer_name, payment_method, total, split_cash, split_method, created_at, status')
+    .select(`
+      id,
+      invoice_number,
+      payment_method,
+      total,
+      split_cash,
+      split_method,
+      created_at,
+      status,
+      customer:customers(name),
+      sale_items(
+        id,
+        product_id,
+        quantity,
+        total,
+        product:products(id, name, cost, is_variable_price)
+      )
+    `)
     .eq('store_id', storeId)
     .gte('created_at', start.toISOString())
     .neq('status', 'cancelled')
     .order('created_at', { ascending: false })
-    .limit(300);
+    .limit(500);
 
   if (closedAt) {
     const end = new Date(closedAt);
-    end.setMinutes(end.getMinutes() + 1);
+    end.setMinutes(end.getMinutes() + 2);
     query = query.lte('created_at', end.toISOString());
   }
 
@@ -146,7 +164,12 @@ export const fetchSessionSales = async (
     console.error('Error fetching session sales:', error);
     return [];
   }
-  return (data as any) || [];
+
+  return (data || []).map((s: any) => ({
+    ...s,
+    customer_name: s.customer?.name || 'Consumidor Final',
+    sale_items: s.sale_items || []
+  }));
 };
 
 export const fetchSessionMovements = async (
