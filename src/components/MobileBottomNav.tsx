@@ -18,6 +18,7 @@ import {
   Database,
   LogOut,
   Truck,
+  Landmark,
 } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
@@ -78,6 +79,7 @@ export const MobileBottomNav: React.FC = () => {
     if (isAccountant) {
       return [
         { name: 'Contabilidad', href: '/accounting', icon: FileText },
+        { name: 'Banco', href: '/banco', icon: Landmark },
         { name: 'Proveedores', href: '/suppliers', icon: Truck },
         { name: 'Reportes', href: '/reports', icon: BarChart },
         { name: 'Facturas', href: '/invoices', icon: FileText },
@@ -112,6 +114,7 @@ export const MobileBottomNav: React.FC = () => {
       ...(hasKitchenDisplay ? [{ name: 'Cocina', href: '/kitchen', icon: ChefHat }] : []),
       { name: 'Facturas', href: '/invoices', icon: FileText },
       { name: 'Reportes', href: '/reports', icon: BarChart },
+      { name: 'Banco', href: '/banco', icon: Landmark },
       { name: 'Clientes', href: '/customers', icon: Users },
       { name: 'Proveedores', href: '/suppliers', icon: Truck },
       { name: 'Empleados', href: '/employees', icon: Users },

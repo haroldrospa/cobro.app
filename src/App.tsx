@@ -29,6 +29,7 @@ const Employees = lazy(() => import("./components/Employees"));
 const Auth = lazy(() => import("./pages/Auth"));
 const MiTienda = lazy(() => import("./pages/MiTienda"));
 const Accounting = lazy(() => import("./components/Accounting"));
+const Bank = lazy(() => import("./components/Bank"));
 const Payroll = lazy(() => import("./components/Payroll"));
 const Tienda = lazy(() => import("./pages/Tienda"));
 const BuscarTienda = lazy(() => import("./pages/BuscarTienda"));
@@ -251,6 +252,7 @@ const App = () => {
                           <Route path="/employees" element={<Employees />} />
                           <Route path="/mi-tienda" element={<MiTienda />} />
                           <Route path="/accounting" element={<Accounting />} />
+                          <Route path="/banco" element={<Bank />} />
                           <Route path="/payroll" element={<Payroll />} />
                           <Route path="/subscription" element={<UserSubscription />} />
                           <Route path="/subscription-expired" element={<SubscriptionExpired />} />
