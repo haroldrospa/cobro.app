@@ -1,8 +1,12 @@
 import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useBankClosings } from '@/hooks/useBankClosings';
 import type { BankSessionItem, SessionDetailSales, SessionDetailMovement } from '@/hooks/useBankClosings';
 import { generateCloseDayPDF } from '@/utils/closeDayPdfGenerator';
 import { useUserStore } from '@/hooks/useUserStore';
+import { useProducts } from '@/hooks/useProducts';
+import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { 
   Building2, 
   Receipt, 
@@ -26,7 +30,9 @@ import {
   RotateCcw,
   Calendar as CalendarIcon,
   SlidersHorizontal,
-  Scale
+  Scale,
+  Sparkles,
+  Percent
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +65,8 @@ import { cn } from '@/lib/utils';
 
 export default function Bank() {
   const { data: userStore } = useUserStore();
+  const { data: products = [] } = useProducts();
+  const { companyInfo } = usePrintSettings();
   const { 
     sessions = [], 
     isLoading, 
@@ -86,6 +94,109 @@ export default function Bank() {
     (s.total_sales_cash || 0) + (s.total_sales_card || 0) + (s.total_sales_transfer || 0) + (s.total_sales_other || 0);
   const getSessionActualCash = (s: BankSessionItem) => s.actual_cash ?? s.expected_cash ?? 0;
   const getSessionDiscrepancy = (s: BankSessionItem) => s.difference ?? 0;
+
+  // Sessions list
+  const safeSessions = useMemo(() => Array.isArray(sessions) ? sessions : [], [sessions]);
+
+  // Date bounds covering visible sessions for single query fetch
+  const { minOpenedAt, maxClosedAt } = useMemo(() => {
+    if (safeSessions.length === 0) return { minOpenedAt: null, maxClosedAt: null };
+    let min = safeSessions[0].opened_at;
+    let max = safeSessions[0].closed_at || new Date().toISOString();
+    let hasOpen = false;
+
+    for (const s of safeSessions) {
+      if (s.opened_at < min) min = s.opened_at;
+      if (!s.closed_at || s.status === 'open') {
+        hasOpen = true;
+      } else if (s.closed_at > max) {
+        max = s.closed_at;
+      }
+    }
+
+    return {
+      minOpenedAt: min,
+      maxClosedAt: hasOpen ? new Date().toISOString() : max
+    };
+  }, [safeSessions]);
+
+  // Single efficient query to fetch sales with items for all sessions
+  const { data: closingsSales = [] } = useQuery({
+    queryKey: ['bank-closings-sales', userStore?.id, minOpenedAt, maxClosedAt],
+    enabled: !!userStore?.id && !!minOpenedAt && !!maxClosedAt,
+    staleTime: 1000 * 60 * 3,
+    queryFn: async () => {
+      if (!userStore?.id || !minOpenedAt || !maxClosedAt) return [];
+      const start = new Date(minOpenedAt);
+      start.setMinutes(start.getMinutes() - 2);
+
+      const end = new Date(maxClosedAt);
+      end.setMinutes(end.getMinutes() + 2);
+
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, total, created_at, status, payment_method, sale_items(product_id, quantity, total)')
+        .eq('store_id', userStore.id)
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .neq('status', 'cancelled');
+
+      if (error) {
+        console.error('Error fetching closings sales for profit calculation:', error);
+        return [];
+      }
+      return data || [];
+    }
+  });
+
+  // Map products by ID for fast cost lookups
+  const productsMap = useMemo(() => {
+    const map = new Map<string, any>();
+    products.forEach(p => {
+      map.set(p.id, p);
+    });
+    return map;
+  }, [products]);
+
+  // Precalculate profit, cost, and percentages for every session
+  const sessionsProfitMap = useMemo(() => {
+    const map = new Map<string, { cost: number; profit: number; profitPct: number; costPct: number }>();
+    if (!safeSessions.length) return map;
+
+    safeSessions.forEach(session => {
+      const sessionStart = new Date(session.opened_at).getTime() - 60000;
+      const sessionEnd = session.closed_at 
+        ? new Date(session.closed_at).getTime() + 60000 
+        : Infinity;
+
+      let cost = 0;
+      closingsSales.forEach((sale: any) => {
+        if (!sale.created_at) return;
+        const saleTime = new Date(sale.created_at).getTime();
+        if (saleTime >= sessionStart && saleTime <= sessionEnd) {
+          sale.sale_items?.forEach((item: any) => {
+            const product = productsMap.get(item.product_id);
+            if (product && product.cost) {
+              if (product.is_variable_price) {
+                cost += (product.cost / 100) * (item.total || 0);
+              } else {
+                cost += (product.cost as number) * (item.quantity || 0);
+              }
+            }
+          });
+        }
+      });
+
+      const totalSales = getSessionTotalSales(session);
+      const profit = Math.max(0, totalSales - cost);
+      const profitPct = totalSales > 0 ? (profit / totalSales) * 100 : 0;
+      const costPct = totalSales > 0 ? (cost / totalSales) * 100 : 0;
+
+      map.set(session.id, { cost, profit, profitPct, costPct });
+    });
+
+    return map;
+  }, [safeSessions, closingsSales, productsMap]);
 
   // Open details dialog
   const handleOpenDetails = async (session: BankSessionItem) => {
@@ -120,48 +231,35 @@ export default function Bank() {
         movements = fetchedMovements;
       }
 
-      await generateCloseDayPDF({
-        branchName: userStore?.store_name || 'Sucursal Principal',
-        cashierName: getSessionCashier(session),
-        businessName: userStore?.store_name || 'Sistema de Cobro',
-        businessRnc: userStore?.rnc || '',
-        phone: userStore?.phone || '',
+      const doc = await generateCloseDayPDF(companyInfo, {
+        stats: {
+          initialCash: session.initial_cash || 0,
+          cashSales: session.total_sales_cash || 0,
+          cardSales: session.total_sales_card || 0,
+          transferSales: session.total_sales_transfer || 0,
+          otherSales: session.total_sales_other || 0,
+          totalRefunds: session.total_refunds || 0,
+          deposits: session.total_cash_in || 0,
+          withdrawals: session.total_cash_out || 0,
+          expectedCash: session.expected_cash || 0,
+          cashToWithdraw: 0,
+          totalSales: getSessionTotalSales(session),
+        },
+        actualCash: getSessionActualCash(session),
+        difference: getSessionDiscrepancy(session),
+        notes: session.notes,
         openedAt: session.opened_at,
         closedAt: session.closed_at || new Date().toISOString(),
-        openingCash: session.initial_cash || 0,
-        cashSales: session.total_sales_cash || 0,
-        cardSales: session.total_sales_card || 0,
-        transferSales: session.total_sales_transfer || 0,
-        totalSales: getSessionTotalSales(session),
-        totalIncomeMovements: session.total_cash_in || 0,
-        totalExpensesMovements: session.total_cash_out || 0,
-        expectedCash: session.expected_cash || 0,
-        actualCash: getSessionActualCash(session),
-        discrepancy: getSessionDiscrepancy(session),
-        discrepancyReason: session.notes || '',
-        invoices: sales.map(s => ({
-          invoice_number: s.invoice_number,
-          client_name: s.customer_name,
-          payment_method: s.payment_method,
-          total: s.total,
-          created_at: s.created_at
-        })),
-        movements: movements.map(m => ({
-          type: m.type,
-          amount: m.amount,
-          reason: m.reason,
-          created_at: m.created_at
-        }))
+        openedBy: session.opener?.full_name,
+        closedBy: session.closer?.full_name,
       });
+      doc.save(`Cierre_${format(new Date(session.opened_at), 'yyyyMMdd_HHmm')}.pdf`);
     } catch (err) {
       console.error('Error generando PDF:', err);
     } finally {
       setDownloadingPdf(false);
     }
   };
-
-  // Sessions list
-  const safeSessions = useMemo(() => Array.isArray(sessions) ? sessions : [], [sessions]);
 
   // Unique cashiers list for select
   const cashiers = useMemo(() => {
@@ -264,6 +362,22 @@ export default function Bank() {
   const totalSales = useMemo(() => filteredSessions.reduce((acc, s) => acc + getSessionTotalSales(s), 0), [filteredSessions]);
   const totalDifference = useMemo(() => filteredSessions.reduce((acc, s) => acc + getSessionDiscrepancy(s), 0), [filteredSessions]);
 
+  const totalProfit = useMemo(() => {
+    return filteredSessions.reduce((sum, s) => {
+      const info = sessionsProfitMap.get(s.id);
+      return sum + (info ? info.profit : getSessionTotalSales(s));
+    }, 0);
+  }, [filteredSessions, sessionsProfitMap]);
+
+  const totalCost = useMemo(() => {
+    return filteredSessions.reduce((sum, s) => {
+      const info = sessionsProfitMap.get(s.id);
+      return sum + (info ? info.cost : 0);
+    }, 0);
+  }, [filteredSessions, sessionsProfitMap]);
+
+  const overallProfitPct = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+
   return (
     <div className="space-y-8 animate-fade-in pb-20 pt-2">
       {/* Centered Premium Header */}
@@ -298,7 +412,7 @@ export default function Bank() {
       </div>
 
       {/* Summary KPI Cards - Centered & Dynamic with Filters */}
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
             <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-2xl mb-1">
@@ -320,19 +434,36 @@ export default function Bank() {
 
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl mb-1">
+            <div className="p-2.5 bg-sky-500/10 text-sky-500 rounded-2xl mb-1">
               <TrendingUp className="h-5 w-5" />
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Ventas Totales
             </span>
-            <span className="text-3xl font-black tracking-tighter text-emerald-500">
+            <span className="text-3xl font-black tracking-tighter text-foreground">
               RD$ {totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <p className="text-xs text-muted-foreground">
               {hasActiveFilters 
                 ? `En los ${filteredSessions.length} ${filteredSessions.length === 1 ? 'cierre' : 'cierres'} filtrados` 
                 : 'Facturado este mes'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
+          <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
+            <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl mb-1">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Ganancia Neta
+            </span>
+            <span className="text-3xl font-black tracking-tighter text-emerald-500">
+              RD$ {totalProfit.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <p className="text-xs text-muted-foreground">
+              Costo: RD$ {totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({overallProfitPct.toFixed(1)}% margen)
             </p>
           </CardContent>
         </Card>
@@ -552,8 +683,8 @@ export default function Bank() {
                   <TableRow className="bg-muted/40 border-b border-border/30 hover:bg-muted/40">
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[200px]">Fecha & Turno</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[180px]">Cajero Responsable</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[140px]">Fondo Apertura</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[160px]">Ventas Totales</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[180px]">Ganancia Neta</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[150px]">Efectivo Cierre</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[140px]">Diferencia</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[120px]">Acciones</TableHead>
@@ -566,6 +697,12 @@ export default function Bank() {
                     const hasDiscrepancy = Math.abs(discrepancy) > 0.01;
                     const totalSalesAmount = getSessionTotalSales(session);
                     const cashierName = getSessionCashier(session);
+                    const profitInfo = sessionsProfitMap.get(session.id) || {
+                      cost: 0,
+                      profit: totalSalesAmount,
+                      profitPct: totalSalesAmount > 0 ? 100 : 0,
+                      costPct: 0
+                    };
 
                     return (
                       <TableRow 
@@ -610,13 +747,6 @@ export default function Bank() {
                           )}
                         </TableCell>
 
-                        {/* Fondo Apertura */}
-                        <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <span className="font-mono text-sm font-semibold text-muted-foreground">
-                            RD$ {(session.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </TableCell>
-
                         {/* Ventas Totales */}
                         <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
                           <div className="font-mono font-bold text-sm text-foreground">
@@ -624,6 +754,24 @@ export default function Bank() {
                           </div>
                           <div className="text-[11px] text-muted-foreground mt-0.5">
                             Efec: RD$ {(session.total_sales_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </TableCell>
+
+                        {/* Ganancia Neta */}
+                        <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="font-mono font-bold text-sm text-emerald-500">
+                            RD$ {profitInfo.profit.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {profitInfo.cost > 0 ? (
+                              <span>
+                                Costo: RD$ {profitInfo.cost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({profitInfo.costPct.toFixed(0)}%)
+                              </span>
+                            ) : totalSalesAmount > 0 ? (
+                              <span className="text-amber-500/90 text-[10px]">Sin costo reg.</span>
+                            ) : (
+                              <span>RD$ 0.00</span>
+                            )}
                           </div>
                         </TableCell>
 
@@ -691,76 +839,129 @@ export default function Bank() {
       {/* Details Modal - Adaptive Theme */}
       <Dialog open={!!selectedSession} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 rounded-3xl border-border/50 bg-card text-card-foreground shadow-2xl">
-          {selectedSession && (
-            <div>
-              {/* Modal Header */}
-              <div className="bg-muted/40 p-6 rounded-t-3xl border-b border-border/30 relative">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-8">
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 bg-primary/10 text-primary rounded-xl">
-                        <Landmark className="h-5 w-5" />
+          {selectedSession && (() => {
+            const selectedProfitInfo = sessionsProfitMap.get(selectedSession.id) || {
+              cost: 0,
+              profit: getSessionTotalSales(selectedSession),
+              profitPct: getSessionTotalSales(selectedSession) > 0 ? 100 : 0,
+              costPct: 0
+            };
+
+            return (
+              <div>
+                {/* Modal Header */}
+                <div className="bg-muted/40 p-6 rounded-t-3xl border-b border-border/30 relative">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-8">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                          <Landmark className="h-5 w-5" />
+                        </div>
+                        <h2 className="text-xl font-bold text-foreground">
+                          Detalle de Cierre de Caja
+                        </h2>
                       </div>
-                      <h2 className="text-xl font-bold text-foreground">
-                        Detalle de Cierre de Caja
-                      </h2>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        {format(new Date(selectedSession.opened_at), "EEEE, dd 'de' MMMM yyyy", { locale: es })}
+                        {' • '}
+                        Cajero: <span className="font-semibold text-foreground">{getSessionCashier(selectedSession)}</span>
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1.5">
-                      {format(new Date(selectedSession.opened_at), "EEEE, dd 'de' MMMM yyyy", { locale: es })}
-                      {' • '}
-                      Cajero: <span className="font-semibold text-foreground">{getSessionCashier(selectedSession)}</span>
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleDownloadPDF(selectedSession)}
-                      disabled={downloadingPdf}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl shadow-md"
-                    >
-                      <Download className="h-3.5 w-3.5 mr-1.5" />
-                      {downloadingPdf ? 'Generando...' : 'Descargar PDF'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleDownloadPDF(selectedSession)}
+                        disabled={downloadingPdf}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl shadow-md"
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
+                        {downloadingPdf ? 'Generando...' : 'Descargar PDF'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-6">
-                {/* Financial Summary Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Fondo Inicial</span>
-                    <p className="text-base font-bold text-foreground font-mono mt-1">
-                      RD$ {(selectedSession.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                    </p>
+                {/* Modal Body */}
+                <div className="p-6 space-y-6">
+                  {/* Financial Summary Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Fondo Inicial</span>
+                      <p className="text-base font-bold text-foreground font-mono mt-1">
+                        RD$ {(selectedSession.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Ventas Totales</span>
+                      <p className="text-base font-bold text-emerald-500 font-mono mt-1">
+                        RD$ {getSessionTotalSales(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Efectivo Contado</span>
+                      <p className="text-base font-bold text-indigo-400 font-mono mt-1">
+                        RD$ {getSessionActualCash(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Diferencia</span>
+                      <p className={`text-base font-bold font-mono mt-1 ${
+                        getSessionDiscrepancy(selectedSession) < 0 
+                          ? 'text-red-500' 
+                          : getSessionDiscrepancy(selectedSession) > 0 
+                          ? 'text-blue-500' 
+                          : 'text-emerald-500'
+                      }`}>
+                        RD$ {getSessionDiscrepancy(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
-                  <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Ventas Totales</span>
-                    <p className="text-base font-bold text-emerald-500 font-mono mt-1">
-                      RD$ {getSessionTotalSales(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                    </p>
+
+                  {/* Rentabilidad: Reinversión vs Ganancia Neta */}
+                  <div className="bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="px-5 py-3.5 bg-muted/20 border-b border-border/30 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-4 rounded-full bg-emerald-500 inline-block" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                          Análisis de Rentabilidad
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        Margen: {selectedProfitInfo.profitPct.toFixed(1)}% de la venta
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 divide-x divide-border/30">
+                      <div className="p-5 bg-card">
+                        <div className="text-[10px] font-extrabold uppercase text-blue-500 tracking-wider mb-1.5">
+                          REINVERSIÓN (COSTO)
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black font-mono text-foreground">
+                          RD$ {selectedProfitInfo.cost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-xs font-semibold text-muted-foreground mt-1.5">
+                          {selectedProfitInfo.costPct.toFixed(1)}% de la venta
+                        </div>
+                      </div>
+
+                      <div className="p-5 bg-emerald-500/10">
+                        <div className="text-[10px] font-extrabold uppercase text-emerald-500 dark:text-emerald-400 tracking-wider mb-1.5">
+                          GANANCIA NETA
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black font-mono text-emerald-500 dark:text-emerald-400">
+                          RD$ {selectedProfitInfo.profit.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1.5">
+                          {selectedProfitInfo.profitPct.toFixed(1)}% de la venta
+                        </div>
+                      </div>
+                    </div>
+                    {selectedProfitInfo.cost === 0 && getSessionTotalSales(selectedSession) > 0 && (
+                      <div className="px-5 py-2.5 bg-amber-500/10 border-t border-amber-500/20 text-amber-500 text-xs font-medium">
+                        ⚠️ Nota: Los productos vendidos en este turno no tienen costo de compra registrado en el inventario.
+                      </div>
+                    )}
                   </div>
-                  <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Efectivo Contado</span>
-                    <p className="text-base font-bold text-indigo-400 font-mono mt-1">
-                      RD$ {getSessionActualCash(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Diferencia</span>
-                    <p className={`text-base font-bold font-mono mt-1 ${
-                      getSessionDiscrepancy(selectedSession) < 0 
-                        ? 'text-red-500' 
-                        : getSessionDiscrepancy(selectedSession) > 0 
-                        ? 'text-blue-500' 
-                        : 'text-emerald-500'
-                    }`}>
-                      RD$ {getSessionDiscrepancy(selectedSession).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
 
                 {/* Breakdown by Payment Method */}
                 <div className="bg-muted/20 border border-border/30 rounded-2xl p-4">
@@ -926,7 +1127,8 @@ export default function Bank() {
                 </Tabs>
               </div>
             </div>
-          )}
+          );
+        })()}
         </DialogContent>
       </Dialog>
     </div>
