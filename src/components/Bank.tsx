@@ -600,19 +600,14 @@ export default function Bank() {
 
                         {/* Cajero Responsable */}
                         <TableCell className="py-3.5 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 border border-primary/20">
-                              {cashierName.slice(0, 2).toUpperCase()}
-                            </div>
-                            <div className="truncate max-w-[150px]">
-                              <span className="font-semibold text-foreground text-sm block truncate" title={cashierName}>
-                                {cashierName}
-                              </span>
-                              <span className="text-[11px] text-muted-foreground block truncate">
-                                {session.notes ? session.notes : 'Sesión de caja'}
-                              </span>
-                            </div>
-                          </div>
+                          <span className="font-semibold text-foreground text-sm block truncate" title={cashierName}>
+                            {cashierName}
+                          </span>
+                          {session.notes && (
+                            <span className="text-[11px] text-muted-foreground block truncate max-w-[170px]" title={session.notes}>
+                              {session.notes}
+                            </span>
+                          )}
                         </TableCell>
 
                         {/* Fondo Apertura */}
