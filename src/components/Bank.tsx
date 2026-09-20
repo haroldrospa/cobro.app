@@ -331,6 +331,12 @@ export default function Bank() {
     if (!safeSessions.length) return map;
 
     safeSessions.forEach(session => {
+      const totalSales = getSessionTotalSales(session);
+      if (totalSales <= 0) {
+        map.set(session.id, { cost: 0, profit: 0, profitPct: 0, costPct: 0 });
+        return;
+      }
+
       const sessionStart = new Date(session.opened_at).getTime() - 120000;
       const sessionEnd = session.closed_at 
         ? new Date(session.closed_at).getTime() + 120000 
@@ -354,12 +360,12 @@ export default function Bank() {
         }
       });
 
-      const totalSales = getSessionTotalSales(session);
-      const profit = Math.max(0, totalSales - cost);
+      const safeCost = Math.min(cost, totalSales);
+      const profit = Math.max(0, totalSales - safeCost);
       const profitPct = totalSales > 0 ? (profit / totalSales) * 100 : 0;
-      const costPct = totalSales > 0 ? (cost / totalSales) * 100 : 0;
+      const costPct = totalSales > 0 ? (safeCost / totalSales) * 100 : 0;
 
-      map.set(session.id, { cost, profit, profitPct, costPct });
+      map.set(session.id, { cost: safeCost, profit, profitPct, costPct });
     });
 
     return map;
@@ -385,6 +391,7 @@ export default function Bank() {
   }, [filteredSessions, sessionsProfitMap]);
 
   const overallProfitPct = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+  const overallCostPct = totalSales > 0 ? (totalCost / totalSales) * 100 : 0;
 
   return (
     <div className="space-y-8 animate-fade-in pb-20 pt-2">
@@ -421,25 +428,7 @@ export default function Bank() {
 
       {/* Summary KPI Cards - Centered & Dynamic with Filters */}
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
-          <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
-            <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-2xl mb-1">
-              <Receipt className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Total Cierres
-            </span>
-            <span className="text-3xl font-black tracking-tighter text-foreground">
-              {filteredSessions.length}
-            </span>
-            <p className="text-xs text-muted-foreground">
-              {hasActiveFilters 
-                ? `Filtrados de ${safeSessions.length} registrados`
-                : 'Sesiones de caja este mes'}
-            </p>
-          </CardContent>
-        </Card>
-
+        {/* 1. Ventas Totales */}
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
             <div className="p-2.5 bg-sky-500/10 text-sky-500 rounded-2xl mb-1">
@@ -448,34 +437,52 @@ export default function Bank() {
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Ventas Totales
             </span>
-            <span className="text-3xl font-black tracking-tighter text-foreground">
+            <span className="text-3xl font-black tracking-tighter text-foreground font-mono">
               RD$ {totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <p className="text-xs text-muted-foreground">
-              {hasActiveFilters 
-                ? `En los ${filteredSessions.length} ${filteredSessions.length === 1 ? 'cierre' : 'cierres'} filtrados` 
-                : 'Facturado este mes'}
+              {filteredSessions.length} {filteredSessions.length === 1 ? 'cierre' : 'cierres'} • Facturado en el período
             </p>
           </CardContent>
         </Card>
 
+        {/* 2. Reinversión (Costo) */}
+        <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
+          <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
+            <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-2xl mb-1">
+              <RotateCcw className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 font-bold">
+              Reinversión (Costo)
+            </span>
+            <span className="text-3xl font-black tracking-tighter text-blue-500 dark:text-blue-400 font-mono">
+              RD$ {totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <p className="text-xs text-blue-500/80 font-medium">
+              {overallCostPct.toFixed(1)}% del total (dinero a apartar)
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* 3. Ganancia Neta */}
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
             <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl mb-1">
               <Sparkles className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 font-bold">
               Ganancia Neta
             </span>
-            <span className="text-3xl font-black tracking-tighter text-emerald-500">
+            <span className="text-3xl font-black tracking-tighter text-emerald-500 font-mono">
               RD$ {totalProfit.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <p className="text-xs text-muted-foreground">
-              Costo: RD$ {totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({overallProfitPct.toFixed(1)}% margen)
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+              {overallProfitPct.toFixed(1)}% margen real de ganancia
             </p>
           </CardContent>
         </Card>
 
+        {/* 4. Efectivo Entregado */}
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
             <div className="p-2.5 bg-indigo-500/10 text-indigo-500 rounded-2xl mb-1">
@@ -484,7 +491,7 @@ export default function Bank() {
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Efectivo Entregado
             </span>
-            <span className="text-3xl font-black tracking-tighter text-indigo-400">
+            <span className="text-3xl font-black tracking-tighter text-indigo-400 font-mono">
               RD$ {totalSettled.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <p className="text-xs text-muted-foreground">
@@ -686,16 +693,17 @@ export default function Bank() {
             </div>
           ) : (
             <div className="overflow-x-auto w-full">
-              <Table className="w-full min-w-[960px] text-left border-collapse">
+              <Table className="w-full min-w-[1050px] text-left border-collapse">
                 <TableHeader>
                   <TableRow className="bg-muted/40 border-b border-border/30 hover:bg-muted/40">
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[200px]">Fecha & Turno</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[180px]">Cajero Responsable</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[160px]">Ventas Totales</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[180px]">Ganancia Neta</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[150px]">Efectivo Cierre</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[140px]">Diferencia</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[120px]">Acciones</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[180px]">Fecha & Turno</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[160px]">Cajero</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[150px]">Ventas Totales</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-blue-500 dark:text-blue-400 py-3.5 px-4 text-right whitespace-nowrap w-[160px]">Reinversión (Costo)</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-emerald-500 dark:text-emerald-400 py-3.5 px-4 text-right whitespace-nowrap w-[160px]">Ganancia Neta</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[140px]">Efectivo Cierre</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[130px]">Diferencia</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[110px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -745,11 +753,11 @@ export default function Bank() {
 
                         {/* Cajero Responsable */}
                         <TableCell className="py-3.5 px-4">
-                          <span className="font-semibold text-foreground text-sm block truncate" title={cashierName}>
+                          <span className="font-semibold text-foreground text-sm block truncate max-w-[160px]" title={cashierName}>
                             {cashierName}
                           </span>
                           {session.notes && (
-                            <span className="text-[11px] text-muted-foreground block truncate max-w-[170px]" title={session.notes}>
+                            <span className="text-[11px] text-muted-foreground block truncate max-w-[160px]" title={session.notes}>
                               {session.notes}
                             </span>
                           )}
@@ -765,20 +773,36 @@ export default function Bank() {
                           </div>
                         </TableCell>
 
-                        {/* Ganancia Neta */}
+                        {/* Reinversión (Costo) */}
                         <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="font-mono font-bold text-sm text-emerald-500">
-                            RD$ {profitInfo.profit.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <div className="font-mono font-bold text-sm text-blue-500 dark:text-blue-400">
+                            RD$ {profitInfo.cost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
-                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                          <div className="text-[11px] mt-0.5">
                             {profitInfo.cost > 0 ? (
-                              <span>
-                                Costo: RD$ {profitInfo.cost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({profitInfo.costPct.toFixed(0)}%)
+                              <span className="text-blue-500/80 font-medium">
+                                {profitInfo.costPct.toFixed(1)}% a apartar
                               </span>
                             ) : totalSalesAmount > 0 ? (
                               <span className="text-amber-500/90 text-[10px]">Sin costo reg.</span>
                             ) : (
-                              <span>RD$ 0.00</span>
+                              <span className="text-muted-foreground">0.0%</span>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Ganancia Neta */}
+                        <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="font-mono font-bold text-sm text-emerald-500 dark:text-emerald-400">
+                            RD$ {profitInfo.profit.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-[11px] mt-0.5">
+                            {profitInfo.profit > 0 ? (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                {profitInfo.profitPct.toFixed(1)}% ganancia
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">0.0%</span>
                             )}
                           </div>
                         </TableCell>
@@ -859,8 +883,9 @@ export default function Bank() {
               costPct: 0
             };
 
-            // If we have detailed sessionSales fetched for this modal, use it for exact calculation
-            if (sessionSales && sessionSales.length > 0) {
+            if (totalSales <= 0) {
+              selectedProfitInfo = { cost: 0, profit: 0, profitPct: 0, costPct: 0 };
+            } else if (sessionSales && sessionSales.length > 0) {
               let modalCost = 0;
               sessionSales.forEach((sale: any) => {
                 sale.sale_items?.forEach((item: any) => {
@@ -874,12 +899,11 @@ export default function Bank() {
                   }
                 });
               });
-              if (modalCost > 0 || selectedProfitInfo.cost === 0) {
-                const profit = Math.max(0, totalSales - modalCost);
-                const profitPct = totalSales > 0 ? (profit / totalSales) * 100 : 0;
-                const costPct = totalSales > 0 ? (modalCost / totalSales) * 100 : 0;
-                selectedProfitInfo = { cost: modalCost, profit, profitPct, costPct };
-              }
+              const safeModalCost = Math.min(modalCost, totalSales);
+              const profit = Math.max(0, totalSales - safeModalCost);
+              const profitPct = totalSales > 0 ? (profit / totalSales) * 100 : 0;
+              const costPct = totalSales > 0 ? (safeModalCost / totalSales) * 100 : 0;
+              selectedProfitInfo = { cost: safeModalCost, profit, profitPct, costPct };
             }
 
             return (
