@@ -40,7 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select, 
@@ -846,7 +846,10 @@ export default function Bank() {
 
       {/* Details Modal - Adaptive Theme */}
       <Dialog open={!!selectedSession} onOpenChange={(open) => !open && setSelectedSession(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 rounded-3xl border-border/50 bg-card text-card-foreground shadow-2xl">
+        <DialogContent 
+          hideCloseButton
+          className="max-w-4xl max-h-[90vh] p-0 rounded-3xl border border-border/50 bg-card text-card-foreground shadow-2xl overflow-hidden flex flex-col"
+        >
           {selectedSession && (() => {
             const totalSales = getSessionTotalSales(selectedSession);
             let selectedProfitInfo = sessionsProfitMap.get(selectedSession.id) || {
@@ -880,42 +883,49 @@ export default function Bank() {
             }
 
             return (
-              <div>
+              <div className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                 {/* Modal Header */}
-                <div className="bg-muted/40 p-6 rounded-t-3xl border-b border-border/30 relative">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-8">
-                    <div>
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-primary/10 text-primary rounded-xl">
-                          <Landmark className="h-5 w-5" />
-                        </div>
-                        <h2 className="text-xl font-bold text-foreground">
-                          Detalle de Cierre de Caja
-                        </h2>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1.5">
+                <div className="bg-muted/40 px-6 py-4 border-b border-border/30 shrink-0 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2.5 bg-primary/10 text-primary rounded-2xl shrink-0">
+                      <Landmark className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <DialogTitle className="text-lg sm:text-xl font-bold text-foreground truncate">
+                        Detalle de Cierre de Caja
+                      </DialogTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
                         {format(new Date(selectedSession.opened_at), "EEEE, dd 'de' MMMM yyyy", { locale: es })}
                         {' • '}
                         Cajero: <span className="font-semibold text-foreground">{getSessionCashier(selectedSession)}</span>
                       </p>
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleDownloadPDF(selectedSession)}
-                        disabled={downloadingPdf}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl shadow-md"
-                      >
-                        <Download className="h-3.5 w-3.5 mr-1.5" />
-                        {downloadingPdf ? 'Generando...' : 'Descargar PDF'}
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={() => handleDownloadPDF(selectedSession)}
+                      disabled={downloadingPdf}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl shadow-md h-9"
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      {downloadingPdf ? 'Generando...' : 'Descargar PDF'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSelectedSession(null)}
+                      className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                      title="Cerrar"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
                   {/* Financial Summary Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-muted/30 p-4 rounded-2xl border border-border/30">
