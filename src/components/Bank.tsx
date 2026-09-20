@@ -298,7 +298,7 @@ export default function Bank() {
       </div>
 
       {/* Summary KPI Cards - Centered & Dynamic with Filters */}
-      <div className="max-w-5xl mx-auto w-full px-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
             <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-2xl mb-1">
@@ -358,7 +358,7 @@ export default function Bank() {
       </div>
 
       {/* Modern & Fast Filter Hub */}
-      <div className="max-w-5xl mx-auto w-full px-4">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6">
         <Card className="bg-card/70 border-border/50 backdrop-blur-md rounded-3xl shadow-sm overflow-hidden p-4 sm:p-5 space-y-4">
           {/* Quick Date Presets Row */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-border/30">
@@ -515,8 +515,8 @@ export default function Bank() {
       </div>
 
       {/* Closings Table - Centered & Adaptive */}
-      <div className="max-w-5xl mx-auto w-full px-4">
-        <Card className="bg-card/60 border-border/40 backdrop-blur-sm rounded-3xl shadow-sm overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6">
+        <Card className="bg-card/70 border-border/50 backdrop-blur-md rounded-3xl shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="py-20 text-center">
               <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary mb-3" />
@@ -546,17 +546,17 @@ export default function Bank() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto w-full">
+              <Table className="w-full min-w-[960px] text-left border-collapse">
                 <TableHeader>
-                  <TableRow className="bg-muted/40 border-border/30 hover:bg-muted/40">
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-4 px-4 sm:px-6">Fecha & Turno</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-4 px-4 sm:px-6">Cajero Responsable</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-4 px-4 sm:px-6 text-right">Fondo Apertura</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-4 px-4 sm:px-6 text-right">Ventas Totales</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-4 px-4 sm:px-6 text-right">Efectivo Cierre</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-4 px-4 sm:px-6 text-right">Diferencia</TableHead>
-                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-4 px-4 sm:px-6 text-center">Acciones</TableHead>
+                  <TableRow className="bg-muted/40 border-b border-border/30 hover:bg-muted/40">
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[200px]">Fecha & Turno</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 whitespace-nowrap w-[180px]">Cajero Responsable</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[140px]">Fondo Apertura</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[160px]">Ventas Totales</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-right whitespace-nowrap w-[150px]">Efectivo Cierre</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[140px]">Diferencia</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground py-3.5 px-4 text-center whitespace-nowrap w-[120px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -570,90 +570,107 @@ export default function Bank() {
                     return (
                       <TableRow 
                         key={session.id} 
-                        className="hover:bg-muted/30 border-border/30 transition-colors cursor-pointer group"
+                        className="hover:bg-muted/30 border-b border-border/25 transition-colors cursor-pointer group"
                         onClick={() => handleOpenDetails(session)}
                       >
-                        <TableCell className="py-4 px-4 sm:px-6">
-                          <div className="font-semibold text-foreground">
-                            {format(new Date(session.opened_at), "dd 'de' MMM, yyyy", { locale: es })}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              {format(new Date(session.opened_at), 'hh:mm a', { locale: es })}
-                              {session.closed_at ? ` → ${format(new Date(session.closed_at), 'hh:mm a', { locale: es })}` : ''}
+                        {/* Fecha & Turno */}
+                        <TableCell className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground text-sm">
+                              {format(new Date(session.opened_at), "dd MMM yyyy", { locale: es })}
                             </span>
-                          </div>
-                          <div className="mt-1">
                             {isClosed ? (
-                              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 font-semibold text-[10px] px-2 py-0.5">
+                              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 font-semibold text-[10px] px-1.5 py-0">
                                 Cerrada
                               </Badge>
                             ) : (
-                              <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-semibold text-[10px] px-2 py-0.5 animate-pulse">
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-semibold text-[10px] px-1.5 py-0 animate-pulse">
                                 Abierta
                               </Badge>
                             )}
                           </div>
-                        </TableCell>
-
-                        <TableCell className="py-4 px-4 sm:px-6">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="font-medium text-foreground truncate">
-                              {cashierName}
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                            <Clock className="h-3 w-3 text-muted-foreground/70 shrink-0" />
+                            <span>
+                              {format(new Date(session.opened_at), 'hh:mm a', { locale: es })}
+                              {session.closed_at ? ` — ${format(new Date(session.closed_at), 'hh:mm a', { locale: es })}` : ''}
                             </span>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {userStore?.store_name || 'Sucursal Principal'}
+                        </TableCell>
+
+                        {/* Cajero Responsable */}
+                        <TableCell className="py-3.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 border border-primary/20">
+                              {cashierName.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="truncate max-w-[150px]">
+                              <span className="font-semibold text-foreground text-sm block truncate" title={cashierName}>
+                                {cashierName}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground block truncate">
+                                {session.notes ? session.notes : 'Sesión de caja'}
+                              </span>
+                            </div>
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-4 px-4 sm:px-6 text-right font-mono text-muted-foreground">
-                          RD$ {(session.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                        </TableCell>
-
-                        <TableCell className="py-4 px-4 sm:px-6 text-right">
-                          <span className="font-bold text-foreground font-mono">
-                            RD$ {totalSalesAmount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                        {/* Fondo Apertura */}
+                        <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <span className="font-mono text-sm font-semibold text-muted-foreground">
+                            RD$ {(session.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
+                        </TableCell>
+
+                        {/* Ventas Totales */}
+                        <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="font-mono font-bold text-sm text-foreground">
+                            RD$ {totalSalesAmount.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
                           <div className="text-[11px] text-muted-foreground mt-0.5">
-                            Efectivo: RD$ {(session.total_sales_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                            Efec: RD$ {(session.total_sales_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-4 px-4 sm:px-6 text-right font-mono font-bold text-foreground">
-                          RD$ {getSessionActualCash(session).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                        {/* Efectivo Cierre */}
+                        <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <span className="font-mono font-black text-sm text-foreground">
+                            RD$ {getSessionActualCash(session).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
                         </TableCell>
 
-                        <TableCell className="py-4 px-4 sm:px-6 text-right">
+                        {/* Diferencia */}
+                        <TableCell className="py-3.5 px-4 text-center whitespace-nowrap">
                           {hasDiscrepancy ? (
-                            <span className={`inline-flex items-center gap-1 font-mono text-xs font-bold px-2 py-0.5 rounded-lg ${
+                            <span className={cn(
+                              "inline-flex items-center gap-1 font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg border",
                               discrepancy < 0 
-                                ? 'bg-red-500/10 text-red-500 border border-red-500/20' 
-                                : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                            }`}>
+                                ? 'bg-rose-500/10 text-rose-500 border-rose-500/30' 
+                                : 'bg-blue-500/10 text-blue-500 border-blue-500/30'
+                            )}>
                               <AlertCircle className="h-3 w-3" />
-                              {discrepancy < 0 ? '-' : '+'}RD$ {Math.abs(discrepancy).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                              {discrepancy < 0 ? '-' : '+'}RD$ {Math.abs(discrepancy).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg">
                               <CheckCircle2 className="h-3 w-3" />
                               Exacto
                             </span>
                           )}
                         </TableCell>
 
-                        <TableCell className="py-4 px-4 sm:px-6 text-center" onClick={(e) => e.stopPropagation()}>
+                        {/* Acciones */}
+                        <TableCell className="py-3.5 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             <Button
                               variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl"
+                              size="sm"
+                              className="h-8 px-2.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl gap-1 text-xs font-semibold"
                               onClick={() => handleOpenDetails(session)}
                               title="Ver Detalle"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" />
+                              <span className="hidden md:inline">Detalle</span>
                             </Button>
                             <Button
                               variant="ghost"
@@ -662,7 +679,7 @@ export default function Bank() {
                               onClick={() => handleDownloadPDF(session)}
                               title="Descargar Comprobante PDF"
                             >
-                              <Download className="h-4 w-4" />
+                              <Download className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>
