@@ -703,6 +703,7 @@ export type Database = {
           status: string | null
           stock: number | null
           store_id: string | null
+          supplier_id: string | null
           tax_percentage: number | null
           track_inventory: boolean | null
           updated_at: string | null
@@ -728,6 +729,7 @@ export type Database = {
           status?: string | null
           stock?: number | null
           store_id?: string | null
+          supplier_id?: string | null
           tax_percentage?: number | null
           track_inventory?: boolean | null
           updated_at?: string | null
@@ -753,6 +755,7 @@ export type Database = {
           status?: string | null
           stock?: number | null
           store_id?: string | null
+          supplier_id?: string | null
           tax_percentage?: number | null
           track_inventory?: boolean | null
           updated_at?: string | null

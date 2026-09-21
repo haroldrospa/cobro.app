@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Building2,
@@ -20,10 +21,13 @@ import {
   Calendar,
   MessageCircle,
   Eye,
+  Package,
+  Search,
 } from 'lucide-react';
 import { Supplier } from '@/hooks/useSuppliers';
 import { SupplierDebt } from '@/hooks/useSupplierDebts';
 import { Expense } from '@/hooks/useExpenses';
+import { useProducts, Product } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
 import { format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -34,6 +38,7 @@ interface SupplierDetailsDialogProps {
   supplier: Supplier | null;
   debts: SupplierDebt[];
   expenses: Expense[];
+  initialTab?: 'debts' | 'expenses' | 'products';
   onOpenEdit: (supplier: Supplier) => void;
   onOpenAddDebt: (supplier: Supplier) => void;
   onOpenPayDebt: (debt: SupplierDebt) => void;
@@ -46,14 +51,25 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   supplier,
   debts,
   expenses,
+  initialTab = 'debts',
   onOpenEdit,
   onOpenAddDebt,
   onOpenPayDebt,
   onDeleteDebt,
 }) => {
   const { toast } = useToast();
+  const { products = [] } = useProducts();
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState<'debts' | 'expenses' | 'products'>(initialTab);
+  const [productSearch, setProductSearch] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setCurrentTab(initialTab);
+      setProductSearch('');
+    }
+  }, [open, initialTab]);
 
   if (!supplier) return null;
 
@@ -69,6 +85,27 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
       (e.supplier_name && e.supplier_name.toLowerCase().trim() === supplier.name.toLowerCase().trim())
   );
   const totalExpensesAmount = supplierExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+  const supplierProducts = useMemo(() => {
+    if (!supplier) return [];
+    return products.filter((p) => p.supplier_id === supplier.id);
+  }, [products, supplier]);
+
+  const filteredSupplierProducts = useMemo(() => {
+    if (!productSearch.trim()) return supplierProducts;
+    const q = productSearch.toLowerCase().trim();
+    return supplierProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+        (p.internal_code && p.internal_code.toLowerCase().includes(q)) ||
+        (p.category?.name && p.category.name.toLowerCase().includes(q))
+    );
+  }, [supplierProducts, productSearch]);
+
+  const supplierInventoryValue = useMemo(() => {
+    return supplierProducts.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.cost || 0), 0);
+  }, [supplierProducts]);
 
   const isTransfer = (supplier.payment_method || 'transfer') === 'transfer';
 
@@ -255,8 +292,12 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
 
           {/* Body Tabs */}
           <div className="p-5 sm:p-6 space-y-4">
-            <Tabs defaultValue="debts" className="w-full">
-              <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1 mb-4">
+            <Tabs value={currentTab} onValueChange={(val) => setCurrentTab(val as any)} className="w-full">
+              <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1 mb-4 flex-wrap">
+                <TabsTrigger value="products" className="rounded-lg px-3.5 h-7 text-xs font-bold gap-1.5">
+                  <Package className="h-3.5 w-3.5 text-primary" />
+                  Productos Comprados ({supplierProducts.length})
+                </TabsTrigger>
                 <TabsTrigger value="debts" className="rounded-lg px-3.5 h-7 text-xs font-bold">
                   Cuentas por Pagar ({supplierDebts.length})
                 </TabsTrigger>
@@ -444,6 +485,151 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                                 ) : (
                                   <span className="text-[11px] text-muted-foreground">—</span>
                                 )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Tab: Productos Comprados */}
+              <TabsContent value="products" className="space-y-4 outline-none">
+                {/* Métricas rápidas de productos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground font-semibold">Productos Comprados</p>
+                        <p className="text-lg font-black text-foreground">{supplierProducts.length} productos</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                        <DollarSign className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground font-semibold">Valor Total en Stock (Costo)</p>
+                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                          RD$ {supplierInventoryValue.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Buscador de productos */}
+                {supplierProducts.length > 0 && (
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar producto por nombre, código o categoría..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="pl-9 h-10 rounded-xl bg-muted/30 border-border/50 text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Lista o estado vacío */}
+                {supplierProducts.length === 0 ? (
+                  <div className="text-center py-10 px-4 bg-muted/20 rounded-2xl border border-border/40">
+                    <Package className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-sm font-semibold text-foreground">Sin productos asignados</p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                      Aún no has asignado productos a este proveedor. Puedes asignarlo editando o creando un producto en el inventario.
+                    </p>
+                  </div>
+                ) : filteredSupplierProducts.length === 0 ? (
+                  <div className="text-center py-8 px-4 bg-muted/10 rounded-2xl border border-border/30">
+                    <p className="text-xs font-semibold text-muted-foreground">No se encontraron productos con "{productSearch}"</p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-border/40 overflow-hidden bg-card">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow>
+                          <TableHead className="text-xs font-bold">Producto</TableHead>
+                          <TableHead className="text-xs font-bold">Categoría</TableHead>
+                          <TableHead className="text-right text-xs font-bold">Costo</TableHead>
+                          <TableHead className="text-right text-xs font-bold">Precio Venta</TableHead>
+                          <TableHead className="text-center text-xs font-bold">Margen</TableHead>
+                          <TableHead className="text-center text-xs font-bold">Stock</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSupplierProducts.map((prod) => {
+                          const cost = Number(prod.cost || 0);
+                          const price = Number(prod.price || 0);
+                          const margin = cost > 0 ? (((price - cost) / cost) * 100).toFixed(0) : null;
+                          const isLowStock = prod.stock <= (prod.min_stock || 0);
+
+                          return (
+                            <TableRow key={prod.id} className="hover:bg-muted/20">
+                              <TableCell className="py-3">
+                                <div className="flex items-center gap-2.5">
+                                  {prod.image_url ? (
+                                    <img
+                                      src={prod.image_url}
+                                      alt={prod.name}
+                                      className="h-8 w-8 rounded-lg object-cover border border-border/50 shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                      <Package className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <span className="font-bold text-xs text-foreground block truncate max-w-[200px]">
+                                      {prod.name}
+                                    </span>
+                                    {(prod.barcode || prod.internal_code) && (
+                                      <span className="text-[10px] text-muted-foreground font-mono block">
+                                        {prod.barcode || prod.internal_code}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3 text-xs text-muted-foreground">
+                                {prod.category?.name || '—'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-semibold text-xs py-3 text-muted-foreground">
+                                {cost > 0 ? `RD$ ${cost.toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '—'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-bold text-xs py-3 text-foreground">
+                                RD$ {price.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                              </TableCell>
+                              <TableCell className="text-center py-3">
+                                {margin !== null ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] font-bold border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                                  >
+                                    +{margin}%
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center py-3">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] font-bold ${
+                                    isLowStock
+                                      ? 'border-red-500/30 text-red-500 bg-red-500/10'
+                                      : 'border-border/60 text-foreground bg-muted/40'
+                                  }`}
+                                >
+                                  {prod.stock} uds
+                                </Badge>
                               </TableCell>
                             </TableRow>
                           );

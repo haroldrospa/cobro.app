@@ -198,6 +198,7 @@ export const useProductsOffline = () => {
                             .select(`
                                 *,
                                 category:categories(name),
+                                supplier:suppliers(id, name),
                                 barcodes:product_barcodes(id, barcode, label)
                             `)
                             .eq('store_id', storeId)
@@ -261,6 +262,7 @@ export const useCreateProductOffline = () => {
             internal_code?: string;
             barcode?: string;
             category_id?: string | null;
+            supplier_id?: string | null;
             stock: number;
             min_stock: number;
             status: 'active' | 'inactive';
@@ -286,11 +288,19 @@ export const useCreateProductOffline = () => {
                 categoryObj = newCat ? { name: newCat.name } : undefined;
             }
 
+            let supplierObj = undefined;
+            if (product.supplier_id) {
+                const suppliers = queryClient.getQueryData<any[]>(['suppliers']);
+                const newSup = suppliers?.find(s => s.id === product.supplier_id);
+                supplierObj = newSup ? { id: newSup.id, name: newSup.name } : undefined;
+            }
+
             const newProduct = {
                 ...product,
                 id: productId,
                 store_id: actualStoreId,
                 category: categoryObj,
+                supplier: supplierObj,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             };
@@ -310,7 +320,7 @@ export const useCreateProductOffline = () => {
                             .maybeSingle();
 
                         // Filtrar propiedades relacionales que no existen en la tabla
-                        const { category, barcodes, ...cleanProduct } = newProduct as any;
+                        const { category, barcodes, supplier, ...cleanProduct } = newProduct as any;
 
                         const { error } = await supabase
                             .from('products')
@@ -394,6 +404,7 @@ export const useUpdateProductOffline = () => {
             internal_code?: string;
             barcode?: string;
             category_id?: string | null;
+            supplier_id?: string | null;
             stock: number;
             min_stock: number;
             status: 'active' | 'inactive';
@@ -425,12 +436,24 @@ export const useUpdateProductOffline = () => {
                 }
             }
 
+            let supplierObj = existing?.supplier;
+            if (product.supplier_id !== existing?.supplier_id) {
+                if (product.supplier_id) {
+                    const suppliers = queryClient.getQueryData<any[]>(['suppliers']);
+                    const newSup = suppliers?.find(s => s.id === product.supplier_id);
+                    supplierObj = newSup ? { id: newSup.id, name: newSup.name } : undefined;
+                } else {
+                    supplierObj = undefined;
+                }
+            }
+
             const updatedProduct = {
                 ...existing,
                 ...product,
                 id,
                 store_id: actualStoreId,
                 category: categoryObj,
+                supplier: supplierObj,
                 updated_at: new Date().toISOString(),
             };
 
@@ -471,7 +494,7 @@ export const useUpdateProductOffline = () => {
             if (isOnline) {
                 try {
                     // Filtrar propiedades relacionales que no existen en la tabla
-                    const { category, barcodes, created_at, updated_at, reason, ...cleanProduct } = product as any;
+                    const { category, barcodes, supplier, created_at, updated_at, reason, ...cleanProduct } = product as any;
 
                     const { error } = await supabase
                         .from('products')

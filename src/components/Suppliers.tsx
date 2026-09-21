@@ -25,6 +25,7 @@ import {
   User,
   ArrowUpRight,
   ShieldCheck,
+  Package,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useSuppliers, Supplier } from '@/hooks/useSuppliers';
 import { useSupplierDebts, SupplierDebt } from '@/hooks/useSupplierDebts';
 import { useExpenses } from '@/hooks/useExpenses';
+import { useProducts } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
 import { SupplierDialog } from '@/components/suppliers/SupplierDialog';
 import { SupplierDebtDialog } from '@/components/suppliers/SupplierDebtDialog';
@@ -61,11 +63,12 @@ export const Suppliers: React.FC = () => {
   } = useSupplierDebts();
 
   const { expenses } = useExpenses();
+  const { products = [] } = useProducts();
 
   // State: Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [debtFilter, setDebtFilter] = useState<'all' | 'with_debt' | 'no_debt'>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   // State: Dialogs
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
@@ -79,6 +82,18 @@ export const Suppliers: React.FC = () => {
 
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedSupplierForDetails, setSelectedSupplierForDetails] = useState<Supplier | null>(null);
+  const [detailsInitialTab, setDetailsInitialTab] = useState<'debts' | 'expenses' | 'products'>('products');
+
+  // Count products by supplier
+  const supplierProductsCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach((p) => {
+      if (p.supplier_id) {
+        map[p.supplier_id] = (map[p.supplier_id] || 0) + 1;
+      }
+    });
+    return map;
+  }, [products]);
 
   // Helper: Get outstanding debt for a supplier
   const getSupplierOutstandingDebt = (supplierId: string) => {
@@ -201,8 +216,9 @@ export const Suppliers: React.FC = () => {
     setIsPayDialogOpen(true);
   };
 
-  const handleOpenViewDetails = (supplier: Supplier) => {
+  const handleOpenViewDetails = (supplier: Supplier, initialTab: 'debts' | 'expenses' | 'products' = 'products') => {
     setSelectedSupplierForDetails(supplier);
+    setDetailsInitialTab(initialTab);
     setIsDetailsDialogOpen(true);
   };
 
@@ -693,8 +709,17 @@ export const Suppliers: React.FC = () => {
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenViewDetails(supplier, 'products')}
+                      className="h-8 px-2.5 rounded-xl text-[11px] font-bold gap-1 text-primary border-primary/20 hover:bg-primary/10"
+                      title="Ver productos de este proveedor"
+                    >
+                      <Package className="h-3 w-3" /> {supplierProductsCountMap[supplier.id] || 0}
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="ghost"
-                      onClick={() => handleOpenViewDetails(supplier)}
+                      onClick={() => handleOpenViewDetails(supplier, 'debts')}
                       className="h-8 px-2.5 rounded-xl text-[11px] font-bold gap-1 text-foreground hover:bg-muted"
                     >
                       <Eye className="h-3 w-3 text-emerald-500" /> Ficha
@@ -740,6 +765,9 @@ export const Suppliers: React.FC = () => {
                 </TableHead>
                 <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3">
                   Contacto / Teléfono
+                </TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3 text-center">
+                  Productos
                 </TableHead>
                 <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3 text-right">
                   Cuentas por Pagar
@@ -860,6 +888,20 @@ export const Suppliers: React.FC = () => {
                       </div>
                     </TableCell>
 
+                    {/* Productos Comprados */}
+                    <TableCell className="py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenViewDetails(supplier, 'products')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20"
+                        title="Ver productos comprados a este proveedor"
+                      >
+                        <Package className="h-3.5 w-3.5" />
+                        <span>{supplierProductsCountMap[supplier.id] || 0}</span>
+                        <span className="hidden xl:inline text-[11px] font-medium text-muted-foreground">artículos</span>
+                      </button>
+                    </TableCell>
+
                     {/* Cuentas por Pagar (Deuda) */}
                     <TableCell className="py-3.5 text-right">
                       {hasDebt ? (
@@ -959,6 +1001,7 @@ export const Suppliers: React.FC = () => {
         supplier={selectedSupplierForDetails}
         debts={supplierDebts}
         expenses={expenses}
+        initialTab={detailsInitialTab}
         onOpenEdit={(s) => {
           setEditingSupplier(s);
           setIsSupplierDialogOpen(true);

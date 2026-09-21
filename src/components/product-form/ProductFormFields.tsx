@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import BarcodesManager from './BarcodesManager';
 import { ProductBarcode } from '@/hooks/useProducts';
 import { useBusinessType } from '@/hooks/useBusinessType';
+import { useSuppliers } from '@/hooks/useSuppliers';
 
 interface ProductFormFieldsProps {
   register: UseFormRegister<ProductFormData>;
@@ -44,7 +45,9 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
   onExtraBarcodesChange,
 }) => {
   const { isStore } = useBusinessType();
+  const { suppliers = [] } = useSuppliers();
   const selectedCategoryId = watch('category_id');
+  const selectedSupplierId = watch('supplier_id');
   const costIncludesTax = watch('cost_includes_tax');
   const isFeatured = watch('is_featured');
   const trackInventory = watch('track_inventory');
@@ -318,26 +321,52 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
         )}
       </div>
 
-      <div>
-        <Label htmlFor="category_id">Categoría</Label>
-        <div className="flex items-center gap-2 mt-1.5">
-          <Select
-            onValueChange={(value) => setValue('category_id', value === 'no-category' ? null : value)}
-            defaultValue={selectedCategoryId || 'no-category'}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seleccionar categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="no-category">Sin categoría</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <ManageCategoriesDialog />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Categoría */}
+        <div>
+          <Label htmlFor="category_id">Categoría</Label>
+          <div className="flex items-center gap-2 mt-1.5">
+            <Select
+              onValueChange={(value) => setValue('category_id', value === 'no-category' ? null : value)}
+              value={selectedCategoryId || 'no-category'}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no-category">Sin categoría</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ManageCategoriesDialog />
+          </div>
+        </div>
+
+        {/* Proveedor */}
+        <div>
+          <Label htmlFor="supplier_id">Proveedor</Label>
+          <div className="flex items-center gap-2 mt-1.5">
+            <Select
+              onValueChange={(value) => setValue('supplier_id', value === 'no-supplier' ? null : value)}
+              value={selectedSupplierId || 'no-supplier'}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar proveedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no-supplier">Sin proveedor asignado</SelectItem>
+                {suppliers.map((supplier) => (
+                  <SelectItem key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

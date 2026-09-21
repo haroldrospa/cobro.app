@@ -23,6 +23,11 @@ export interface Product {
   barcode?: string;
   barcodes?: ProductBarcode[]; // múltiples códigos de barra adicionales
   category_id?: string;
+  supplier_id?: string;
+  supplier?: {
+    id: string;
+    name: string;
+  };
   stock: number;
   min_stock: number;
   status: 'active' | 'inactive' | 'low_stock';
@@ -63,10 +68,11 @@ export const useProducts = () => {
         let query = supabase
           .from('products')
           .select(isBasicSchema ? `
-            id, name, price, stock, cost, barcode, internal_code, min_stock, status, image_url, tax_percentage, cost_includes_tax, discount_percentage, discount_start_date, discount_end_date, is_featured, is_variable_price, is_variable_quantity, store_id, category_id, created_at, updated_at, category:categories(name), barcodes:product_barcodes(id, barcode, label)
+            id, name, price, stock, cost, barcode, internal_code, min_stock, status, image_url, tax_percentage, cost_includes_tax, discount_percentage, discount_start_date, discount_end_date, is_featured, is_variable_price, is_variable_quantity, store_id, category_id, supplier_id, created_at, updated_at, category:categories(name), supplier:suppliers(id, name), barcodes:product_barcodes(id, barcode, label)
           ` : `
             *,
             category:categories(name),
+            supplier:suppliers(id, name),
             barcodes:product_barcodes(id, barcode, label, quantity, discount_value, discount_type)
           `)
           .order('name')
@@ -132,6 +138,7 @@ export const useCreateProduct = () => {
       internal_code?: string;
       barcode?: string;
       category_id?: string | null;
+      supplier_id?: string | null;
       stock: number;
       min_stock: number;
       status: 'active' | 'inactive';
@@ -243,6 +250,7 @@ export const useUpdateProduct = () => {
       internal_code?: string;
       barcode?: string;
       category_id?: string | null;
+      supplier_id?: string | null;
       stock: number;
       min_stock: number;
       status: 'active' | 'inactive';
