@@ -62,6 +62,7 @@ import {
   Landmark,
   CheckCircle2,
   Sparkles,
+  RotateCcw,
   ChevronLeft,
   ChevronsLeft,
   ChevronsRight,
@@ -275,7 +276,8 @@ const Reports = () => {
   }, [sales, dateRange, filterCustomer, filterPaymentMethod, filterUser, filterCategory, productsMap]);
 
   const getSaleInvoiceTypeCode = (s: Sale): string => {
-    if (s.invoice_type?.code) return s.invoice_type.code.toUpperCase();
+    if (!s) return 'B02';
+    if (s.invoice_type?.code) return String(s.invoice_type.code).toUpperCase();
     const invNum = (s.invoice_number || '').toUpperCase();
     if (invNum.startsWith('E31') || invNum.startsWith('B01')) return 'B01';
     if (invNum.startsWith('E32') || invNum.startsWith('B02')) return 'B02';
@@ -284,10 +286,11 @@ const Reports = () => {
     if (invNum.startsWith('E44') || invNum.startsWith('B14')) return 'B14';
     if (invNum.startsWith('E45') || invNum.startsWith('B15')) return 'B15';
     if (invNum.startsWith('E46') || invNum.startsWith('B16')) return 'B16';
-    return s.invoice_type_id || 'B02';
+    return String(s.invoice_type_id || 'B02');
   };
 
   const getSaleInvoiceTypeName = (s: Sale): string => {
+    if (!s) return 'Factura';
     if (s.invoice_type?.name) return s.invoice_type.name;
     const code = getSaleInvoiceTypeCode(s);
     if (code === 'B01' || code === 'E31') return 'Crédito Fiscal';
@@ -335,7 +338,7 @@ const Reports = () => {
         return num.includes(q) || client.includes(q) || rnc.includes(q) || method.includes(q) || code.includes(q) || typeName.includes(q);
       });
     }
-    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [filteredSales, filterInvoiceType, invoiceTableSearch, invoiceTypes]);
 
   const invoiceTypeCounts = useMemo(() => {
@@ -1929,8 +1932,8 @@ const Reports = () => {
       case 'sales-b02':
       case 'all-invoices': {
         // Calculate totals for the footer & cards
-        const totalAmount = allInvoices.reduce((sum, s) => sum + s.total, 0);
-        const totalTax = allInvoices.reduce((sum, s) => sum + (s.tax_total || 0), 0);
+        const totalAmount = allInvoices.reduce((sum, s) => sum + Number(s.total || 0), 0);
+        const totalTax = allInvoices.reduce((sum, s) => sum + Number(s.tax_total || 0), 0);
         const subtotalAmount = totalAmount - totalTax;
         const avgTicket = allInvoices.length > 0 ? (totalAmount / allInvoices.length) : 0;
 
@@ -2101,7 +2104,13 @@ const Reports = () => {
                     const isSelected = filterInvoiceType === tab.id;
                     const count = tab.id === 'all' 
                       ? sales.length 
-                      : sales.filter(s => getSaleInvoiceTypeCode(s).toLowerCase() === tab.id || (tab.id === 'b01' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e31') || (tab.id === 'b02' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e32') || (tab.id === 'b04' && getSaleInvoiceTypeCode(s).toLowerCase() === 'e34')).length;
+                      : sales.filter(s => {
+                          const code = getSaleInvoiceTypeCode(s).toLowerCase();
+                          return code === tab.id || 
+                            (tab.id === 'b01' && code === 'e31') || 
+                            (tab.id === 'b02' && code === 'e32') || 
+                            (tab.id === 'b04' && code === 'e34');
+                        }).length;
 
                     return (
                       <button
@@ -2201,7 +2210,9 @@ const Reports = () => {
                               className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/30 group"
                             >
                               <TableCell className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap font-medium">
-                                {format(new Date(s.created_at), 'dd/MM/yy HH:mm', { locale: es })}
+                                {s.created_at && !isNaN(new Date(s.created_at).getTime())
+                                  ? format(new Date(s.created_at), 'dd/MM/yy HH:mm', { locale: es })
+                                  : '—'}
                               </TableCell>
                               <TableCell className="py-3 px-3 whitespace-nowrap">
                                 <span className="font-mono text-xs font-bold text-foreground bg-muted/60 px-2 py-1 rounded-md border border-border/40 tracking-tight">
@@ -2242,10 +2253,10 @@ const Reports = () => {
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-3 px-3 text-right text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap font-medium">
-                                ${(s.tax_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ${Number(s.tax_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </TableCell>
                               <TableCell className="py-3 px-4 text-right text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap font-mono">
-                                ${s.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ${Number(s.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </TableCell>
                               <TableCell className="py-3 px-3 text-center whitespace-nowrap">
                                 <div className="flex items-center justify-center gap-1 opacity-75 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
@@ -2851,6 +2862,7 @@ const Reports = () => {
           <div className="space-y-1">
             {REPORT_TYPES.map(report => (
               <button
+                type="button"
                 key={report.id}
                 onClick={() => setActiveReport(report.id)}
                 className={cn(
@@ -2920,6 +2932,7 @@ const Reports = () => {
               const isActive = activeReport === report.id;
               return (
                 <button
+                  type="button"
                   key={report.id}
                   onClick={() => setActiveReport(report.id)}
                   className={cn(
