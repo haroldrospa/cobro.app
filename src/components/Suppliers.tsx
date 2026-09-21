@@ -83,7 +83,7 @@ export const Suppliers: React.FC = () => {
 
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedSupplierForDetails, setSelectedSupplierForDetails] = useState<Supplier | null>(null);
-  const [detailsInitialTab, setDetailsInitialTab] = useState<'debts' | 'expenses' | 'products'>('products');
+  const [detailsInitialTab, setDetailsInitialTab] = useState<'overview' | 'debts' | 'expenses' | 'products'>('overview');
 
   const [isSupplierProductsDialogOpen, setIsSupplierProductsDialogOpen] = useState(false);
   const [selectedSupplierForProducts, setSelectedSupplierForProducts] = useState<Supplier | null>(null);
@@ -225,7 +225,7 @@ export const Suppliers: React.FC = () => {
     setIsPayDialogOpen(true);
   };
 
-  const handleOpenViewDetails = (supplier: Supplier, initialTab: 'debts' | 'expenses' | 'products' = 'products') => {
+  const handleOpenViewDetails = (supplier: Supplier, initialTab: 'overview' | 'debts' | 'expenses' | 'products' = 'overview') => {
     setSelectedSupplierForDetails(supplier);
     setDetailsInitialTab(initialTab);
     setIsDetailsDialogOpen(true);
@@ -728,7 +728,7 @@ export const Suppliers: React.FC = () => {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleOpenViewDetails(supplier, 'debts')}
+                      onClick={() => handleOpenViewDetails(supplier, 'overview')}
                       className="h-8 px-2.5 rounded-xl text-[11px] font-bold gap-1 text-foreground hover:bg-muted"
                     >
                       <Eye className="h-3 w-3 text-emerald-500" /> Ficha

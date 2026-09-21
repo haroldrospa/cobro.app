@@ -23,14 +23,24 @@ import {
   Eye,
   Package,
   Search,
+  Link2,
+  Unlink,
+  CheckCircle,
+  Loader2,
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Supplier } from '@/hooks/useSuppliers';
 import { SupplierDebt } from '@/hooks/useSupplierDebts';
 import { Expense } from '@/hooks/useExpenses';
 import { useProductsOffline, Product } from '@/hooks/useProductsOffline';
+import { supabase } from '@/integrations/supabase/client';
+import { offlineDB, OfflineStore } from '@/lib/offlineDB';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
+import ProductForm from '@/components/ProductForm';
 
 interface SupplierDetailsDialogProps {
   open: boolean;
@@ -38,7 +48,7 @@ interface SupplierDetailsDialogProps {
   supplier: Supplier | null;
   debts: SupplierDebt[];
   expenses: Expense[];
-  initialTab?: 'debts' | 'expenses' | 'products';
+  initialTab?: 'overview' | 'debts' | 'expenses' | 'products';
   onOpenEdit: (supplier: Supplier) => void;
   onOpenAddDebt: (supplier: Supplier) => void;
   onOpenPayDebt: (debt: SupplierDebt) => void;
@@ -51,18 +61,28 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   supplier,
   debts,
   expenses,
-  initialTab = 'debts',
+  initialTab = 'overview',
   onOpenEdit,
   onOpenAddDebt,
   onOpenPayDebt,
   onDeleteDebt,
 }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: products = [] } = useProductsOffline();
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<'debts' | 'expenses' | 'products'>(initialTab);
+  const [currentTab, setCurrentTab] = useState<'overview' | 'debts' | 'expenses' | 'products'>(initialTab);
   const [productSearch, setProductSearch] = useState('');
+
+  // Estados para vincular productos del inventario y formulario
+  const [isLinkingModalOpen, setIsLinkingModalOpen] = useState(false);
+  const [linkingSearch, setLinkingSearch] = useState('');
+  const [linkingFilter, setLinkingFilter] = useState<'unassigned' | 'all'>('unassigned');
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [isSavingLinking, setIsSavingLinking] = useState(false);
+  const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
 
   useEffect(() => {
     if (open) {
@@ -106,6 +126,117 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   const supplierInventoryValue = useMemo(() => {
     return supplierProducts.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.cost || 0), 0);
   }, [supplierProducts]);
+
+  // Candidatos a vincular desde inventario general
+  const candidateProducts = useMemo(() => {
+    if (!supplier) return [];
+    let list = products.filter((p) => p.supplier_id !== supplier.id);
+
+    if (linkingFilter === 'unassigned') {
+      list = list.filter((p) => !p.supplier_id);
+    }
+
+    if (linkingSearch.trim()) {
+      const q = linkingSearch.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+          (p.internal_code && p.internal_code.toLowerCase().includes(q)) ||
+          (p.category?.name && p.category.name.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [products, supplier, linkingFilter, linkingSearch]);
+
+  const handleUnlinkProduct = async (product: Product) => {
+    if (!supplier) return;
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ supplier_id: null })
+        .eq('id', product.id);
+
+      if (error) throw error;
+
+      const updated = { ...product, supplier_id: null, supplier: undefined };
+      await offlineDB.put(OfflineStore.PRODUCTS, updated);
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+
+      toast({
+        title: 'Producto desvinculado',
+        description: `"${product.name}" ya no está asignado a ${supplier.name}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error al desvincular',
+        description: error.message || 'No se pudo desvincular el producto.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveLinking = async () => {
+    if (!supplier || selectedProductIds.size === 0) return;
+    setIsSavingLinking(true);
+    try {
+      const idsArray = Array.from(selectedProductIds);
+      const { error } = await supabase
+        .from('products')
+        .update({ supplier_id: supplier.id })
+        .in('id', idsArray);
+
+      if (error) throw error;
+
+      for (const id of idsArray) {
+        const prod = products.find((p) => p.id === id);
+        if (prod) {
+          const updated = {
+            ...prod,
+            supplier_id: supplier.id,
+            supplier: { id: supplier.id, name: supplier.name },
+          };
+          await offlineDB.put(OfflineStore.PRODUCTS, updated);
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+
+      toast({
+        title: 'Productos vinculados',
+        description: `Se han vinculado ${idsArray.length} producto(s) a ${supplier.name}.`,
+      });
+
+      setSelectedProductIds(new Set());
+      setIsLinkingModalOpen(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error al vincular',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingLinking(false);
+    }
+  };
+
+  const toggleSelectProduct = (id: string) => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllCandidates = () => {
+    if (selectedProductIds.size === candidateProducts.length) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(candidateProducts.map((p) => p.id)));
+    }
+  };
 
   const isTransfer = (supplier.payment_method || 'transfer') === 'transfer';
 
@@ -294,17 +425,324 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
           <div className="p-5 sm:p-6 space-y-4">
             <Tabs value={currentTab} onValueChange={(val) => setCurrentTab(val as any)} className="w-full">
               <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1 mb-4 flex-wrap">
+                <TabsTrigger value="overview" className="rounded-lg px-3.5 h-7 text-xs font-bold gap-1.5">
+                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                  Productos y Deudas
+                </TabsTrigger>
                 <TabsTrigger value="products" className="rounded-lg px-3.5 h-7 text-xs font-bold gap-1.5">
                   <Package className="h-3.5 w-3.5 text-primary" />
-                  Productos Comprados ({supplierProducts.length})
+                  Solo Productos ({supplierProducts.length})
                 </TabsTrigger>
                 <TabsTrigger value="debts" className="rounded-lg px-3.5 h-7 text-xs font-bold">
-                  Cuentas por Pagar ({supplierDebts.length})
+                  Solo Deudas ({supplierDebts.length})
                 </TabsTrigger>
                 <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold">
-                  Historial de Pagos y Compras ({supplierExpenses.length})
+                  Historial de Pagos ({supplierExpenses.length})
                 </TabsTrigger>
               </TabsList>
+
+              {/* Tab Principal Unificado: Productos y Deudas Juntos */}
+              <TabsContent value="overview" className="space-y-6 outline-none">
+                {/* 1. SECCIÓN DE CUENTAS POR PAGAR (DEUDAS) */}
+                <div className="bg-card rounded-2xl border border-border/50 p-4 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-rose-500" />
+                      <h3 className="text-sm font-black text-foreground">Cuentas por Pagar</h3>
+                      {hasDebt ? (
+                        <Badge variant="outline" className="bg-rose-500/10 text-rose-500 border-rose-500/30 text-[10px] font-bold">
+                          RD$ {outstandingDebt.toLocaleString('es-DO', { minimumFractionDigits: 2 })} Pendiente
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px] font-bold">
+                          Al Día
+                        </Badge>
+                      )}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onOpenAddDebt(supplier)}
+                      className="h-8 text-xs font-bold gap-1 rounded-xl text-rose-500 border-rose-500/30 hover:bg-rose-500/10"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Registrar Deuda
+                    </Button>
+                  </div>
+
+                  {supplierDebts.length === 0 ? (
+                    <div className="p-3.5 bg-muted/20 rounded-xl border border-border/40 text-xs text-muted-foreground flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+                      <span>No hay deudas ni facturas pendientes registradas con este proveedor.</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-border/40 overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-muted/30">
+                          <TableRow>
+                            <TableHead className="text-xs font-bold py-2">Concepto / Vencimiento</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2">Monto</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2">Pagado</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2">Pendiente</TableHead>
+                            <TableHead className="text-center text-xs font-bold py-2">Estado</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2">Acción</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {supplierDebts.map((debt) => {
+                            const rem = Math.max(0, Number(debt.amount) - Number(debt.amount_paid));
+                            const isPaid = debt.status === 'paid' || rem <= 0;
+                            return (
+                              <TableRow key={debt.id} className="hover:bg-muted/20">
+                                <TableCell className="py-2 text-xs">
+                                  <span className="font-bold text-foreground block">{debt.description}</span>
+                                  <span className="text-[10px] text-muted-foreground">{debt.category}</span>
+                                </TableCell>
+                                <TableCell className="py-2 text-right text-xs font-mono font-semibold">
+                                  ${Number(debt.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell className="py-2 text-right text-xs font-mono text-emerald-500 font-semibold">
+                                  ${Number(debt.amount_paid).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell className="py-2 text-right text-xs font-mono text-red-500 font-black">
+                                  ${rem.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell className="py-2 text-center">
+                                  {isPaid ? (
+                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[9px] font-bold">
+                                      Pagado
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-[9px] font-bold">
+                                      Pendiente
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-2 text-right">
+                                  {!isPaid && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
+                                      onClick={() => onOpenPayDebt(debt)}
+                                    >
+                                      Pagar
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. SECCIÓN DE PRODUCTOS ASOCIADOS */}
+                <div className="bg-card rounded-2xl border border-border/50 p-4 space-y-3 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Package className="h-4 w-4 text-primary" />
+                      <h3 className="text-sm font-black text-foreground">Productos Asociados</h3>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold">
+                        {supplierProducts.length} {supplierProducts.length === 1 ? 'artículo' : 'artículos'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        • Valor stock: RD$ {supplierInventoryValue.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedProductIds(new Set());
+                          setLinkingSearch('');
+                          setIsLinkingModalOpen(true);
+                        }}
+                        className="h-8 text-xs font-bold gap-1.5 rounded-xl border-primary/30 text-primary hover:bg-primary/10"
+                      >
+                        <Link2 className="h-3.5 w-3.5" /> Vincular Productos
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setEditingProduct(undefined);
+                          setIsProductFormOpen(true);
+                        }}
+                        className="h-8 text-xs font-bold gap-1.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Nuevo Producto
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Buscador de productos si hay artículos */}
+                  {supplierProducts.length > 0 && (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Filtrar productos asociados (nombre, código, categoría)..."
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        className="pl-8 h-8 rounded-xl bg-muted/30 border-border/40 text-xs"
+                      />
+                    </div>
+                  )}
+
+                  {supplierProducts.length === 0 ? (
+                    <div className="p-6 text-center bg-muted/20 rounded-xl border border-dashed border-border/50">
+                      <Package className="h-8 w-8 mx-auto text-muted-foreground/50 mb-1.5" />
+                      <p className="text-xs font-bold text-foreground">Sin productos vinculados a este proveedor</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 mb-3 max-w-sm mx-auto">
+                        Selecciona productos que ya tienes en tu inventario para asignárselos a {supplier.name}.
+                      </p>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProductIds(new Set());
+                            setLinkingSearch('');
+                            setIsLinkingModalOpen(true);
+                          }}
+                          className="rounded-xl text-xs font-bold gap-1.5 h-8"
+                        >
+                          <Link2 className="h-3.5 w-3.5" /> Vincular Productos del Inventario
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingProduct(undefined);
+                            setIsProductFormOpen(true);
+                          }}
+                          className="rounded-xl text-xs font-bold gap-1.5 h-8"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Crear Producto
+                        </Button>
+                      </div>
+                    </div>
+                  ) : filteredSupplierProducts.length === 0 ? (
+                    <div className="text-center py-6 px-4 bg-muted/10 rounded-xl border border-border/30 text-xs text-muted-foreground">
+                      No se encontraron productos con "{productSearch}"
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-border/40 overflow-hidden max-h-[320px] overflow-y-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm z-10">
+                          <TableRow>
+                            <TableHead className="text-xs font-bold py-2">Producto</TableHead>
+                            <TableHead className="text-xs font-bold py-2">Categoría</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2">Costo</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2">Precio Venta</TableHead>
+                            <TableHead className="text-center text-xs font-bold py-2">Margen</TableHead>
+                            <TableHead className="text-center text-xs font-bold py-2">Stock</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2 pr-3">Acciones</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredSupplierProducts.map((prod) => {
+                            const cost = Number(prod.cost || 0);
+                            const price = Number(prod.price || 0);
+                            const margin = cost > 0 ? (((price - cost) / cost) * 100).toFixed(0) : null;
+                            const isLowStock = prod.stock <= (prod.min_stock || 0);
+
+                            return (
+                              <TableRow key={prod.id} className="hover:bg-muted/20">
+                                <TableCell className="py-2">
+                                  <div className="flex items-center gap-2">
+                                    {prod.image_url ? (
+                                      <img
+                                        src={prod.image_url}
+                                        alt={prod.name}
+                                        className="h-7 w-7 rounded-lg object-cover border border-border/50 shrink-0"
+                                      />
+                                    ) : (
+                                      <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                                        <Package className="h-3.5 w-3.5" />
+                                      </div>
+                                    )}
+                                    <div className="min-w-0">
+                                      <span className="font-bold text-xs text-foreground block truncate max-w-[180px]">
+                                        {prod.name}
+                                      </span>
+                                      {(prod.barcode || prod.internal_code) && (
+                                        <span className="text-[9px] text-muted-foreground font-mono block">
+                                          {prod.barcode || prod.internal_code}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-2 text-xs text-muted-foreground">
+                                  {prod.category?.name || '—'}
+                                </TableCell>
+                                <TableCell className="py-2 text-right font-mono text-xs text-muted-foreground">
+                                  {cost > 0 ? `RD$ ${cost.toFixed(2)}` : '—'}
+                                </TableCell>
+                                <TableCell className="py-2 text-right font-mono font-bold text-xs text-foreground">
+                                  RD$ {price.toFixed(2)}
+                                </TableCell>
+                                <TableCell className="py-2 text-center">
+                                  {margin !== null ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] font-bold border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                                    >
+                                      +{margin}%
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-2 text-center">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[9px] font-bold ${
+                                      isLowStock
+                                        ? 'border-red-500/30 text-red-500 bg-red-500/10'
+                                        : 'border-border/60 text-foreground bg-muted/40'
+                                    }`}
+                                  >
+                                    {prod.stock} uds
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-2 text-right pr-3">
+                                  <div className="flex items-center justify-end gap-0.5">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
+                                      onClick={() => {
+                                        setEditingProduct(prod);
+                                        setIsProductFormOpen(true);
+                                      }}
+                                      title="Editar producto"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                                      onClick={() => handleUnlinkProduct(prod)}
+                                      title="Desvincular de este proveedor"
+                                    >
+                                      <Unlink className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
 
               {/* Tab: Cuentas por Pagar */}
               <TabsContent value="debts" className="space-y-4 outline-none">
@@ -668,6 +1106,187 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo para vincular productos del inventario general */}
+      <Dialog open={isLinkingModalOpen} onOpenChange={setIsLinkingModalOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 rounded-2xl overflow-hidden">
+          <DialogHeader className="p-5 pb-3 border-b border-border/40 bg-muted/20">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Link2 className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-black text-foreground">
+                  Vincular Productos a {supplier.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Selecciona los productos de tu inventario que le compras a este proveedor
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* Filter controls */}
+            <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar producto por nombre, código o categoría..."
+                  value={linkingSearch}
+                  onChange={(e) => setLinkingSearch(e.target.value)}
+                  className="pl-8 h-8 rounded-xl bg-background text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 bg-background p-0.5 rounded-xl border border-border/50">
+                <button
+                  type="button"
+                  onClick={() => setLinkingFilter('unassigned')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                    linkingFilter === 'unassigned'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Sin proveedor ({products.filter((p) => !p.supplier_id).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkingFilter('all')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                    linkingFilter === 'all'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Todos ({products.length})
+                </button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Candidate list */}
+          <div className="p-4 flex-1 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between pb-2 px-1 text-xs text-muted-foreground border-b border-border/40">
+              <button
+                type="button"
+                onClick={toggleSelectAllCandidates}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                {selectedProductIds.size === candidateProducts.length && candidateProducts.length > 0
+                  ? 'Desmarcar todos'
+                  : `Seleccionar todos (${candidateProducts.length})`}
+              </button>
+              <span className="font-bold text-foreground text-xs">
+                {selectedProductIds.size} seleccionado(s)
+              </span>
+            </div>
+
+            <ScrollArea className="flex-1 max-h-[360px] mt-2 pr-2">
+              {candidateProducts.length === 0 ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  No hay productos disponibles con los filtros actuales.
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {candidateProducts.map((prod) => {
+                    const isSelected = selectedProductIds.has(prod.id);
+                    return (
+                      <div
+                        key={prod.id}
+                        onClick={() => toggleSelectProduct(prod.id)}
+                        className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                          isSelected
+                            ? 'bg-primary/5 border-primary/40 shadow-xs'
+                            : 'bg-card border-border/40 hover:bg-muted/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelectProduct(prod.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="min-w-0">
+                            <span className="font-bold text-xs text-foreground block truncate">
+                              {prod.name}
+                            </span>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono mt-0.5">
+                              {prod.barcode && <span>{prod.barcode}</span>}
+                              {prod.category?.name && (
+                                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                  {prod.category.name}
+                                </Badge>
+                              )}
+                              {prod.supplier && (
+                                <span className="text-amber-500">
+                                  (Actual: {prod.supplier.name})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="font-mono font-bold text-xs text-foreground block">
+                            RD$ {Number(prod.price || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono block">
+                            Stock: {prod.stock} uds
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          {/* Footer */}
+          <div className="p-3.5 bg-muted/30 border-t border-border/40 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">
+              {selectedProductIds.size} producto(s) listo(s) para vincular
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-xl text-xs"
+                onClick={() => setIsLinkingModalOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                disabled={selectedProductIds.size === 0 || isSavingLinking}
+                onClick={handleSaveLinking}
+                className="rounded-xl text-xs font-bold gap-1.5"
+              >
+                {isSavingLinking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                Vincular {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ''}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sub-modal: Crear o Editar Producto con este proveedor asignado */}
+      <Dialog open={isProductFormOpen} onOpenChange={setIsProductFormOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 rounded-2xl border-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
+            <DialogDescription>Formulario de producto</DialogDescription>
+          </DialogHeader>
+          <ProductForm
+            product={editingProduct}
+            prefilledValues={{ supplier_id: supplier.id }}
+            onClose={() => setIsProductFormOpen(false)}
+            onSuccess={() => {
+              setIsProductFormOpen(false);
+            }}
+          />
         </DialogContent>
       </Dialog>
     </>
