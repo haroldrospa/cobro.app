@@ -431,9 +431,6 @@ export default function Bank() {
         {/* 1. Ventas Totales */}
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
-            <div className="p-2.5 bg-sky-500/10 text-sky-500 rounded-2xl mb-1">
-              <TrendingUp className="h-5 w-5" />
-            </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Ventas Totales
             </span>
@@ -449,9 +446,6 @@ export default function Bank() {
         {/* 2. Reinversión (Costo) */}
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
-            <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-2xl mb-1">
-              <RotateCcw className="h-5 w-5" />
-            </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 font-bold">
               Reinversión (Costo)
             </span>
@@ -467,9 +461,6 @@ export default function Bank() {
         {/* 3. Ganancia Neta */}
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-2xl mb-1">
-              <Sparkles className="h-5 w-5" />
-            </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 font-bold">
               Ganancia Neta
             </span>
@@ -485,9 +476,6 @@ export default function Bank() {
         {/* 4. Efectivo Entregado */}
         <Card className="bg-card/60 border-border/40 backdrop-blur-sm overflow-hidden relative group hover:bg-card/80 transition-all rounded-3xl shadow-sm">
           <CardContent className="p-6 flex flex-col items-center text-center gap-1.5">
-            <div className="p-2.5 bg-indigo-500/10 text-indigo-500 rounded-2xl mb-1">
-              <Wallet className="h-5 w-5" />
-            </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Efectivo Entregado
             </span>
