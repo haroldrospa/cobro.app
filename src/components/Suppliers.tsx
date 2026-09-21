@@ -35,12 +35,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useSuppliers, Supplier } from '@/hooks/useSuppliers';
 import { useSupplierDebts, SupplierDebt } from '@/hooks/useSupplierDebts';
 import { useExpenses } from '@/hooks/useExpenses';
-import { useProducts } from '@/hooks/useProducts';
+import { useProductsOffline } from '@/hooks/useProductsOffline';
 import { useToast } from '@/hooks/use-toast';
 import { SupplierDialog } from '@/components/suppliers/SupplierDialog';
 import { SupplierDebtDialog } from '@/components/suppliers/SupplierDebtDialog';
 import { SupplierPayDialog } from '@/components/suppliers/SupplierPayDialog';
 import { SupplierDetailsDialog } from '@/components/suppliers/SupplierDetailsDialog';
+import { SupplierProductsDialog } from '@/components/suppliers/SupplierProductsDialog';
 
 export const Suppliers: React.FC = () => {
   const { toast } = useToast();
@@ -63,7 +64,7 @@ export const Suppliers: React.FC = () => {
   } = useSupplierDebts();
 
   const { expenses } = useExpenses();
-  const { products = [] } = useProducts();
+  const { data: products = [] } = useProductsOffline();
 
   // State: Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,6 +84,14 @@ export const Suppliers: React.FC = () => {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedSupplierForDetails, setSelectedSupplierForDetails] = useState<Supplier | null>(null);
   const [detailsInitialTab, setDetailsInitialTab] = useState<'debts' | 'expenses' | 'products'>('products');
+
+  const [isSupplierProductsDialogOpen, setIsSupplierProductsDialogOpen] = useState(false);
+  const [selectedSupplierForProducts, setSelectedSupplierForProducts] = useState<Supplier | null>(null);
+
+  const handleOpenSupplierProducts = (supplier: Supplier) => {
+    setSelectedSupplierForProducts(supplier);
+    setIsSupplierProductsDialogOpen(true);
+  };
 
   // Count products by supplier
   const supplierProductsCountMap = useMemo(() => {
@@ -710,7 +719,7 @@ export const Suppliers: React.FC = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleOpenViewDetails(supplier, 'products')}
+                      onClick={() => handleOpenSupplierProducts(supplier)}
                       className="h-8 px-2.5 rounded-xl text-[11px] font-bold gap-1 text-primary border-primary/20 hover:bg-primary/10"
                       title="Ver productos de este proveedor"
                     >
@@ -892,8 +901,8 @@ export const Suppliers: React.FC = () => {
                     <TableCell className="py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
-                        onClick={() => handleOpenViewDetails(supplier, 'products')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20"
+                        onClick={() => handleOpenSupplierProducts(supplier)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer"
                         title="Ver productos comprados a este proveedor"
                       >
                         <Package className="h-3.5 w-3.5" />
@@ -1015,6 +1024,13 @@ export const Suppliers: React.FC = () => {
           setIsPayDialogOpen(true);
         }}
         onDeleteDebt={deleteSupplierDebt}
+      />
+
+      {/* 5. Dedicated Supplier Products Dialog */}
+      <SupplierProductsDialog
+        open={isSupplierProductsDialogOpen}
+        onOpenChange={setIsSupplierProductsDialogOpen}
+        supplier={selectedSupplierForProducts}
       />
     </div>
   );

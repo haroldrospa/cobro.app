@@ -27,7 +27,7 @@ import {
 import { Supplier } from '@/hooks/useSuppliers';
 import { SupplierDebt } from '@/hooks/useSupplierDebts';
 import { Expense } from '@/hooks/useExpenses';
-import { useProducts, Product } from '@/hooks/useProducts';
+import { useProductsOffline, Product } from '@/hooks/useProductsOffline';
 import { useToast } from '@/hooks/use-toast';
 import { format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -58,7 +58,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   onDeleteDebt,
 }) => {
   const { toast } = useToast();
-  const { products = [] } = useProducts();
+  const { data: products = [] } = useProductsOffline();
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'debts' | 'expenses' | 'products'>(initialTab);
