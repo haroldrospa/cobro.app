@@ -260,6 +260,10 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[780px] max-h-[88vh] overflow-y-auto rounded-3xl border border-border/60 p-0 overflow-hidden bg-background">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{supplier.name}</DialogTitle>
+            <DialogDescription>Ficha completa del proveedor, productos asociados y deudas</DialogDescription>
+          </DialogHeader>
           {/* Header Banner */}
           <div className="p-5 sm:p-6 bg-muted/40 border-b border-border/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

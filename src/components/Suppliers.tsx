@@ -827,10 +827,7 @@ export const Suppliers: React.FC = () => {
                           </div>
 
                           {(supplier.bank_name || supplier.bank_account_number) && (
-                            <div
-                              className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5"
-                              onClick={(e) => e.stopPropagation()}
-                            >
+                            <div className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
                               <Landmark className="h-3 w-3 text-muted-foreground/70 shrink-0" />
                               <span className="truncate">
                                 {supplier.bank_name || 'Banco'}{' '}
@@ -839,7 +836,10 @@ export const Suppliers: React.FC = () => {
                               {supplier.bank_account_number && (
                                 <button
                                   type="button"
-                                  onClick={() => handleCopyBankAccount(supplier.bank_account_number!)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopyBankAccount(supplier.bank_account_number!);
+                                  }}
                                   className="p-1 hover:text-emerald-500 transition-colors"
                                   title="Copiar cuenta bancaria"
                                 >
@@ -858,7 +858,7 @@ export const Suppliers: React.FC = () => {
                     </TableCell>
 
                     {/* Contacto y Teléfono */}
-                    <TableCell className="py-3.5 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="py-3.5 text-xs text-muted-foreground">
                       <div className="flex flex-col gap-1">
                         {supplier.phone && (
                           <div className="flex items-center gap-1.5">
@@ -868,6 +868,7 @@ export const Suppliers: React.FC = () => {
                             </span>
                             <a
                               href={`tel:${cleanPhone(supplier.phone)}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="p-1 hover:text-emerald-500 transition-colors"
                               title="Llamar"
                             >
@@ -875,6 +876,7 @@ export const Suppliers: React.FC = () => {
                             </a>
                             <a
                               href={`https://wa.me/${cleanPhone(supplier.phone)}`}
+                              onClick={(e) => e.stopPropagation()}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-1 hover:text-emerald-500 transition-colors"
@@ -898,12 +900,15 @@ export const Suppliers: React.FC = () => {
                     </TableCell>
 
                     {/* Productos Comprados */}
-                    <TableCell className="py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="py-3.5 text-center">
                       <button
                         type="button"
-                        onClick={() => handleOpenSupplierProducts(supplier)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenViewDetails(supplier, 'overview');
+                        }}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer"
-                        title="Ver productos comprados a este proveedor"
+                        title="Ver productos comprados y deudas de este proveedor"
                       >
                         <Package className="h-3.5 w-3.5" />
                         <span>{supplierProductsCountMap[supplier.id] || 0}</span>
@@ -930,13 +935,16 @@ export const Suppliers: React.FC = () => {
                     </TableCell>
 
                     {/* Acciones */}
-                    <TableCell className="py-3.5 pr-4" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="py-3.5 pr-4">
                       <div className="flex items-center justify-center gap-1">
                         <Button
                           size="sm"
                           variant="ghost"
                           className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-rose-500 hover:bg-rose-500/10"
-                          onClick={() => handleOpenAddDebt(supplier)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAddDebt(supplier);
+                          }}
                           title="Registrar Cuenta por Pagar"
                         >
                           <Plus className="h-3.5 w-3.5" /> Deuda
@@ -945,7 +953,10 @@ export const Suppliers: React.FC = () => {
                           size="sm"
                           variant="ghost"
                           className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-foreground hover:bg-muted"
-                          onClick={() => handleOpenViewDetails(supplier)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenViewDetails(supplier, 'overview');
+                          }}
                           title="Ver Ficha Completa e Historial"
                         >
                           <Eye className="h-3.5 w-3.5 text-emerald-500" /> Ficha
@@ -954,7 +965,10 @@ export const Suppliers: React.FC = () => {
                           size="sm"
                           variant="ghost"
                           className="h-8 px-2 rounded-xl text-xs font-bold text-amber-500 hover:bg-amber-500/10"
-                          onClick={() => handleOpenEditSupplier(supplier)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditSupplier(supplier);
+                          }}
                           title="Editar Proveedor"
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -963,7 +977,10 @@ export const Suppliers: React.FC = () => {
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteSupplier(supplier)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSupplier(supplier);
+                          }}
                           title="Eliminar Proveedor"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
