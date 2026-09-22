@@ -34,7 +34,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Supplier } from '@/hooks/useSuppliers';
 import { SupplierDebt } from '@/hooks/useSupplierDebts';
 import { Expense } from '@/hooks/useExpenses';
-import { useRestaurantIngredients } from '@/hooks/useRestaurantInventory';
+import { useRestaurantIngredients, useUpdateIngredient, RestaurantIngredient } from '@/hooks/useRestaurantInventory';
 import { useProductsOffline, Product } from '@/hooks/useProductsOffline';
 import { supabase } from '@/integrations/supabase/client';
 import { offlineDB, OfflineStore } from '@/lib/offlineDB';
@@ -73,6 +73,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   const queryClient = useQueryClient();
   const { data: products = [] } = useProductsOffline();
   const { data: allIngredients = [] } = useRestaurantIngredients();
+  const updateIngredientMutation = useUpdateIngredient();
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'overview' | 'debts' | 'expenses' | 'products'>(initialTab);
@@ -86,6 +87,13 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   const [isSavingLinking, setIsSavingLinking] = useState(false);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
+
+  // Estados para vincular ingredientes (materia prima)
+  const [isLinkingIngredientsModalOpen, setIsLinkingIngredientsModalOpen] = useState(false);
+  const [linkingIngredientsSearch, setLinkingIngredientsSearch] = useState('');
+  const [linkingIngredientsFilter, setLinkingIngredientsFilter] = useState<'unassigned' | 'all'>('unassigned');
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<Set<string>>(new Set());
+  const [isSavingIngredientsLinking, setIsSavingIngredientsLinking] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -243,6 +251,89 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
       setSelectedProductIds(new Set());
     } else {
       setSelectedProductIds(new Set(candidateProducts.map((p) => p.id)));
+    }
+  };
+
+  // Candidatos a vincular de materia prima / ingredientes
+  const candidateIngredients = useMemo(() => {
+    if (!supplier) return [];
+    let list = allIngredients.filter((i) => i.supplier_id !== supplier.id);
+
+    if (linkingIngredientsFilter === 'unassigned') {
+      list = list.filter((i) => !i.supplier_id);
+    }
+
+    if (linkingIngredientsSearch.trim()) {
+      const q = linkingIngredientsSearch.toLowerCase().trim();
+      list = list.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          (i.category && i.category.toLowerCase().includes(q)) ||
+          (i.notes && i.notes.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [allIngredients, supplier, linkingIngredientsFilter, linkingIngredientsSearch]);
+
+  const handleUnlinkIngredient = async (ingredient: RestaurantIngredient) => {
+    if (!supplier) return;
+    try {
+      await updateIngredientMutation.mutateAsync({ id: ingredient.id, supplier_id: null });
+      toast({
+        title: 'Ingrediente desvinculado',
+        description: `"${ingredient.name}" ya no está asignado a ${supplier.name}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error al desvincular',
+        description: error.message || 'No se pudo desvincular el ingrediente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveIngredientsLinking = async () => {
+    if (!supplier || selectedIngredientIds.size === 0) return;
+    setIsSavingIngredientsLinking(true);
+    try {
+      const idsArray = Array.from(selectedIngredientIds);
+      for (const id of idsArray) {
+        await updateIngredientMutation.mutateAsync({ id, supplier_id: supplier.id });
+      }
+
+      toast({
+        title: 'Ingredientes vinculados',
+        description: `Se han vinculado ${idsArray.length} ingrediente(s) a ${supplier.name}.`,
+      });
+
+      setSelectedIngredientIds(new Set());
+      setIsLinkingIngredientsModalOpen(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error al vincular',
+        description: error.message || 'No se pudieron vincular los ingredientes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingIngredientsLinking(false);
+    }
+  };
+
+  const toggleSelectIngredient = (id: string) => {
+    setSelectedIngredientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllIngredientCandidates = () => {
+    if (selectedIngredientIds.size === candidateIngredients.length) {
+      setSelectedIngredientIds(new Set());
+    } else {
+      setSelectedIngredientIds(new Set(candidateIngredients.map((i) => i.id)));
     }
   };
 
@@ -755,14 +846,27 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   )}
 
                   {/* Ingredientes de restaurante vinculados */}
-                  {supplierIngredients.length > 0 && (
-                    <div className="mt-5 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                          <FlaskConical className="h-3.5 w-3.5 text-emerald-500" />
-                          Materia Prima / Ingredientes ({supplierIngredients.length})
-                        </p>
-                      </div>
+                  <div className="mt-5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <FlaskConical className="h-3.5 w-3.5 text-emerald-500" />
+                        Materia Prima / Ingredientes ({supplierIngredients.length})
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs font-bold rounded-xl gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                        onClick={() => {
+                          setSelectedIngredientIds(new Set());
+                          setLinkingIngredientsSearch('');
+                          setIsLinkingIngredientsModalOpen(true);
+                        }}
+                      >
+                        <Link2 className="h-3 w-3" /> Vincular Ingredientes
+                      </Button>
+                    </div>
+
+                    {supplierIngredients.length > 0 ? (
                       <div className="rounded-xl border border-border/40 overflow-hidden max-h-[220px] overflow-y-auto">
                         <Table>
                           <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm z-10">
@@ -772,6 +876,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                               <TableHead className="text-right text-xs font-bold py-2">Costo/Unidad</TableHead>
                               <TableHead className="text-center text-xs font-bold py-2">Stock Actual</TableHead>
                               <TableHead className="text-center text-xs font-bold py-2">Stock Mínimo</TableHead>
+                              <TableHead className="w-10 py-2 text-center"></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -806,13 +911,31 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                                 <TableCell className="py-2 text-center text-xs text-muted-foreground font-mono">
                                   {ing.min_stock} {ing.unit}
                                 </TableCell>
+                                <TableCell className="py-2 text-center">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive rounded-md"
+                                    onClick={() => handleUnlinkIngredient(ing)}
+                                    title={`Desvincular "${ing.name}"`}
+                                  >
+                                    <Unlink className="h-3 w-3" />
+                                  </Button>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="text-center py-6 px-4 bg-muted/10 rounded-xl border border-dashed border-border/60">
+                        <FlaskConical className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1" />
+                        <p className="text-xs text-muted-foreground">
+                          No hay ingredientes o materia prima vinculados a este proveedor.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
@@ -1338,6 +1461,161 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               >
                 {isSavingLinking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 Vincular {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ''}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo para vincular ingredientes / materia prima */}
+      <Dialog open={isLinkingIngredientsModalOpen} onOpenChange={setIsLinkingIngredientsModalOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 rounded-2xl overflow-hidden">
+          <DialogHeader className="p-5 pb-3 border-b border-border/40 bg-muted/20">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                <FlaskConical className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-black text-foreground">
+                  Vincular Ingredientes a {supplier.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Selecciona la materia prima o insumos que compras a este proveedor
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* Filter controls */}
+            <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar ingrediente por nombre o categoría..."
+                  value={linkingIngredientsSearch}
+                  onChange={(e) => setLinkingIngredientsSearch(e.target.value)}
+                  className="pl-8 h-8 rounded-xl bg-background text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 bg-background p-0.5 rounded-xl border border-border/50">
+                <button
+                  type="button"
+                  onClick={() => setLinkingIngredientsFilter('unassigned')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                    linkingIngredientsFilter === 'unassigned'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Sin proveedor ({allIngredients.filter((i) => !i.supplier_id).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkingIngredientsFilter('all')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                    linkingIngredientsFilter === 'all'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Todos ({allIngredients.length})
+                </button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Candidate list */}
+          <div className="p-4 flex-1 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between pb-2 px-1 text-xs text-muted-foreground border-b border-border/40">
+              <button
+                type="button"
+                onClick={toggleSelectAllIngredientCandidates}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                {selectedIngredientIds.size === candidateIngredients.length && candidateIngredients.length > 0
+                  ? 'Desmarcar todos'
+                  : `Seleccionar todos (${candidateIngredients.length})`}
+              </button>
+              <span className="font-bold text-foreground text-xs">
+                {selectedIngredientIds.size} seleccionado(s)
+              </span>
+            </div>
+
+            <ScrollArea className="flex-1 max-h-[360px] mt-2 pr-2">
+              {candidateIngredients.length === 0 ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  No hay ingredientes disponibles con los filtros actuales.
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {candidateIngredients.map((ing) => {
+                    const isSelected = selectedIngredientIds.has(ing.id);
+                    return (
+                      <div
+                        key={ing.id}
+                        onClick={() => toggleSelectIngredient(ing.id)}
+                        className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                          isSelected
+                            ? 'bg-primary/5 border-primary/40 shadow-xs'
+                            : 'bg-card border-border/40 hover:bg-muted/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelectIngredient(ing.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="min-w-0">
+                            <span className="font-bold text-xs text-foreground block truncate">
+                              {ing.name}
+                            </span>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                              {ing.category && (
+                                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                  {ing.category}
+                                </Badge>
+                              )}
+                              <span>Stock: {ing.stock} {ing.unit}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="font-mono font-bold text-xs text-foreground block">
+                            ${Number(ing.cost_per_unit || 0).toFixed(2)} / {ing.unit}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          {/* Footer */}
+          <div className="p-3.5 bg-muted/30 border-t border-border/40 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">
+              {selectedIngredientIds.size} ingrediente(s) listo(s) para vincular
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-xl text-xs"
+                onClick={() => setIsLinkingIngredientsModalOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                disabled={selectedIngredientIds.size === 0 || isSavingIngredientsLinking}
+                onClick={handleSaveIngredientsLinking}
+                className="rounded-xl text-xs font-bold gap-1.5"
+              >
+                {isSavingIngredientsLinking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                Vincular {selectedIngredientIds.size > 0 ? `(${selectedIngredientIds.size})` : ''}
               </Button>
             </div>
           </div>
