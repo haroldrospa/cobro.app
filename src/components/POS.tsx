@@ -128,6 +128,7 @@ const POSContent: React.FC = () => {
   const [selectedInvoiceType, setSelectedInvoiceType] = useState('B02');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [userClosedRegisterDialog, setUserClosedRegisterDialog] = useState(false);
+  const [showOpenRegisterDialog, setShowOpenRegisterDialog] = useState(false);
   const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
   const [saleData, setSaleData] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -275,6 +276,11 @@ const POSContent: React.FC = () => {
   }, []);
 
   const { data: activeSession, isLoading: isLoadingSession, isFetching: isFetchingSession } = useActiveSession();
+
+  const handleOpenRegister = useCallback(() => {
+    setUserClosedRegisterDialog(false);
+    setShowOpenRegisterDialog(true);
+  }, []);
 
   const handleSearchFocus = useCallback(() => {
     if (!activeSession) {
@@ -699,7 +705,7 @@ const POSContent: React.FC = () => {
     if (cart.length === 0) return;
 
     if (!activeSession) {
-      setUserClosedRegisterDialog(false);
+      handleOpenRegister();
       toast({
         title: "Sesión requerida",
         description: "Debe abrir un turno de caja para poder facturar.",
@@ -1632,7 +1638,7 @@ const POSContent: React.FC = () => {
           })}
           userName={profile?.full_name}
           activeSession={activeSession}
-          onOpenRegister={() => setUserClosedRegisterDialog(false)}
+          onOpenRegister={handleOpenRegister}
         />
       );
     }
@@ -1649,10 +1655,10 @@ const POSContent: React.FC = () => {
         onLogout={handleLogout}
         userName={profile?.full_name}
         activeSession={activeSession}
-        onOpenRegister={() => setUserClosedRegisterDialog(false)}
+        onOpenRegister={handleOpenRegister}
       />
     );
-  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile, activeSession]);
+  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile, activeSession, handleOpenRegister]);
 
   const hasCartItems = cart.length > 0;
   // Action buttons as a stable React.memo component reference
@@ -1831,6 +1837,8 @@ const POSContent: React.FC = () => {
               onCheckout={handleCheckout}
               isInvoiceLimitReached={isInvoiceLimitReached}
               isElectronic={isElectronicActive}
+              hasActiveSession={!!activeSession}
+              onOpenRegister={handleOpenRegister}
             />
           }
           cartTotal={totals.total}
@@ -2177,6 +2185,8 @@ const POSContent: React.FC = () => {
                   loyaltyRedeemedPoints={loyaltyRedeemedPoints}
                   isClassicMode={isClassicLayout}
                   isElectronic={isElectronicActive}
+                  hasActiveSession={!!activeSession}
+                  onOpenRegister={handleOpenRegister}
                 />
               </div>
             </>
@@ -2274,6 +2284,8 @@ const POSContent: React.FC = () => {
                     loyaltyRedeemedPoints={loyaltyRedeemedPoints}
                     isClassicMode={isClassicLayout}
                     isElectronic={isElectronicActive}
+                    hasActiveSession={!!activeSession}
+                    onOpenRegister={handleOpenRegister}
                   />
                 </div>
               </div>
@@ -2501,10 +2513,11 @@ const POSContent: React.FC = () => {
         )}
 
         <OpenRegisterDialog
-          isOpen={!activeSession && !isLoadingSession && !userClosedRegisterDialog}
+          isOpen={((!activeSession && !isLoadingSession && !userClosedRegisterDialog) || showOpenRegisterDialog)}
           onOpenChange={(open) => {
             if (!open) {
               setUserClosedRegisterDialog(true);
+              setShowOpenRegisterDialog(false);
             }
           }}
         />

@@ -11,7 +11,8 @@ import {
   ArrowRight,
   ChevronDown,
   Search,
-  Check
+  Check,
+  Unlock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
+import { useActiveSession } from '@/hooks/useCashSession';
 import AddCustomerDialog from './AddCustomerDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -64,6 +66,8 @@ interface MobilePaymentViewProps {
   onCheckout: () => void;
   isInvoiceLimitReached?: boolean;
   isElectronic?: boolean;
+  hasActiveSession?: boolean;
+  onOpenRegister?: () => void;
 }
 
 const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
@@ -80,7 +84,11 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   onCheckout,
   isInvoiceLimitReached = false,
   isElectronic = false,
+  hasActiveSession,
+  onOpenRegister,
 }) => {
+  const { data: sessionData } = useActiveSession();
+  const sessionActive = hasActiveSession !== undefined ? hasActiveSession : !!sessionData;
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerSelectOpen, setIsCustomerSelectOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -395,27 +403,45 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
           )}
         </AnimatePresence>
 
-        <Button
-          onClick={onCheckout}
-          disabled={!canCheckout || isInvoiceLimitReached}
-          className={cn(
-            "w-full h-14 sm:h-16 mobile-landscape:h-11 rounded-2xl mobile-landscape:rounded-xl text-sm sm:text-base mobile-landscape:text-xs font-black group transition-all relative overflow-hidden",
-            canCheckout
-              ? "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-[0_0_40px_rgba(34,197,94,0.3)]"
-              : "bg-muted text-muted-foreground border border-border"
-          )}
-        >
-          <div className="flex items-center justify-between w-full gap-2 px-4 mobile-landscape:px-2.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <CreditCard className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 shrink-0" />
-              <span className="truncate">Finalizar</span>
+        {!sessionActive ? (
+          <Button
+            onClick={onOpenRegister || onCheckout}
+            className="w-full h-14 sm:h-16 mobile-landscape:h-11 rounded-2xl mobile-landscape:rounded-xl text-sm sm:text-base mobile-landscape:text-xs font-black group transition-all relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white shadow-[0_0_40px_rgba(34,197,94,0.3)]"
+          >
+            <div className="flex items-center justify-between w-full gap-2 px-4 mobile-landscape:px-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Unlock className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 shrink-0" />
+                <span className="truncate">Abrir Turno</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-xs uppercase opacity-90 font-bold">Requerido</span>
+                <ArrowRight className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-base sm:text-lg mobile-landscape:text-sm">${totals.total}</span>
-              <ArrowRight className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5 group-hover:translate-x-1 transition-transform" />
+          </Button>
+        ) : (
+          <Button
+            onClick={onCheckout}
+            disabled={!canCheckout || isInvoiceLimitReached}
+            className={cn(
+              "w-full h-14 sm:h-16 mobile-landscape:h-11 rounded-2xl mobile-landscape:rounded-xl text-sm sm:text-base mobile-landscape:text-xs font-black group transition-all relative overflow-hidden",
+              canCheckout
+                ? "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-[0_0_40px_rgba(34,197,94,0.3)]"
+                : "bg-muted text-muted-foreground border border-border"
+            )}
+          >
+            <div className="flex items-center justify-between w-full gap-2 px-4 mobile-landscape:px-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <CreditCard className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 shrink-0" />
+                <span className="truncate">Finalizar</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-base sm:text-lg mobile-landscape:text-sm">${totals.total}</span>
+                <ArrowRight className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
-          </div>
-        </Button>
+          </Button>
+        )}
       </div>
 
       <AddCustomerDialog

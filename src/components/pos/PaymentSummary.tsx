@@ -16,7 +16,8 @@ import {
   GripVertical, 
   SlidersHorizontal, 
   RotateCcw,
-  Star 
+  Star,
+  Unlock 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ import { useCustomerBalance } from '@/hooks/useCustomerBalance';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { thermalPrinter } from '@/utils/thermalPrinter';
 import { useToast } from '@/hooks/use-toast';
+import { useActiveSession } from '@/hooks/useCashSession';
 import LoyaltyPanel from './LoyaltyPanel';
 import QuickNotesSection, { useQuickNotes } from './QuickNotes';
 
@@ -67,6 +69,8 @@ interface PaymentSummaryProps {
   loyaltyRedeemedPoints?: number;
   isClassicMode?: boolean;
   isElectronic?: boolean;
+  hasActiveSession?: boolean;
+  onOpenRegister?: () => void;
 }
 
 const PaymentSummary: React.FC<PaymentSummaryProps> = ({
@@ -88,9 +92,13 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   onLoyaltyPointsRedeemed,
   onLoyaltyClearRedemption,
   loyaltyRedeemedPoints = 0,
-  isClassicMode = true,
+  isClassicMode = false,
   isElectronic = false,
+  hasActiveSession,
+  onOpenRegister,
 }) => {
+  const { data: sessionData } = useActiveSession();
+  const sessionActive = hasActiveSession !== undefined ? hasActiveSession : !!sessionData;
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -713,28 +721,39 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               Límite de facturas alcanzado
             </div>
           )}
-          <Button
-            onClick={onCheckout}
-            className={cn(
-              "w-full h-9 md:h-10 text-sm font-semibold",
-              isInvoiceLimitReached && "opacity-80"
-            )}
-            variant={isInvoiceLimitReached ? "destructive" : "default"}
-            disabled={isCheckoutDisabled || isInvoiceLimitReached}
-          >
-            {isInvoiceLimitReached ? (
-              <>
-                <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
-                Límite Alcanzado
-              </>
-            ) : (
-              <>
-                <CreditCard className="mr-1.5 h-3.5 w-3.5" />
-                Procesar
-                {!isMobile && <span className="ml-2 text-[10px] opacity-70 font-normal border border-current rounded px-1">F10</span>}
-              </>
-            )}
-          </Button>
+          {!sessionActive ? (
+            <Button
+              onClick={onOpenRegister || onCheckout}
+              className="w-full h-9 md:h-10 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all"
+            >
+              <Unlock className="mr-1.5 h-4 w-4" />
+              Abrir Turno
+              {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F10</span>}
+            </Button>
+          ) : (
+            <Button
+              onClick={onCheckout}
+              className={cn(
+                "w-full h-9 md:h-10 text-sm font-semibold",
+                isInvoiceLimitReached && "opacity-80"
+              )}
+              variant={isInvoiceLimitReached ? "destructive" : "default"}
+              disabled={isCheckoutDisabled || isInvoiceLimitReached}
+            >
+              {isInvoiceLimitReached ? (
+                <>
+                  <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
+                  Límite Alcanzado
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+                  Procesar
+                  {!isMobile && <span className="ml-2 text-[10px] opacity-70 font-normal border border-current rounded px-1">F10</span>}
+                </>
+              )}
+            </Button>
+          )}
         </div>
       )}
 
@@ -745,14 +764,24 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
             <div className="text-[10px] text-muted-foreground">Total a Pagar</div>
             <div className="text-base font-bold leading-none">${totals.total}</div>
           </div>
-          <Button
-            onClick={onCheckout}
-            className="h-9 px-4 text-xs font-semibold flex-1 max-w-[150px]"
-            disabled={isCheckoutDisabled}
-          >
-            <CreditCard className="mr-1.5 h-3.5 w-3.5" />
-            Cobrar
-          </Button>
+          {!sessionActive ? (
+            <Button
+              onClick={onOpenRegister || onCheckout}
+              className="h-9 px-4 text-xs font-semibold flex-1 max-w-[150px] bg-emerald-600 hover:bg-emerald-500 text-white"
+            >
+              <Unlock className="mr-1.5 h-3.5 w-3.5" />
+              Abrir Turno
+            </Button>
+          ) : (
+            <Button
+              onClick={onCheckout}
+              className="h-9 px-4 text-xs font-semibold flex-1 max-w-[150px]"
+              disabled={isCheckoutDisabled}
+            >
+              <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+              Cobrar
+            </Button>
+          )}
         </div>
       )}
 
