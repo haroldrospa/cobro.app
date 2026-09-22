@@ -27,12 +27,14 @@ import {
   Unlink,
   CheckCircle,
   Loader2,
+  FlaskConical,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Supplier } from '@/hooks/useSuppliers';
 import { SupplierDebt } from '@/hooks/useSupplierDebts';
 import { Expense } from '@/hooks/useExpenses';
+import { useRestaurantIngredients } from '@/hooks/useRestaurantInventory';
 import { useProductsOffline, Product } from '@/hooks/useProductsOffline';
 import { supabase } from '@/integrations/supabase/client';
 import { offlineDB, OfflineStore } from '@/lib/offlineDB';
@@ -70,6 +72,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: products = [] } = useProductsOffline();
+  const { data: allIngredients = [] } = useRestaurantIngredients();
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'overview' | 'debts' | 'expenses' | 'products'>(initialTab);
@@ -110,6 +113,11 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
     if (!supplier) return [];
     return products.filter((p) => p.supplier_id === supplier.id);
   }, [products, supplier]);
+
+  const supplierIngredients = useMemo(() => {
+    if (!supplier) return [];
+    return allIngredients.filter((i) => i.supplier_id === supplier.id);
+  }, [allIngredients, supplier]);
 
   const filteredSupplierProducts = useMemo(() => {
     if (!productSearch.trim()) return supplierProducts;
@@ -435,7 +443,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 </TabsTrigger>
                 <TabsTrigger value="products" className="rounded-lg px-3.5 h-7 text-xs font-bold gap-1.5">
                   <Package className="h-3.5 w-3.5 text-primary" />
-                  Solo Productos ({supplierProducts.length})
+                  Productos {supplierIngredients.length > 0 ? `e Ingredientes (${supplierProducts.length + supplierIngredients.length})` : `(${supplierProducts.length})`}
                 </TabsTrigger>
                 <TabsTrigger value="debts" className="rounded-lg px-3.5 h-7 text-xs font-bold">
                   Solo Deudas ({supplierDebts.length})
@@ -743,6 +751,66 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                           })}
                         </TableBody>
                       </Table>
+                    </div>
+                  )}
+
+                  {/* Ingredientes de restaurante vinculados */}
+                  {supplierIngredients.length > 0 && (
+                    <div className="mt-5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                          <FlaskConical className="h-3.5 w-3.5 text-emerald-500" />
+                          Materia Prima / Ingredientes ({supplierIngredients.length})
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border/40 overflow-hidden max-h-[220px] overflow-y-auto">
+                        <Table>
+                          <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm z-10">
+                            <TableRow>
+                              <TableHead className="text-xs font-bold py-2">Ingrediente</TableHead>
+                              <TableHead className="text-xs font-bold py-2">Categoría</TableHead>
+                              <TableHead className="text-right text-xs font-bold py-2">Costo/Unidad</TableHead>
+                              <TableHead className="text-center text-xs font-bold py-2">Stock Actual</TableHead>
+                              <TableHead className="text-center text-xs font-bold py-2">Stock Mínimo</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {supplierIngredients.map((ing) => (
+                              <TableRow key={ing.id} className="hover:bg-muted/20">
+                                <TableCell className="py-2 text-xs font-semibold text-foreground">
+                                  {ing.name}
+                                  {ing.notes && (
+                                    <span className="block text-[10px] text-muted-foreground font-normal">
+                                      {ing.notes}
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-2 text-xs text-muted-foreground">
+                                  {ing.category || 'General'}
+                                </TableCell>
+                                <TableCell className="py-2 text-right text-xs font-mono text-muted-foreground">
+                                  ${Number(ing.cost_per_unit || 0).toFixed(2)} / {ing.unit}
+                                </TableCell>
+                                <TableCell className="py-2 text-center">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[9px] font-bold ${
+                                      ing.stock <= ing.min_stock
+                                        ? 'border-red-500/30 text-red-500 bg-red-500/10'
+                                        : 'border-border/60 text-foreground bg-muted/40'
+                                    }`}
+                                  >
+                                    {ing.stock} {ing.unit}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-2 text-center text-xs text-muted-foreground font-mono">
+                                  {ing.min_stock} {ing.unit}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
                   )}
                 </div>

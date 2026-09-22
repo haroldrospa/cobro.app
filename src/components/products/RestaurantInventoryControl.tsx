@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Plus, Edit, Trash2, Search, ChefHat, Package, AlertTriangle,
   Save, X, ChevronDown, ChevronRight, FlaskConical, Scale, Loader2,
-  BookOpen, ShoppingBag, CheckCircle2, DollarSign, Printer, PlusCircle
+  BookOpen, ShoppingBag, CheckCircle2, DollarSign, Printer, PlusCircle, Building2
 } from 'lucide-react';
+import { useSuppliers } from '@/hooks/useSuppliers';
 import { AdicionalesControl } from './AdicionalesControl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ const emptyIngredient = (): IngredientForm => ({
   cost_per_unit: 0,
   category: 'General',
   notes: '',
+  supplier_id: null,
 });
 
 // ─── IngredientDialog ─────────────────────────────────────────────────────────
@@ -90,6 +92,8 @@ const IngredientDialog: React.FC<IngredientDialogProps> = ({ open, initial, onCl
   const { toast } = useToast();
   const createMutation = useCreateIngredient();
   const updateMutation = useUpdateIngredient();
+  const { data: suppliers = [], createSupplierMutation } = useSuppliers();
+
   const [form, setForm] = useState<IngredientForm>(initial ? {
     name: initial.name,
     unit: initial.unit,
@@ -98,7 +102,31 @@ const IngredientDialog: React.FC<IngredientDialogProps> = ({ open, initial, onCl
     cost_per_unit: initial.cost_per_unit,
     category: initial.category,
     notes: initial.notes || '',
+    supplier_id: initial.supplier_id || null,
   } : emptyIngredient());
+
+  const [showQuickSupplier, setShowQuickSupplier] = useState(false);
+  const [quickSupplierName, setQuickSupplierName] = useState('');
+  const [quickSupplierPhone, setQuickSupplierPhone] = useState('');
+  const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm(initial ? {
+        name: initial.name,
+        unit: initial.unit,
+        stock: initial.stock,
+        min_stock: initial.min_stock,
+        cost_per_unit: initial.cost_per_unit,
+        category: initial.category,
+        notes: initial.notes || '',
+        supplier_id: initial.supplier_id || null,
+      } : emptyIngredient());
+      setShowQuickSupplier(false);
+      setQuickSupplierName('');
+      setQuickSupplierPhone('');
+    }
+  }, [open, initial]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -118,6 +146,28 @@ const IngredientDialog: React.FC<IngredientDialogProps> = ({ open, initial, onCl
       onClose();
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message });
+    }
+  };
+
+  const handleCreateQuickSupplier = async () => {
+    if (!quickSupplierName.trim()) return;
+    setIsCreatingSupplier(true);
+    try {
+      const created = await createSupplierMutation.mutateAsync({
+        name: quickSupplierName.trim(),
+        phone: quickSupplierPhone.trim() || null,
+      });
+      if (created?.id) {
+        set('supplier_id', created.id);
+      }
+      toast({ title: 'Proveedor registrado', description: `Se asignó "${quickSupplierName.trim()}" al ingrediente.` });
+      setShowQuickSupplier(false);
+      setQuickSupplierName('');
+      setQuickSupplierPhone('');
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error al registrar proveedor', description: e.message });
+    } finally {
+      setIsCreatingSupplier(false);
     }
   };
 
@@ -183,9 +233,106 @@ const IngredientDialog: React.FC<IngredientDialogProps> = ({ open, initial, onCl
             </div>
           </div>
 
+          {/* Proveedor */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                Proveedor (opcional)
+              </label>
+              {!showQuickSupplier && (
+                <button
+                  type="button"
+                  onClick={() => setShowQuickSupplier(true)}
+                  className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                >
+                  <Plus className="h-3 w-3" /> Nuevo proveedor
+                </button>
+              )}
+            </div>
+
+            {showQuickSupplier ? (
+              <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-2.5 animate-in fade-in-50 duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">Registrar proveedor rápido</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setShowQuickSupplier(false);
+                      setQuickSupplierName('');
+                      setQuickSupplierPhone('');
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Nombre del proveedor *"
+                    value={quickSupplierName}
+                    onChange={e => setQuickSupplierName(e.target.value)}
+                    className="h-8 text-xs"
+                    autoFocus
+                  />
+                  <Input
+                    placeholder="Teléfono (opcional)"
+                    value={quickSupplierPhone}
+                    onChange={e => setQuickSupplierPhone(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setShowQuickSupplier(false);
+                      setQuickSupplierName('');
+                      setQuickSupplierPhone('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={isCreatingSupplier || !quickSupplierName.trim()}
+                    onClick={handleCreateQuickSupplier}
+                  >
+                    {isCreatingSupplier ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />}
+                    Guardar y Asignar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Select
+                value={form.supplier_id || 'no-supplier'}
+                onValueChange={v => set('supplier_id', v === 'no-supplier' ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar proveedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-supplier">Sin proveedor asignado</SelectItem>
+                  {suppliers.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Notas (opcional)</label>
-            <Input placeholder="Marca, proveedor, observaciones..."
+            <Input placeholder="Marca, observaciones, especificaciones..."
               value={form.notes} onChange={e => set('notes', e.target.value)} />
           </div>
         </div>
@@ -431,6 +578,7 @@ export const RestaurantInventoryControl: React.FC = () => {
   const { data: ingredients = [], isLoading: isIngredientsLoading } = useRestaurantIngredients();
   const { data: products = [], isLoading: isProductsLoading } = useProductsOffline();
   const { data: allRecipes = [], isLoading: isRecipesLoading } = useAllProductRecipes();
+  const { data: suppliers = [] } = useSuppliers();
   const deleteIngredient = useDeleteIngredient();
   const updateProductStock = useUpdateProductStock();
 
@@ -440,6 +588,7 @@ export const RestaurantInventoryControl: React.FC = () => {
   const [preselectedIngForExtra, setPreselectedIngForExtra] = useState<RestaurantIngredient | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedSupplier, setSelectedSupplier] = useState('all');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showIngredientDialog, setShowIngredientDialog] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<RestaurantIngredient | null>(null);
@@ -516,22 +665,26 @@ export const RestaurantInventoryControl: React.FC = () => {
           <thead>
             <tr>
               <th style="width: 5%">#</th>
-              <th style="width: 45%">Ingrediente</th>
-              <th style="width: 25%">Categoría</th>
-              <th class="text-center" style="width: 15%">Stock Actual</th>
+              <th style="width: 35%">Ingrediente</th>
+              <th style="width: 20%">Categoría</th>
+              <th style="width: 20%">Proveedor</th>
+              <th class="text-center" style="width: 10%">Stock Actual</th>
               <th class="text-center" style="width: 10%">Mínimo</th>
             </tr>
           </thead>
           <tbody>
-            ${lowStockIngredients.map((ing, index) => `
+            ${lowStockIngredients.map((ing, index) => {
+              const sup = suppliers.find(s => s.id === ing.supplier_id);
+              return `
               <tr>
                 <td class="text-center">${index + 1}</td>
                 <td><strong>${ing.name}</strong></td>
                 <td>${ing.category || 'General'}</td>
+                <td>${sup ? sup.name : '<span style="color:#888;">Sin proveedor</span>'}</td>
                 <td class="text-center" style="color: red; font-weight: bold;">${ing.stock} ${ing.unit}</td>
                 <td class="text-center">${ing.min_stock} ${ing.unit}</td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
         <div class="footer">
@@ -555,9 +708,13 @@ export const RestaurantInventoryControl: React.FC = () => {
       const matchesSearch = !searchTerm || ing.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCat = selectedCategory === 'all' || ing.category === selectedCategory;
       const matchesLowStock = !showLowStockOnly || ing.stock <= ing.min_stock;
-      return matchesSearch && matchesCat && matchesLowStock;
+      const matchesSupplier =
+        selectedSupplier === 'all' ||
+        (selectedSupplier === 'none' && !ing.supplier_id) ||
+        ing.supplier_id === selectedSupplier;
+      return matchesSearch && matchesCat && matchesLowStock && matchesSupplier;
     });
-  }, [ingredients, searchTerm, selectedCategory, showLowStockOnly]);
+  }, [ingredients, searchTerm, selectedCategory, showLowStockOnly, selectedSupplier]);
 
   const groupedIngredients = useMemo(() => {
     const groups: Record<string, RestaurantIngredient[]> = {};
@@ -715,19 +872,33 @@ export const RestaurantInventoryControl: React.FC = () => {
       {/* ───── TAB: INGREDIENTS ───── */}
       {tab === 'ingredients' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar ingrediente..." value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[170px]">
                 <SelectValue placeholder="Todas las categorías" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las categorías</SelectItem>
                 {INGREDIENT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
+              <SelectTrigger className="w-full sm:w-[170px]">
+                <SelectValue placeholder="Todos los proveedores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los proveedores</SelectItem>
+                <SelectItem value="none">Sin proveedor asignado</SelectItem>
+                {suppliers.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Button onClick={() => { setEditingIngredient(null); setShowIngredientDialog(true); }}>
@@ -770,13 +941,22 @@ export const RestaurantInventoryControl: React.FC = () => {
                     <div className="divide-y divide-border/30">
                       {items.map(ing => {
                         const isLow = ing.stock <= ing.min_stock;
+                        const ingSupplier = suppliers.find(s => s.id === ing.supplier_id);
                         return (
                           <div key={ing.id}
                             className={`flex items-center gap-3 p-3 hover:bg-muted/20 transition-colors ${isLow ? 'bg-destructive/5' : ''}`}>
                             <div className={`h-2 w-2 rounded-full flex-shrink-0 ${isLow ? 'bg-destructive' : 'bg-emerald-500'}`} />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm truncate">{ing.name}</p>
-                              {ing.notes && <p className="text-xs text-muted-foreground truncate">{ing.notes}</p>}
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {ingSupplier && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded border border-border/40">
+                                    <Building2 className="h-3 w-3 text-primary/70" />
+                                    {ingSupplier.name}
+                                  </span>
+                                )}
+                                {ing.notes && <p className="text-xs text-muted-foreground truncate">{ing.notes}</p>}
+                              </div>
                             </div>
                             <div className="hidden sm:flex items-center gap-4 text-sm">
                               <div className="text-center min-w-[70px]">

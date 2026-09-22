@@ -12,6 +12,7 @@ export interface RestaurantIngredient {
   cost_per_unit: number;
   category: string;
   notes?: string;
+  supplier_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,7 +40,19 @@ export const useRestaurantIngredients = () => {
         .order('category', { ascending: true })
         .order('name', { ascending: true });
       if (error) throw error;
-      return data as RestaurantIngredient[];
+
+      return (data || []).map((item: any) => {
+        let supplierId = item.supplier_id;
+        if (!supplierId) {
+          try {
+            supplierId = localStorage.getItem(`cobro_ing_supplier_${item.id}`) || null;
+          } catch {}
+        }
+        return {
+          ...item,
+          supplier_id: supplierId || null,
+        } as RestaurantIngredient;
+      });
     },
     enabled: !!userStore?.id,
   });
@@ -51,13 +64,37 @@ export const useCreateIngredient = () => {
   return useMutation({
     mutationFn: async (ingredient: Omit<RestaurantIngredient, 'id' | 'created_at' | 'updated_at' | 'store_id'>) => {
       if (!userStore?.id) throw new Error('No store');
-      const { data, error } = await supabase
-        .from('restaurant_ingredients')
-        .insert({ ...ingredient, store_id: userStore.id })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from('restaurant_ingredients')
+          .insert({ ...ingredient, store_id: userStore.id })
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } catch (err: any) {
+        // Fallback si la columna supplier_id no ha sido creada aún en Supabase
+        const isSupplierColError =
+          err.message?.includes('supplier_id') ||
+          err.code === '42703' ||
+          err.code === 'PGRST204';
+        if (isSupplierColError) {
+          const { supplier_id, ...fallbackPayload } = ingredient as any;
+          const { data, error } = await supabase
+            .from('restaurant_ingredients')
+            .insert({ ...fallbackPayload, store_id: userStore.id })
+            .select()
+            .single();
+          if (error) throw error;
+          if (data?.id && supplier_id) {
+            try {
+              localStorage.setItem(`cobro_ing_supplier_${data.id}`, supplier_id);
+            } catch {}
+          }
+          return { ...data, supplier_id };
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['restaurant-ingredients'] });
@@ -69,11 +106,35 @@ export const useUpdateIngredient = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<RestaurantIngredient> & { id: string }) => {
-      const { error } = await supabase
-        .from('restaurant_ingredients')
-        .update(updates)
-        .eq('id', id);
-      if (error) throw error;
+      try {
+        const { error } = await supabase
+          .from('restaurant_ingredients')
+          .update(updates)
+          .eq('id', id);
+        if (error) throw error;
+      } catch (err: any) {
+        const isSupplierColError =
+          err.message?.includes('supplier_id') ||
+          err.code === '42703' ||
+          err.code === 'PGRST204';
+        if (isSupplierColError) {
+          const { supplier_id, ...fallbackUpdates } = updates as any;
+          const { error } = await supabase
+            .from('restaurant_ingredients')
+            .update(fallbackUpdates)
+            .eq('id', id);
+          if (error) throw error;
+          try {
+            if (supplier_id) {
+              localStorage.setItem(`cobro_ing_supplier_${id}`, supplier_id);
+            } else {
+              localStorage.removeItem(`cobro_ing_supplier_${id}`);
+            }
+          } catch {}
+          return;
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['restaurant-ingredients'] });
@@ -90,6 +151,9 @@ export const useDeleteIngredient = () => {
         .delete()
         .eq('id', id);
       if (error) throw error;
+      try {
+        localStorage.removeItem(`cobro_ing_supplier_${id}`);
+      } catch {}
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['restaurant-ingredients'] });
