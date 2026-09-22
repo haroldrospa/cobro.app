@@ -8,27 +8,60 @@ import { ProductBarcode } from '@/hooks/useProducts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProductsOffline } from '@/hooks/useProductsOffline';
 
+export const generateUniqueBarcodeFromProducts = (
+    products: { barcode?: string | null; barcodes?: { barcode: string }[] }[],
+    extraBarcodes: { barcode: string }[] = []
+): string => {
+    const existingBarcodes = new Set<string>();
+    products.forEach(p => {
+        if (p.barcode) existingBarcodes.add(p.barcode.trim());
+        if (p.barcodes) {
+            p.barcodes.forEach(b => {
+                if (b.barcode) existingBarcodes.add(b.barcode.trim());
+            });
+        }
+    });
+    extraBarcodes.forEach(b => {
+        if (b.barcode) existingBarcodes.add(b.barcode.trim());
+    });
+
+    let attempts = 0;
+    const maxAttempts = 1000;
+    while (attempts < maxAttempts) {
+        const num = Math.floor(100000 + Math.random() * 900000);
+        const code = num.toString();
+        if (!existingBarcodes.has(code)) {
+            return code;
+        }
+        attempts++;
+    }
+    return Math.floor(100000000 + Math.random() * 900000000).toString();
+};
+
 interface BarcodesManagerProps {
     /** Código de barra principal (campo original del producto) */
-    primaryBarcode: string;
-    onPrimaryBarcodeChange: (value: string) => void;
+    primaryBarcode?: string;
+    onPrimaryBarcodeChange?: (value: string) => void;
     /** Códigos adicionales */
     extraBarcodes: Omit<ProductBarcode, 'id'>[];
     onExtraBarcodesChange: (barcodes: Omit<ProductBarcode, 'id'>[]) => void;
+    /** Si es true, oculta el input del código de barra principal */
+    hidePrimaryBarcode?: boolean;
 }
 
 const BarcodesManager: React.FC<BarcodesManagerProps> = ({
-    primaryBarcode,
+    primaryBarcode = '',
     onPrimaryBarcodeChange,
     extraBarcodes,
     onExtraBarcodesChange,
+    hidePrimaryBarcode = false,
 }) => {
     const [newBarcode, setNewBarcode] = useState('');
     const [newLabel, setNewLabel] = useState('');
     const [newQuantity, setNewQuantity] = useState<string>('1');
     const [newDiscountValue, setNewDiscountValue] = useState<string>('0');
     const [newDiscountType, setNewDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(hidePrimaryBarcode);
 
     const { data: products = [] } = useProductsOffline();
 
@@ -48,28 +81,13 @@ const BarcodesManager: React.FC<BarcodesManagerProps> = ({
 
     // Generar un código numérico aleatorio de 6 dígitos que no exista en el sistema
     const generateUniqueBarcode = () => {
-        let newCode = '';
-        let attempts = 0;
-        const maxAttempts = 1000;
-        
-        while (attempts < maxAttempts) {
-            const num = Math.floor(100000 + Math.random() * 900000); // 100000 a 999999
-            newCode = num.toString();
-            
-            const isDuplicate = 
-                existingBarcodes.has(newCode) || 
-                extraBarcodes.some(b => b.barcode === newCode);
-                
-            if (!isDuplicate) {
-                break;
-            }
-            attempts++;
-        }
-        return newCode;
+        return generateUniqueBarcodeFromProducts(products, extraBarcodes);
     };
 
     const handleGeneratePrimary = () => {
-        onPrimaryBarcodeChange(generateUniqueBarcode());
+        if (onPrimaryBarcodeChange) {
+            onPrimaryBarcodeChange(generateUniqueBarcode());
+        }
     };
 
     const handleGenerateExtra = () => {
@@ -82,7 +100,7 @@ const BarcodesManager: React.FC<BarcodesManagerProps> = ({
 
         // Evitar duplicados
         const isDuplicate =
-            trimmed === primaryBarcode.trim() ||
+            (primaryBarcode && trimmed === primaryBarcode.trim()) ||
             extraBarcodes.some(b => b.barcode === trimmed);
 
         if (isDuplicate) {
@@ -119,33 +137,35 @@ const BarcodesManager: React.FC<BarcodesManagerProps> = ({
     return (
         <div className="space-y-3">
             {/* Código principal */}
-            <div>
-                <Label htmlFor="barcode" className="flex items-center gap-1.5">
-                    <Barcode className="h-3.5 w-3.5" />
-                    Código de Barras Principal
-                </Label>
-                <div className="flex gap-2 mt-1.5">
-                    <Input
-                        id="barcode"
-                        value={primaryBarcode}
-                        onChange={e => onPrimaryBarcodeChange(e.target.value)}
-                        placeholder="Código de barras escaneable"
-                        className="flex-1 font-mono"
-                    />
-                    {!primaryBarcode && (
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleGeneratePrimary}
-                            className="shrink-0 gap-1.5 h-10 border-primary/20 hover:border-primary text-primary font-semibold text-xs bg-primary/5 hover:bg-primary/10"
-                            title="Generar un código corto y único automáticamente"
-                        >
-                            <Sparkles className="h-3.5 w-3.5 text-primary" />
-                            Generar
-                        </Button>
-                    )}
+            {!hidePrimaryBarcode && (
+                <div>
+                    <Label htmlFor="barcode" className="flex items-center gap-1.5">
+                        <Barcode className="h-3.5 w-3.5" />
+                        Código de Barras Principal
+                    </Label>
+                    <div className="flex gap-2 mt-1.5">
+                        <Input
+                            id="barcode"
+                            value={primaryBarcode}
+                            onChange={e => onPrimaryBarcodeChange?.(e.target.value)}
+                            placeholder="Código de barras escaneable"
+                            className="flex-1 font-mono"
+                        />
+                        {!primaryBarcode && onPrimaryBarcodeChange && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleGeneratePrimary}
+                                className="shrink-0 gap-1.5 h-10 border-primary/20 hover:border-primary text-primary font-semibold text-xs bg-primary/5 hover:bg-primary/10"
+                                title="Generar un código corto y único automáticamente"
+                            >
+                                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                Generar
+                            </Button>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Códigos adicionales */}
             <div className="space-y-2 border border-dashed rounded-lg p-3 bg-muted/10">

@@ -175,7 +175,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, prefilledValues, onC
       >
         {/* Stoppage propagation: clic dentro del Card NO cierra */}
         <Card
-          className="w-full max-w-md max-h-[75vh] md:max-h-[90vh] mb-[76px] md:mb-0 flex flex-col overflow-hidden"
+          className="w-full max-w-lg max-h-[85vh] md:max-h-[90vh] mb-[76px] md:mb-0 flex flex-col overflow-hidden shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <CardHeader className="flex flex-row items-center justify-between bg-card z-10 border-b flex-shrink-0">
