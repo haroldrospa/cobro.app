@@ -555,6 +555,7 @@ export const Suppliers: React.FC = () => {
                 key={supplier.id}
                 onClick={() => handleOpenViewDetails(supplier)}
                 className="bg-card border border-border/50 hover:border-emerald-500/40 rounded-2xl p-4 shadow-xs transition-all hover:shadow-md cursor-pointer flex flex-col justify-between group relative overflow-hidden"
+                title={`Click para ver toda la información de ${supplier.name}`}
               >
                 {/* Accent top line if has debt */}
                 {hasDebt && (
@@ -797,6 +798,7 @@ export const Suppliers: React.FC = () => {
                     key={supplier.id}
                     onClick={() => handleOpenViewDetails(supplier)}
                     className="hover:bg-muted/30 transition-colors border-b border-border/30 group cursor-pointer"
+                    title={`Click para ver toda la información de ${supplier.name}`}
                   >
                     {/* Nombre y Datos Bancarios */}
                     <TableCell className="py-3.5 pl-4">
@@ -812,7 +814,7 @@ export const Suppliers: React.FC = () => {
                         </div>
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-sm text-foreground group-hover:text-emerald-500 transition-colors">
+                            <span className="font-bold text-sm text-foreground group-hover:text-emerald-500 transition-colors hover:underline">
                               {supplier.name}
                             </span>
                             {isTransfer ? (

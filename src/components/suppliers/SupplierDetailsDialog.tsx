@@ -102,20 +102,34 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
     }
   }, [open, initialTab]);
 
-  if (!supplier) return null;
+  const supplierDebts = useMemo(() => {
+    if (!supplier) return [];
+    return debts.filter((d) => d.supplier_id === supplier.id);
+  }, [debts, supplier]);
 
-  const supplierDebts = debts.filter((d) => d.supplier_id === supplier.id);
-  const totalDebt = supplierDebts.reduce((sum, d) => sum + Number(d.amount || 0), 0);
-  const totalPaid = supplierDebts.reduce((sum, d) => sum + Number(d.amount_paid || 0), 0);
+  const totalDebt = useMemo(() => {
+    return supplierDebts.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+  }, [supplierDebts]);
+
+  const totalPaid = useMemo(() => {
+    return supplierDebts.reduce((sum, d) => sum + Number(d.amount_paid || 0), 0);
+  }, [supplierDebts]);
+
   const outstandingDebt = Math.max(0, totalDebt - totalPaid);
   const hasDebt = outstandingDebt > 0;
 
-  const supplierExpenses = expenses.filter(
-    (e) =>
-      e.supplier_id === supplier.id ||
-      (e.supplier_name && e.supplier_name.toLowerCase().trim() === supplier.name.toLowerCase().trim())
-  );
-  const totalExpensesAmount = supplierExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  const supplierExpenses = useMemo(() => {
+    if (!supplier) return [];
+    return expenses.filter(
+      (e) =>
+        e.supplier_id === supplier.id ||
+        (e.supplier_name && e.supplier_name.toLowerCase().trim() === supplier.name.toLowerCase().trim())
+    );
+  }, [expenses, supplier]);
+
+  const totalExpensesAmount = useMemo(() => {
+    return supplierExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  }, [supplierExpenses]);
 
   const supplierProducts = useMemo(() => {
     if (!supplier) return [];
@@ -337,10 +351,10 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
     }
   };
 
-  const isTransfer = (supplier.payment_method || 'transfer') === 'transfer';
+  const isTransfer = (supplier?.payment_method || 'transfer') === 'transfer';
 
   const handleCopyAccount = () => {
-    if (!supplier.bank_account_number) return;
+    if (!supplier?.bank_account_number) return;
     navigator.clipboard.writeText(supplier.bank_account_number);
     setCopiedAccount(true);
     toast({
@@ -354,6 +368,8 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
     if (!phone) return '';
     return phone.replace(/[^\d+]/g, '');
   };
+
+  if (!supplier) return null;
 
   return (
     <>
@@ -393,6 +409,14 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                     <span>
                       RNC / Cédula: <strong className="font-mono text-foreground">{supplier.rnc || 'N/A'}</strong>
                     </span>
+                    {supplier.created_at && isValid(new Date(supplier.created_at)) && (
+                      <>
+                        <span>•</span>
+                        <span>
+                          Registrado: <strong className="text-foreground">{format(new Date(supplier.created_at), 'dd/MM/yyyy')}</strong>
+                        </span>
+                      </>
+                    )}
                     <span>•</span>
                     <span>
                       Deuda Pendiente:{' '}
@@ -507,6 +531,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   <span className="font-mono font-bold truncate block text-xs">
                     {supplier.bank_name ? `${supplier.bank_name} • ` : ''}
                     {supplier.bank_account_number || 'Sin cuenta'}
+                    {supplier.bank_account_type ? ` (${supplier.bank_account_type})` : ''}
                   </span>
                 </div>
                 {supplier.bank_account_number && (
