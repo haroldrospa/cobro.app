@@ -676,52 +676,53 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                 </div>
 
                                 {/* Card 2: Turnos & Movimientos */}
-                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col min-h-[220px] lg:min-h-0 overflow-hidden shrink-0">
-                                    <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
-                                        <div className="flex items-center gap-1 bg-muted/80 p-0.5 rounded-lg">
+                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col overflow-hidden shrink-0">
+                                    <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2 shrink-0">
+                                        <div className="flex items-center gap-1 bg-muted/80 p-0.5 rounded-lg shrink-0">
                                             <button
                                                 type="button"
                                                 onClick={() => setCard2Tab('shifts')}
                                                 className={cn(
-                                                    "px-2 py-1 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
+                                                    "px-2 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap",
                                                     card2Tab === 'shifts'
                                                         ? "bg-background text-foreground shadow-sm"
                                                         : "text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
-                                                <Clock className="h-2.5 w-2.5 text-green-500" />
-                                                Turnos ({openSessions.length})
+                                                <Clock className="h-3 w-3 text-green-500 shrink-0" />
+                                                <span>Turnos ({openSessions.length})</span>
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setCard2Tab('movements')}
                                                 className={cn(
-                                                    "px-2 py-1 text-[9px] font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer",
+                                                    "px-2 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap",
                                                     card2Tab === 'movements'
                                                         ? "bg-background text-foreground shadow-sm"
                                                         : "text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
-                                                <Wallet className="h-2.5 w-2.5 text-amber-500" />
-                                                Movimientos ({sessionMovements.length})
+                                                <Wallet className="h-3 w-3 text-amber-500 shrink-0" />
+                                                <span>Movimientos ({sessionMovements.length})</span>
                                             </button>
                                         </div>
 
                                         {card2Tab === 'shifts' ? (
-                                            <Badge variant="outline" className="text-[9px] py-0 h-4 border-green-500/30 text-green-500 font-bold">
-                                                {openSessions.length} Activos
+                                            <Badge variant="outline" className="text-[10px] h-6 px-2 border-green-500/30 text-green-500 font-bold whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0 animate-pulse" />
+                                                <span>{openSessions.length} {openSessions.length === 1 ? 'Activo' : 'Activos'}</span>
                                             </Badge>
                                         ) : (
                                             <Badge variant="outline" className={cn(
-                                                "text-[9px] py-0 h-4 font-bold",
+                                                "text-[10px] h-6 px-2 font-bold whitespace-nowrap shrink-0 flex items-center gap-1.5",
                                                 sessionMovements.length > 0 ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30 text-muted-foreground"
                                             )}>
-                                                {sessionMovements.length} Registrados
+                                                <span>{sessionMovements.length} {sessionMovements.length === 1 ? 'Registrado' : 'Registrados'}</span>
                                             </Badge>
                                         )}
                                     </div>
 
-                                    <div className="flex-1 min-h-[130px] max-h-48 sm:max-h-56 overflow-y-auto no-scrollbar space-y-1.5 py-2">
+                                    <div className="flex-1 min-h-[90px] max-h-48 sm:max-h-56 overflow-y-auto no-scrollbar space-y-1.5 py-2">
                                         {card2Tab === 'shifts' ? (
                                             isLoading ? (
                                                 <div className="flex items-center justify-center py-6 text-muted-foreground">
@@ -742,9 +743,13 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                                 {(session.opener?.full_name || 'U').charAt(0)}
                                                             </div>
                                                             <div className="truncate flex flex-col">
-                                                                <div className="flex items-center gap-1">
+                                                                <div className="flex items-center gap-1.5">
                                                                     <span className="font-bold truncate text-[11px]">{session.opener?.full_name || 'Cajero'}</span>
-                                                                    {session.id === activeSession?.id && <span className="text-[7px] bg-green-500 text-white px-1 rounded-full font-black">TÚ</span>}
+                                                                    {session.id === activeSession?.id && (
+                                                                        <span className="text-[9px] leading-none bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                                                                            TÚ
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                                 <span className="text-[8px] text-muted-foreground">
                                                                     {Math.floor((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60 * 60))}h {Math.floor(((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60)) % 60)}m
