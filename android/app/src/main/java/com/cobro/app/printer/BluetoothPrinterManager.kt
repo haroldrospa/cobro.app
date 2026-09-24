@@ -182,13 +182,25 @@ class BluetoothPrinterManager private constructor(private val context: Context) 
 
             _status = PrinterStatus.CONNECTING
 
-            val newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             bluetoothAdapter?.cancelDiscovery()
 
-            newSocket.connect()
+            var newSocket: BluetoothSocket? = null
+            try {
+                newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
+                newSocket.connect()
+            } catch (sppEx: IOException) {
+                Log.w(TAG, "Conexión SPP estándar falló, intentando socket fallback RFCOMM (puerto 1): ${sppEx.message}")
+                try {
+                    newSocket?.close()
+                } catch (_: Exception) {}
+                val createRfcommSocketMethod = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+                newSocket = createRfcommSocketMethod.invoke(device, 1) as BluetoothSocket
+                newSocket.connect()
+            }
 
-            socket = newSocket
-            outputStream = newSocket.outputStream
+            val connectedSocket = newSocket ?: return false to "No se pudo crear el socket Bluetooth"
+            socket = connectedSocket
+            outputStream = connectedSocket.outputStream
             currentDevice = device
             _status = PrinterStatus.CONNECTED
             reconnectAttempts = 0

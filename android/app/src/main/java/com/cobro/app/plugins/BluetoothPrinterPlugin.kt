@@ -107,8 +107,17 @@ class BluetoothPrinterPlugin : Plugin() {
 
     fun onPermissionsResult(permissions: Array<out String>, grantResults: IntArray) {
         // Intentar auto-conectar a impresora predeterminada tras obtener permisos BT
-        val btConnectIndex = permissions.indexOf("android.permission.BLUETOOTH_CONNECT")
-        if (btConnectIndex != -1 && grantResults.getOrNull(btConnectIndex) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        val hasBtPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val idx = permissions.indexOf("android.permission.BLUETOOTH_CONNECT")
+            idx != -1 && grantResults.getOrNull(idx) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            val idx = permissions.indexOf("android.permission.BLUETOOTH")
+            val locIdx = permissions.indexOf("android.permission.ACCESS_COARSE_LOCATION")
+            (idx != -1 && grantResults.getOrNull(idx) == android.content.pm.PackageManager.PERMISSION_GRANTED) ||
+            (locIdx != -1 && grantResults.getOrNull(locIdx) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+        }
+
+        if (hasBtPermission) {
             printerManager.autoConnect()
         }
     }

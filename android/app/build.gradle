@@ -21,9 +21,9 @@ android {
         versionName "2.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-            // Ignorar archivos comprimidos .gz generados por vite-plugin-compression
+            // Ignorar archivos comprimidos .gz y .br generados por vite-plugin-compression
             // y otros archivos de control de versiones
-            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:!*.gz'
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:!*.gz:!*.br'
         }
     }
 

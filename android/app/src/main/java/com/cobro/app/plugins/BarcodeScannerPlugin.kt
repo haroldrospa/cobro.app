@@ -1,10 +1,13 @@
 package com.cobro.app.plugins
 
+import android.app.Activity
+import android.content.Intent
 import android.graphics.Outline
 import android.util.DisplayMetrics
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import androidx.activity.result.ActivityResult
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -12,10 +15,12 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.cobro.app.BarcodeScannerActivity
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
@@ -53,6 +58,24 @@ class BarcodeScannerPlugin : Plugin() {
 
     private var lastNotifiedCode: String? = null
     private var lastNotifiedAtMs = 0L
+
+    @PluginMethod
+    fun scan(call: PluginCall) {
+        val intent = Intent(context, BarcodeScannerActivity::class.java)
+        val mode = call.getString("mode") ?: BarcodeScannerActivity.MODE_BARCODE
+        intent.putExtra("mode", mode)
+        startActivityForResult(call, intent, "handleScanResult")
+    }
+
+    @ActivityCallback
+    private fun handleScanResult(call: PluginCall, result: ActivityResult) {
+        if (result.resultCode == Activity.RESULT_OK) {
+            val code = result.data?.getStringExtra(BarcodeScannerActivity.RESULT_CODE) ?: ""
+            call.resolve(JSObject().put("code", code).put("cancelled", false))
+        } else {
+            call.resolve(JSObject().put("code", "").put("cancelled", true))
+        }
+    }
 
     @PluginMethod
     fun startEmbedded(call: PluginCall) {
@@ -167,9 +190,16 @@ class BarcodeScannerPlugin : Plugin() {
 
             try {
                 provider.unbindAll()
+                val cameraSelector = if (provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                } else if (provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                }
                 provider.bindToLifecycle(
                     activity as LifecycleOwner,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    cameraSelector,
                     preview,
                     imageAnalyzer
                 )
