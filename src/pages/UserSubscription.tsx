@@ -778,41 +778,6 @@ const UserSubscription = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Banner Destacado Banreservas */}
-            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
-                <div className="flex items-start sm:items-center gap-3.5">
-                    <div className="h-11 w-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-400 shadow-inner">
-                        <Landmark className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h4 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                            Pago directo por Transferencia Banreservas
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] uppercase font-bold">
-                                Oficial RD
-                            </Badge>
-                        </h4>
-                        <p className="text-xs text-zinc-300 mt-0.5">
-                            Transfiere a nuestra cuenta de Banreservas en pesos dominicanos (DOP) para renovar o activar tu membresía.
-                        </p>
-                    </div>
-                </div>
-                <Button 
-                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 sm:px-5 h-auto min-h-10 py-2.5 rounded-xl shadow-md w-full md:w-auto shrink-0 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs sm:text-sm text-center leading-tight whitespace-normal"
-                    onClick={() => {
-                        setIsSuccess(false);
-                        setTargetPlan(activePlan);
-                        const defaultAmt = currentPlanDetails.price > 0 
-                            ? (isAnnual ? currentPlanDetails.annualPrice : currentPlanDetails.price).toString() 
-                            : '17';
-                        setPaymentAmount(defaultAmt);
-                        setIsBankModalOpen(true);
-                    }}
-                >
-                    <Landmark className="h-4 w-4 shrink-0" />
-                    <span>Pagar con Transferencia Banreservas</span>
-                </Button>
-            </div>
-
             {/* Planes y Precios Grid */}
             <div className="text-center mt-12 mb-8">
                 <h2 className="text-2xl font-black uppercase tracking-widest mb-6">
