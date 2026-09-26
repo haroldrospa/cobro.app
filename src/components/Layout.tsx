@@ -158,7 +158,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       { name: 'Banco', href: '/banco', icon: Landmark },
       { name: 'Empleados', href: '/employees', icon: Users },
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
-      { name: 'Usuario', href: '/subscription', icon: User },
+      { name: 'Plan y Usuario', href: '/subscription', icon: User },
       { name: 'Configuración', href: '/settings', icon: Settings },
       ...(isPlatformAdmin ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }] : []),
     ];
@@ -425,7 +425,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       onClick={() => navigate('/subscription')}
                       className="cursor-pointer text-xs font-semibold py-2 rounded-xl"
                     >
-                      <User className="h-4 w-4 mr-2 text-primary" /> Mi Perfil y Plan
+                      <User className="h-4 w-4 mr-2 text-primary" /> Plan y Usuario
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => navigate('/settings')}

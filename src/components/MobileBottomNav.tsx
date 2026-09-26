@@ -119,7 +119,7 @@ export const MobileBottomNav: React.FC = () => {
       { name: 'Proveedores', href: '/suppliers', icon: Truck },
       { name: 'Empleados', href: '/employees', icon: Users },
       { name: 'Nómina', href: '/payroll', icon: Briefcase },
-      { name: 'Mi Cuenta', href: '/subscription', icon: User },
+      { name: 'Plan y Usuario', href: '/subscription', icon: User },
       { name: 'Configuración', href: '/settings', icon: Settings },
       ...(isPlatformAdmin
         ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }]
