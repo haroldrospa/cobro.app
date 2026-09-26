@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Check, Wallet, Loader2, Upload, DollarSign, CreditCard, ShieldCheck, Landmark, User, Leaf, Star, Building2, X, MessageSquare, Mail, Copy, CheckCircle2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -61,7 +60,6 @@ const UserSubscription = () => {
 
     const [targetPlan, setTargetPlan] = useState<string | null>(null);
 
-    const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [isBankModalOpen, setIsBankModalOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false); // Estado para pantalla de éxito
@@ -168,7 +166,7 @@ const UserSubscription = () => {
             const initialPlan = plans.find(p => p.id === initialPlanId) || plans[0];
             setTargetPlan(initialPlan.id);
             setPaymentAmount((isAnnual ? initialPlan.annualPrice : initialPlan.price).toString());
-            setIsPaymentOpen(true);
+            setIsBankModalOpen(true);
         }
     }, [activePlan, isAnnual]);
 
@@ -181,7 +179,7 @@ const UserSubscription = () => {
         setTargetPlan(plan.id);
         const amt = isAnnual ? plan.annualPrice : plan.price;
         setPaymentAmount(amt.toString());
-        setIsPaymentOpen(true);
+        setIsBankModalOpen(true);
     };
 
     const handleCopy = (text: string, fieldId: string, label: string) => {
@@ -320,117 +318,6 @@ const UserSubscription = () => {
             toast({
                 title: "Error al registrar comprobante",
                 description: error.message || "Hubo un problema. Intente nuevamente.",
-                variant: 'destructive'
-            });
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    // NUEVA FUNCIÓN: Activación automatizada (Paddle / PayPal)
-    const handlePaddleCheckout = () => {
-        if (!store?.id) return;
-
-        const selectedPlanId = targetPlan || (activePlan === 'enterprise' ? 'basic' : activePlan);
-
-        if (selectedPlanId === 'enterprise') {
-            window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20cotizar%20el%20Plan%20Corporativo%20de%20CobroApp', '_blank');
-            return;
-        }
-
-        const paddlePriceIds: Record<string, string | undefined> = {
-            'basic': isAnnual ? import.meta.env.VITE_PADDLE_BASIC_ANNUAL_PRICE_ID : import.meta.env.VITE_PADDLE_BASIC_PRICE_ID,
-            'pro': isAnnual ? import.meta.env.VITE_PADDLE_PRO_ANNUAL_PRICE_ID : import.meta.env.VITE_PADDLE_PRO_PRICE_ID,
-            'enterprise': import.meta.env.VITE_PADDLE_ENTERPRISE_PRICE_ID
-        };
-
-        const rawPriceId = paddlePriceIds[selectedPlanId];
-        const priceId = (rawPriceId || '').replace(/['"]/g, '').trim();
-
-        if (!priceId || priceId.includes('...')) {
-            toast({
-                title: "Pasarela Directa en Configuración",
-                description: `El pago con tarjeta para el plan ${effectivePlanDetails.name} se encuentra en mantenimiento. Puedes pagar por PayPal o Transferencia Bancaria.`,
-                variant: 'destructive'
-            });
-            return;
-        }
-
-        // @ts-ignore
-        if (window.Paddle) {
-            try {
-                // @ts-ignore
-                window.Paddle.Checkout.open({
-                    items: [{ priceId: priceId, quantity: 1 }],
-                    customData: {
-                        company_id: store.id,
-                        target_plan_id: selectedPlanId
-                    },
-                    settings: {
-                        displayMode: "overlay",
-                        theme: "light",
-                        locale: "es",
-                    },
-                    eventCallback: (event: any) => {
-                        console.log("💳 Paddle Event:", event);
-                        if (event?.name === 'checkout.error' || event?.type === 'checkout.error') {
-                            toast({
-                                title: "Error en Pasarela Paddle",
-                                description: "Verifica que el 'Default Payment Link' esté configurado en tu Dashboard de Paddle.",
-                                variant: "destructive"
-                            });
-                        }
-                    }
-                });
-                setIsPaymentOpen(false);
-            } catch (err: any) {
-                console.error("❌ Error al abrir Paddle:", err);
-                toast({
-                    title: "Error al abrir pasarela",
-                    description: "Usa la pestaña de PayPal o Transferencia Bancaria para activar tu suscripción.",
-                    variant: "destructive"
-                });
-            }
-        } else {
-            toast({
-                title: "Pasarela no disponible",
-                description: "La pasarela de tarjeta no está disponible. Puedes utilizar PayPal o Transferencia Bancaria.",
-                variant: 'destructive'
-            });
-        }
-    };
-
-    const activatePlanAutomated = async (method: 'stripe' | 'paypal') => {
-        setIsProcessing(true);
-        console.log(`🚀 [AUTO] Activando plan vía ${method}...`);
-
-        try {
-            // Simulamos delay de respuesta de pasarela
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            const { data: rpcData, error: rpcError } = await supabase.rpc('submit_payment_and_activate', {
-                p_company_id: store?.id,
-                p_amount: parseFloat(paymentAmount),
-                p_currency: 'DOP',
-                p_bank_name: method === 'stripe' ? 'Stripe Card' : 'PayPal Auto',
-                p_proof_url: 'automated_payment_success',
-                p_target_plan_id: targetPlan || activePlan
-            });
-
-            if (rpcError) throw rpcError;
-
-            console.log(`✅ [AUTO] Plan activado vía ${method}`);
-            setIsSuccess(true);
-            toast({
-                title: "¡Membresía Activada!",
-                description: "Tu cuenta se ha actualizado al instante.",
-                duration: 5000
-            });
-        } catch (error: any) {
-            console.error('❌ Error en activación automática:', error);
-            toast({
-                title: "Fallo en activación",
-                description: "El pago se procesó pero no pudimos activar automáticamente. Contacta a soporte.",
                 variant: 'destructive'
             });
         } finally {
@@ -797,188 +684,20 @@ const UserSubscription = () => {
                                 </span>
                             </Button>
 
-                            <div className="flex gap-2">
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="flex-1 text-xs font-semibold h-9 rounded-lg border-border"
-                                    onClick={() => {
-                                        setIsSuccess(false);
-                                        setTargetPlan(null);
-                                        setPaymentAmount(currentPlanDetails.price.toString());
-                                        setIsPaymentOpen(true);
-                                    }}
-                                >
-                                    <CreditCard className="mr-1.5 h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                    Tarjeta / PayPal
-                                </Button>
-
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="text-xs font-semibold h-9 px-3 rounded-lg text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 shrink-0 flex items-center justify-center gap-1.5"
-                                    onClick={() => window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20informaci%C3%B3n%20sobre%20el%20pago%20de%20mi%20suscripci%C3%B3n%20CobroApp', '_blank')}
-                                    title="Soporte WhatsApp"
-                                >
-                                    <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="hidden sm:inline text-[11px]">Soporte</span>
-                                </Button>
-                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full text-xs font-semibold h-9 px-3 rounded-xl text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 flex items-center justify-center gap-1.5"
+                                onClick={() => window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20informaci%C3%B3n%20sobre%20el%20pago%20de%20mi%20suscripci%C3%B3n%20CobroApp', '_blank')}
+                                title="Soporte WhatsApp"
+                            >
+                                <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                                <span>Soporte por WhatsApp</span>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
             </div>
-
-            {/* Modal de Pagos */}
-            <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
-                <DialogContent className="w-[95vw] sm:max-w-[550px] p-0 overflow-hidden gap-0 bg-background border-border shadow-xl max-h-[92vh] flex flex-col">
-                    {isSuccess ? (
-                        // VISTA DE ÉXITO ESTILIZADA
-                        <div className="flex flex-col items-center justify-center py-10 px-6 text-center space-y-5 animate-in zoom-in-50 duration-300">
-                            <div className="h-20 w-20 bg-orange-500/10 rounded-full flex items-center justify-center mb-2 animate-pulse">
-                                <Loader2 className="h-10 w-10 text-orange-500" />
-                            </div>
-                            <div className="space-y-1">
-                                <h2 className="text-2xl font-bold text-foreground">¡Reportado!</h2>
-                                <p className="text-muted-foreground">Tu comprobante está en espera de confirmación.</p>
-                                <p className="text-xs text-muted-foreground font-medium mt-2">Te enviaremos un correo una vez validado.</p>
-                            </div>
-                            <Button onClick={() => window.location.reload()} className="w-full mt-4">
-                                Entendido
-                            </Button>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="bg-primary/5 border-b border-border p-5 flex flex-col items-center text-center relative">
-                                <DialogHeader>
-                                    <DialogTitle className="text-xl font-bold text-primary flex items-center justify-center gap-2">
-                                        {targetPlan ? `Activar Plan ${targetPlanDetails?.name}` : 'Continuar Membresía'}
-                                    </DialogTitle>
-                                    <DialogDescription className="text-muted-foreground text-xs mt-1">
-                                        Selecciona tu método de pago preferido
-                                    </DialogDescription>
-                                </DialogHeader>
-                            </div>
-
-                            <Tabs defaultValue="card" className="w-full">
-                                <div className="px-5 pt-4">
-                                    <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start h-11 bg-muted/50 p-1 sm:grid sm:grid-cols-3">
-                                        <TabsTrigger value="card" className="flex items-center gap-2 text-xs">
-                                            <CreditCard className="w-3.5 h-3.5" />
-                                            Tarjeta
-                                        </TabsTrigger>
-                                        <TabsTrigger value="paypal" className="flex items-center gap-2 text-xs">
-                                            <Wallet className="w-3.5 h-3.5" />
-                                            PayPal
-                                        </TabsTrigger>
-                                        <TabsTrigger value="bank" className="flex items-center gap-2 text-xs">
-                                            <Landmark className="w-3.5 h-3.5" />
-                                            Transferencia
-                                        </TabsTrigger>
-                                    </TabsList>
-                                </div>
-
-                                {/* TAB 1: CARD (PADDLE) */}
-                                <TabsContent value="card" className="p-2 space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                                    <div className="relative overflow-hidden bg-[#1c1d22] border border-white/5 rounded-2xl p-6 text-center shadow-2xl">
-                                        {/* Background Glow */}
-                                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 blur-[80px] rounded-full pointer-events-none" />
-                                        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full pointer-events-none" />
-                                        
-                                        <div className="relative z-10 flex flex-col items-center">
-                                            {/* Icons */}
-                                            <div className="flex justify-center gap-2 mb-5">
-                                                <div className="h-10 w-14 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex items-center justify-center shadow-inner">
-                                                    <svg className="h-4 text-white opacity-90" viewBox="0 0 38 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                                        <path d="M14.502 11.233L16.892.427h3.818l-2.39 10.806h-3.818zm11.18-10.609c-1.077-.423-2.736-.889-4.739-.889-4.212 0-7.18 2.228-7.202 5.419-.023 2.362 2.146 3.673 3.774 4.465 1.673.814 2.234 1.336 2.234 2.062-.02 1.116-1.349 1.62-2.593 1.62-1.748 0-2.695-.272-4.127-.923l-.58-.27-1.12 5.093c1.078.498 3.064.927 5.143.953 4.492 0 7.41-2.197 7.433-5.597.022-1.895-1.127-3.336-3.6-4.505-1.503-.772-2.42-1.284-2.42-2.068 0-.712.809-1.464 2.464-1.464 1.412-.023 2.457.29 3.238.65l.39.18 1.125-5.118zm10.74 10.609l-3.612-9.673c-.27-.687-.852-1.034-1.554-1.133h-6.7l-.105.485c1.298.272 2.766.777 3.682 1.348l-3.14 8.973h4.032l.805-2.224h4.925l.47 2.224h3.197zm-5.717-5.32l1.986-5.417 1.143 5.418h-3.13zM6.91 11.233l-2.78-7.502L2.946.804A1.674 1.674 0 0 0 1.378 0H.02L0 .093c2.723.687 5.795 1.956 7.643 3.447l1.196-3.113h4.1l-6.03 10.806H6.91z" />
-                                                    </svg>
-                                                </div>
-                                                <div className="h-10 w-14 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg flex items-center justify-center shadow-inner">
-                                                    <svg className="h-6" viewBox="0 0 36 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                        <circle cx="11.25" cy="11.25" r="11.25" fill="#EB001B"/>
-                                                        <circle cx="24.75" cy="11.25" r="11.25" fill="#F79E1B"/>
-                                                        <path fillRule="evenodd" clipRule="evenodd" d="M18 17.58A11.25 11.25 0 0 1 18 4.92a11.25 11.25 0 0 1 0 12.66Z" fill="#FF5F00"/>
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="space-y-1.5 mb-6">
-                                                <h3 className="text-lg font-bold text-white tracking-tight flex items-center justify-center gap-2">
-                                                    Pago Seguro
-                                                </h3>
-                                                <p className="text-[12px] text-zinc-400 max-w-[240px] mx-auto leading-relaxed">
-                                                    Cifrado de grado bancario. Tu suscripción se activará al instante.
-                                                </p>
-                                            </div>
-
-                                            <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col items-center mb-6">
-                                                <span className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase mb-1">Total a Pagar</span>
-                                                <span className="text-3xl font-black text-white tracking-tighter">
-                                                    ${displayAmount.toLocaleString()} {effectivePlanDetails.currency || 'USD'}
-                                                </span>
-                                            </div>
-
-                                            <Button 
-                                                className="w-full bg-white text-black hover:bg-zinc-200 font-bold h-12 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:scale-[1.02] active:scale-[0.98] group"
-                                                onClick={handlePaddleCheckout}
-                                                disabled={isProcessing}
-                                            >
-                                                {isProcessing ? (
-                                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                                ) : (
-                                                    <>
-                                                        <ShieldCheck className="w-4 h-4 mr-2 group-hover:text-emerald-600 transition-colors" />
-                                                        Ingresar Tarjeta
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1 mt-2">
-                                        <ShieldCheck className="h-3 w-3" /> Conexión cifrada de 256 bits
-                                    </p>
-                                </TabsContent>
-
-                                {/* TAB 2: PAYPAL */}
-                                <TabsContent value="paypal" className="p-5 space-y-4 animate-in slide-in-from-right-2 transition-all">
-                                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-100 rounded-xl p-5 text-center space-y-4 shadow-sm">
-                                        <div className="flex justify-center">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-6" alt="PayPal" />
-                                        </div>
-                                        
-                                        <div className="space-y-1">
-                                            <h3 className="font-bold text-orange-900">Botones de Pago PayPal</h3>
-                                            <p className="text-[11px] text-orange-700/70">Usa tu saldo PayPal o tarjeta vinculada para activar tu membresía.</p>
-                                        </div>
-
-                                        <div className="bg-white/80 p-3 rounded-lg border border-orange-200/50 flex flex-col items-center">
-                                            <span className="text-2xl font-black text-orange-900">${displayAmount.toLocaleString()} {effectivePlanDetails.currency || 'USD'}</span>
-                                            <span className="text-[10px] text-muted-foreground font-medium">TOTAL A PAGAR</span>
-                                        </div>
-
-                                        <Button 
-                                            className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold h-11 shadow-lg"
-                                            onClick={() => activatePlanAutomated('paypal')}
-                                            disabled={isProcessing}
-                                        >
-                                            {isProcessing ? (
-                                                <Loader2 className="h-5 w-5 animate-spin" />
-                                            ) : (
-                                                "Pagar con PayPal"
-                                            )}
-                                        </Button>
-                                    </div>
-                                </TabsContent>
-
-                                {/* TAB 3: TRANSFERENCIA (BANRESERVAS) */}
-                                <TabsContent value="bank" className="p-4 sm:p-5 space-y-4 animate-in slide-in-from-bottom-2 transition-all">
-                                    {renderBanreservasBankCard()}
-                                </TabsContent>
-                            </Tabs>
-                        </>
-                    )}
-                </DialogContent>
-            </Dialog>
 
             {/* Modal Exclusivo de Transferencia Banreservas */}
             <Dialog open={isBankModalOpen} onOpenChange={setIsBankModalOpen}>
@@ -1019,7 +738,7 @@ const UserSubscription = () => {
                                 <DialogHeader>
                                     <DialogTitle className="text-lg sm:text-xl font-black text-foreground flex items-center justify-center gap-2">
                                         <Landmark className="h-5 w-5 text-emerald-500" />
-                                        Transferencia Bancaria Banreservas
+                                        {targetPlan ? `Activar Plan ${targetPlanDetails?.name || ''} - Banreservas` : 'Transferencia Bancaria Banreservas'}
                                     </DialogTitle>
                                     <DialogDescription className="text-muted-foreground text-xs mt-1">
                                         Transfiere desde tu banca en línea o sucursal y adjunta tu comprobante
@@ -1259,39 +978,24 @@ const UserSubscription = () => {
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="space-y-2 w-full mt-auto">
+                                <div className="w-full mt-auto">
                                     <Button
-                                        className={`w-full h-auto min-h-11 py-2 px-3 font-bold rounded-xl transition-all active:scale-[0.98] text-xs sm:text-sm text-center leading-tight whitespace-normal ${
+                                        className={`w-full h-auto min-h-11 py-2 px-3 font-bold rounded-xl transition-all active:scale-[0.98] text-xs sm:text-sm text-center leading-tight whitespace-normal flex items-center justify-center gap-2 ${
                                             activePlan === plan.id
                                                 ? isPro
                                                     ? 'bg-emerald-800/20 text-emerald-800 border-0 cursor-not-allowed opacity-60'
                                                     : 'bg-zinc-800 border-zinc-700 text-zinc-400 cursor-not-allowed'
                                                 : isPro
                                                 ? 'bg-white text-emerald-950 hover:bg-emerald-50 border-0 shadow-lg shadow-emerald-950/10'
-                                                : 'bg-[#25262b] border-zinc-800 hover:bg-[#2c2e33] text-white border'
+                                                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md'
                                         }`}
                                         disabled={activePlan === plan.id}
                                         onClick={() => handleSelectPlan(plan)}
                                     >
-                                        {activePlan === plan.id ? 'Plan Actual' : 'Seleccionar Plan'}
-                                    </Button>
-
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={`w-full text-xs font-semibold h-auto min-h-8 py-1.5 px-2 rounded-lg text-center leading-tight whitespace-normal flex items-center justify-center gap-1.5 ${
-                                            isPro ? 'text-emerald-950 hover:bg-emerald-600/20' : 'text-emerald-400 hover:bg-zinc-800'
-                                        }`}
-                                        onClick={() => {
-                                            setIsSuccess(false);
-                                            setTargetPlan(plan.id);
-                                            const amt = isAnnual ? plan.annualPrice : plan.price;
-                                            setPaymentAmount(amt.toString());
-                                            setIsBankModalOpen(true);
-                                        }}
-                                    >
-                                        <Landmark className="h-3.5 w-3.5 shrink-0" />
-                                        <span>Pagar por Banreservas</span>
+                                        <Landmark className="h-4 w-4 shrink-0" />
+                                        <span>
+                                            {activePlan === plan.id ? 'Plan Actual' : 'Pagar por Transferencia'}
+                                        </span>
                                     </Button>
                                 </div>
                             )}
