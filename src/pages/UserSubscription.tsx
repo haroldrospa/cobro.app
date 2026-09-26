@@ -706,16 +706,16 @@ const UserSubscription = () => {
                     </Avatar>
                 </div>
 
-                <div className="flex-1 space-y-1">
-                    <h1 className="text-2xl font-bold">{store?.store_name || 'Mi Negocio'}</h1>
+                <div className="flex-1 min-w-0 space-y-1">
+                    <h1 className="text-2xl font-bold truncate">{store?.store_name || 'Mi Negocio'}</h1>
                     <div className="flex flex-col gap-1">
                         <p className="text-muted-foreground text-sm font-medium">Tienda: {store?.store_code || '---'}</p>
                         <div className="flex flex-col gap-0.5 mt-1 p-2 bg-muted/30 rounded-lg border border-border/50">
                             <p className="text-xs font-semibold text-foreground flex items-center gap-2">
-                                <User className="h-3 w-3 text-primary" />
-                                Usuario: {profile?.full_name || '---'}
+                                <User className="h-3 w-3 text-primary shrink-0" />
+                                <span className="truncate">Usuario: {profile?.full_name || '---'}</span>
                             </p>
-                            <p className="text-[10px] font-mono text-muted-foreground select-all">
+                            <p className="text-[10px] font-mono text-muted-foreground select-all truncate">
                                 ID: {companySettings?.rnc || profile?.rnc || profile?.user_number || '---'}
                             </p>
                         </div>
@@ -725,16 +725,16 @@ const UserSubscription = () => {
                     </Badge>
                 </div>
 
-                <Card className="w-full md:w-72 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                    <CardContent className="p-4 space-y-4">
+                <Card className="w-full md:w-80 lg:w-[350px] shrink-0 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 shadow-md">
+                    <CardContent className="p-4 sm:p-5 space-y-4">
                         <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">Estado de Cuenta</span>
+                            <span className="text-sm font-bold text-foreground">Estado de Cuenta</span>
                             <div className="flex flex-col items-end gap-1">
-                                <Badge className={subscription?.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}>
+                                <Badge className={subscription?.status === 'active' ? 'bg-green-500 font-bold' : 'bg-gray-500 font-bold'}>
                                     {subscription?.status === 'active' ? 'Activo' : 'Inactivo'}
                                 </Badge>
                                 {pendingPayment && (
-                                    <Badge variant="outline" className="text-[10px] animate-pulse border-yellow-500 text-yellow-600 bg-yellow-50">
+                                    <Badge variant="outline" className="text-[10px] animate-pulse border-yellow-500 text-yellow-600 bg-yellow-50 font-semibold">
                                         Pago en revisión
                                     </Badge>
                                 )}
@@ -780,7 +780,7 @@ const UserSubscription = () => {
 
                         <div className="space-y-2 pt-1">
                             <Button 
-                                className="w-full shadow-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-11 flex items-center justify-center gap-2 rounded-xl transition-all"
+                                className="w-full shadow-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-auto min-h-11 py-2.5 px-3 flex items-center justify-center gap-2 rounded-xl transition-all text-xs sm:text-sm text-center leading-tight whitespace-normal break-words"
                                 onClick={() => {
                                     setIsSuccess(false);
                                     setTargetPlan(activePlan);
@@ -791,15 +791,17 @@ const UserSubscription = () => {
                                     setIsBankModalOpen(true);
                                 }}
                             >
-                                <Landmark className="h-4 w-4" />
-                                Pagar con Transferencia Banreservas
+                                <Landmark className="h-4 w-4 shrink-0" />
+                                <span className="text-center font-bold">
+                                    Pagar con Transferencia Banreservas
+                                </span>
                             </Button>
 
                             <div className="flex gap-2">
                                 <Button 
                                     variant="outline" 
                                     size="sm" 
-                                    className="flex-1 text-xs font-semibold h-8 rounded-lg border-border"
+                                    className="flex-1 text-xs font-semibold h-9 rounded-lg border-border"
                                     onClick={() => {
                                         setIsSuccess(false);
                                         setTargetPlan(null);
@@ -807,18 +809,19 @@ const UserSubscription = () => {
                                         setIsPaymentOpen(true);
                                     }}
                                 >
-                                    <CreditCard className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                                    <CreditCard className="mr-1.5 h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                     Tarjeta / PayPal
                                 </Button>
 
                                 <Button 
                                     variant="outline" 
                                     size="sm" 
-                                    className="text-xs font-semibold h-8 px-2.5 rounded-lg text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                                    className="text-xs font-semibold h-9 px-3 rounded-lg text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 shrink-0 flex items-center justify-center gap-1.5"
                                     onClick={() => window.open('https://wa.me/18099175744?text=Hola!%20Deseo%20informaci%C3%B3n%20sobre%20el%20pago%20de%20mi%20suscripci%C3%B3n%20CobroApp', '_blank')}
                                     title="Soporte WhatsApp"
                                 >
-                                    <MessageSquare className="h-3.5 w-3.5" />
+                                    <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="hidden sm:inline text-[11px]">Soporte</span>
                                 </Button>
                             </div>
                         </div>
@@ -828,7 +831,7 @@ const UserSubscription = () => {
 
             {/* Modal de Pagos */}
             <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
-                <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden gap-0 bg-background border-border shadow-xl">
+                <DialogContent className="w-[95vw] sm:max-w-[550px] p-0 overflow-hidden gap-0 bg-background border-border shadow-xl max-h-[92vh] flex flex-col">
                     {isSuccess ? (
                         // VISTA DE ÉXITO ESTILIZADA
                         <div className="flex flex-col items-center justify-center py-10 px-6 text-center space-y-5 animate-in zoom-in-50 duration-300">
@@ -979,7 +982,7 @@ const UserSubscription = () => {
 
             {/* Modal Exclusivo de Transferencia Banreservas */}
             <Dialog open={isBankModalOpen} onOpenChange={setIsBankModalOpen}>
-                <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden gap-0 bg-background border-border shadow-2xl max-h-[92vh] flex flex-col">
+                <DialogContent className="w-[95vw] sm:max-w-[550px] p-0 overflow-hidden gap-0 bg-background border-border shadow-2xl max-h-[92vh] flex flex-col">
                     {isSuccess ? (
                         <div className="flex flex-col items-center justify-center py-12 px-6 text-center space-y-5 animate-in zoom-in-50 duration-300">
                             <div className="h-20 w-20 bg-emerald-500/15 rounded-full flex items-center justify-center mb-2">
@@ -1051,7 +1054,7 @@ const UserSubscription = () => {
                     </div>
                 </div>
                 <Button 
-                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-5 h-10 rounded-xl shadow-md w-full md:w-auto shrink-0 transition-transform active:scale-95 flex items-center justify-center gap-2"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 sm:px-5 h-auto min-h-10 py-2.5 rounded-xl shadow-md w-full md:w-auto shrink-0 transition-transform active:scale-95 flex items-center justify-center gap-2 text-xs sm:text-sm text-center leading-tight whitespace-normal"
                     onClick={() => {
                         setIsSuccess(false);
                         setTargetPlan(activePlan);
@@ -1062,8 +1065,8 @@ const UserSubscription = () => {
                         setIsBankModalOpen(true);
                     }}
                 >
-                    <Landmark className="h-4 w-4" />
-                    Pagar con Transferencia Banreservas
+                    <Landmark className="h-4 w-4 shrink-0" />
+                    <span>Pagar con Transferencia Banreservas</span>
                 </Button>
             </div>
 
@@ -1243,7 +1246,7 @@ const UserSubscription = () => {
                                         Contactar por WhatsApp
                                     </Button>
                                     <Button
-                                        className="w-full h-11 bg-zinc-800 hover:bg-[#2c2e33] text-white font-bold rounded-xl flex items-center justify-center gap-2 border border-zinc-700 transition-all active:scale-[0.98]"
+                                        className="w-full h-auto min-h-11 py-2 px-3 bg-zinc-800 hover:bg-[#2c2e33] text-white font-bold rounded-xl flex items-center justify-center gap-2 border border-zinc-700 transition-all active:scale-[0.98] text-xs sm:text-sm text-center leading-tight whitespace-normal"
                                         onClick={() => {
                                             setIsSuccess(false);
                                             setTargetPlan('enterprise');
@@ -1251,14 +1254,14 @@ const UserSubscription = () => {
                                             setIsBankModalOpen(true);
                                         }}
                                     >
-                                        <Landmark className="h-4 w-4" />
-                                        Pagar con Transferencia Banreservas
+                                        <Landmark className="h-4 w-4 shrink-0" />
+                                        <span>Pagar con Transferencia Banreservas</span>
                                     </Button>
                                 </div>
                             ) : (
                                 <div className="space-y-2 w-full mt-auto">
                                     <Button
-                                        className={`w-full h-11 font-bold rounded-xl transition-all active:scale-[0.98] ${
+                                        className={`w-full h-auto min-h-11 py-2 px-3 font-bold rounded-xl transition-all active:scale-[0.98] text-xs sm:text-sm text-center leading-tight whitespace-normal ${
                                             activePlan === plan.id
                                                 ? isPro
                                                     ? 'bg-emerald-800/20 text-emerald-800 border-0 cursor-not-allowed opacity-60'
@@ -1276,7 +1279,7 @@ const UserSubscription = () => {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className={`w-full text-xs font-semibold h-8 rounded-lg ${
+                                        className={`w-full text-xs font-semibold h-auto min-h-8 py-1.5 px-2 rounded-lg text-center leading-tight whitespace-normal flex items-center justify-center gap-1.5 ${
                                             isPro ? 'text-emerald-950 hover:bg-emerald-600/20' : 'text-emerald-400 hover:bg-zinc-800'
                                         }`}
                                         onClick={() => {
@@ -1287,8 +1290,8 @@ const UserSubscription = () => {
                                             setIsBankModalOpen(true);
                                         }}
                                     >
-                                        <Landmark className="h-3.5 w-3.5 mr-1" />
-                                        Pagar por Banreservas
+                                        <Landmark className="h-3.5 w-3.5 shrink-0" />
+                                        <span>Pagar por Banreservas</span>
                                     </Button>
                                 </div>
                             )}
