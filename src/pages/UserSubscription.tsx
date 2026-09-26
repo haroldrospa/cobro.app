@@ -745,14 +745,27 @@ const UserSubscription = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="bg-emerald-500/10 border-b border-border px-4 py-2 sm:px-5 sm:py-2.5 flex flex-col items-center text-center relative shrink-0">
-                                <DialogHeader>
-                                    <DialogTitle className="text-sm sm:text-base font-black text-foreground flex items-center justify-center gap-1.5">
-                                        <Landmark className="h-4 w-4 text-emerald-500" />
-                                        {targetPlan ? `Activar Plan ${targetPlanDetails?.name || ''} - Banreservas` : 'Transferencia Bancaria Banreservas'}
+                            <div className="relative overflow-hidden bg-gradient-to-b from-emerald-950/70 via-emerald-950/25 to-transparent border-b border-emerald-500/20 px-6 py-3 sm:px-8 sm:py-3.5 flex flex-col items-center text-center relative shrink-0">
+                                {/* Efecto de resplandor decorativo */}
+                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-16 bg-emerald-500/20 blur-2xl rounded-full pointer-events-none" />
+
+                                <DialogHeader className="relative z-10 flex flex-col items-center text-center space-y-1">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-0.5 shadow-sm">
+                                        <Landmark className="h-3 w-3 text-emerald-400" />
+                                        <span>Pago Directo Banreservas</span>
+                                    </div>
+
+                                    <DialogTitle className="text-base sm:text-lg font-black tracking-tight text-white flex items-center justify-center gap-2">
+                                        {targetPlan ? `Activar Plan ${targetPlanDetails?.name || ''}` : 'Transferencia Bancaria'}
+                                        {targetPlan && (
+                                            <Badge variant="outline" className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px] font-bold px-2 py-0">
+                                                RD$ Oficial
+                                            </Badge>
+                                        )}
                                     </DialogTitle>
-                                    <DialogDescription className="text-muted-foreground text-[10.5px] sm:text-xs mt-0.5">
-                                        Transfiere desde tu banca en línea o cajero y notifica tu pago
+
+                                    <DialogDescription className="text-zinc-300 text-[11px] sm:text-xs font-normal max-w-sm mx-auto">
+                                        Transfiere a nuestra cuenta en Pesos Dominicanos (DOP) y adjunta tu comprobante
                                     </DialogDescription>
                                 </DialogHeader>
                             </div>
