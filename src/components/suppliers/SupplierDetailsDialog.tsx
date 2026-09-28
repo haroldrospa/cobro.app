@@ -95,6 +95,22 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<Set<string>>(new Set());
   const [isSavingIngredientsLinking, setIsSavingIngredientsLinking] = useState(false);
 
+  // Estado para eliminar deuda con confirmación y loading
+  const [deletingDebtId, setDeletingDebtId] = useState<string | null>(null);
+
+  const handleDeleteDebtClick = async (debtId: string, description: string) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la factura/cuenta pendiente "${description}"? Esta acción no se puede deshacer.`)) {
+      try {
+        setDeletingDebtId(debtId);
+        await onDeleteDebt(debtId, description);
+      } catch (error: any) {
+        console.error('Error al eliminar la deuda:', error);
+      } finally {
+        setDeletingDebtId(null);
+      }
+    }
+  };
+
   useEffect(() => {
     if (open) {
       setCurrentTab(initialTab);
@@ -374,13 +390,13 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[780px] max-h-[88vh] overflow-y-auto rounded-3xl border border-border/60 p-0 overflow-hidden bg-background">
+        <DialogContent className="sm:max-w-[850px] max-h-[88vh] overflow-y-auto overflow-x-hidden rounded-3xl border border-border/60 p-0 bg-background">
           <DialogHeader className="sr-only">
             <DialogTitle>{supplier.name}</DialogTitle>
             <DialogDescription>Ficha completa del proveedor, productos asociados y deudas</DialogDescription>
           </DialogHeader>
           {/* Header Banner */}
-          <div className="p-5 sm:p-6 bg-muted/40 border-b border-border/50">
+          <div className="p-5 sm:p-6 bg-muted/40 border-b border-border/50 rounded-t-3xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div
@@ -613,7 +629,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                             <TableHead className="text-right text-xs font-bold py-2">Pagado</TableHead>
                             <TableHead className="text-right text-xs font-bold py-2">Pendiente</TableHead>
                             <TableHead className="text-center text-xs font-bold py-2">Estado</TableHead>
-                            <TableHead className="text-right text-xs font-bold py-2">Acción</TableHead>
+                            <TableHead className="text-right text-xs font-bold py-2">Acciones</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -624,7 +640,17 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                               <TableRow key={debt.id} className="hover:bg-muted/20">
                                 <TableCell className="py-2 text-xs">
                                   <span className="font-bold text-foreground block">{debt.description}</span>
-                                  <span className="text-[10px] text-muted-foreground">{debt.category}</span>
+                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                                    <span>{debt.category}</span>
+                                    {debt.due_date && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1 font-mono text-amber-500">
+                                          <Calendar className="h-3 w-3" /> Vence: {debt.due_date}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="py-2 text-right text-xs font-mono font-semibold">
                                   ${Number(debt.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
@@ -647,16 +673,32 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                                   )}
                                 </TableCell>
                                 <TableCell className="py-2 text-right">
-                                  {!isPaid && (
+                                  <div className="flex items-center justify-end gap-1">
+                                    {!isPaid && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
+                                        onClick={() => onOpenPayDebt(debt)}
+                                      >
+                                        Pagar
+                                      </Button>
+                                    )}
                                     <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
-                                      onClick={() => onOpenPayDebt(debt)}
+                                      size="icon"
+                                      variant="ghost"
+                                      disabled={deletingDebtId === debt.id}
+                                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                      onClick={() => handleDeleteDebtClick(debt.id, debt.description)}
+                                      title="Eliminar Factura / Deuda"
                                     >
-                                      Pagar
+                                      {deletingDebtId === debt.id ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
+                                      ) : (
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      )}
                                     </Button>
-                                  )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );
@@ -1056,11 +1098,16 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-lg"
-                                    onClick={() => onDeleteDebt(debt.id, debt.description)}
-                                    title="Eliminar Deuda"
+                                    disabled={deletingDebtId === debt.id}
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                    onClick={() => handleDeleteDebtClick(debt.id, debt.description)}
+                                    title="Eliminar Deuda / Factura"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    {deletingDebtId === debt.id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
+                                    ) : (
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    )}
                                   </Button>
                                 </div>
                               </TableCell>
