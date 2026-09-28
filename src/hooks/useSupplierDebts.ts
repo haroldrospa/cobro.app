@@ -167,7 +167,7 @@ export const useSupplierDebts = () => {
         }
     });
 
-    // Pay / Add payment to supplier debt mutation
+    // Pay / Add payment to supplier debt mutation (supports cascading excess to subsequent debts)
     const paySupplierDebtMutation = useMutation({
         mutationFn: async (payload: {
             debtId: string;
@@ -182,28 +182,71 @@ export const useSupplierDebts = () => {
             const debt = await offlineDB.get<SupplierDebt>(OfflineStore.SUPPLIER_DEBTS, payload.debtId);
             if (!debt) throw new Error("Deuda no encontrada en base de datos local");
 
-            const newAmountPaid = Number(debt.amount_paid) + Number(payload.amountToPay);
-            const isFullyPaid = newAmountPaid >= Number(debt.amount);
-            const status = isFullyPaid ? 'paid' : 'partial';
+            // Calculate allocation for the selected debt
+            const currentDebtRemaining = Math.max(0, Number(debt.amount) - Number(debt.amount_paid));
+            const amountForCurrent = Math.min(Number(payload.amountToPay), currentDebtRemaining);
+            const currentAmountPaid = Number(debt.amount_paid) + amountForCurrent;
+            const currentIsFullyPaid = currentAmountPaid >= Number(debt.amount);
 
-            const updatedDebt: SupplierDebt = {
+            const updatedCurrentDebt: SupplierDebt = {
                 ...debt,
-                amount_paid: Math.min(newAmountPaid, debt.amount),
-                status,
+                amount_paid: Math.min(currentAmountPaid, debt.amount),
+                status: currentIsFullyPaid ? 'paid' : 'partial',
                 updated_at: new Date().toISOString(),
                 synced: 0
             };
 
-            // 2. Update debt in local IndexedDB
-            await offlineDB.put(OfflineStore.SUPPLIER_DEBTS, updatedDebt);
+            const allUpdatedDebts: SupplierDebt[] = [updatedCurrentDebt];
 
-            // 3. Register corresponding cash outflow in expenses (IndexedDB)
+            // 2. Cascade remaining excess to subsequent pending debts of the same supplier
+            let excess = Math.max(0, Number(payload.amountToPay) - amountForCurrent);
+            if (excess > 0.001) {
+                const allLocalDebts = await offlineDB.getAll<SupplierDebt>(OfflineStore.SUPPLIER_DEBTS);
+                const otherDebts = allLocalDebts
+                    .filter(d => d.supplier_id === debt.supplier_id && d.id !== debt.id && d.status !== 'paid')
+                    .sort((a, b) => {
+                        if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+                        if (a.due_date) return -1;
+                        if (b.due_date) return 1;
+                        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                    });
+
+                for (const nextDebt of otherDebts) {
+                    if (excess <= 0.001) break;
+                    const nextRemaining = Math.max(0, Number(nextDebt.amount) - Number(nextDebt.amount_paid));
+                    if (nextRemaining <= 0) continue;
+
+                    const payToNext = Math.min(excess, nextRemaining);
+                    const nextPaid = Number(nextDebt.amount_paid) + payToNext;
+                    const nextIsPaid = nextPaid >= Number(nextDebt.amount);
+
+                    const updatedNext: SupplierDebt = {
+                        ...nextDebt,
+                        amount_paid: Math.min(nextPaid, nextDebt.amount),
+                        status: nextIsPaid ? 'paid' : 'partial',
+                        updated_at: new Date().toISOString(),
+                        synced: 0
+                    };
+
+                    allUpdatedDebts.push(updatedNext);
+                    excess -= payToNext;
+                }
+            }
+
+            // 3. Update all debts in local IndexedDB
+            for (const d of allUpdatedDebts) {
+                await offlineDB.put(OfflineStore.SUPPLIER_DEBTS, d);
+            }
+
+            // 4. Register corresponding cash outflow in expenses (IndexedDB)
             const tempExpenseId = crypto.randomUUID();
             const expenseToSave = {
                 id: tempExpenseId,
                 store_id: storeId,
                 date: new Date().toISOString(),
-                description: payload.description || `Abono Deuda: ${debt.description}`,
+                description: payload.description || (allUpdatedDebts.length > 1
+                    ? `Pago deuda: ${debt.description} (y abono a factura siguiente)`
+                    : `Abono Deuda: ${debt.description}`),
                 amount: payload.amountToPay,
                 category: payload.category || debt.category,
                 supplier_id: debt.supplier_id,
@@ -216,20 +259,27 @@ export const useSupplierDebts = () => {
 
             await offlineDB.put(OfflineStore.EXPENSES, expenseToSave);
 
-            // 4. Send to Supabase if Online
+            // 5. Send to Supabase if Online (Batch single query, NO iterative loops)
             if (navigator.onLine) {
                 try {
-                    // Update debt on server
-                    const { synced: _, ...debtPayload } = updatedDebt;
-                    const { error: debtError } = await supabase
-                        .from('supplier_debts' as any)
-                        .update(debtPayload)
-                        .eq('id', debt.id);
+                    const debtPayloads = allUpdatedDebts.map(({ synced: _, ...rest }) => rest);
+                    if (debtPayloads.length === 1) {
+                        const { error: debtError } = await supabase
+                            .from('supplier_debts' as any)
+                            .update(debtPayloads[0])
+                            .eq('id', debtPayloads[0].id);
+                        if (debtError) throw debtError;
+                    } else if (debtPayloads.length > 1) {
+                        const { error: debtError } = await supabase
+                            .from('supplier_debts' as any)
+                            .upsert(debtPayloads, { onConflict: 'id' });
+                        if (debtError) throw debtError;
+                    }
 
-                    if (debtError) throw debtError;
-                    
-                    // Update debt local cache to synced: 1
-                    await offlineDB.put(OfflineStore.SUPPLIER_DEBTS, { ...updatedDebt, synced: 1 });
+                    // Update synced: 1 in local IndexedDB
+                    for (const d of allUpdatedDebts) {
+                        await offlineDB.put(OfflineStore.SUPPLIER_DEBTS, { ...d, synced: 1 });
+                    }
 
                     // Insert expense on server
                     const { synced: __, ...expensePayload } = expenseToSave;
@@ -238,18 +288,16 @@ export const useSupplierDebts = () => {
                         .insert(expensePayload);
 
                     if (expenseError) throw expenseError;
-
-                    // Update expense local cache to synced: 1
                     await offlineDB.put(OfflineStore.EXPENSES, { ...expenseToSave, synced: 1 });
                 } catch (error: any) {
-                    console.error('Error recording payment on server, queuing both operations:', error);
-                    // Add debt update to sync queue
-                    await offlineDB.addToSyncQueue({
-                        store: OfflineStore.SUPPLIER_DEBTS,
-                        operation: 'UPDATE',
-                        data: updatedDebt
-                    });
-                    // Add expense to sync queue
+                    console.error('Error recording payment on server, queuing operations:', error);
+                    for (const d of allUpdatedDebts) {
+                        await offlineDB.addToSyncQueue({
+                            store: OfflineStore.SUPPLIER_DEBTS,
+                            operation: 'UPDATE',
+                            data: d
+                        });
+                    }
                     await offlineDB.addToSyncQueue({
                         store: OfflineStore.EXPENSES,
                         operation: 'CREATE',
@@ -257,12 +305,13 @@ export const useSupplierDebts = () => {
                     });
                 }
             } else {
-                // Offline sync queues
-                await offlineDB.addToSyncQueue({
-                    store: OfflineStore.SUPPLIER_DEBTS,
-                    operation: 'UPDATE',
-                    data: updatedDebt
-                });
+                for (const d of allUpdatedDebts) {
+                    await offlineDB.addToSyncQueue({
+                        store: OfflineStore.SUPPLIER_DEBTS,
+                        operation: 'UPDATE',
+                        data: d
+                    });
+                }
                 await offlineDB.addToSyncQueue({
                     store: OfflineStore.EXPENSES,
                     operation: 'CREATE',
@@ -270,15 +319,23 @@ export const useSupplierDebts = () => {
                 });
             }
 
-            return updatedDebt;
+            return { updatedDebts: allUpdatedDebts };
         },
-        onSuccess: () => {
+        onSuccess: (data: any) => {
             queryClient.invalidateQueries({ queryKey: ['supplier_debts'] });
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
-            toast({
-                title: "Pago registrado",
-                description: "Se ha registrado el pago y se generó un egreso en contabilidad.",
-            });
+            const count = data?.updatedDebts?.length || 1;
+            if (count > 1) {
+                toast({
+                    title: "Pago y abono registrados",
+                    description: `Se saldó la factura inicial y el excedente se abonó a ${count - 1} factura(s) subsiguiente(s).`,
+                });
+            } else {
+                toast({
+                    title: "Pago registrado",
+                    description: "Se ha registrado el pago y se generó un egreso en contabilidad.",
+                });
+            }
         },
         onError: (error: any) => {
             toast({

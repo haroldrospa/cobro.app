@@ -1019,6 +1019,7 @@ export const Suppliers: React.FC = () => {
         open={isPayDialogOpen}
         onOpenChange={setIsPayDialogOpen}
         debt={selectedDebtForPayment}
+        allDebts={supplierDebts}
         onPayDebt={paySupplierDebt}
       />
 

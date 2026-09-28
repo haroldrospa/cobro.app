@@ -284,11 +284,12 @@ function AccountingContent() {
             return;
         }
 
-        const remainingDebt = Number(selectedDebtForPayment.amount) - Number(selectedDebtForPayment.amount_paid);
-        if (payAmountNum > remainingDebt + 0.01) {
+        const supplierDebtsList = supplierDebts.filter(d => d.supplier_id === selectedDebtForPayment.supplier_id && d.status !== 'paid');
+        const totalSupplierRemaining = supplierDebtsList.reduce((sum, d) => sum + Math.max(0, Number(d.amount) - Number(d.amount_paid)), 0);
+        if (payAmountNum > totalSupplierRemaining + 0.01) {
             toast({
                 title: "Monto excedido",
-                description: `El monto a pagar no puede superar los pagos pendientes ($${remainingDebt.toLocaleString()}).`,
+                description: `El monto a pagar no puede superar la deuda total pendiente con este proveedor ($${totalSupplierRemaining.toLocaleString()}).`,
                 variant: "destructive"
             });
             return;
