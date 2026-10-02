@@ -19,13 +19,9 @@ import './index.css'
 import './styles/date-range-picker.css'
 import { registerSW } from 'virtual:pwa-register';
 import { initGlobalKeyboardAvoid } from './hooks/useKeyboardAvoid';
-import { initGlobalAudio } from './utils/audio';
 
 // Activar manejo de teclado virtual (oculta barras inferiores)
 initGlobalKeyboardAvoid();
-
-// Activar sonidos globales interactivos
-initGlobalAudio();
 
 
 // Register PWA Service Worker
