@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Building2, Mail, Lock, User, ArrowRight, ChevronRight, ChevronLeft, Check, Phone, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { z } from 'zod';
 import cobroLogo from '@/assets/cobro-logo-dark.png';
 
@@ -70,6 +70,7 @@ const Auth = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   
   const [authView, setAuthView] = useState<'login' | 'signup' | 'forgot-password' | 'update-password'>(() => {
     const isRecovery = window.location.hash.includes('type=recovery') || 
@@ -81,6 +82,77 @@ const Auth = () => {
   useEffect(() => {
     setAuthView(isSignup ? 'signup' : 'login');
   }, [isSignup]);
+
+  // Real-time email validation for signup step 1 (case-insensitive & debounced)
+  useEffect(() => {
+    if (authView !== 'signup' || step !== 1) {
+      setEmailStatus('idle');
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setEmailStatus('idle');
+      setErrors(prev => {
+        if (!prev.email) return prev;
+        const next = { ...prev };
+        delete next.email;
+        return next;
+      });
+      return;
+    }
+
+    // Basic email format check before hitting the RPC
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setEmailStatus('idle');
+      return;
+    }
+
+    setEmailStatus('checking');
+    let isCancelled = false;
+
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc('check_existing_user', {
+          p_email: cleanEmail,
+          p_phone: ''
+        });
+
+        if (isCancelled) return;
+
+        if (error) {
+          console.error("Error checking email availability:", error);
+          setEmailStatus('idle');
+          return;
+        }
+
+        if (data && (data as any).emailExists) {
+          setEmailStatus('taken');
+          setErrors(prev => ({ ...prev, email: 'Este correo electrónico ya está registrado.' }));
+        } else {
+          setEmailStatus('available');
+          setErrors(prev => {
+            if (!prev.email || prev.email === 'Este correo electrónico ya está registrado.') {
+              const next = { ...prev };
+              delete next.email;
+              return next;
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setEmailStatus('idle');
+        }
+      }
+    }, 450);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [email, authView, step]);
   
   // Wizard state
   const [step, setStep] = useState(1);
@@ -218,9 +290,10 @@ const Auth = () => {
     setErrors({});
     let hasError = false;
     let currentFieldErrors: Record<string, string> = {};
+    const cleanEmail = email.trim().toLowerCase();
     
     try {
-      if (step === 1) step1Schema.parse({ fullName, email, phone });
+      if (step === 1) step1Schema.parse({ fullName, email: cleanEmail, phone });
       if (step === 2) step2Schema.parse({ companyName, rnc });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -236,19 +309,27 @@ const Auth = () => {
 
     if (hasError) return;
 
+    if (step === 1 && emailStatus === 'taken') {
+      setErrors({ email: 'Este correo electrónico ya está registrado.' });
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (step === 1) {
         const fullPhone = `${countryCode.split('_')[0]}${phone}`;
         const { data: existing, error } = await supabase.rpc('check_existing_user', {
-          p_email: email,
+          p_email: cleanEmail,
           p_phone: fullPhone
         });
 
         if (existing) {
           const { emailExists, phoneExists } = existing as any;
-          if (emailExists) currentFieldErrors.email = 'Este correo electrónico ya está registrado.';
+          if (emailExists) {
+            currentFieldErrors.email = 'Este correo electrónico ya está registrado.';
+            setEmailStatus('taken');
+          }
           if (phoneExists) currentFieldErrors.phone = 'Este teléfono ya está registrado.';
           
           if (emailExists || phoneExists) {
@@ -287,8 +368,9 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    const cleanEmail = email.trim().toLowerCase();
     try {
-      signupSchema.parse({ fullName, companyName, rnc, email, phone, password, confirmPassword });
+      signupSchema.parse({ fullName, companyName, rnc, email: cleanEmail, phone, password, confirmPassword });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -307,7 +389,7 @@ const Auth = () => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       const { data: signUpData, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           emailRedirectTo: redirectUrl,
@@ -737,10 +819,37 @@ const Auth = () => {
                             placeholder="tu@email.com"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
-                            className={`${inputCls} ${errors.email ? '!border-red-500/60 focus:!border-red-500 focus:ring-red-500/20 focus-visible:border-red-500' : ''}`}
+                            className={`${inputCls} pr-9 sm:pr-10 ${
+                              errors.email || emailStatus === 'taken'
+                                ? '!border-red-500/60 focus:!border-red-500 focus:ring-red-500/20 focus-visible:border-red-500' 
+                                : emailStatus === 'available'
+                                ? '!border-emerald-500/60 focus:!border-emerald-500 focus:ring-emerald-500/20 focus-visible:border-emerald-500'
+                                : ''
+                            }`}
                           />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                            {emailStatus === 'checking' && (
+                              <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
+                            )}
+                            {emailStatus === 'available' && !errors.email && (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                            )}
+                            {(emailStatus === 'taken' || errors.email) && (
+                              <AlertCircle className="h-4 w-4 text-red-400" />
+                            )}
+                          </div>
                         </div>
-                        {errors.email && <p className="text-[10px] text-red-400">{errors.email}</p>}
+                        {emailStatus === 'taken' || errors.email ? (
+                          <p className="text-[10px] text-red-400 flex items-center gap-1 font-medium mt-0.5">
+                            <AlertCircle className="h-3 w-3 shrink-0" />
+                            {errors.email || 'Este correo electrónico ya está registrado.'}
+                          </p>
+                        ) : emailStatus === 'available' ? (
+                          <p className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium mt-0.5">
+                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                            Correo disponible para registrarse
+                          </p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-1">
