@@ -79,6 +79,13 @@ const Auth = () => {
     return isRecovery ? 'update-password' : (isSignup ? 'signup' : 'login');
   });
 
+  // Wizard state
+  const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState(0); // 1 for forward, -1 for backward
+
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   useEffect(() => {
     setAuthView(isSignup ? 'signup' : 'login');
   }, [isSignup]);
@@ -153,13 +160,6 @@ const Auth = () => {
       clearTimeout(timer);
     };
   }, [email, authView, step]);
-  
-  // Wizard state
-  const [step, setStep] = useState(1);
-  const [direction, setDirection] = useState(0); // 1 for forward, -1 for backward
-
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     let redirected = false;
