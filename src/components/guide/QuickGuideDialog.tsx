@@ -12,15 +12,12 @@ import {
   Package,
   FileText,
   Settings,
-  Sparkles,
   ArrowRight,
   ChevronRight,
   ChevronLeft,
-  CheckCircle2,
   X
 } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useCompanySettings } from '@/hooks/useCompanySettings';
 
 export const triggerQuickGuide = () => {
   window.dispatchEvent(new CustomEvent('cobro:open-quick-guide'));
@@ -29,12 +26,9 @@ export const triggerQuickGuide = () => {
 interface QuickGuideStep {
   id: number;
   title: string;
-  badge: string;
   subtitle: string;
   icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  features: { title: string; desc: string }[];
+  points: { title: string; desc: string }[];
   actionLabel: string;
   actionRoute: string;
   tip?: string;
@@ -43,107 +37,95 @@ interface QuickGuideStep {
 const STEPS: QuickGuideStep[] = [
   {
     id: 1,
-    title: 'Punto de Venta Rápido',
-    badge: 'Cobro Ágil',
-    subtitle: 'Registra ventas y emite comprobantes en cuestión de segundos.',
+    title: 'Punto de Venta',
+    subtitle: 'Registra ventas y emite comprobantes en segundos.',
     icon: ShoppingCart,
-    iconColor: 'text-emerald-400',
-    iconBg: 'bg-emerald-500/15 border-emerald-500/30',
-    features: [
+    points: [
       {
-        title: 'Búsqueda instantánea',
+        title: 'Búsqueda rápida',
         desc: 'Encuentra productos por nombre o código de barra con tu teclado o lector.'
       },
       {
-        title: 'Múltiples métodos de pago',
-        desc: 'Cobra en Efectivo, Tarjeta, Transferencia bancaria o Crédito a plazo.'
+        title: 'Métodos de pago',
+        desc: 'Cobra en efectivo, tarjeta, transferencia bancaria o crédito a plazo.'
       },
       {
         title: 'Facturación directa',
-        desc: 'Asigna clientes, aplica descuentos o propinas y emite tickets o facturas con un clic.'
+        desc: 'Asigna clientes, aplica descuentos y emite tickets o facturas fiscales.'
       }
     ],
     actionLabel: 'Ir al Punto de Venta',
     actionRoute: '/pos',
-    tip: '💡 Puedes presionar "Punto de Venta" en cualquier momento desde el menú superior.'
+    tip: 'Accede al POS en cualquier momento desde el menú superior.'
   },
   {
     id: 2,
     title: 'Catálogo e Inventario',
-    badge: 'Tus Productos',
     subtitle: 'Administra tus existencias o servicios profesionales.',
     icon: Package,
-    iconColor: 'text-cyan-400',
-    iconBg: 'bg-cyan-500/15 border-cyan-500/30',
-    features: [
+    points: [
       {
-        title: 'Productos y Servicios',
-        desc: 'Define precios, costos, impuestos y categorías organizadas para tu negocio.'
+        title: 'Productos y servicios',
+        desc: 'Define precios, costos, impuestos y categorías para tu catálogo.'
       },
       {
-        title: 'Control de Stock',
+        title: 'Control de stock',
         desc: 'Recibe alertas automáticas cuando un producto esté por agotarse.'
       },
       {
-        title: 'Importación masiva',
-        desc: 'Carga tu catálogo completo fácilmente desde un archivo de Excel.'
+        title: 'Carga masiva',
+        desc: 'Importa tu inventario completo fácilmente desde una plantilla de Excel.'
       }
     ],
     actionLabel: 'Ver Productos',
     actionRoute: '/products',
-    tip: '💡 Si tu negocio es de servicios, puedes registrar tus tarifas por hora o proyecto.'
+    tip: 'Si eres de servicios, registra tus tarifas por hora o por proyecto.'
   },
   {
     id: 3,
-    title: 'Comprobantes y Facturación',
-    badge: 'Fiscal y Formal',
-    subtitle: 'Emite facturas formales con NCF o comprobantes en formato Carta.',
+    title: 'Comprobantes y NCF',
+    subtitle: 'Emite facturas fiscales o en formato Carta.',
     icon: FileText,
-    iconColor: 'text-blue-400',
-    iconBg: 'bg-blue-500/15 border-blue-500/30',
-    features: [
+    points: [
       {
-        title: 'Comprobantes Fiscales (NCF)',
-        desc: 'Facturas de Crédito Fiscal (B01/E31), Consumidor Final (B02/E32) y más.'
+        title: 'Comprobantes fiscales',
+        desc: 'Soporte para Crédito Fiscal (B01/E31), Consumidor Final (B02/E32) y más.'
       },
       {
-        title: 'Formatos Carta y Térmico',
-        desc: 'Diseñado para impresoras térmicas de 80mm/58mm o papel estándar Carta (8.5x11).'
+        title: 'Formatos de impresión',
+        desc: 'Compatible con rollos térmicos de 80mm/58mm y hojas estándar Carta.'
       },
       {
-        title: 'Reimpresión y Envío',
-        desc: 'Descarga facturas en PDF al instante o compártelas por WhatsApp.'
+        title: 'Descarga y envío',
+        desc: 'Genera PDFs al instante o comparte comprobantes directamente por WhatsApp.'
       }
     ],
     actionLabel: 'Historial de Facturas',
     actionRoute: '/invoices',
-    tip: '💡 Puedes personalizar tus secuencias fiscales en Ajustes > Comprobantes.'
+    tip: 'Configura tus secuencias fiscales en Ajustes > Comprobantes.'
   },
   {
     id: 4,
-    title: 'Configuración y Tienda',
-    badge: 'Personalización',
-    subtitle: 'Ajusta tu logo, datos de empresa e impresora predeterminada.',
+    title: 'Configuración de Tienda',
+    subtitle: 'Ajusta tu logo, datos de empresa e impresora.',
     icon: Settings,
-    iconColor: 'text-purple-400',
-    iconBg: 'bg-purple-500/15 border-purple-500/30',
-    features: [
+    points: [
       {
-        title: 'Datos de Empresa',
-        desc: 'Coloca tu RNC o Cédula, teléfono, dirección y redes sociales.'
+        title: 'Datos fiscales',
+        desc: 'Coloca tu RNC o Cédula, teléfono, dirección comercial y redes.'
       },
       {
-        title: 'Logo e Impresora',
-        desc: 'Sube tu logotipo para que aparezca en el encabezado de cada comprobante.'
+        title: 'Logo e impresión',
+        desc: 'Sube tu logotipo para el encabezado y elige el tamaño de papel predeterminado.'
       },
       {
-        title: 'Cuentas de Banco y Caja',
-        desc: 'Registra tus cuentas bancarias para cobros por transferencia y apertura de caja.'
+        title: 'Cuentas de banco',
+        desc: 'Registra tus cuentas bancarias para cobros por transferencia y cuadres.'
       }
     ],
     actionLabel: 'Ir a Configuración',
     actionRoute: '/settings',
-    tip: '💡 Puedes volver a consultar esta guía en cualquier momento desde tu menú de usuario.'
+    tip: 'Puedes volver a abrir esta guía desde tu menú de perfil.'
   }
 ];
 
@@ -152,11 +134,9 @@ export const QuickGuideDialog: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
   const { profile } = useUserProfile();
-  const { settings } = useCompanySettings();
 
   const userStorageKey = `cobro_quick_guide_seen_${profile?.id || 'guest'}`;
 
-  // Check if first-time registration or guide requested
   useEffect(() => {
     const handleOpen = () => {
       setCurrentStep(0);
@@ -165,15 +145,13 @@ export const QuickGuideDialog: React.FC = () => {
 
     window.addEventListener('cobro:open-quick-guide', handleOpen);
 
-    // Auto-open on first time registration or if user hasn't seen it yet
     const justRegistered = localStorage.getItem('cobro_show_quick_guide');
     const hasSeen = localStorage.getItem(userStorageKey);
 
     if (justRegistered === 'true' || !hasSeen) {
-      // Small delay to allow UI transition
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 700);
+      }, 600);
       return () => {
         clearTimeout(timer);
         window.removeEventListener('cobro:open-quick-guide', handleOpen);
@@ -218,84 +196,64 @@ export const QuickGuideDialog: React.FC = () => {
     <Dialog open={isOpen} onOpenChange={open => !open && handleClose()}>
       <DialogContent
         hideCloseButton
-        className="w-[calc(100%-1.5rem)] sm:w-full max-w-lg p-0 overflow-hidden bg-[#121619] border border-white/10 text-white shadow-2xl rounded-3xl z-[100]"
+        className="w-[calc(100%-1.5rem)] sm:w-full max-w-[460px] p-6 bg-[#0e1215] border border-white/[0.08] text-white shadow-2xl rounded-2xl z-[100]"
       >
-        <DialogTitle className="sr-only">Guía Rápida Minimalista</DialogTitle>
+        <DialogTitle className="sr-only">Guía Rápida</DialogTitle>
 
-        {/* Header with gradient glow background */}
-        <div className="relative p-5 sm:p-6 pb-4 border-b border-white/[0.08] overflow-hidden">
-          {/* Subtle glow accent */}
-          <div className="absolute -top-12 -right-12 w-44 h-44 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          {/* Close button */}
+        {/* Minimalist Top Bar: subtle step counter & close icon */}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-mono tracking-widest text-emerald-400 font-semibold uppercase">
+            0{currentStep + 1} / 0{STEPS.length}
+          </span>
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-white transition-colors p-1 -mr-1 rounded-md hover:bg-white/5 cursor-pointer"
             title="Cerrar guía"
           >
             <X className="h-4 w-4" />
           </button>
+        </div>
 
-          <div className="relative z-10 flex items-center justify-between pr-8">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold tracking-wider uppercase">
-              <Sparkles className="h-3 w-3" />
-              <span>Guía Rápida • Paso {currentStep + 1} de {STEPS.length}</span>
-            </div>
-            <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
-              {settings?.company_name || 'Cobro App'}
-            </span>
+        {/* Header: Clean icon, title and subtitle without heavy boxes */}
+        <div className="mt-4 flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <StepIcon className="h-5 w-5" strokeWidth={1.75} />
           </div>
-
-          <div className="relative z-10 mt-3 flex items-start gap-3.5">
-            <div className={`p-3 rounded-2xl border ${activeStepData.iconBg} ${activeStepData.iconColor} shrink-0 shadow-inner`}>
-              <StepIcon className="h-6 w-6" strokeWidth={2} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                {activeStepData.title}
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed mt-0.5">
-                {activeStepData.subtitle}
-              </p>
-            </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-bold text-white tracking-tight leading-tight">
+              {activeStepData.title}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              {activeStepData.subtitle}
+            </p>
           </div>
         </div>
 
-        {/* Body content with smooth transition */}
-        <div className="p-5 sm:p-6 space-y-4">
+        {/* Body: Clean minimalist points */}
+        <div className="mt-5 space-y-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-3"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+              className="space-y-2.5"
             >
-              {/* Feature cards */}
-              <div className="space-y-2">
-                {activeStepData.features.map((feature, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.05] transition-colors"
-                  >
-                    <div className="mt-0.5 p-1 rounded-full bg-emerald-500/10 text-emerald-400 shrink-0">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="text-left leading-snug">
-                      <p className="text-xs font-bold text-slate-200">{feature.title}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">{feature.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Tip box */}
-              {activeStepData.tip && (
-                <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/5 text-[11px] text-slate-300">
-                  {activeStepData.tip}
+              {activeStepData.points.map((point, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 text-left">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    <strong className="text-white font-medium">{point.title}: </strong>
+                    <span className="text-slate-400">{point.desc}</span>
+                  </p>
                 </div>
+              ))}
+
+              {activeStepData.tip && (
+                <p className="text-[11px] text-slate-400/80 pt-2 border-t border-white/[0.06] leading-relaxed">
+                  💡 {activeStepData.tip}
+                </p>
               )}
             </motion.div>
           </AnimatePresence>
@@ -304,7 +262,7 @@ export const QuickGuideDialog: React.FC = () => {
           <div className="pt-1 flex items-center justify-between text-xs">
             <button
               onClick={() => handleJumpToModule(activeStepData.actionRoute)}
-              className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-semibold transition-colors cursor-pointer group"
+              className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors cursor-pointer group"
             >
               <span>{activeStepData.actionLabel}</span>
               <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -312,41 +270,41 @@ export const QuickGuideDialog: React.FC = () => {
 
             <button
               onClick={handleClose}
-              className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+              className="text-[11px] text-slate-400 hover:text-slate-300 transition-colors cursor-pointer"
             >
-              Saltar guía
+              Saltar
             </button>
           </div>
         </div>
 
-        {/* Footer with Step Dots and Navigation */}
-        <div className="p-4 sm:p-5 bg-black/30 border-t border-white/[0.08] flex items-center justify-between gap-3">
-          {/* Step indicator dots */}
+        {/* Minimalist Footer: dots on left, nav buttons on right */}
+        <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between gap-3">
+          {/* Subtle dot indicators */}
           <div className="flex items-center gap-1.5">
             {STEPS.map((step, idx) => (
               <button
                 key={step.id}
                 onClick={() => setCurrentStep(idx)}
-                className={`h-2 rounded-full transition-all cursor-pointer ${
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${
                   currentStep === idx
-                    ? 'w-6 bg-emerald-500'
-                    : 'w-2 bg-white/20 hover:bg-white/40'
+                    ? 'w-5 bg-emerald-400'
+                    : 'w-1.5 bg-white/20 hover:bg-white/40'
                 }`}
-                title={`Ir al paso ${idx + 1}`}
+                title={`Paso ${idx + 1}`}
               />
             ))}
           </div>
 
-          {/* Prev & Next / Finish buttons */}
+          {/* Buttons */}
           <div className="flex items-center gap-2">
             {currentStep > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handlePrev}
-                className="h-9 px-3 text-xs text-slate-300 hover:text-white hover:bg-white/10 rounded-xl"
+                className="h-8 px-2.5 text-xs text-slate-400 hover:text-white hover:bg-white/5 rounded-lg"
               >
-                <ChevronLeft className="h-4 w-4 mr-0.5" />
+                <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
                 Anterior
               </Button>
             )}
@@ -354,18 +312,15 @@ export const QuickGuideDialog: React.FC = () => {
             <Button
               size="sm"
               onClick={handleNext}
-              className="h-9 px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
+              className="h-8 px-3.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               {currentStep < STEPS.length - 1 ? (
                 <>
                   Siguiente
-                  <ChevronRight className="h-4 w-4 ml-0.5" />
+                  <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
                 </>
               ) : (
-                <>
-                  ¡Comenzar ahora!
-                  <Sparkles className="h-3.5 w-3.5 ml-1.5" />
-                </>
+                'Comenzar'
               )}
             </Button>
           </div>
