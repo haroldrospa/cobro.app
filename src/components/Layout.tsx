@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Truck, Landmark } from 'lucide-react';
+import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Truck, Landmark, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +19,7 @@ import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useUserStore } from '@/hooks/useUserStore';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { SubscriptionWarningBanner } from '@/components/SubscriptionWarningBanner';
+import { QuickGuideDialog, triggerQuickGuide } from '@/components/guide/QuickGuideDialog';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -293,6 +294,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className={cn("flex-1 min-h-0 w-full flex flex-col", isPOS ? "overflow-hidden" : "overflow-y-auto")}>
           {children}
         </div>
+        <QuickGuideDialog />
       </div>
     );
   }
@@ -421,6 +423,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </div>
 
                     <DropdownMenuItem
+                      onSelect={triggerQuickGuide}
+                      onClick={triggerQuickGuide}
+                      className="cursor-pointer text-xs font-semibold py-2 rounded-xl text-emerald-400 focus:text-emerald-300"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2 text-emerald-400" /> Guía Rápida
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       onSelect={() => navigate('/subscription')}
                       onClick={() => navigate('/subscription')}
                       className="cursor-pointer text-xs font-semibold py-2 rounded-xl"
@@ -461,6 +470,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Barra de navegación inferior para móviles */}
       <MobileBottomNav />
+
+      {/* Guía Rápida Minimalista */}
+      <QuickGuideDialog />
     </div>
   );
 };

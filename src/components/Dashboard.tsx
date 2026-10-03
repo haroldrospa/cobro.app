@@ -16,8 +16,10 @@ import {
   Settings,
   Menu,
   Trophy,
-  Crown
+  Crown,
+  Sparkles
 } from 'lucide-react';
+import { triggerQuickGuide } from '@/components/guide/QuickGuideDialog';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -873,16 +875,51 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          <Button
-            asChild
-            size="lg"
-            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-12 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95 cursor-pointer"
-          >
-            <Link to="/pos">
-              <ShoppingCart className="h-5 w-5 mr-1" />
-              Punto de Venta
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-md">
+            <Button
+              asChild
+              size="lg"
+              className="flex-1 min-w-[200px] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95 cursor-pointer"
+            >
+              <Link to="/pos">
+                <ShoppingCart className="h-5 w-5 mr-1" />
+                Punto de Venta
+              </Link>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={triggerQuickGuide}
+              className="border-white/10 hover:border-emerald-500/40 bg-card/60 hover:bg-emerald-500/10 text-slate-200 hover:text-emerald-400 font-bold uppercase tracking-wider h-14 px-6 rounded-2xl shadow-md gap-2.5 transition-all active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4 text-emerald-400" />
+              Guía Rápida
+            </Button>
+          </div>
+
+          {currentMonthSales.length === 0 && (
+            <div className="w-full max-w-2xl mx-auto p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-slate-950 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-fade-in mt-2">
+              <div className="flex items-center gap-3.5 text-left">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">¡Bienvenido a Cobro App!</h4>
+                  <p className="text-xs text-slate-400 mt-0.5">Te preparamos una guía rápida minimalista en 4 pasos para comenzar a vender y configurar tu negocio.</p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={triggerQuickGuide}
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-5 rounded-xl shrink-0 cursor-pointer shadow-md transition-all active:scale-95"
+              >
+                Ver Guía Rápida
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

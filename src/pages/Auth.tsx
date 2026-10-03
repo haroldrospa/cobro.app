@@ -409,11 +409,19 @@ const Auth = () => {
         throw error;
       }
 
+      // Mark that user just registered to show the minimalist quick guide
+      localStorage.setItem('cobro_show_quick_guide', 'true');
+
       setLoading(false);
       toast({
         title: 'Registro exitoso',
         description: 'Te hemos enviado un email de confirmación. Revisa tu bandeja de entrada.'
       });
+
+      if (signUpData?.session) {
+        navigate('/app', { replace: true });
+        return;
+      }
 
     } catch (error: any) {
       setLoading(false);
