@@ -22,7 +22,6 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         onFocus={handleFocus}
-        onKeyDown={handleKeyDown}
         {...props}
       />
     )
