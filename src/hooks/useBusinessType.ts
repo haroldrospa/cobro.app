@@ -1,6 +1,6 @@
 import { useStoreSettings } from './useStoreSettings';
 
-export type BusinessType = 'restaurant' | 'store' | 'supermarket';
+export type BusinessType = 'restaurant' | 'store' | 'supermarket' | 'services';
 
 export const BUSINESS_TYPES: { id: BusinessType; label: string; emoji: string; description: string }[] = [
     {
@@ -21,6 +21,12 @@ export const BUSINESS_TYPES: { id: BusinessType; label: string; emoji: string; d
         emoji: '🛒',
         description: 'Gran inventario, múltiples categorías y cajas'
     },
+    {
+        id: 'services',
+        label: 'Servicios',
+        emoji: '💼',
+        description: 'Servicios profesionales, contabilidad, asesoría y facturación'
+    },
 ];
 
 export const useBusinessType = () => {
@@ -33,32 +39,34 @@ export const useBusinessType = () => {
     const businessType: BusinessType = (() => {
         if (raw === 'store' || raw === 'fashion' || raw === 'technology') return 'store';
         if (raw === 'supermarket') return 'supermarket';
+        if (raw === 'services') return 'services';
         return 'restaurant'; // 'restaurant', 'default', undefined → restaurant
     })();
 
     const isRestaurant = businessType === 'restaurant';
     const isStore = businessType === 'store';
     const isSupermarket = businessType === 'supermarket';
+    const isServices = businessType === 'services';
 
     // Kitchen display: restaurant type + not explicitly disabled via use_kitchen toggle
     // use_kitchen defaults to true so restaurant users keep seeing it by default
     const useKitchen = settings?.use_kitchen !== false;
     const hasKitchenDisplay = isRestaurant && useKitchen;
 
-    // Delivery page — defaults to true so existing users keep seeing it
-    const hasDelivery = settings?.use_delivery !== false;
+    // Delivery page — defaults to true so existing users keep seeing it (disabled for services by default)
+    const hasDelivery = isServices ? false : settings?.use_delivery !== false;
 
     // Kitchen order step should be skipped when kitchen is not active
     const skipKitchenStep = !hasKitchenDisplay;
 
     const orderTypeLabels = {
-        'dine-in': (isStore || isSupermarket) ? 'Compra aquí' : 'Comer Aquí',
-        'takeout': (isStore || isSupermarket) ? 'Delivery' : 'Para Llevar',
+        'dine-in': isServices ? 'Presencial' : (isStore || isSupermarket) ? 'Compra aquí' : 'Comer Aquí',
+        'takeout': isServices ? 'Remoto / Virtual' : (isStore || isSupermarket) ? 'Delivery' : 'Para Llevar',
     };
 
     const orderTypeIcons = {
-        'dine-in': (isStore || isSupermarket) ? 'Tag' : 'Utensils',
-        'takeout': (isStore || isSupermarket) ? 'ShoppingBag' : 'ShoppingBag',
+        'dine-in': isServices ? 'Briefcase' : (isStore || isSupermarket) ? 'Tag' : 'Utensils',
+        'takeout': isServices ? 'Send' : (isStore || isSupermarket) ? 'ShoppingBag' : 'ShoppingBag',
     };
 
     const orderTypeTags = {
@@ -67,7 +75,11 @@ export const useBusinessType = () => {
     };
 
     const setBusinessType = (type: BusinessType) => {
-        updateSettings({ shop_type: type });
+        if (type === 'services') {
+            updateSettings({ shop_type: type, paper_size: 'carta' });
+        } else {
+            updateSettings({ shop_type: type });
+        }
     };
 
     return {
@@ -75,6 +87,7 @@ export const useBusinessType = () => {
         isRestaurant,
         isStore,
         isSupermarket,
+        isServices,
         hasKitchenDisplay,
         hasDelivery,
         useKitchen,

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Building2, ChefHat, Store as StoreIcon, ArrowRight, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Building2, ChefHat, Store as StoreIcon, Briefcase, ArrowRight, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -124,6 +124,7 @@ const Onboarding = () => {
     { id: 'store', label: 'Tienda', emoji: '🛍️', desc: 'Venta directa, inventario, clientes y facturas', color: 'blue', icon: StoreIcon },
     { id: 'restaurant', label: 'Restaurante', emoji: '🍽️', desc: 'Mesas, pantalla de cocina, pedidos y delivery', color: 'orange', icon: ChefHat },
     { id: 'supermarket', label: 'Supermercado', emoji: '🛒', desc: 'Gran inventario, múltiples categorías y cajas rápidas', color: 'green', icon: Building2 },
+    { id: 'services', label: 'Servicios', emoji: '💼', desc: 'Servicios profesionales, contabilidad, asesoría y facturas en carta', color: 'emerald', icon: Briefcase },
   ];
 
   return (

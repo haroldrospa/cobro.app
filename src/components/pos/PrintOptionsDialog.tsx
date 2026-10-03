@@ -1447,7 +1447,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       ? 'Firmando con DGII...'
                       : printStatus === 'printing'
                         ? 'Imprimiendo...'
-                        : isAndroidNative() ? 'Imprimir en impresora térmica' : 'Imprimir directamente (Navegador)'}
+                        : (printSettings.paperSize === 'carta' || printSettings.paperSize === 'A4')
+                          ? 'Imprimir Factura (Formato Carta)'
+                          : isAndroidNative() ? 'Imprimir en impresora térmica' : 'Imprimir directamente (Navegador)'}
                   </span>
                 </Button>
               </Card>
@@ -1468,7 +1470,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                   <div className="p-1.5 rounded-md bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors shrink-0">
                     <FileText className="h-4 w-4 text-blue-500" />
                   </div>
-                  <span className="ml-2 font-semibold text-sm">Generar PDF</span>
+                  <span className="ml-2 font-semibold text-sm">
+                    {(printSettings.paperSize === 'carta' || printSettings.paperSize === 'A4') ? 'Descargar PDF (Formato Carta)' : 'Generar PDF'}
+                  </span>
                 </Button>
               </Card>
 

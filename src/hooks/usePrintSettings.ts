@@ -46,9 +46,12 @@ export const usePrintSettings = () => {
     ? JSON.parse(localStorage.getItem('invoice_settings_local') || '{}')
     : {};
 
+  const isServices = storeSettings?.shop_type === 'services';
+  const defaultPaperSize: PaperSize = isServices ? 'carta' : '80mm';
+
   const printSettings: PrintSettings = {
-    paperSize: (storeSettings?.paper_size as PaperSize) || '80mm',
-    useThermalPrinter: storeSettings?.use_thermal_printer || false,
+    paperSize: (storeSettings?.paper_size as PaperSize) || defaultPaperSize,
+    useThermalPrinter: isServices ? false : (storeSettings?.use_thermal_printer || false),
     thermalPrinterName: storeSettings?.thermal_printer_name || '',
     // Prioritize LocalStorage -> DB (if exists, cast as any to avoid TS error) -> Default
     pageMargin: localMargins.pageMargin || (storeSettings as any)?.page_margin || '0mm',

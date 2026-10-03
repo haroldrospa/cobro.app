@@ -34,6 +34,13 @@ const BUSINESS_TYPES: { id: BusinessType; label: string; emoji: string; descript
     description: 'Gran inventario, múltiples categorías y cajas rápidas',
     color: 'green'
   },
+  {
+    id: 'services',
+    label: 'Servicios',
+    emoji: '💼',
+    description: 'Servicios profesionales, contabilidad, asesoría y facturación a medida',
+    color: 'emerald'
+  },
 ];
 
 const THEME_OPTIONS = [
@@ -301,18 +308,22 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
               Tipo de Negocio
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {BUSINESS_TYPES.map((bt) => {
                 const isSelected = (
                   (bt.id === 'restaurant' && (shopType === 'restaurant' || shopType === 'default' || !shopType)) ||
                   (bt.id === 'store' && (shopType === 'store' || shopType === 'fashion' || shopType === 'technology')) ||
-                  (bt.id === 'supermarket' && shopType === 'supermarket')
+                  (bt.id === 'supermarket' && shopType === 'supermarket') ||
+                  (bt.id === 'services' && shopType === 'services')
                 );
                 return (
                   <button
                     key={bt.id}
                     onClick={async () => {
                       setShopType(bt.id);
+                      if (bt.id === 'services') {
+                        setPaperSize('carta');
+                      }
                       if (onSaveBusinessType) {
                         await onSaveBusinessType(bt.id);
                       } else {
@@ -320,7 +331,7 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
                       }
                       toast({
                         title: `Tipo de negocio actualizado`,
-                        description: `${bt.label}`,
+                        description: `${bt.label}${bt.id === 'services' ? ' (Facturación en formato Carta configurada)' : ''}`,
                       });
                     }}
                     className={cn(

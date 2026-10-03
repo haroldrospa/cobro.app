@@ -16,7 +16,7 @@ import {
   Maximize, Minimize, Menu, Home, Package, Users, FileText, BarChart,
   Settings as SettingsIcon, Store, LogOut, Save, ClipboardList, Receipt,
   RefreshCcw, HandCoins, Lock, Unlock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
-  Menu as MenuIcon, User, Info, HelpCircle, Search
+  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase
 } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
@@ -79,6 +79,7 @@ import { useRecipeAvailability } from '@/hooks/useRecipeAvailability';
 import { useAwardLoyaltyPoints, calculatePointsValue } from '@/hooks/useLoyaltyPoints';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
+import { GenerateServiceInvoiceDialog } from './pos/GenerateServiceInvoiceDialog';
 
 class SimpleErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -120,13 +121,15 @@ const POSContent: React.FC = () => {
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
   const isMobilePortrait = isMobile && !isLandscape;
-  const { skipKitchenStep, isStore, isSupermarket, orderTypeLabels, orderTypeTags } = useBusinessType();
+  const { skipKitchenStep, isStore, isSupermarket, isServices, orderTypeLabels, orderTypeTags } = useBusinessType();
   const recipeAvailability = useRecipeAvailability();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedInvoiceType, setSelectedInvoiceType] = useState('B02');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showServiceInvoiceDialog, setShowServiceInvoiceDialog] = useState(false);
+  const [isEmittingServiceInvoice, setIsEmittingServiceInvoice] = useState(false);
   const [userClosedRegisterDialog, setUserClosedRegisterDialog] = useState(false);
   const [showOpenRegisterDialog, setShowOpenRegisterDialog] = useState(false);
   const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
@@ -1395,6 +1398,119 @@ const POSContent: React.FC = () => {
     }
   }, [userStore, store, profile, orderTypeTags, isStore, isSupermarket, skipKitchenStep, queryClient, toast]);
 
+  const handleLoadServicesToCart = useCallback((serviceItems: CartItem[], customerId: string, invoiceTypeId: string) => {
+    setCart(prev => [...prev, ...serviceItems]);
+    if (customerId) setSelectedCustomer(customerId);
+    if (invoiceTypeId) setSelectedInvoiceType(invoiceTypeId);
+  }, []);
+
+  const handleDirectEmitServiceInvoice = useCallback(async (data: {
+    customerId: string;
+    invoiceTypeId: string;
+    items: CartItem[];
+    paymentMethod: string;
+    creditDays?: number;
+    notes?: string;
+  }) => {
+    try {
+      setIsEmittingServiceInvoice(true);
+      if (!activeSession) {
+        handleOpenRegister();
+        toast({
+          title: "Sesión requerida",
+          description: "Debe abrir un turno de caja para poder facturar.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const selectedCustomerData = customers.find(c => c.id === data.customerId);
+      const targetInvoiceType = invoiceTypes.find(t => t.id === data.invoiceTypeId);
+      const code = targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02';
+
+      const subtotal = data.items.reduce((s, it) => s + (it.price * it.quantity), 0);
+      const tax = data.items.reduce((s, it) => s + ((it.price * it.quantity) * (it.tax || 0)), 0);
+      const totalAmount = subtotal + tax;
+
+      let dueDate = null;
+      let paymentStatus = 'paid';
+      if (data.paymentMethod === 'credit') {
+        const dueDateObj = new Date();
+        dueDateObj.setDate(dueDateObj.getDate() + (data.creditDays || creditDays || 30));
+        dueDate = dueDateObj.toISOString();
+        paymentStatus = 'pending';
+      }
+
+      const salePayload = {
+        id: crypto.randomUUID(),
+        store_id: storeId || store.id,
+        customer_id: data.customerId || null,
+        payment_method: data.paymentMethod,
+        subtotal,
+        tax_total: tax,
+        total: totalAmount,
+        discount_total: 0,
+        items: data.items,
+        status: 'completed',
+        payment_status: paymentStatus,
+        due_date: dueDate,
+        invoice_type_code: code,
+        customer_name: selectedCustomerData?.name || 'Cliente Ocasional',
+        customer_phone: selectedCustomerData?.phone || '',
+        customer_rnc: selectedCustomerData?.rnc || '',
+        notes: data.notes || '',
+        order_source: 'pos',
+        pos_order_type: 'dine-in'
+      };
+
+      const result = await createSale.mutateAsync(salePayload as any);
+
+      const printSaleData = {
+        id: result?.id || salePayload.id,
+        total: totalAmount,
+        items: data.items.map(it => ({
+          ...it,
+          product_name: it.name,
+          unit_price: it.price,
+          tax_amount: (it.price * it.quantity) * (it.tax || 0),
+          subtotal: it.price * it.quantity,
+          total: (it.price * it.quantity) * (1 + (it.tax || 0))
+        })),
+        paymentMethod: data.paymentMethod,
+        customer: selectedCustomerData,
+        invoice_number: result?.invoice_number || (result as any)?.encf || '',
+        invoiceType: code,
+        is_electronic: (result as any)?.is_electronic,
+        encf: (result as any)?.encf,
+        codigo_seguridad: (result as any)?.codigo_seguridad,
+        fecha_firma: (result as any)?.fecha_firma,
+        qrcode_url: (result as any)?.qrcode_url,
+        estado_fiscal: (result as any)?.estado_fiscal,
+        profile: {
+          full_name: profile?.full_name || 'Cajero'
+        }
+      };
+
+      setSaleData(printSaleData);
+      setShowPrintOptionsDialog(true);
+      setShowServiceInvoiceDialog(false);
+
+      toast({
+        title: "Factura de servicios emitida",
+        description: `Comprobante generado correctamente en formato Carta.`,
+      });
+    } catch (err: any) {
+      console.error('Error emitiendo factura de servicios:', err);
+      toast({
+        title: "Error al emitir factura",
+        description: err?.message || "No se pudo completar la facturación del servicio.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsEmittingServiceInvoice(false);
+    }
+  }, [activeSession, customers, invoiceTypes, selectedInvoiceTypeData, creditDays, storeId, store.id, createSale, profile, handleOpenRegister, toast]);
+
   const handleSaveOrder = useCallback(() => {
     const currentCart = cartRef.current;
     if (!currentCart || currentCart.length === 0) return;
@@ -1670,12 +1786,14 @@ const POSContent: React.FC = () => {
       currentWebOrderId={currentWebOrderId}
       webOrdersCount={webOrdersCount}
       isFullscreen={isFullscreen}
+      isServices={isServices}
       onSaveOrder={memoHandleSaveOrder}
       onOpenAccounts={memoHandleShowOpenAccounts}
       onShowWebSales={memoHandleShowWebSales}
       onToggleFullscreen={memoHandleToggleFullscreen}
+      onGenerateServiceInvoice={() => setShowServiceInvoiceDialog(true)}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
@@ -2074,6 +2192,20 @@ const POSContent: React.FC = () => {
             }
           }}
         />
+
+        {showServiceInvoiceDialog && (
+          <GenerateServiceInvoiceDialog
+            isOpen={showServiceInvoiceDialog}
+            onClose={() => setShowServiceInvoiceDialog(false)}
+            customers={customers}
+            invoiceTypes={invoiceTypes}
+            onLoadToCart={handleLoadServicesToCart}
+            onDirectEmit={handleDirectEmitServiceInvoice}
+            isEmitting={isEmittingServiceInvoice}
+            currencySymbol={storeSettings?.currency === 'USD' ? 'US$' : 'RD$'}
+            defaultTaxRate={storeSettings?.default_tax_rate || 18}
+          />
+        )}
       </div>
     );
   }
@@ -2095,6 +2227,27 @@ const POSContent: React.FC = () => {
             /* --- CLASSIC LAYOUT (Search top-left, Cart bottom-left, Payment right) --- */
             <>
               <div className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-3 overflow-hidden pr-0.5">
+                {isServices && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                        <Briefcase className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-300">Modo de Negocio: Servicios</p>
+                        <p className="text-[11px] text-muted-foreground">Facturación para contabilidad, consultoría y servicios en formato Carta.</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowServiceInvoiceDialog(true)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 px-3.5 rounded-lg gap-2 shadow-sm shadow-emerald-600/20"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Generar Factura
+                    </Button>
+                  </div>
+                )}
                 <div className="flex-shrink-0 z-20 relative">
                   <ProductSearchList
                     ref={searchInputRef}
@@ -2195,6 +2348,27 @@ const POSContent: React.FC = () => {
             <>
               {/* Panel principal - Catálogo de productos */}
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm pr-0">
+                {isServices && (
+                  <div className="m-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                        <Briefcase className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-300">Modo de Negocio: Servicios</p>
+                        <p className="text-[11px] text-muted-foreground">Facturación para contabilidad, consultoría y servicios en formato Carta.</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowServiceInvoiceDialog(true)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 px-3.5 rounded-lg gap-2 shadow-sm shadow-emerald-600/20"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Generar Factura
+                    </Button>
+                  </div>
+                )}
                 <ProductSearchList
                   ref={searchInputRef}
                   products={products}
@@ -2601,6 +2775,20 @@ const POSContent: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {showServiceInvoiceDialog && (
+          <GenerateServiceInvoiceDialog
+            isOpen={showServiceInvoiceDialog}
+            onClose={() => setShowServiceInvoiceDialog(false)}
+            customers={customers}
+            invoiceTypes={invoiceTypes}
+            onLoadToCart={handleLoadServicesToCart}
+            onDirectEmit={handleDirectEmitServiceInvoice}
+            isEmitting={isEmittingServiceInvoice}
+            currencySymbol={storeSettings?.currency === 'USD' ? 'US$' : 'RD$'}
+            defaultTaxRate={storeSettings?.default_tax_rate || 18}
+          />
+        )}
       </div >
     </SimpleErrorBoundary >
   );
@@ -2615,10 +2803,12 @@ interface POSActionButtonsProps {
   currentWebOrderId: string | null;
   webOrdersCount: number;
   isFullscreen: boolean;
+  isServices?: boolean;
   onSaveOrder: () => void;
   onOpenAccounts: () => void;
   onShowWebSales: () => void;
   onToggleFullscreen: () => void;
+  onGenerateServiceInvoice?: () => void;
 }
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
@@ -2628,13 +2818,33 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
   currentWebOrderId,
   webOrdersCount,
   isFullscreen,
+  isServices,
   onSaveOrder,
   onOpenAccounts,
   onShowWebSales,
   onToggleFullscreen,
+  onGenerateServiceInvoice,
 }) {
   return (
     <div className="flex items-center gap-1.5">
+      {onGenerateServiceInvoice && (
+        <Button
+          variant={isServices ? "default" : "outline"}
+          onClick={onGenerateServiceInvoice}
+          size="sm"
+          className={cn(
+            "h-8 px-2.5 gap-1.5 rounded-lg text-xs font-bold transition-all shadow-xs",
+            isServices
+              ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 border-emerald-500"
+              : "border-border bg-background hover:bg-accent text-foreground"
+          )}
+          title="Generar Factura de Servicios (Formato Carta)"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Generar Factura</span>
+        </Button>
+      )}
+
       <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/40 border border-border/40 mr-1">
         <User className="h-3 w-3 text-muted-foreground" />
         <div className="flex flex-col text-left">

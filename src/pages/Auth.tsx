@@ -883,6 +883,7 @@ const Auth = () => {
                           { id: 'store', label: 'Tienda', desc: 'Venta de productos, inventario y clientes', icon: '🛍️' },
                           { id: 'restaurant', label: 'Restaurante', desc: 'Mesas, cocina, pedidos y delivery', icon: '🍽️' },
                           { id: 'supermarket', label: 'Supermercado', desc: 'Gran inventario, categorías y cajas', icon: '🛒' },
+                          { id: 'services', label: 'Servicios', desc: 'Contabilidad, consultoría y servicios profesionales', icon: '💼' },
                         ].map(type => {
                           const isSelected = selectedBusinessType === type.id;
                           return (
