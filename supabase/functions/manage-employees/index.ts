@@ -63,7 +63,12 @@ serve(async (req) => {
             } else {
                 const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                     email, password, email_confirm: true,
-                    user_metadata: { full_name: fullName },
+                    user_metadata: { 
+                        full_name: fullName,
+                        is_employee: true,
+                        store_id: currentStoreId,
+                        role: role || "staff"
+                    },
                 });
                 if (createError) {
                     if (createError.message?.toLowerCase().includes("already registered") ||
@@ -74,6 +79,13 @@ serve(async (req) => {
                 }
                 if (!newUser.user) throw new Error("Error al crear usuario en Auth.");
                 userId = newUser.user.id;
+
+                // Limpiar cualquier tienda fantasma/dummy que el trigger de Auth haya podido generar
+                try {
+                    await supabaseAdmin.from("stores").delete().eq("owner_id", userId);
+                } catch (cleanupErr: any) {
+                    console.log("Cleanup dummy store skipped:", cleanupErr?.message);
+                }
             }
 
             const dbRole = role || "staff";
