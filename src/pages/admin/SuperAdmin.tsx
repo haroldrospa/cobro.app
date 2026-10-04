@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
@@ -45,97 +44,80 @@ import {
     Calendar,
     Building2,
     DollarSign,
-    Lock,
     Search,
     Filter,
     AlertCircle,
     Settings,
     History,
     Trash2,
-    Shield,
     ShieldCheck,
     ShieldAlert,
-    Globe,
     Mail,
-    Smartphone,
     LogOut,
-    Radio,
-    UserCheck,
     User,
     Pencil,
-    Edit3,
     Clock,
-    Plus
+    Plus,
+    Users,
+    Copy,
+    Check,
+    CreditCard,
+    TrendingUp,
+    RefreshCw,
+    X,
+    ExternalLink
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { format, differenceInDays } from "date-fns";
-import { es } from "date-fns/locale";
+import { differenceInDays } from "date-fns";
 import { getDaysRemaining } from "@/lib/utils";
 
-// INTERFAZ DE ADMINISTRACIÓN
-// Ruta: /admin/super-panel
-
-// Type definitions
-type Store = {
-    id: string;
-    store_name: string;
-    store_code: string;
-    owner_email: string;
-    is_active: boolean;
-    plan_name: string;
-    plan_end_date: string;
-    created_at: string;
+// Precios oficiales actualizados para proyecciones MRR
+const PLAN_PRICES: Record<string, number> = {
+    'basic': 895,
+    'pro': 1495,
+    'enterprise': 3500
 };
 
-type PaymentReport = {
-    id: string;
-    company_id: string;
-    status: string;
-    amount: number;
-    bank_name: string;
-    proof_url: string;
-    created_at: string;
-    store_settings?: {
-        store_name: string;
-    };
+const PLAN_NAMES: Record<string, string> = {
+    'basic': 'Emprendedor',
+    'pro': 'Empresarial',
+    'enterprise': 'Corporativo'
 };
-
-// (Antes había aquí un par de helpers para capturar IP/ubicación y mandar
-// un correo de alerta -incluso a un webhook externo de Formspree- cada vez
-// que alguien entraba con la contraseña maestra hardcodeada. Se eliminaron
-// junto con ese login: el acceso a este panel ahora depende exclusivamente
-// de is_platform_admin(), ver usePlatformAdmin, verificado tanto aquí como,
-// sobre todo, dentro de cada RPC admin en la base de datos.)
 
 const SuperAdmin = () => {
     const [selectedProof, setSelectedProof] = useState<string | null>(null);
-
-    // Fuente única de verdad para el acceso a este panel — la misma función
-    // is_platform_admin() que ya protege cada RPC admin en la base de datos.
     const { isPlatformAdmin, loading: checkingAdmin } = usePlatformAdmin();
-
-    // Filtros
-    const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "pending_payment">("active");
-
     const queryClient = useQueryClient();
     const { profile } = useUserProfile();
+
+    // Navegación y Filtros
+    const [mainTab, setMainTab] = useState<string>("clients");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState<"all" | "active" | "expiring" | "expired" | "inactive" | "pending_payment">("all");
+    const [planFilter, setPlanFilter] = useState<string>("all");
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    const handleCopyText = (text: string, id: string, label: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(id);
+        toast.success(`${label} copiado`);
+        setTimeout(() => setCopiedField(null), 2000);
+    };
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
         window.location.href = '/auth';
     };
 
-    // 3. Obtener Todas las Tiendas (USANDO RPC SECURE)
-    const { data: stores, isLoading: loadingStores } = useQuery<any[]>({
+    // 1. Obtener Todas las Tiendas (RPC SECURE)
+    const { data: stores, isLoading: loadingStores, isRefetching: refetchingStores, refetch: refetchStores } = useQuery<any[]>({
         queryKey: ["admin-all-stores"],
         enabled: isPlatformAdmin,
         queryFn: async () => {
             // @ts-ignore - Supabase RPC type issue
             const { data, error } = await supabase.rpc("get_all_stores_admin");
-
             if (error) {
                 toast.error("Error cargando tiendas: " + error.message);
                 return [];
@@ -144,17 +126,15 @@ const SuperAdmin = () => {
         },
     });
 
-    // 1. Obtener Reportes Pendientes
-    const { data: reports, isLoading: loadingReports } = useQuery<any[]>({
+    // 2. Obtener Reportes de Pago
+    const { data: reports, isLoading: loadingReports, refetch: refetchReports } = useQuery<any[]>({
         queryKey: ["admin-pending-payments"],
         enabled: isPlatformAdmin,
         queryFn: async () => {
             // @ts-ignore
             const { data, error } = await supabase.rpc("get_payment_reports_admin");
-
             if (error) {
                 console.error("Error fetching reports via RPC:", error);
-                // Fallback a tabla directa si el RPC falla
                 const { data: directData, error: directError } = await supabase
                     .from("payment_reports")
                     .select("*")
@@ -166,30 +146,7 @@ const SuperAdmin = () => {
         },
     });
 
-    // LÓGICA DE FILTRADO
-    const filteredStores = stores?.filter((store: any) => {
-        // 1. Filtro de Texto
-        const searchLower = searchTerm.toLowerCase();
-        const matchesSearch =
-            (store.store_name?.toLowerCase() || "").includes(searchLower) ||
-            (store.store_code?.toLowerCase() || "").includes(searchLower) ||
-            (store.owner_email?.toLowerCase() || "").includes(searchLower) ||
-            (store.id?.toLowerCase() || "").includes(searchLower);
-
-        // 2. Filtro de Estado
-        const hasPendingReport = reports?.some(r => r.company_id === store.id && r.status === "pending");
-
-        const matchesStatus =
-            statusFilter === "all" ? true :
-                statusFilter === "active" ? store.is_active :
-                    statusFilter === "inactive" ? !store.is_active :
-                        statusFilter === "pending_payment" ? hasPendingReport :
-                            true;
-
-        return matchesSearch && matchesStatus;
-    });
-
-    // 4. Mutation Toggle Store
+    // 3. Mutación Toggle Tienda
     const toggleStoreMutation = useMutation({
         mutationFn: async ({ id, currentState }: { id: string; currentState: boolean }) => {
             // @ts-ignore - Supabase RPC type issue
@@ -208,8 +165,7 @@ const SuperAdmin = () => {
         }
     });
 
-
-    // 2. Acción de Aprobar/Rechazar
+    // 4. Acción de Aprobar/Rechazar Pago
     const processPaymentMutation = useMutation({
         mutationFn: async ({
             id,
@@ -222,14 +178,13 @@ const SuperAdmin = () => {
             const { data, error } = await supabase.rpc("process_subscription_payment", {
                 p_report_id: id,
                 p_status: status,
-                p_admin_note: status === "approved" ? "Aprobado desde panel admin" : "Rechazado",
+                p_admin_note: status === "approved" ? "Aprobado desde panel maestro" : "Rechazado por administrador",
             });
-
             if (error) throw error;
             return data;
         },
         onSuccess: () => {
-            toast.success("Operación realizada");
+            toast.success("Operación realizada con éxito");
             queryClient.invalidateQueries({ queryKey: ["admin-pending-payments"] });
             queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
             setSelectedProof(null);
@@ -244,13 +199,10 @@ const SuperAdmin = () => {
         const endDateTime = new Date(endDateIso).getTime();
         const nowTime = Date.now();
         const finalPlanId = planId || 'basic';
-
-        // Calcular la duración en días exactos entre hoy y la fecha seleccionada
         const diffMs = endDateTime - nowTime;
         let daysDuration = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
         if (daysDuration < 0) daysDuration = 0;
 
-        // 1. Invocar RPC 'admin_update_subscription' (SECURITY DEFINER en PostgreSQL)
         // @ts-ignore - Supabase RPC type definition
         const { data: rpcData, error: rpcError } = await supabase.rpc("admin_update_subscription", {
             p_store_id: companyId,
@@ -258,15 +210,9 @@ const SuperAdmin = () => {
             p_days_duration: daysDuration
         });
 
-        if (!rpcError && rpcData) {
-            return rpcData;
-        }
+        if (!rpcError && rpcData) return rpcData;
+        if (rpcError) console.warn("RPC admin_update_subscription warning:", rpcError);
 
-        if (rpcError) {
-            console.warn("RPC admin_update_subscription warning:", rpcError);
-        }
-
-        // 2. Fallback si el RPC no ha sido aplicado aún en el SQL Editor de Supabase
         const status = endDateTime > nowTime ? 'active' : 'expired';
         const { error: upsertError } = await supabase
             .from("company_subscriptions")
@@ -279,12 +225,10 @@ const SuperAdmin = () => {
                 updated_at: new Date().toISOString()
             }, { onConflict: 'company_id' });
 
-        if (upsertError && rpcError) {
-            throw rpcError || upsertError;
-        }
+        if (upsertError && rpcError) throw rpcError || upsertError;
     };
 
-    // 5. Edición Manual de Suscripción (Meses)
+    // 5. Extender Suscripción (+30 días)
     const updateSubscriptionMutation = useMutation({
         mutationFn: async ({ companyId, planId, months }: { companyId: string, planId: string, months: number }) => {
             const endDate = new Date();
@@ -292,7 +236,7 @@ const SuperAdmin = () => {
             await saveCompanySubscriptionAdmin(companyId, planId, endDate.toISOString());
         },
         onSuccess: () => {
-            toast.success("Suscripción actualizada manualmente");
+            toast.success("Suscripción renovada por 30 días");
             queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
         },
         onError: (err) => {
@@ -300,7 +244,7 @@ const SuperAdmin = () => {
         }
     });
 
-    // 5.1 Estado y Mutation para edición rápida por DÍAS
+    // 5.1 Edición detallada por Días o Fecha Exacta
     const [editingStoreSub, setEditingStoreSub] = useState<{
         id: string;
         store_name: string;
@@ -329,16 +273,13 @@ const SuperAdmin = () => {
 
     const handleSaveStoreDays = () => {
         if (!editingStoreSub) return;
-
         let targetEndDate: string;
 
         if (editMode === "days") {
             const daysToAdd = Number(customDaysInput);
             const d = new Date();
             d.setDate(d.getDate() + daysToAdd);
-            if (daysToAdd <= 0) {
-                d.setHours(0, 0, 0, 0);
-            }
+            if (daysToAdd <= 0) d.setHours(0, 0, 0, 0);
             targetEndDate = d.toISOString();
         } else {
             if (!customDateInput) {
@@ -353,6 +294,21 @@ const SuperAdmin = () => {
             companyId: editingStoreSub.id,
             newEndDate: targetEndDate,
             planId: editingStoreSub.plan_name
+        });
+    };
+
+    // Cambiar plan conservando la fecha de vencimiento actual
+    const handleChangeStorePlan = (store: any, newPlan: string) => {
+        const currentEnd = store.plan_end_date ? new Date(store.plan_end_date) : null;
+        const now = new Date();
+        const targetEnd = (currentEnd && currentEnd > now)
+            ? currentEnd.toISOString()
+            : new Date(now.setDate(now.getDate() + 30)).toISOString();
+
+        updateStoreDaysMutation.mutate({
+            companyId: store.id,
+            newEndDate: targetEnd,
+            planId: newPlan
         });
     };
 
@@ -379,7 +335,7 @@ const SuperAdmin = () => {
     });
 
     const handleDeleteStore = (storeId: string, storeName: string) => {
-        if (confirm(`¿Estás seguro de que deseas eliminar permanentemente la tienda "${storeName}" y su usuario asociado? Esta acción borrará todas las ventas, productos y configuraciones del comercio, y no se puede deshacer.`)) {
+        if (confirm(`¿Estás seguro de que deseas eliminar permanentemente la tienda "${storeName}" y su usuario asociado? Esta acción borrará todas las ventas, productos y datos asociados del negocio.`)) {
             deleteStoreMutation.mutate(storeId);
         }
     };
@@ -390,7 +346,7 @@ const SuperAdmin = () => {
         return data.publicUrl;
     };
 
-    // 6. Global Settings Logic
+    // 7. Configuración Global
     const { data: globalSettings, refetch: refetchGlobalSettings } = useQuery({
         queryKey: ["admin-global-settings"],
         enabled: isPlatformAdmin,
@@ -413,13 +369,11 @@ const SuperAdmin = () => {
             toast.error("Correo inválido");
             return;
         }
-
         setIsSavingGlobal(true);
         try {
             const { error } = await supabase
                 .from("admin_global_settings")
                 .upsert({ id: "notification_email", value: editingEmail.toLowerCase() });
-            
             if (error) throw error;
             toast.success("Configuración guardada");
             refetchGlobalSettings();
@@ -430,12 +384,75 @@ const SuperAdmin = () => {
         }
     };
 
-    // Initialize editing email when globalSettings is loaded
     React.useEffect(() => {
         if (globalSettings?.value) {
             setEditingEmail(globalSettings.value);
         }
     }, [globalSettings]);
+
+    // Conteo y Cálculos Generales
+    const totalStoresCount = stores?.length || 0;
+    const activeCount = stores?.filter((s: any) => s.is_active).length || 0;
+    const inactiveCount = stores?.filter((s: any) => !s.is_active).length || 0;
+    
+    const expiringSoonCount = stores?.filter((s: any) => {
+        if (!s.plan_end_date || !s.is_active) return false;
+        const days = getDaysRemaining(s.plan_end_date);
+        return days > 0 && days <= 7;
+    }).length || 0;
+
+    const expiredCount = stores?.filter((s: any) => {
+        if (!s.plan_end_date) return true;
+        return getDaysRemaining(s.plan_end_date) <= 0;
+    }).length || 0;
+
+    const pendingReports = reports?.filter(r => r.status === "pending") || [];
+    const pendingReportsCount = pendingReports.length;
+
+    // Cálculo Realista de MRR
+    const mrrTotal = stores?.reduce((sum: number, store: any) => {
+        if (store.is_active && store.plan_name) {
+            return sum + (PLAN_PRICES[store.plan_name] || 0);
+        }
+        return sum;
+    }, 0) || 0;
+
+    // LÓGICA DE FILTRADO DE CLIENTES
+    const filteredStores = stores?.filter((store: any) => {
+        // 1. Filtro de Texto
+        const searchLower = searchTerm.toLowerCase().trim();
+        if (searchLower) {
+            const matchesSearch =
+                (store.store_name?.toLowerCase() || "").includes(searchLower) ||
+                (store.store_code?.toLowerCase() || "").includes(searchLower) ||
+                (store.owner_email?.toLowerCase() || "").includes(searchLower) ||
+                (store.id?.toLowerCase() || "").includes(searchLower);
+            if (!matchesSearch) return false;
+        }
+
+        // 2. Filtro de Plan
+        if (planFilter !== "all") {
+            if (planFilter === "none") {
+                if (store.plan_name && store.plan_name !== 'Sin Plan') return false;
+            } else if (store.plan_name !== planFilter) {
+                return false;
+            }
+        }
+
+        // 3. Filtro de Estado
+        const daysRemaining = store.plan_end_date ? getDaysRemaining(store.plan_end_date) : 0;
+        const isExpiringSoon = store.is_active && store.plan_end_date && daysRemaining > 0 && daysRemaining <= 7;
+        const isExpired = !store.plan_end_date || daysRemaining <= 0;
+        const hasPendingReport = pendingReports.some(r => r.company_id === store.id);
+
+        if (statusFilter === "active") return store.is_active;
+        if (statusFilter === "inactive") return !store.is_active;
+        if (statusFilter === "expiring") return isExpiringSoon;
+        if (statusFilter === "expired") return isExpired;
+        if (statusFilter === "pending_payment") return hasPendingReport;
+
+        return true;
+    });
 
     if (checkingAdmin) {
         return (
@@ -449,10 +466,8 @@ const SuperAdmin = () => {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 relative overflow-hidden">
                 <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
-
                 <Card className="w-full max-w-md border-rose-500/30 bg-slate-900/90 text-white shadow-2xl backdrop-blur-xl relative z-10 rounded-2xl overflow-hidden">
                     <div className="h-1.5 w-full bg-gradient-to-r from-rose-500 via-red-400 to-rose-500" />
-
                     <CardHeader className="text-center pb-2 pt-6">
                         <div className="mx-auto w-16 h-16 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center justify-center mb-3 shadow-inner">
                             <ShieldAlert className="w-9 h-9 text-rose-400" />
@@ -464,10 +479,9 @@ const SuperAdmin = () => {
                             No autorizado
                         </CardTitle>
                         <CardDescription className="text-slate-400 text-xs mt-1">
-                            Tu cuenta ({profile?.email || 'sesión actual'}) no tiene acceso al Panel Maestro.
+                            Tu cuenta ({profile?.email || 'sesión actual'}) no tiene permisos de administrador general.
                         </CardDescription>
                     </CardHeader>
-
                     <CardContent className="pt-2 pb-6">
                         <Button
                             onClick={() => (window.location.href = '/dashboard')}
@@ -482,721 +496,940 @@ const SuperAdmin = () => {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl animate-fade-in text-foreground pb-24 min-h-screen">
-            {/* Header Limpio y Profesional con Bar de Seguridad */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 border-b pb-4 gap-4">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl animate-fade-in text-foreground pb-24 min-h-screen">
+            {/* HEADER PRINCIPAL */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-border/60 gap-4">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
                             Panel Maestro
                         </h1>
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs font-semibold gap-1">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-xs font-bold gap-1 px-2.5 py-0.5 rounded-full">
                             <ShieldCheck className="h-3.5 w-3.5" />
-                            Acceso Autorizado
+                            Super Admin
                         </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                        <span className="flex items-center gap-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
+                        <span>Control de clientes, suscripciones y transferencias bancarias</span>
+                        <span className="hidden sm:inline text-muted-foreground/40">•</span>
+                        <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
                             <User className="h-3 w-3" /> {profile?.email}
                         </span>
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-start sm:self-auto">
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.location.reload()}
-                        className="h-9 gap-1.5 text-xs"
+                        onClick={() => {
+                            refetchStores();
+                            refetchReports();
+                            toast.success("Datos actualizados");
+                        }}
+                        disabled={refetchingStores}
+                        className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-xl border-border/80 hover:bg-muted"
                     >
-                        <Loader2 className="h-3.5 w-3.5" />
-                        Actualizar
+                        <RefreshCw className={`h-3.5 w-3.5 ${refetchingStores ? 'animate-spin text-emerald-500' : ''}`} />
+                        <span>Actualizar</span>
                     </Button>
                     <Button
                         variant="destructive"
                         size="sm"
                         onClick={handleLogout}
-                        className="h-9 gap-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white"
+                        className="h-9 px-3 gap-1.5 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-sm"
                     >
                         <LogOut className="h-3.5 w-3.5" />
-                        Cerrar Sesión
+                        <span>Salir</span>
                     </Button>
                 </div>
             </div>
 
-            {/* KPI CARDS - Diseño Minimalista "Enterprise" */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-8">
-                {/* Clientes Activos */}
-                <Card className="shadow-none border border-border/30 hover:border-primary/30 transition-colors bg-card/50">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {/* BARRA DE 4 KPIs CONSOLIDADOS */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                {/* 1. Clientes Activos */}
+                <Card 
+                    className="border border-border/50 bg-card/60 hover:border-emerald-500/40 transition-all rounded-2xl shadow-sm cursor-pointer group"
+                    onClick={() => {
+                        setStatusFilter("active");
+                        setMainTab("clients");
+                    }}
+                >
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3.5 px-4">
+                        <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                             Clientes Activos
                         </CardTitle>
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {stores?.filter((s: any) => s.is_active).length || 0}
+                        <div className="h-7 w-7 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
+                            <Users className="h-4 w-4" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            + {stores?.filter((s: any) => s.is_active && differenceInDays(new Date(), new Date(s.created_at)) < 30).length || 0} este mes
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3.5">
+                        <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+                            {activeCount}
+                            <span className="text-xs font-semibold text-muted-foreground ml-1.5 font-normal">
+                                / {totalStoresCount}
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                            {totalStoresCount > 0 ? Math.round((activeCount / totalStoresCount) * 100) : 0}% del total operativo
                         </p>
                     </CardContent>
                 </Card>
 
-                {/* Espacio reservado o simplemente omitir inactivos como pidió el usuario */}
-
-                {/* Ingreso Mensual Recurrente (MRR) */}
-                <Card className="shadow-none border border-border/30 hover:border-primary/30 transition-colors bg-card/50">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {/* 2. MRR Estimado */}
+                <Card className="border border-border/50 bg-card/60 hover:border-blue-500/40 transition-all rounded-2xl shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3.5 px-4">
+                        <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                             Ingreso Mensual (MRR)
                         </CardTitle>
-                        <DollarSign className="h-4 w-4 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            RD$ {(() => {
-                                const planPrices: Record<string, number> = {
-                                    'basic': 1500,
-                                    'pro': 3000,
-                                    'enterprise': 6000
-                                };
-                                const total = stores?.reduce((sum: number, store: any) => {
-                                    if (store.is_active && store.plan_name) {
-                                        return sum + (planPrices[store.plan_name] || 0);
-                                    }
-                                    return sum;
-                                }, 0) || 0;
-                                return total.toLocaleString();
-                            })()}
+                        <div className="h-7 w-7 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                            <TrendingUp className="h-4 w-4" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Proyección basada en planes activos
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3.5">
+                        <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground truncate">
+                            RD$ {mrrTotal.toLocaleString()}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Planes activos (895 / 1,495 RD)
                         </p>
                     </CardContent>
                 </Card>
 
-                {/* Pagos por Revisar */}
+                {/* 3. Próximos a Vencer (<= 7 días) */}
                 <Card 
-                    className={`shadow-none border border-border/30 hover:border-primary/30 transition-colors bg-card/50 cursor-pointer ${statusFilter === 'pending_payment' ? 'ring-1 ring-orange-500 bg-orange-500/5' : ''}`}
-                    onClick={() => setStatusFilter(statusFilter === 'pending_payment' ? 'all' : 'pending_payment')}
+                    className={`border transition-all rounded-2xl shadow-sm cursor-pointer group ${
+                        expiringSoonCount > 0 
+                            ? 'border-amber-500/50 bg-amber-500/5 hover:border-amber-500' 
+                            : 'border-border/50 bg-card/60 hover:border-border'
+                    }`}
+                    onClick={() => {
+                        setStatusFilter("expiring");
+                        setMainTab("clients");
+                    }}
                 >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Pendientes de Revisión
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3.5 px-4">
+                        <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            Por Vencer (≤ 7d)
                         </CardTitle>
-                        <Calendar className="h-4 w-4 text-orange-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {reports?.filter((r) => r.status === "pending").length || 0}
+                        <div className={`h-7 w-7 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${
+                            expiringSoonCount > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-muted text-muted-foreground'
+                        }`}>
+                            <Clock className="h-4 w-4" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {statusFilter === 'pending_payment' ? 'Viendo solo pendientes' : 'Click para filtrar'}
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3.5">
+                        <div className={`text-2xl sm:text-3xl font-black tracking-tight ${expiringSoonCount > 0 ? 'text-amber-500' : 'text-foreground'}`}>
+                            {expiringSoonCount}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {expiringSoonCount > 0 ? 'Click para filtrar y avisar' : 'Sin alertas de vencimiento'}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                {/* 4. Pagos Pendientes */}
+                <Card 
+                    className={`border transition-all rounded-2xl shadow-sm cursor-pointer group ${
+                        pendingReportsCount > 0 
+                            ? 'border-orange-500/50 bg-orange-500/5 hover:border-orange-500' 
+                            : 'border-border/50 bg-card/60 hover:border-border'
+                    }`}
+                    onClick={() => setMainTab("payments")}
+                >
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3.5 px-4">
+                        <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            Pagos por Validar
+                        </CardTitle>
+                        <div className={`h-7 w-7 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${
+                            pendingReportsCount > 0 ? 'bg-orange-500/20 text-orange-500 animate-pulse' : 'bg-muted text-muted-foreground'
+                        }`}>
+                            <CreditCard className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3.5">
+                        <div className={`text-2xl sm:text-3xl font-black tracking-tight ${pendingReportsCount > 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                            {pendingReportsCount}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {pendingReportsCount > 0 ? 'Transferencias para revisar' : 'Al día, sin transferencias'}
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                {/* Distribución de Planes - Diseño Compacto */}
-                <Card className="lg:col-span-2 shadow-none border border-border/30 bg-card/50">
-                    <CardHeader className="pb-3 border-b">
-                        <CardTitle className="text-base font-semibold">Distribución de Suscripciones</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        <div className="space-y-5">
-                            {/* Plan Render Helper */}
-                            {[
-                                { name: 'Emprendedor', key: 'basic', color: 'bg-emerald-500', price: 1500 },
-                                { name: 'Negocio', key: 'pro', color: 'bg-blue-600', price: 3000 },
-                                { name: 'Corporativo', key: 'enterprise', color: 'bg-violet-600', price: 6000 }
-                            ].map((plan) => {
-                                const count = stores?.filter((s: any) => s.is_active && s.plan_name === plan.key).length || 0;
-                                const activeStores = stores?.filter((s: any) => s.is_active) || [];
-                                const total = activeStores.length || 1;
-                                const percentage = Math.round((count / total) * 100);
-
-                                return (
-                                    <div key={plan.key} className="space-y-1">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-medium text-foreground">{plan.name}</span>
-                                            <span className="text-muted-foreground">
-                                                {count} ({percentage}%) <span className="mx-1">•</span> RD$ {(count * plan.price).toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full ${plan.color} rounded-full transition-all duration-500`}
-                                                style={{ width: `${percentage}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            {/* Sin Plan */}
-                            {(() => {
-                                const count = stores?.filter((s: any) => s.is_active && !s.plan_name).length || 0;
-                                const activeStores = stores?.filter((s: any) => s.is_active) || [];
-                                const total = activeStores.length || 1;
-                                const percentage = Math.round((count / total) * 100);
-                                return (
-                                    <div className="space-y-1 pt-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-medium text-muted-foreground">Sin Plan Asignado</span>
-                                            <span className="text-muted-foreground">{count} ({percentage}%)</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gray-400 rounded-full transition-all duration-500"
-                                                style={{ width: `${percentage}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })()}
+            {/* ALERTA RÁPIDA DE PAGOS PENDIENTES SI EXISTEN */}
+            {pendingReportsCount > 0 && (
+                <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-transparent border border-orange-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-500 shrink-0">
+                            <AlertCircle className="h-5 w-5" />
                         </div>
-                    </CardContent>
-                </Card>
-
-                {/* Métricas Resumidas */}
-                <Card className="shadow-none border border-border/30 bg-card/50 flex flex-col justify-between">
-                    <CardHeader className="pb-3 border-b">
-                        <CardTitle className="text-base font-semibold">Resumen Total</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-6">
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Total Recaudado (Histórico)</span>
-                            <span className="text-lg font-bold">
-                                RD$ {((reports || []).filter((r: any) => r.status === 'approved').reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0)).toLocaleString()}
-                            </span>
+                        <div>
+                            <h4 className="text-sm font-bold text-foreground">
+                                {pendingReportsCount === 1 ? '1 transferencia pendiente de validación' : `${pendingReportsCount} transferencias pendientes de validación`}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                                Revisa los comprobantes bancarios para activar o renovar los negocios inmediatamente.
+                            </p>
                         </div>
-                        <div className="border-t border-dashed" />
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Próximos Vencimientos (7d)</span>
-                            <span className="text-lg font-bold text-orange-600">
-                                {((stores || []).filter((s: any) => {
-                                    if (!s.plan_end_date || !s.is_active) return false;
-                                    const days = getDaysRemaining(s.plan_end_date);
-                                    return days > 0 && days <= 7;
-                                }).length) || 0}
-                            </span>
-                        </div>
-                        <div className="border-t border-dashed" />
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Negocios Activos</span>
-                            <span className="text-lg font-bold text-emerald-600">
-                                {stores?.filter((s: any) => s.is_active).length || 0}
-                            </span>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    </div>
+                    <Button 
+                        size="sm"
+                        onClick={() => setMainTab("payments")}
+                        className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs h-9 px-4 rounded-xl shrink-0"
+                    >
+                        Revisar Comprobantes
+                    </Button>
+                </div>
+            )}
 
-            <div className="animate-fade-in delay-100">
-                <h2 className="text-lg font-semibold mb-4">Gestión del Sistema</h2>
+            {/* SISTEMA DE PESTAÑAS PRINCIPAL */}
+            <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-6">
+                <TabsList className="bg-muted/50 p-1 rounded-2xl border border-border/50 h-auto flex flex-wrap gap-1">
+                    <TabsTrigger 
+                        value="clients" 
+                        className="rounded-xl font-bold text-xs px-4 py-2 gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                    >
+                        <Building2 className="h-4 w-4 text-emerald-500" />
+                        <span>Control de Clientes</span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
+                            {filteredStores?.length || 0}
+                        </Badge>
+                    </TabsTrigger>
 
-                <div className="space-y-6">
-                    {/* SECCION PAGOS */}
+                    <TabsTrigger 
+                        value="payments" 
+                        className="rounded-xl font-bold text-xs px-4 py-2 gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all relative"
+                    >
+                        <CreditCard className="h-4 w-4 text-orange-500" />
+                        <span>Pagos & Comprobantes</span>
+                        {pendingReportsCount > 0 && (
+                            <Badge className="bg-orange-500 hover:bg-orange-500 text-white text-[10px] px-1.5 py-0 h-4 font-bold">
+                                {pendingReportsCount}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
 
-                    <Tabs defaultValue="pending" className="w-full">
-                        <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start mb-4 sm:grid sm:grid-cols-3">
-                            <TabsTrigger value="pending" className="flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4" />
-                                Pendientes ({reports?.filter(r => r.status === "pending").length || 0})
-                            </TabsTrigger>
-                            <TabsTrigger value="history" className="flex items-center gap-2">
-                                <History className="h-4 w-4" />
-                                Historial
-                            </TabsTrigger>
-                            <TabsTrigger value="settings" className="flex items-center gap-2">
-                                <Settings className="h-4 w-4" />
-                                Configuración
-                            </TabsTrigger>
-                        </TabsList>
+                    <TabsTrigger 
+                        value="metrics" 
+                        className="rounded-xl font-bold text-xs px-4 py-2 gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                    >
+                        <TrendingUp className="h-4 w-4 text-blue-500" />
+                        <span>Distribución & MRR</span>
+                    </TabsTrigger>
 
-                        <TabsContent value="pending">
-                            <Card className="shadow-lg border-primary/10">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <DollarSign className="h-5 w-5 text-orange-600" />
-                                        Pagos por Aprobar
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Valida las transferencias manuales para activar suscripciones.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {loadingReports ? (
-                                        <div className="flex justify-center p-8">
-                                            <Loader2 className="animate-spin h-8 w-8 text-primary" />
-                                        </div>
-                                    ) : reports?.filter(r => r.status === "pending").length === 0 ? (
-                                        <div className="text-center p-8 text-muted-foreground">
-                                            No hay pagos pendientes de revisión.
-                                        </div>
-                                    ) : (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Fecha</TableHead>
-                                                    <TableHead>Empresa</TableHead>
-                                                    <TableHead>Banco</TableHead>
-                                                    <TableHead>Monto</TableHead>
-                                                    <TableHead>Comprobante</TableHead>
-                                                    <TableHead className="text-right">Acciones</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {reports?.filter(r => r.status === "pending").map((report: any) => (
-                                                    <TableRow key={report.id}>
-                                                        <TableCell className="text-xs">
-                                                            {new Date(report.created_at).toLocaleDateString()}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium text-sm">
-                                                                    {report.store_name || "Desconocido"}
-                                                                </span>
-                                                                <span className="text-[10px] text-muted-foreground">
-                                                                    ID: {report.company_id.slice(0, 8)}
-                                                                </span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="outline" className="text-[10px]">{report.bank_name}</Badge>
-                                                        </TableCell>
-                                                        <TableCell className="font-bold text-green-600 text-sm">
-                                                            RD$ {report.amount.toLocaleString()}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 text-[11px]"
-                                                                onClick={() => setSelectedProof(getPublicUrl(report.proof_url))}
-                                                            >
-                                                                <Eye className="h-3 w-3 mr-1" />
-                                                                Ver
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-2">
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                                    onClick={() =>
-                                                                        processPaymentMutation.mutate({
-                                                                            id: report.id,
-                                                                            status: "rejected",
-                                                                        })
-                                                                    }
-                                                                    disabled={processPaymentMutation.isPending}
-                                                                >
-                                                                    <XCircle className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    className="h-8 bg-green-600 hover:bg-green-700 text-white px-3 text-[11px]"
-                                                                    onClick={() =>
-                                                                        processPaymentMutation.mutate({
-                                                                            id: report.id,
-                                                                            status: "approved",
-                                                                        })
-                                                                    }
-                                                                    disabled={processPaymentMutation.isPending}
-                                                                >
-                                                                    {processPaymentMutation.isPending ? (
-                                                                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                                                    ) : (
-                                                                        <CheckCircle className="h-3 w-3 mr-1" />
-                                                                    )}
-                                                                    Aprobar
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                    <TabsTrigger 
+                        value="settings" 
+                        className="rounded-xl font-bold text-xs px-4 py-2 gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                    >
+                        <Settings className="h-4 w-4 text-slate-400" />
+                        <span>Configuración</span>
+                    </TabsTrigger>
+                </TabsList>
 
-                        <TabsContent value="history">
-                            <Card className="shadow-lg border-primary/10">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <History className="h-5 w-5 text-blue-600" />
-                                        Historial de Acciones
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Registro de pagos ya procesados (Aprobados o Rechazados).
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {loadingReports ? (
-                                        <div className="flex justify-center p-8">
-                                            <Loader2 className="animate-spin h-8 w-8 text-primary" />
-                                        </div>
-                                    ) : reports?.filter(r => r.status !== "pending").length === 0 ? (
-                                        <div className="text-center p-8 text-muted-foreground">
-                                            No hay registros históricos.
-                                        </div>
-                                    ) : (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Fecha</TableHead>
-                                                    <TableHead>Empresa</TableHead>
-                                                    <TableHead>Monto</TableHead>
-                                                    <TableHead>Comprobante</TableHead>
-                                                    <TableHead className="text-right">Resultado</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {reports?.filter(r => r.status !== "pending").map((report: any) => (
-                                                    <TableRow key={report.id} className="opacity-80">
-                                                        <TableCell className="text-[10px]">
-                                                            {new Date(report.created_at).toLocaleDateString()}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <span className="text-xs font-medium">{report.store_name}</span>
-                                                        </TableCell>
-                                                        <TableCell className="text-xs">
-                                                            RD$ {report.amount.toLocaleString()}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-7 text-[10px]"
-                                                                onClick={() => setSelectedProof(getPublicUrl(report.proof_url))}
-                                                            >
-                                                                Ver
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Badge
-                                                                variant={report.status === "approved" ? "default" : "destructive"}
-                                                                className={`text-[10px] h-5 ${report.status === "approved" ? "bg-green-500/20 text-green-700 hover:bg-green-500/20" : ""}`}
-                                                            >
-                                                                {report.status === "approved" ? "APROBADO" : "RECHAZADO"}
-                                                            </Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                        <TabsContent value="settings">
-                            <Card className="shadow-lg border-primary/10">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Settings className="h-5 w-5 text-gray-600" />
-                                        Configuración del Sistema
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Define parámetros globales para la plataforma.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-4 max-w-md">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="admin-email">Correo de Notificaciones de Cobro</Label>
-                                            <div className="flex gap-2">
-                                                <Input 
-                                                    id="admin-email"
-                                                    placeholder="admin@ejemplo.com"
-                                                    value={editingEmail}
-                                                    onChange={(e) => setEditingEmail(e.target.value)}
-                                                />
-                                                <Button 
-                                                    onClick={handleSaveGlobalEmail} 
-                                                    disabled={isSavingGlobal}
-                                                >
-                                                    {isSavingGlobal ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
-                                                </Button>
-                                            </div>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Este correo recibirá las alertas cuando cualquier tienda reporte un pago o renueve su plan.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
-
-                    {/* SECCION TIENDAS */}
-                    <Card className="shadow-lg border-primary/10 mt-8">
-                        <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Building2 className="h-5 w-5 text-blue-600" />
-                                        Tiendas Registradas
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {filteredStores?.length || 0} negocios encontrados.
-                                    </CardDescription>
-                                </div>
-                            </div>
-
-                            {/* BARRA DE BÚSQUEDA Y FILTROS */}
-                            <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                {/* ============================================================== */}
+                {/* TAB 1: CONTROL DE CLIENTES (FRONT & CENTER) */}
+                {/* ============================================================== */}
+                <TabsContent value="clients" className="space-y-4 outline-none">
+                    <Card className="border border-border/60 bg-card/60 shadow-sm rounded-2xl overflow-hidden">
+                        <CardHeader className="p-4 sm:p-5 border-b border-border/40 space-y-4">
+                            {/* Barra de Filtros Rápidos */}
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                                {/* Buscador */}
+                                <div className="relative flex-1 max-w-md">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="Buscar por nombre, código, email o ID..."
-                                        className="pl-9"
+                                        placeholder="Buscar por negocio, código, email o ID..."
+                                        className="pl-9 pr-8 h-9 text-xs rounded-xl bg-background/80 border-border/60 focus:border-emerald-500"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
+                                    {searchTerm && (
+                                        <button 
+                                            onClick={() => setSearchTerm("")}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
                                 </div>
-                                <Select
-                                    value={statusFilter}
-                                    onValueChange={(v: any) => setStatusFilter(v)}
-                                >
-                                    <SelectTrigger className="w-[180px]">
-                                        <div className="flex items-center gap-2">
-                                            <Filter className="h-4 w-4 text-muted-foreground" />
-                                            <SelectValue placeholder="Estado" />
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas</SelectItem>
-                                        <SelectItem value="active">Activas</SelectItem>
-                                        <SelectItem value="inactive">Inactivas</SelectItem>
-                                        <SelectItem value="pending_payment">Pagos Pendientes 🔔</SelectItem>
-                                    </SelectContent>
-                                </Select>
+
+                                {/* Filtro por Plan */}
+                                <div className="flex items-center gap-2">
+                                    <Select value={planFilter} onValueChange={setPlanFilter}>
+                                        <SelectTrigger className="w-[170px] h-9 text-xs rounded-xl bg-background/80 border-border/60">
+                                            <SelectValue placeholder="Filtrar por Plan" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos los Planes</SelectItem>
+                                            <SelectItem value="basic">Plan Emprendedor</SelectItem>
+                                            <SelectItem value="pro">Plan Empresarial</SelectItem>
+                                            <SelectItem value="enterprise">Plan Corporativo</SelectItem>
+                                            <SelectItem value="none">Sin Plan</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {/* Píldoras de Estado (Quick Filter Pills) */}
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                {[
+                                    { id: "all", label: "Todos", count: totalStoresCount },
+                                    { id: "active", label: "Activos", count: activeCount, color: "text-emerald-500" },
+                                    { id: "expiring", label: "Por Vencer (≤7d)", count: expiringSoonCount, color: "text-amber-500" },
+                                    { id: "expired", label: "Vencidos", count: expiredCount, color: "text-rose-500" },
+                                    { id: "inactive", label: "Inactivos", count: inactiveCount, color: "text-slate-400" },
+                                    ...(pendingReportsCount > 0 ? [{ id: "pending_payment", label: "Con Pago Pendiente", count: pendingReportsCount, color: "text-orange-500" }] : [])
+                                ].map((pill) => {
+                                    const isSelected = statusFilter === pill.id;
+                                    return (
+                                        <button
+                                            key={pill.id}
+                                            onClick={() => setStatusFilter(pill.id as any)}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${
+                                                isSelected 
+                                                    ? 'bg-foreground text-background border-foreground shadow-sm' 
+                                                    : 'bg-background/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground'
+                                            }`}
+                                        >
+                                            <span>{pill.label}</span>
+                                            <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                                                isSelected ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'
+                                            }`}>
+                                                {pill.count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </CardHeader>
-                        <CardContent>
+
+                        <CardContent className="p-0">
                             {loadingStores ? (
-                                <div className="flex justify-center p-8">
-                                    <Loader2 className="animate-spin h-8 w-8 text-primary" />
+                                <div className="flex flex-col items-center justify-center p-16 space-y-3">
+                                    <Loader2 className="animate-spin h-8 w-8 text-emerald-500" />
+                                    <p className="text-xs text-muted-foreground font-medium">Cargando base de clientes...</p>
                                 </div>
                             ) : filteredStores?.length === 0 ? (
-                                <div className="text-center p-12 text-muted-foreground flex flex-col items-center gap-2">
-                                    <Building2 className="h-10 w-10 opacity-20" />
-                                    <p>No se encontraron tiendas con estos filtros.</p>
+                                <div className="text-center p-16 text-muted-foreground flex flex-col items-center gap-3">
+                                    <div className="h-12 w-12 rounded-2xl bg-muted/60 flex items-center justify-center">
+                                        <Building2 className="h-6 w-6 opacity-40" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="font-semibold text-sm text-foreground">No se encontraron clientes</p>
+                                        <p className="text-xs">Prueba cambiando los filtros o el término de búsqueda.</p>
+                                    </div>
+                                    {(searchTerm || statusFilter !== "all" || planFilter !== "all") && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSearchTerm("");
+                                                setStatusFilter("all");
+                                                setPlanFilter("all");
+                                            }}
+                                            className="h-8 text-xs mt-2 rounded-xl"
+                                        >
+                                            Limpiar Filtros
+                                        </Button>
+                                    )}
                                 </div>
                             ) : (
-                                <Table className="border-collapse w-full">
-                                    <TableHeader>
-                                        <TableRow className="border-b border-border/40 hover:bg-transparent">
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Nombre Tienda</TableHead>
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Dueño (Email)</TableHead>
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Plan</TableHead>
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Vence</TableHead>
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">Cambiar Plan / Renovar</TableHead>
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 text-right">Estado</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredStores?.map((store: any) => {
-                                            const daysRemaining = store.plan_end_date ? getDaysRemaining(store.plan_end_date) : 0;
-                                            const hasPlan = !!store.plan_name;
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-muted/30">
+                                            <TableRow className="border-b border-border/50 hover:bg-transparent">
+                                                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 pl-5">
+                                                    Negocio / Tienda
+                                                </TableHead>
+                                                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">
+                                                    Propietario (Email)
+                                                </TableHead>
+                                                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">
+                                                    Plan Asignado
+                                                </TableHead>
+                                                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">
+                                                    Vencimiento
+                                                </TableHead>
+                                                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5">
+                                                    Extender
+                                                </TableHead>
+                                                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 text-center">
+                                                    Activa
+                                                </TableHead>
+                                                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 pr-5 text-right">
+                                                    Acción
+                                                </TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredStores?.map((store: any) => {
+                                                const daysRemaining = store.plan_end_date ? getDaysRemaining(store.plan_end_date) : 0;
+                                                const hasPlan = !!store.plan_name && store.plan_name !== 'Sin Plan';
+                                                const isExpiringSoon = store.is_active && store.plan_end_date && daysRemaining > 0 && daysRemaining <= 7;
+                                                const isExpired = !store.plan_end_date || daysRemaining <= 0;
+                                                const hasPendingReport = pendingReports.some(r => r.company_id === store.id);
 
-                                            return (
-                                                <TableRow key={store.id} className="hover:bg-muted/30 transition-colors border-b border-border/20 group">
-                                                    <TableCell className="py-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-xs shrink-0">
-                                                                {(store.store_name || 'T')[0].toUpperCase()}
-                                                            </div>
-                                                            <div className="flex flex-col min-w-0">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-semibold text-sm text-foreground truncate max-w-[170px]">
-                                                                        {store.store_name || "Sin Nombre"}
-                                                                    </span>
-                                                                    {reports?.some(r => r.company_id === store.id && r.status === "pending") && (
-                                                                        <Badge className="bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[10px] h-5 px-1.5 shrink-0 animate-pulse">
-                                                                            PENDIENTE
-                                                                        </Badge>
-                                                                    )}
-                                                                </div>
-                                                                <span className="text-[11px] text-muted-foreground font-mono">
-                                                                    {store.store_code || "N/A"}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="py-3">
-                                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                                            <Mail className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                                                            <span className="truncate max-w-[170px]" title={store.owner_email}>
-                                                                {store.owner_email || "Desconocido"}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="py-3">
-                                                        {hasPlan ? (
-                                                            <Badge variant="outline" className={`font-semibold text-xs py-0.5 px-2.5 rounded-full border ${
-                                                                store.plan_name === 'basic' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' :
-                                                                store.plan_name === 'pro' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
-                                                                store.plan_name === 'enterprise' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-muted text-muted-foreground'
-                                                            }`}>
-                                                                {store.plan_name === 'basic' ? 'Emprendedor' :
-                                                                 store.plan_name === 'pro' ? 'Negocio' :
-                                                                 store.plan_name === 'enterprise' ? 'Corporativo' : store.plan_name}
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 text-xs">Sin Plan</Badge>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell 
-                                                        className="py-3 cursor-pointer group/editcell"
-                                                        title="Haz clic para modificar la fecha de vencimiento"
-                                                        onClick={() => {
-                                                            const days = store.plan_end_date ? getDaysRemaining(store.plan_end_date) : 0;
-                                                            setEditingStoreSub({
-                                                                id: store.id,
-                                                                store_name: store.store_name || "Tienda",
-                                                                currentDays: days,
-                                                                plan_name: store.plan_name || "basic",
-                                                                plan_end_date: store.plan_end_date
-                                                            });
-                                                            setCustomDaysInput(days > 0 ? days : 30);
-                                                            if (store.plan_end_date) {
-                                                                try {
-                                                                    setCustomDateInput(new Date(store.plan_end_date).toISOString().split('T')[0]);
-                                                                } catch (e) {
-                                                                    setCustomDateInput(new Date().toISOString().split('T')[0]);
-                                                                }
-                                                            } else {
-                                                                const d = new Date();
-                                                                d.setDate(d.getDate() + 30);
-                                                                setCustomDateInput(d.toISOString().split('T')[0]);
-                                                            }
-                                                        }}
+                                                return (
+                                                    <TableRow 
+                                                        key={store.id} 
+                                                        className="hover:bg-muted/40 transition-colors border-b border-border/30 group"
                                                     >
-                                                        <div className="inline-flex items-center gap-2 p-1.5 px-2.5 rounded-lg border border-border/40 bg-background/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all">
-                                                            <div className="flex flex-col">
-                                                                <span className={`text-xs font-bold flex items-center gap-1 ${daysRemaining <= 7 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                                                    {daysRemaining <= 7 ? <Clock className="h-3 w-3 animate-pulse" /> : null}
-                                                                    {daysRemaining} días
-                                                                </span>
-                                                                <span className="text-[10px] text-muted-foreground font-mono">
-                                                                    {store.plan_end_date ? new Date(store.plan_end_date).toLocaleDateString('es-DO') : 'Sin fecha'}
-                                                                </span>
+                                                        {/* COL 1: NEGOCIO */}
+                                                        <TableCell className="py-3.5 pl-5">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-black text-emerald-500 text-xs shrink-0 shadow-sm">
+                                                                    {(store.store_name || 'T')[0].toUpperCase()}
+                                                                </div>
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className="font-bold text-sm text-foreground truncate max-w-[180px]" title={store.store_name}>
+                                                                            {store.store_name || "Sin Nombre"}
+                                                                        </span>
+                                                                        {hasPendingReport && (
+                                                                            <Badge className="bg-orange-500/15 text-orange-500 border border-orange-500/30 text-[9px] h-4.5 px-1.5 font-bold shrink-0 animate-pulse">
+                                                                                PAGO PENDIENTE
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                                        <span 
+                                                                            onClick={() => handleCopyText(store.store_code || store.id.slice(0, 8), `code-${store.id}`, 'Código')}
+                                                                            className="text-[10px] text-muted-foreground font-mono bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                                                                            title="Click para copiar código"
+                                                                        >
+                                                                            {store.store_code || store.id.slice(0, 8)}
+                                                                        </span>
+                                                                        {store.created_at && (
+                                                                            <span className="text-[10px] text-muted-foreground/60">
+                                                                                • {new Date(store.created_at).toLocaleDateString('es-DO', { month: 'short', day: 'numeric' })}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <Pencil className="h-3 w-3 text-muted-foreground group-hover/editcell:text-emerald-500 transition-colors shrink-0" />
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <Select 
-                                                                defaultValue={store.plan_name || "basic"}
-                                                                onValueChange={(newPlan) => updateSubscriptionMutation.mutate({ 
-                                                                    companyId: store.id, 
-                                                                    planId: newPlan,
-                                                                    months: 1
-                                                                })}
-                                                            >
-                                                                <SelectTrigger className="w-[125px] h-8 text-xs bg-background/60 border-border/60">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="basic">Emprendedor</SelectItem>
-                                                                    <SelectItem value="pro">Negocio</SelectItem>
-                                                                    <SelectItem value="enterprise">Corporativo</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                        </TableCell>
 
+                                                        {/* COL 2: PROPIETARIO */}
+                                                        <TableCell className="py-3.5">
+                                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                                <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                                                                <span className="truncate max-w-[170px] select-all font-medium text-foreground/80" title={store.owner_email}>
+                                                                    {store.owner_email || "Sin correo"}
+                                                                </span>
+                                                                {store.owner_email && (
+                                                                    <button
+                                                                        onClick={() => handleCopyText(store.owner_email, `email-${store.id}`, 'Correo')}
+                                                                        className="text-muted-foreground hover:text-foreground p-0.5 rounded"
+                                                                        title="Copiar correo"
+                                                                    >
+                                                                        {copiedField === `email-${store.id}` ? (
+                                                                            <Check className="h-3 w-3 text-emerald-500" />
+                                                                        ) : (
+                                                                            <Copy className="h-3 w-3" />
+                                                                        )}
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+
+                                                        {/* COL 3: PLAN */}
+                                                        <TableCell className="py-3.5">
+                                                            <div className="flex items-center gap-2">
+                                                                <Select
+                                                                    value={store.plan_name || "basic"}
+                                                                    onValueChange={(newPlan) => handleChangeStorePlan(store, newPlan)}
+                                                                >
+                                                                    <SelectTrigger className="w-[130px] h-8 text-xs font-semibold rounded-xl bg-background/60 border-border/60">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="basic">🌱 Emprendedor</SelectItem>
+                                                                        <SelectItem value="pro">⭐ Empresarial</SelectItem>
+                                                                        <SelectItem value="enterprise">🏢 Corporativo</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        </TableCell>
+
+                                                        {/* COL 4: VENCIMIENTO */}
+                                                        <TableCell className="py-3.5">
+                                                            <button
+                                                                onClick={() => {
+                                                                    const days = store.plan_end_date ? getDaysRemaining(store.plan_end_date) : 0;
+                                                                    setEditingStoreSub({
+                                                                        id: store.id,
+                                                                        store_name: store.store_name || "Tienda",
+                                                                        currentDays: days,
+                                                                        plan_name: store.plan_name || "basic",
+                                                                        plan_end_date: store.plan_end_date
+                                                                    });
+                                                                    setCustomDaysInput(days > 0 ? days : 30);
+                                                                    if (store.plan_end_date) {
+                                                                        try {
+                                                                            setCustomDateInput(new Date(store.plan_end_date).toISOString().split('T')[0]);
+                                                                        } catch (e) {
+                                                                            setCustomDateInput(new Date().toISOString().split('T')[0]);
+                                                                        }
+                                                                    } else {
+                                                                        const d = new Date();
+                                                                        d.setDate(d.getDate() + 30);
+                                                                        setCustomDateInput(d.toISOString().split('T')[0]);
+                                                                    }
+                                                                }}
+                                                                title="Haz clic para modificar la fecha de vencimiento"
+                                                                className={`inline-flex items-center gap-2 py-1 px-2.5 rounded-xl border text-left transition-all ${
+                                                                    isExpired 
+                                                                        ? 'bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/20' 
+                                                                        : isExpiringSoon 
+                                                                            ? 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20' 
+                                                                            : 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20'
+                                                                }`}
+                                                            >
+                                                                <div className="flex flex-col">
+                                                                    <span className={`text-xs font-bold flex items-center gap-1 ${
+                                                                        isExpired 
+                                                                            ? 'text-rose-500' 
+                                                                            : isExpiringSoon 
+                                                                                ? 'text-amber-500' 
+                                                                                : 'text-emerald-500'
+                                                                    }`}>
+                                                                        {isExpiringSoon && <Clock className="h-3 w-3 animate-pulse" />}
+                                                                        {daysRemaining > 0 ? `${daysRemaining} días` : 'Vencido'}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                                                        {store.plan_end_date ? new Date(store.plan_end_date).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Sin fecha'}
+                                                                    </span>
+                                                                </div>
+                                                                <Pencil className="h-3 w-3 text-muted-foreground opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                            </button>
+                                                        </TableCell>
+
+                                                        {/* COL 5: EXTENDER RÁPIDO */}
+                                                        <TableCell className="py-3.5">
                                                             <Button 
                                                                 size="sm" 
                                                                 variant="outline" 
-                                                                className="h-8 text-xs border-emerald-500/30 text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 font-medium px-2.5 gap-1 shrink-0"
+                                                                className="h-8 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-bold px-2.5 gap-1 rounded-xl shadow-none"
                                                                 onClick={() => updateSubscriptionMutation.mutate({
                                                                     companyId: store.id,
                                                                     planId: store.plan_name || 'basic',
                                                                     months: 1
                                                                 })}
-                                                                title="Extender 30 días adicionales"
+                                                                title="Extender 30 días de suscripción"
                                                             >
-                                                                <Plus className="h-3 w-3" />
-                                                                +30d
+                                                                <Plus className="h-3.5 w-3.5" />
+                                                                <span>+30d</span>
                                                             </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="py-3 text-right">
-                                                        <div className="flex items-center justify-end gap-3">
-                                                            <div className="flex items-center gap-1.5" title={store.is_active ? "Tienda Activa" : "Tienda Inactiva"}>
+                                                        </TableCell>
+
+                                                        {/* COL 6: ESTADO SWITCH */}
+                                                        <TableCell className="py-3.5 text-center">
+                                                            <div className="flex justify-center items-center">
                                                                 <Switch
                                                                     checked={store.is_active}
                                                                     onCheckedChange={() => toggleStoreMutation.mutate({ id: store.id, currentState: store.is_active })}
                                                                     disabled={toggleStoreMutation.isPending}
+                                                                    title={store.is_active ? "Tienda Activa (Click para suspender)" : "Tienda Suspendida (Click para activar)"}
                                                                 />
                                                             </div>
+                                                        </TableCell>
 
+                                                        {/* COL 7: ELIMINAR */}
+                                                        <TableCell className="py-3.5 pr-5 text-right">
                                                             <Button 
                                                                 size="icon" 
                                                                 variant="ghost" 
-                                                                className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg shrink-0"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-xl"
                                                                 disabled={deleteStoreMutation.isPending}
                                                                 onClick={() => handleDeleteStore(store.id, store.store_name)}
                                                                 title="Eliminar Tienda"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* ============================================================== */}
+                {/* TAB 2: PAGOS Y COMPROBANTES DE TRANSFERENCIA */}
+                {/* ============================================================== */}
+                <TabsContent value="payments" className="space-y-6 outline-none">
+                    {/* Pagos Pendientes */}
+                    <Card className="border border-border/60 bg-card/60 shadow-sm rounded-2xl overflow-hidden">
+                        <CardHeader className="p-5 border-b border-border/40">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                <CreditCard className="h-5 w-5 text-orange-500" />
+                                Pagos por Validar ({pendingReportsCount})
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                Valida y confirma las transferencias manuales para renovar o activar las suscripciones de los comercios.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {loadingReports ? (
+                                <div className="flex justify-center p-12">
+                                    <Loader2 className="animate-spin h-8 w-8 text-primary" />
+                                </div>
+                            ) : pendingReportsCount === 0 ? (
+                                <div className="text-center p-12 text-muted-foreground flex flex-col items-center gap-2">
+                                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                        <CheckCircle className="h-6 w-6" />
+                                    </div>
+                                    <p className="font-semibold text-sm text-foreground">Todo al día</p>
+                                    <p className="text-xs">No hay transferencias pendientes de revisión en este momento.</p>
+                                </div>
+                            ) : (
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow className="border-b border-border/40">
+                                            <TableHead className="pl-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Fecha</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Negocio</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Banco</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Monto</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Comprobante</TableHead>
+                                            <TableHead className="pr-5 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {pendingReports.map((report: any) => (
+                                            <TableRow key={report.id} className="hover:bg-muted/40 transition-colors border-b border-border/30">
+                                                <TableCell className="pl-5 text-xs font-medium">
+                                                    {new Date(report.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-sm text-foreground">
+                                                            {report.store_name || "Desconocido"}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground font-mono">
+                                                            ID: {report.company_id?.slice(0, 8)}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-[10px] font-semibold">
+                                                        {report.bank_name || 'Banreservas'}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                                                    RD$ {(report.amount || 0).toLocaleString()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 text-xs font-semibold rounded-xl gap-1.5 border-border/60 hover:bg-muted"
+                                                        onClick={() => setSelectedProof(getPublicUrl(report.proof_url))}
+                                                    >
+                                                        <Eye className="h-3.5 w-3.5 text-primary" />
+                                                        Ver Comprobante
+                                                    </Button>
+                                                </TableCell>
+                                                <TableCell className="pr-5 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-8 px-2.5 text-xs border-rose-500/30 text-rose-500 hover:bg-rose-500/10 rounded-xl"
+                                                            onClick={() =>
+                                                                processPaymentMutation.mutate({
+                                                                    id: report.id,
+                                                                    status: "rejected",
+                                                                })
+                                                            }
+                                                            disabled={processPaymentMutation.isPending}
+                                                        >
+                                                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                                                            Rechazar
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-sm"
+                                                            onClick={() =>
+                                                                processPaymentMutation.mutate({
+                                                                    id: report.id,
+                                                                    status: "approved",
+                                                                })
+                                                            }
+                                                            disabled={processPaymentMutation.isPending}
+                                                        >
+                                                            {processPaymentMutation.isPending ? (
+                                                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                                            ) : (
+                                                                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                                            )}
+                                                            Aprobar
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
                                     </TableBody>
                                 </Table>
                             )}
                         </CardContent>
                     </Card>
-                </div>
-            </div>
 
-            {/* Modal para ver imagen */}
+                    {/* Historial de Pagos Procesados */}
+                    <Card className="border border-border/60 bg-card/60 shadow-sm rounded-2xl overflow-hidden">
+                        <CardHeader className="p-5 border-b border-border/40">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                <History className="h-5 w-5 text-blue-500" />
+                                Historial de Pagos Procesados
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                Registro de transferencias que ya fueron aprobadas o rechazadas previamente.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {reports?.filter(r => r.status !== "pending").length === 0 ? (
+                                <div className="text-center p-10 text-muted-foreground text-xs">
+                                    No hay registros históricos de pagos procesados.
+                                </div>
+                            ) : (
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow className="border-b border-border/40">
+                                            <TableHead className="pl-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Fecha</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Negocio</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Monto</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Comprobante</TableHead>
+                                            <TableHead className="pr-5 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Estado</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {reports?.filter(r => r.status !== "pending").map((report: any) => (
+                                            <TableRow key={report.id} className="opacity-90 hover:opacity-100 hover:bg-muted/30 transition-all border-b border-border/30">
+                                                <TableCell className="pl-5 text-xs font-medium">
+                                                    {new Date(report.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                </TableCell>
+                                                <TableCell className="text-xs font-semibold text-foreground">
+                                                    {report.store_name || "Desconocido"}
+                                                </TableCell>
+                                                <TableCell className="text-xs font-bold">
+                                                    RD$ {(report.amount || 0).toLocaleString()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg"
+                                                        onClick={() => setSelectedProof(getPublicUrl(report.proof_url))}
+                                                    >
+                                                        <Eye className="h-3 w-3 mr-1" />
+                                                        Ver
+                                                    </Button>
+                                                </TableCell>
+                                                <TableCell className="pr-5 text-right">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`text-[10px] font-bold py-0.5 px-2 rounded-full border ${
+                                                            report.status === "approved" 
+                                                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" 
+                                                                : "bg-rose-500/10 text-rose-500 border-rose-500/30"
+                                                        }`}
+                                                    >
+                                                        {report.status === "approved" ? "APROBADO" : "RECHAZADO"}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* ============================================================== */}
+                {/* TAB 3: DISTRIBUCIÓN Y MÉTRICAS */}
+                {/* ============================================================== */}
+                <TabsContent value="metrics" className="space-y-6 outline-none">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Distribución de Planes */}
+                        <Card className="lg:col-span-2 border border-border/60 bg-card/60 shadow-sm rounded-2xl">
+                            <CardHeader className="p-5 border-b border-border/40">
+                                <CardTitle className="text-base font-bold flex items-center gap-2">
+                                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                                    Distribución de Suscripciones
+                                </CardTitle>
+                                <CardDescription className="text-xs">
+                                    Desglose porcentual y aporte al MRR según cada plan contratado.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-5 space-y-6">
+                                {[
+                                    { name: '🌱 Emprendedor', key: 'basic', color: 'bg-emerald-500', price: 895 },
+                                    { name: '⭐ Empresarial', key: 'pro', color: 'bg-blue-600', price: 1495 },
+                                    { name: '🏢 Corporativo', key: 'enterprise', color: 'bg-purple-600', price: 3500 }
+                                ].map((plan) => {
+                                    const count = stores?.filter((s: any) => s.is_active && s.plan_name === plan.key).length || 0;
+                                    const percentage = activeCount > 0 ? Math.round((count / activeCount) * 100) : 0;
+
+                                    return (
+                                        <div key={plan.key} className="space-y-1.5">
+                                            <div className="flex justify-between text-xs sm:text-sm font-semibold">
+                                                <span className="text-foreground">{plan.name}</span>
+                                                <span className="text-muted-foreground font-mono">
+                                                    {count} negocios ({percentage}%) • <strong className="text-foreground font-bold">RD$ {(count * plan.price).toLocaleString()}</strong>
+                                                </span>
+                                            </div>
+                                            <div className="h-2 w-full bg-muted/60 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full ${plan.color} rounded-full transition-all duration-500`}
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Sin Plan */}
+                                {(() => {
+                                    const count = stores?.filter((s: any) => s.is_active && (!s.plan_name || s.plan_name === 'Sin Plan')).length || 0;
+                                    const percentage = activeCount > 0 ? Math.round((count / activeCount) * 100) : 0;
+                                    return (
+                                        <div className="space-y-1.5 pt-2 border-t border-border/40">
+                                            <div className="flex justify-between text-xs sm:text-sm font-semibold">
+                                                <span className="text-muted-foreground">Sin Plan Asignado</span>
+                                                <span className="text-muted-foreground font-mono">{count} ({percentage}%)</span>
+                                            </div>
+                                            <div className="h-2 w-full bg-muted/60 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-slate-500 rounded-full transition-all duration-500"
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </CardContent>
+                        </Card>
+
+                        {/* Resumen Histórico */}
+                        <Card className="border border-border/60 bg-card/60 shadow-sm rounded-2xl flex flex-col justify-between">
+                            <CardHeader className="p-5 border-b border-border/40">
+                                <CardTitle className="text-base font-bold">Resumen de Facturación</CardTitle>
+                                <CardDescription className="text-xs">
+                                    Cifras consolidadas del sistema.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-5 space-y-5">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs sm:text-sm text-muted-foreground">Total Recaudado (Histórico)</span>
+                                    <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
+                                        RD$ {((reports || []).filter((r: any) => r.status === 'approved').reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0)).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="border-t border-dashed border-border/60" />
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs sm:text-sm text-muted-foreground">Próximos Vencimientos (7d)</span>
+                                    <span className="text-base sm:text-lg font-black text-amber-500">
+                                        {expiringSoonCount}
+                                    </span>
+                                </div>
+                                <div className="border-t border-dashed border-border/60" />
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs sm:text-sm text-muted-foreground">Negocios Registrados</span>
+                                    <span className="text-base sm:text-lg font-black text-foreground">
+                                        {totalStoresCount}
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* ============================================================== */}
+                {/* TAB 4: CONFIGURACIÓN GENERAL */}
+                {/* ============================================================== */}
+                <TabsContent value="settings" className="space-y-6 outline-none">
+                    <Card className="border border-border/60 bg-card/60 shadow-sm rounded-2xl max-w-2xl">
+                        <CardHeader className="p-5 border-b border-border/40">
+                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                <Settings className="h-5 w-5 text-muted-foreground" />
+                                Configuración de Alertas & Notificaciones
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                Configura el correo de administrador donde se notifican transferencias bancarias y actividades del sistema.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-5 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="admin-email" className="text-xs font-bold text-foreground">
+                                    Correo de Notificaciones de Pagos
+                                </Label>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <Input 
+                                        id="admin-email"
+                                        placeholder="admin@ejemplo.com"
+                                        className="h-10 text-xs rounded-xl bg-background/80 border-border/60 flex-1"
+                                        value={editingEmail}
+                                        onChange={(e) => setEditingEmail(e.target.value)}
+                                    />
+                                    <Button 
+                                        onClick={handleSaveGlobalEmail} 
+                                        disabled={isSavingGlobal}
+                                        className="h-10 px-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm"
+                                    >
+                                        {isSavingGlobal ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+                                        Guardar Correo
+                                    </Button>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">
+                                    Este correo recibirá alertas instantáneas cuando cualquier cliente reporte una transferencia bancaria para validación.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+
+            {/* MODAL PARA VER COMPROBANTE DE PAGO */}
             <Dialog open={!!selectedProof} onOpenChange={() => setSelectedProof(null)}>
-                <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                        <DialogTitle>Comprobante de Pago</DialogTitle>
-                        <DialogDescription>
-                            Verifica que el monto y la fecha coincidan con tu estado bancario.
+                <DialogContent className="max-w-2xl bg-card border border-border p-5 rounded-2xl">
+                    <DialogHeader className="space-y-1">
+                        <DialogTitle className="text-base font-bold text-foreground">Comprobante de Pago</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">
+                            Verifica que el monto y la fecha coincidan con la cuenta bancaria de CobroApp.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex justify-center bg-black/5 p-4 rounded-lg">
+                    <div className="flex justify-center bg-black/10 dark:bg-black/30 p-3 rounded-xl border border-border/40 mt-2">
                         {selectedProof && (
                             <img
                                 src={selectedProof}
                                 alt="Comprobante"
-                                className="max-h-[70vh] object-contain rounded shadow-lg"
+                                className="max-h-[65vh] object-contain rounded-lg shadow-md"
                             />
                         )}
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* DIÁLOGO MODIFICAR DÍAS DE SUSCRIPCIÓN */}
+            {/* MODAL MODIFICAR DÍAS DE SUSCRIPCIÓN */}
             <Dialog open={!!editingStoreSub} onOpenChange={(open) => !open && setEditingStoreSub(null)}>
-                <DialogContent className="max-w-md bg-slate-900 border-slate-800 text-white rounded-2xl p-6">
+                <DialogContent className="max-w-md bg-card border-border text-foreground rounded-2xl p-6">
                     <DialogHeader className="space-y-2 text-left">
                         <div className="flex items-center gap-2.5">
-                            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+                            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-500">
                                 <Clock className="h-5 w-5" />
                             </div>
                             <div>
-                                <DialogTitle className="text-lg font-bold text-white">
-                                    Modificar Días de Suscripción
+                                <DialogTitle className="text-base font-bold text-foreground">
+                                    Modificar Suscripción
                                 </DialogTitle>
-                                <DialogDescription className="text-xs text-slate-400">
-                                    Tienda: <strong className="text-white">{editingStoreSub?.store_name}</strong>
+                                <DialogDescription className="text-xs text-muted-foreground">
+                                    Negocio: <strong className="text-foreground font-semibold">{editingStoreSub?.store_name}</strong>
                                 </DialogDescription>
                             </div>
                         </div>
@@ -1204,13 +1437,17 @@ const SuperAdmin = () => {
 
                     <div className="space-y-4 pt-2">
                         {/* Selector de modo */}
-                        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-muted/60 rounded-xl border border-border/60">
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setEditMode("days")}
-                                className={`h-8 text-xs font-semibold rounded-lg transition-all ${editMode === "days" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}
+                                className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                                    editMode === "days" 
+                                        ? "bg-card text-foreground shadow-sm" 
+                                        : "text-muted-foreground hover:text-foreground"
+                                }`}
                             >
                                 Por Días Restantes
                             </Button>
@@ -1219,7 +1456,11 @@ const SuperAdmin = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setEditMode("date")}
-                                className={`h-8 text-xs font-semibold rounded-lg transition-all ${editMode === "date" ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}
+                                className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                                    editMode === "date" 
+                                        ? "bg-card text-foreground shadow-sm" 
+                                        : "text-muted-foreground hover:text-foreground"
+                                }`}
                             >
                                 Por Fecha Exacta
                             </Button>
@@ -1228,7 +1469,7 @@ const SuperAdmin = () => {
                         {editMode === "days" ? (
                             <div className="space-y-3">
                                 <div className="space-y-1.5 text-left">
-                                    <Label className="text-xs text-slate-300 font-semibold">
+                                    <Label className="text-xs font-semibold text-muted-foreground">
                                         Días de Acceso a Otorgar:
                                     </Label>
                                     <div className="flex items-center gap-2">
@@ -1238,15 +1479,15 @@ const SuperAdmin = () => {
                                             max="3650"
                                             value={customDaysInput}
                                             onChange={(e) => setCustomDaysInput(parseInt(e.target.value) || 0)}
-                                            className="h-10 bg-slate-950 border-slate-800 text-white font-mono text-base font-bold focus:border-emerald-500"
+                                            className="h-10 font-mono text-base font-bold rounded-xl"
                                         />
-                                        <span className="text-sm font-bold text-slate-300">Días</span>
+                                        <span className="text-sm font-bold text-muted-foreground">Días</span>
                                     </div>
                                 </div>
 
                                 {/* Botones de acceso rápido */}
                                 <div className="space-y-1.5 text-left">
-                                    <span className="text-[11px] font-semibold text-slate-400">Accesos Rápidos:</span>
+                                    <span className="text-[11px] font-semibold text-muted-foreground">Accesos Rápidos:</span>
                                     <div className="flex flex-wrap gap-1.5">
                                         {[
                                             { label: "+7 días", days: 7 },
@@ -1262,7 +1503,7 @@ const SuperAdmin = () => {
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => setCustomDaysInput(preset.days)}
-                                                className="h-7 text-[11px] px-2.5 bg-slate-950/80 border-slate-800 text-slate-300 hover:border-emerald-500 hover:text-emerald-400"
+                                                className="h-7 text-[11px] px-2.5 rounded-lg border-border/60 hover:border-emerald-500 hover:text-emerald-500"
                                             >
                                                 {preset.label}
                                             </Button>
@@ -1272,31 +1513,31 @@ const SuperAdmin = () => {
                             </div>
                         ) : (
                             <div className="space-y-1.5 text-left">
-                                <Label className="text-xs text-slate-300 font-semibold">
+                                <Label className="text-xs font-semibold text-muted-foreground">
                                     Fecha Exacta de Vencimiento:
                                 </Label>
                                 <Input
                                     type="date"
                                     value={customDateInput}
                                     onChange={(e) => setCustomDateInput(e.target.value)}
-                                    className="h-10 bg-slate-950 border-slate-800 text-white font-mono text-sm focus:border-emerald-500"
+                                    className="h-10 font-mono text-sm rounded-xl"
                                 />
                             </div>
                         )}
 
                         {/* Previsualización del cálculo */}
-                        <div className="p-3.5 bg-slate-950/90 border border-slate-800 rounded-xl text-left space-y-1">
-                            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                        <div className="p-3.5 bg-muted/40 border border-border/60 rounded-xl text-left space-y-1">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
                                 Previsualización del Vencimiento
                             </span>
-                            <p className="text-xs font-semibold text-emerald-400 leading-relaxed">
+                            <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                 {editMode === "days" ? (
                                     <>
-                                        Vencerá el: <strong>{new Date(Date.now() + Number(customDaysInput) * 86400000).toLocaleDateString()}</strong> ({customDaysInput} días de acceso)
+                                        Vencerá el: <strong>{new Date(Date.now() + Number(customDaysInput) * 86400000).toLocaleDateString('es-DO')}</strong> ({customDaysInput} días de acceso)
                                     </>
                                 ) : (
                                     <>
-                                        Fecha fija: <strong>{customDateInput ? new Date(customDateInput + "T23:59:59").toLocaleDateString() : 'N/A'}</strong>
+                                        Fecha fija: <strong>{customDateInput ? new Date(customDateInput + "T23:59:59").toLocaleDateString('es-DO') : 'N/A'}</strong>
                                     </>
                                 )}
                             </p>
@@ -1307,7 +1548,7 @@ const SuperAdmin = () => {
                                 type="button"
                                 variant="ghost"
                                 onClick={() => setEditingStoreSub(null)}
-                                className="h-9 text-xs text-slate-400 hover:text-white hover:bg-slate-800"
+                                className="h-9 text-xs rounded-xl"
                             >
                                 Cancelar
                             </Button>
@@ -1315,14 +1556,14 @@ const SuperAdmin = () => {
                                 type="button"
                                 disabled={updateStoreDaysMutation.isPending}
                                 onClick={handleSaveStoreDays}
-                                className="h-9 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-4 gap-1.5 shadow-lg shadow-emerald-600/20"
+                                className="h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 rounded-xl gap-1.5 shadow-sm"
                             >
                                 {updateStoreDaysMutation.isPending ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     <CheckCircle className="h-4 w-4" />
                                 )}
-                                Guardar Días
+                                Guardar Cambios
                             </Button>
                         </div>
                     </div>
