@@ -1027,13 +1027,13 @@ const SuperAdmin = () => {
                                                                     value={store.plan_name || "basic"}
                                                                     onValueChange={(newPlan) => handleChangeStorePlan(store, newPlan)}
                                                                 >
-                                                                    <SelectTrigger className="w-[130px] h-8 text-xs font-semibold rounded-xl bg-background/60 border-border/60">
+                                                                    <SelectTrigger className="w-[125px] h-7 text-xs font-medium rounded-lg bg-background/50 border-border/60 hover:bg-muted/50 px-2.5 transition-colors">
                                                                         <SelectValue />
                                                                     </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="basic">🌱 Emprendedor</SelectItem>
-                                                                        <SelectItem value="pro">⭐ Empresarial</SelectItem>
-                                                                        <SelectItem value="enterprise">🏢 Corporativo</SelectItem>
+                                                                    <SelectContent className="text-xs">
+                                                                        <SelectItem value="basic">Emprendedor</SelectItem>
+                                                                        <SelectItem value="pro">Empresarial</SelectItem>
+                                                                        <SelectItem value="enterprise">Corporativo</SelectItem>
                                                                     </SelectContent>
                                                                 </Select>
                                                             </div>
@@ -1355,9 +1355,9 @@ const SuperAdmin = () => {
                             </CardHeader>
                             <CardContent className="p-5 space-y-6">
                                 {[
-                                    { name: '🌱 Emprendedor', key: 'basic', color: 'bg-emerald-500', price: 895 },
-                                    { name: '⭐ Empresarial', key: 'pro', color: 'bg-blue-600', price: 1495 },
-                                    { name: '🏢 Corporativo', key: 'enterprise', color: 'bg-purple-600', price: 3500 }
+                                    { name: 'Emprendedor', key: 'basic', color: 'bg-emerald-500', price: 895 },
+                                    { name: 'Empresarial', key: 'pro', color: 'bg-blue-600', price: 1495 },
+                                    { name: 'Corporativo', key: 'enterprise', color: 'bg-purple-600', price: 3500 }
                                 ].map((plan) => {
                                     const count = stores?.filter((s: any) => s.is_active && s.plan_name === plan.key).length || 0;
                                     const percentage = activeCount > 0 ? Math.round((count / activeCount) * 100) : 0;
