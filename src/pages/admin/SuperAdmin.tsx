@@ -297,15 +297,20 @@ const SuperAdmin = () => {
         if (upsertError && rpcError) throw rpcError || upsertError;
     };
 
-    // 5. Extender Suscripción (+30 días)
+    // 5. Extender Suscripción (+30 días o +1 año)
     const updateSubscriptionMutation = useMutation({
-        mutationFn: async ({ companyId, planId, months }: { companyId: string, planId: string, months: number }) => {
-            const endDate = new Date();
+        mutationFn: async ({ companyId, planId, months, currentEndDate }: { companyId: string, planId: string, months: number, currentEndDate?: string }) => {
+            const now = new Date();
+            const baseDate = (currentEndDate && new Date(currentEndDate) > now)
+                ? new Date(currentEndDate)
+                : now;
+            const endDate = new Date(baseDate);
             endDate.setMonth(endDate.getMonth() + months);
             await saveCompanySubscriptionAdmin(companyId, planId, endDate.toISOString());
         },
-        onSuccess: () => {
-            toast.success("Suscripción renovada por 30 días");
+        onSuccess: (_data, variables) => {
+            const label = variables.months >= 12 ? `${Math.round(variables.months / 12)} año` : `${variables.months * 30} días`;
+            toast.success(`Suscripción extendida por ${label}`);
             queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
         },
         onError: (err) => {
@@ -1094,20 +1099,38 @@ const SuperAdmin = () => {
 
                                                         {/* COL 5: EXTENDER RÁPIDO */}
                                                         <TableCell className="py-3.5">
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline" 
-                                                                className="h-8 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-bold px-2.5 gap-1 rounded-xl shadow-none"
-                                                                onClick={() => updateSubscriptionMutation.mutate({
-                                                                    companyId: store.id,
-                                                                    planId: store.plan_name || 'basic',
-                                                                    months: 1
-                                                                })}
-                                                                title="Extender 30 días de suscripción"
-                                                            >
-                                                                <Plus className="h-3.5 w-3.5" />
-                                                                <span>+30d</span>
-                                                            </Button>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline" 
+                                                                    className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-medium px-2 rounded-lg shadow-none transition-colors"
+                                                                    onClick={() => updateSubscriptionMutation.mutate({
+                                                                        companyId: store.id,
+                                                                        planId: store.plan_name || 'basic',
+                                                                        months: 1,
+                                                                        currentEndDate: store.plan_end_date
+                                                                    })}
+                                                                    disabled={updateSubscriptionMutation.isPending}
+                                                                    title="Extender 30 días de suscripción"
+                                                                >
+                                                                    +30d
+                                                                </Button>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline" 
+                                                                    className="h-7 text-xs border-primary/30 text-primary bg-primary/10 hover:bg-primary/20 font-medium px-2 rounded-lg shadow-none transition-colors"
+                                                                    onClick={() => updateSubscriptionMutation.mutate({
+                                                                        companyId: store.id,
+                                                                        planId: store.plan_name || 'basic',
+                                                                        months: 12,
+                                                                        currentEndDate: store.plan_end_date
+                                                                    })}
+                                                                    disabled={updateSubscriptionMutation.isPending}
+                                                                    title="Extender 1 año (12 meses) de suscripción"
+                                                                >
+                                                                    +1 año
+                                                                </Button>
+                                                            </div>
                                                         </TableCell>
 
                                                         {/* COL 6: ESTADO SWITCH */}
