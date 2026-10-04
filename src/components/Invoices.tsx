@@ -60,6 +60,7 @@ const Invoices: React.FC = () => {
   const deleteSale = useDeleteSale();
   const { toast } = useToast();
   const { settings: storeSettings } = useStoreSettings();
+  const hasSecurityEmail = Boolean(storeSettings?.email_reports_recipient?.trim());
 
   const handleViewDetails = (sale: Sale) => {
     console.log('Viewing details for sale:', sale);
@@ -522,7 +523,9 @@ const Invoices: React.FC = () => {
             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
-                {!otpCode ? (
+                {!hasSecurityEmail ? (
+                  <p>Esta acción no se puede deshacer. La factura y todos sus items serán eliminados permanentemente.</p>
+                ) : !otpCode ? (
                   <p>Esta acción no se puede deshacer. La factura y todos sus items serán eliminados permanentemente. Se requerirá un código de seguridad.</p>
                 ) : (
                   <div className="flex flex-col gap-3 mt-3">
@@ -540,8 +543,16 @@ const Invoices: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            {!otpCode ? (
+            <AlertDialogCancel disabled={deleteSale.isPending || isSendingOtp}>Cancelar</AlertDialogCancel>
+            {!hasSecurityEmail ? (
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteSale.isPending}
+              >
+                {deleteSale.isPending ? "Eliminando..." : "Eliminar"}
+              </Button>
+            ) : !otpCode ? (
               <Button
                 variant="destructive"
                 onClick={handleSendOtp}
@@ -553,9 +564,9 @@ const Invoices: React.FC = () => {
               <Button
                 variant="destructive"
                 onClick={handleVerifyAndDelete}
-                disabled={otpInput.length < 6}
+                disabled={otpInput.length < 6 || deleteSale.isPending}
               >
-                Verificar y Eliminar
+                {deleteSale.isPending ? "Eliminando..." : "Verificar y Eliminar"}
               </Button>
             )}
           </AlertDialogFooter>
