@@ -587,10 +587,10 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="transfer">🏦 Transferencia Bancaria</SelectItem>
-                    <SelectItem value="cash">💵 Efectivo</SelectItem>
-                    <SelectItem value="card">💳 Tarjeta Débito / Crédito</SelectItem>
-                    <SelectItem value="check">📑 Cheque</SelectItem>
+                    <SelectItem value="transfer">Transferencia Bancaria</SelectItem>
+                    <SelectItem value="cash">Efectivo</SelectItem>
+                    <SelectItem value="card">Tarjeta Débito / Crédito</SelectItem>
+                    <SelectItem value="check">Cheque</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
