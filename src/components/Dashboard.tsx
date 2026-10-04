@@ -875,27 +875,16 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-md">
+          <div className="flex items-center justify-center w-full max-w-xs">
             <Button
               asChild
               size="lg"
-              className="flex-1 min-w-[200px] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95 cursor-pointer"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95 cursor-pointer"
             >
               <Link to="/pos">
                 <ShoppingCart className="h-5 w-5 mr-1" />
                 Punto de Venta
               </Link>
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={triggerQuickGuide}
-              className="border-white/10 hover:border-emerald-500/40 bg-card/60 hover:bg-emerald-500/10 text-slate-200 hover:text-emerald-400 font-bold uppercase tracking-wider h-14 px-6 rounded-2xl shadow-md gap-2.5 transition-all active:scale-95 cursor-pointer"
-            >
-              <Sparkles className="h-4 w-4 text-emerald-400" />
-              Guía Rápida
             </Button>
           </div>
 
