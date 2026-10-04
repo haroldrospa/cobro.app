@@ -74,11 +74,11 @@ const UserSubscription = () => {
         {
             id: 'basic',
             name: 'Emprendedor',
-            priceDisplay: '$17',
-            price: 17,
-            annualPriceDisplay: '$14',
-            annualPrice: 168,
-            currency: 'USD',
+            priceDisplay: '$895',
+            price: 895,
+            annualPriceDisplay: '$745',
+            annualPrice: 8940,
+            currency: 'RD',
             period: 'mes',
             description: 'Ideal para empezar con el pie derecho.',
             features: [
@@ -99,11 +99,11 @@ const UserSubscription = () => {
         {
             id: 'pro',
             name: 'Empresarial',
-            priceDisplay: '$45',
-            price: 45,
-            annualPriceDisplay: '$37',
-            annualPrice: 444,
-            currency: 'USD',
+            priceDisplay: '$1,495',
+            price: 1495,
+            annualPriceDisplay: '$1,245',
+            annualPrice: 14940,
+            currency: 'RD',
             period: 'mes',
             description: 'Todo lo que necesitas para escalar.',
             features: [
@@ -157,7 +157,7 @@ const UserSubscription = () => {
     const parsedAmount = parseFloat(paymentAmount);
     const displayAmount = !isNaN(parsedAmount) && parsedAmount > 0 
         ? parsedAmount 
-        : (isAnnual ? effectivePlanDetails.annualPrice : effectivePlanDetails.price) || 17;
+        : (isAnnual ? effectivePlanDetails.annualPrice : effectivePlanDetails.price) || 895;
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -683,7 +683,7 @@ const UserSubscription = () => {
                                     setTargetPlan(activePlan);
                                     const defaultAmt = currentPlanDetails.price > 0 
                                         ? (isAnnual ? currentPlanDetails.annualPrice : currentPlanDetails.price).toString() 
-                                        : '17';
+                                        : '895';
                                     setPaymentAmount(defaultAmt);
                                     setIsBankModalOpen(true);
                                 }}
@@ -881,13 +881,13 @@ const UserSubscription = () => {
                                                     isPro ? 'text-emerald-900/60' : 'text-zinc-500'
                                                 }`}
                                             >
-                                                USD / mes
+                                                {plan.currency || 'RD'} / mes
                                             </span>
                                         </div>
                                         {isAnnual && (
                                             <div className="mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
                                                 <span className={`inline-block text-xs font-bold px-2 py-1 rounded-full ${isPro ? 'bg-emerald-950 text-emerald-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                    Pago único de ${plan.annualPrice} USD
+                                                    Pago único de ${plan.annualPrice.toLocaleString('en-US')} {plan.currency || 'RD'}
                                                 </span>
                                             </div>
                                         )}

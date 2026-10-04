@@ -351,16 +351,16 @@ const Landing = () => {
                 <p className="text-slate-400 mb-6 h-12">Ideal para empezar con el pie derecho.</p>
                 <div className="mb-6">
                   <div>
-                    <span className="text-4xl font-extrabold text-white">${isAnnual ? '14' : '17'}</span>
-                    <span className="text-slate-400"> USD / mes</span>
+                    <span className="text-4xl font-extrabold text-white">${isAnnual ? '745' : '895'}</span>
+                    <span className="text-slate-400"> RD / mes</span>
                   </div>
                   {isAnnual && (
                     <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-2 items-start">
                       <span className="inline-block text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-400 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-emerald-400/50">
-                        ✨ Ahorras $36 USD / año (17%)
+                        ✨ Ahorras $1,800 RD / año (17%)
                       </span>
                       <span className="text-sm text-slate-400 font-medium">
-                        Pago único de $168 USD
+                        Pago único de $8,940 RD
                       </span>
                     </div>
                   )}
@@ -399,16 +399,16 @@ const Landing = () => {
                 <p className="text-emerald-950/80 mb-6 h-12">Todo lo que necesitas para escalar.</p>
                 <div className="mb-6">
                   <div>
-                    <span className="text-4xl font-extrabold">${isAnnual ? '37' : '45'}</span>
-                    <span className="text-emerald-950/80"> USD / mes</span>
+                    <span className="text-4xl font-extrabold">${isAnnual ? '1,245' : '1,495'}</span>
+                    <span className="text-emerald-950/80"> RD / mes</span>
                   </div>
                   {isAnnual && (
                     <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-2 items-start">
                       <span className="inline-block text-sm font-extrabold text-yellow-950 bg-yellow-400 px-3 py-1 rounded-full shadow-[0_4px_14px_rgba(250,204,21,0.5)] ring-2 ring-yellow-300/50">
-                        🔥 Ahorras $96 USD / año (17%)
+                        🔥 Ahorras $3,000 RD / año (17%)
                       </span>
                       <span className="text-sm text-emerald-950/80 font-bold">
-                        Pago único de $444 USD
+                        Pago único de $14,940 RD
                       </span>
                     </div>
                   )}
