@@ -871,6 +871,7 @@ const POSContent: React.FC = () => {
         loyaltyPointsEarned: loyaltyPointsEarnedNow,
         loyaltyPoints: loyaltyNewBalance,
         profile: profile ? { full_name: profile.full_name } : undefined,
+        is_service: isServices,
       };
 
       // Show success IMMEDIATELY
@@ -1495,7 +1496,8 @@ const POSContent: React.FC = () => {
         estado_fiscal: (result as any)?.estado_fiscal,
         profile: {
           full_name: profile?.full_name || 'Cajero'
-        }
+        },
+        is_service: true,
       };
 
       setSaleData(printSaleData);

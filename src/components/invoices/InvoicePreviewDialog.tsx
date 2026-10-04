@@ -48,7 +48,9 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
     const invoiceNum = (saleData as any).encf || saleData.invoice_number || '';
     const isElec = invoiceNum.startsWith('E') || (saleData as any).is_electronic || !!(saleData as any).encf;
 
-    const activePaper = storeSettings?.paper_size || printSettings?.paperSize || '80mm';
+    const isServices = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
+    const rawPaper = storeSettings?.paper_size || printSettings?.paperSize;
+    const activePaper = isServices ? (rawPaper === 'A4' ? 'A4' : 'carta') : (rawPaper || '80mm');
 
     return generateCleanInvoiceHTML(
       {
@@ -258,7 +260,9 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                   <p className="text-sm">Cargando vista previa...</p>
                 </div>
               ) : (() => {
-                const activePaper = storeSettings?.paper_size || printSettings?.paperSize || '80mm';
+                const isServices = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
+                const rawPaper = storeSettings?.paper_size || printSettings?.paperSize;
+                const activePaper = isServices ? (rawPaper === 'A4' ? 'A4' : 'carta') : (rawPaper || '80mm');
                 const isFullPage = activePaper === 'A4' || activePaper === 'carta' || activePaper === 'letter';
                 const is58mm = activePaper === '58mm';
                 const containerWidth = isFullPage ? '100%' : is58mm ? '58mm' : '80mm';

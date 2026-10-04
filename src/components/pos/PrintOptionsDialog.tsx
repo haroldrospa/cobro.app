@@ -215,6 +215,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   }, [rawSaleData, dbCompanyInfo]);
 
   const invoiceNumber = saleData?.encf || saleData?.invoice_number || saleData?.invoiceNumber || '000001';
+  const isServicesMode = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
+  const effectivePaperSize = isServicesMode
+    ? (printSettings.paperSize === 'A4' ? 'A4' : 'carta')
+    : (printSettings.paperSize || '80mm');
 
   const customerPhoneToSend = useMemo(() => {
     return (
@@ -717,7 +721,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       containerPadding: printSettings.containerPadding || '4px',
       logoMarginBottom: printSettings.logoMarginBottom || '6px',
       fontSize: printSettings.fontSize,
-      paperSize: printSettings.paperSize || '80mm',
+      paperSize: effectivePaperSize,
     };
 
     const invoiceData = {
@@ -810,11 +814,11 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       // Small delay to ensure content is rendered
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      // Determine format from settings
+      // Determine format from effective paper size
       let format: '80mm' | '58mm' | 'A4' = '80mm';
-      if (printSettings.paperSize === '58mm' || printSettings.paperSize === '58mm') {
+      if (effectivePaperSize === '58mm') {
         format = '58mm';
-      } else if (printSettings.paperSize === 'A4' || printSettings.paperSize === 'carta') {
+      } else if (effectivePaperSize === 'A4' || effectivePaperSize === 'carta') {
         format = 'A4';
       }
 
@@ -842,7 +846,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const doc = new jsPDF({
       orientation: 'p',
       unit: 'mm',
-      format: 'a4'
+      format: (effectivePaperSize === 'carta' || isServicesMode) ? 'letter' : 'a4'
     });
 
     const signatureDate = saleData.fecha_firma || new Date().toISOString();
@@ -1447,7 +1451,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       ? 'Firmando con DGII...'
                       : printStatus === 'printing'
                         ? 'Imprimiendo...'
-                        : (printSettings.paperSize === 'carta' || printSettings.paperSize === 'A4')
+                        : (effectivePaperSize === 'carta' || effectivePaperSize === 'A4')
                           ? 'Imprimir Factura (Formato Carta)'
                           : isAndroidNative() ? 'Imprimir en impresora térmica' : 'Imprimir directamente (Navegador)'}
                   </span>
@@ -1471,7 +1475,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                     <FileText className="h-4 w-4 text-blue-500" />
                   </div>
                   <span className="ml-2 font-semibold text-sm">
-                    {(printSettings.paperSize === 'carta' || printSettings.paperSize === 'A4') ? 'Descargar PDF (Formato Carta)' : 'Generar PDF'}
+                    {(effectivePaperSize === 'carta' || effectivePaperSize === 'A4') ? 'Descargar PDF (Formato Carta)' : 'Generar PDF'}
                   </span>
                 </Button>
               </Card>

@@ -47,10 +47,17 @@ export const usePrintSettings = () => {
     : {};
 
   const isServices = storeSettings?.shop_type === 'services';
-  const defaultPaperSize: PaperSize = isServices ? 'carta' : '80mm';
+  let resolvedPaperSize: PaperSize = (storeSettings?.paper_size as PaperSize);
+  if (isServices) {
+    if (resolvedPaperSize !== 'A4' && resolvedPaperSize !== 'carta') {
+      resolvedPaperSize = 'carta';
+    }
+  } else {
+    resolvedPaperSize = resolvedPaperSize || '80mm';
+  }
 
   const printSettings: PrintSettings = {
-    paperSize: (storeSettings?.paper_size as PaperSize) || defaultPaperSize,
+    paperSize: resolvedPaperSize,
     useThermalPrinter: isServices ? false : (storeSettings?.use_thermal_printer || false),
     thermalPrinterName: storeSettings?.thermal_printer_name || '',
     // Prioritize LocalStorage -> DB (if exists, cast as any to avoid TS error) -> Default

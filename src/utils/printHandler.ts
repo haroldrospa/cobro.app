@@ -136,7 +136,7 @@ export const injectPrintStyles = (): void => {
         color: black !important;
       }
       
-      .printable-content * {
+      body:not(.print-a4) .printable-content * {
         color: black !important;
       }
     }
@@ -291,23 +291,16 @@ export const injectPrintStyles = (): void => {
     
     @media print {
       body.print-a4 {
-        width: 210mm !important;
-      }
-      
-      body.print-a4 @page {
-        size: A4 portrait;
-        margin: 15mm 20mm;
+        width: 100% !important;
+        max-width: 100% !important;
       }
       
       body.print-a4 .printable-content {
-        width: 100%;
-        max-width: 170mm;
-        margin: 0 auto;
-        font-family: Arial, sans-serif;
-        font-size: 11pt;
-        line-height: 1.5;
-        padding: 10mm;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
       }
       
       body.print-a4 h1 {
