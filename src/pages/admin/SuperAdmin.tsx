@@ -65,7 +65,10 @@ import {
     TrendingUp,
     RefreshCw,
     X,
-    ExternalLink
+    ExternalLink,
+    Key,
+    EyeOff,
+    Sparkles
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -99,11 +102,77 @@ const SuperAdmin = () => {
     const [planFilter, setPlanFilter] = useState<string>("all");
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
+    // Estado para cambio/asignación de contraseña de cliente
+    const [changingPasswordStore, setChangingPasswordStore] = useState<{
+        id: string;
+        store_name: string;
+        email: string;
+    } | null>(null);
+    const [newPasswordInput, setNewPasswordInput] = useState<string>("");
+    const [showPasswordInModal, setShowPasswordInModal] = useState<boolean>(true);
+    const [isSendingResetEmail, setIsSendingResetEmail] = useState<boolean>(false);
+
+    const generateRandomPassword = () => {
+        const letters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
+        const numbers = "23456789";
+        let pass = "Cobro";
+        for (let i = 0; i < 3; i++) {
+            pass += letters.charAt(Math.floor(Math.random() * letters.length));
+        }
+        pass += "@";
+        for (let i = 0; i < 3; i++) {
+            pass += numbers.charAt(Math.floor(Math.random() * numbers.length));
+        }
+        return pass;
+    };
+
     const handleCopyText = (text: string, id: string, label: string) => {
         navigator.clipboard.writeText(text);
         setCopiedField(id);
         toast.success(`${label} copiado`);
         setTimeout(() => setCopiedField(null), 2000);
+    };
+
+    // Mutación para asignar nueva contraseña
+    const setPasswordMutation = useMutation({
+        mutationFn: async ({ storeId, newPassword }: { storeId: string; newPassword: string }) => {
+            // @ts-ignore
+            const { data, error } = await supabase.rpc("admin_set_user_password", {
+                p_store_id: storeId,
+                p_new_password: newPassword
+            });
+            if (error) throw error;
+            if (data && !(data as any).success) {
+                throw new Error((data as any).message || "No se pudo actualizar la contraseña");
+            }
+            return data;
+        },
+        onSuccess: () => {
+            toast.success("Contraseña actualizada con éxito");
+            setChangingPasswordStore(null);
+        },
+        onError: (err: any) => {
+            toast.error("Error al cambiar contraseña: " + err.message);
+        }
+    });
+
+    const handleSendResetEmail = async (email: string) => {
+        if (!email) {
+            toast.error("Este usuario no tiene correo registrado");
+            return;
+        }
+        setIsSendingResetEmail(true);
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/auth?reset=true`
+            });
+            if (error) throw error;
+            toast.success(`Enlace de restablecimiento enviado a ${email}`);
+        } catch (err: any) {
+            toast.error("Error al enviar enlace: " + err.message);
+        } finally {
+            setIsSendingResetEmail(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -915,21 +984,38 @@ const SuperAdmin = () => {
                                                         <TableCell className="py-3.5">
                                                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                                 <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                                                                <span className="truncate max-w-[170px] select-all font-medium text-foreground/80" title={store.owner_email}>
+                                                                <span className="truncate max-w-[150px] select-all font-medium text-foreground/80" title={store.owner_email}>
                                                                     {store.owner_email || "Sin correo"}
                                                                 </span>
                                                                 {store.owner_email && (
-                                                                    <button
-                                                                        onClick={() => handleCopyText(store.owner_email, `email-${store.id}`, 'Correo')}
-                                                                        className="text-muted-foreground hover:text-foreground p-0.5 rounded"
-                                                                        title="Copiar correo"
-                                                                    >
-                                                                        {copiedField === `email-${store.id}` ? (
-                                                                            <Check className="h-3 w-3 text-emerald-500" />
-                                                                        ) : (
-                                                                            <Copy className="h-3 w-3" />
-                                                                        )}
-                                                                    </button>
+                                                                    <div className="flex items-center gap-0.5 shrink-0">
+                                                                        <button
+                                                                            onClick={() => handleCopyText(store.owner_email, `email-${store.id}`, 'Correo')}
+                                                                            className="text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors"
+                                                                            title="Copiar correo"
+                                                                        >
+                                                                            {copiedField === `email-${store.id}` ? (
+                                                                                <Check className="h-3 w-3 text-emerald-500" />
+                                                                            ) : (
+                                                                                <Copy className="h-3 w-3" />
+                                                                            )}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setChangingPasswordStore({
+                                                                                    id: store.id,
+                                                                                    store_name: store.store_name || "Tienda",
+                                                                                    email: store.owner_email
+                                                                                });
+                                                                                setNewPasswordInput(generateRandomPassword());
+                                                                                setShowPasswordInModal(true);
+                                                                            }}
+                                                                            className="text-muted-foreground hover:text-amber-500 p-0.5 rounded transition-colors"
+                                                                            title="Ver / Asignar Contraseña a este cliente"
+                                                                        >
+                                                                            <Key className="h-3.5 w-3.5 text-amber-500/80 hover:text-amber-400" />
+                                                                        </button>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </TableCell>
@@ -1565,6 +1651,148 @@ const SuperAdmin = () => {
                                 )}
                                 Guardar Cambios
                             </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL ASIGNAR / VER CONTRASEÑA */}
+            <Dialog open={!!changingPasswordStore} onOpenChange={(open) => !open && setChangingPasswordStore(null)}>
+                <DialogContent className="max-w-md bg-card border border-border text-foreground rounded-2xl p-6 shadow-2xl">
+                    <DialogHeader className="space-y-2 text-left">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500">
+                                <Key className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-base font-bold text-foreground">
+                                    Asignar Contraseña al Cliente
+                                </DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground">
+                                    Negocio: <strong className="text-foreground font-semibold">{changingPasswordStore?.store_name}</strong>
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-2">
+                        {/* Información del correo */}
+                        <div className="p-3 bg-muted/40 rounded-xl border border-border/60 flex items-center justify-between gap-2">
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                                    Usuario / Email
+                                </span>
+                                <span className="text-xs font-semibold text-foreground truncate select-all">
+                                    {changingPasswordStore?.email || 'Sin correo'}
+                                </span>
+                            </div>
+                            {changingPasswordStore?.email && (
+                                <button
+                                    onClick={() => handleCopyText(changingPasswordStore.email, 'modal-email', 'Correo')}
+                                    className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
+                                    title="Copiar correo"
+                                >
+                                    {copiedField === 'modal-email' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Campo de contraseña */}
+                        <div className="space-y-2 text-left">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold text-foreground">
+                                    Contraseña Asignada:
+                                </Label>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewPasswordInput(generateRandomPassword())}
+                                    className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                                >
+                                    <Sparkles className="h-3 w-3" />
+                                    Generar aleatoria
+                                </button>
+                            </div>
+
+                            <div className="relative">
+                                <Input
+                                    type={showPasswordInModal ? "text" : "password"}
+                                    value={newPasswordInput}
+                                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                                    placeholder="Mínimo 6 caracteres"
+                                    className="h-10 pr-20 font-mono text-sm font-bold rounded-xl bg-background border-border/70 focus:border-amber-500"
+                                />
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPasswordInModal(!showPasswordInModal)}
+                                        className="p-1 text-muted-foreground hover:text-foreground"
+                                        title={showPasswordInModal ? "Ocultar" : "Mostrar"}
+                                    >
+                                        {showPasswordInModal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCopyText(newPasswordInput, 'modal-pass', 'Contraseña')}
+                                        className="p-1 text-muted-foreground hover:text-foreground"
+                                        title="Copiar contraseña"
+                                    >
+                                        {copiedField === 'modal-pass' ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p className="text-[11px] text-muted-foreground">
+                                Al guardar, el cliente podrá iniciar sesión inmediatamente con esta clave. Puedes copiarla y enviársela.
+                            </p>
+                        </div>
+
+                        {/* Botones de acción */}
+                        <div className="space-y-2 pt-2 border-t border-border/50">
+                            <div className="flex items-center justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setChangingPasswordStore(null)}
+                                    className="h-9 text-xs rounded-xl"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="button"
+                                    disabled={setPasswordMutation.isPending || !newPasswordInput || newPasswordInput.trim().length < 6}
+                                    onClick={() => {
+                                        if (changingPasswordStore) {
+                                            setPasswordMutation.mutate({
+                                                storeId: changingPasswordStore.id,
+                                                newPassword: newPasswordInput.trim()
+                                            });
+                                        }
+                                    }}
+                                    className="h-9 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-4 rounded-xl gap-1.5 shadow-sm"
+                                >
+                                    {setPasswordMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Check className="h-4 w-4" />
+                                    )}
+                                    Guardar Contraseña
+                                </Button>
+                            </div>
+
+                            {/* Opción secundaria: enviar enlace de recuperación */}
+                            {changingPasswordStore?.email && (
+                                <div className="pt-1 text-center">
+                                    <button
+                                        type="button"
+                                        disabled={isSendingResetEmail}
+                                        onClick={() => handleSendResetEmail(changingPasswordStore.email)}
+                                        className="text-[11px] text-muted-foreground hover:text-primary hover:underline transition-colors inline-flex items-center justify-center gap-1.5"
+                                    >
+                                        <Mail className="h-3 w-3" />
+                                        {isSendingResetEmail ? "Enviando enlace..." : "O enviar enlace de recuperación oficial al correo"}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </DialogContent>
