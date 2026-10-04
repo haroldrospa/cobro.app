@@ -676,23 +676,25 @@ const UserSubscription = () => {
                         )}
 
                         <div className="space-y-2 pt-1">
-                            <Button 
-                                className="w-full shadow-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-auto min-h-11 py-2.5 px-3 flex items-center justify-center gap-2 rounded-xl transition-all text-xs sm:text-sm text-center leading-tight whitespace-normal break-words"
-                                onClick={() => {
-                                    setIsSuccess(false);
-                                    setTargetPlan(activePlan);
-                                    const defaultAmt = currentPlanDetails.price > 0 
-                                        ? (isAnnual ? currentPlanDetails.annualPrice : currentPlanDetails.price).toString() 
-                                        : '895';
-                                    setPaymentAmount(defaultAmt);
-                                    setIsBankModalOpen(true);
-                                }}
-                            >
-                                <Landmark className="h-4 w-4 shrink-0" />
-                                <span className="text-center font-bold">
-                                    Pagar con Transferencia Banreservas
-                                </span>
-                            </Button>
+                            {activePlan !== 'enterprise' && (
+                                <Button 
+                                    className="w-full shadow-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-auto min-h-11 py-2.5 px-3 flex items-center justify-center gap-2 rounded-xl transition-all text-xs sm:text-sm text-center leading-tight whitespace-normal break-words"
+                                    onClick={() => {
+                                        setIsSuccess(false);
+                                        setTargetPlan(activePlan);
+                                        const defaultAmt = currentPlanDetails.price > 0 
+                                            ? (isAnnual ? currentPlanDetails.annualPrice : currentPlanDetails.price).toString() 
+                                            : '895';
+                                        setPaymentAmount(defaultAmt);
+                                        setIsBankModalOpen(true);
+                                    }}
+                                >
+                                    <Landmark className="h-4 w-4 shrink-0" />
+                                    <span className="text-center font-bold">
+                                        Pagar con Transferencia Banreservas
+                                    </span>
+                                </Button>
+                            )}
 
                             <Button 
                                 variant="outline" 
@@ -940,7 +942,7 @@ const UserSubscription = () => {
 
                             {/* CTA Action Buttons */}
                             {isEnterprise ? (
-                                <div className="space-y-2.5 w-full mt-auto">
+                                <div className="w-full mt-auto">
                                     <Button
                                         className="w-full h-11 bg-[#10b981] hover:bg-[#0bb274] text-white font-bold rounded-xl flex items-center justify-center gap-2 border-0 shadow-lg shadow-emerald-500/10 transition-all active:scale-[0.98]"
                                         onClick={() =>
@@ -952,18 +954,6 @@ const UserSubscription = () => {
                                     >
                                         <MessageSquare className="h-4 w-4 fill-white" />
                                         Contactar por WhatsApp
-                                    </Button>
-                                    <Button
-                                        className="w-full h-auto min-h-11 py-2 px-3 bg-zinc-800 hover:bg-[#2c2e33] text-white font-bold rounded-xl flex items-center justify-center gap-2 border border-zinc-700 transition-all active:scale-[0.98] text-xs sm:text-sm text-center leading-tight whitespace-normal"
-                                        onClick={() => {
-                                            setIsSuccess(false);
-                                            setTargetPlan('enterprise');
-                                            setPaymentAmount('');
-                                            setIsBankModalOpen(true);
-                                        }}
-                                    >
-                                        <Landmark className="h-4 w-4 shrink-0" />
-                                        <span>Pagar con Transferencia Banreservas</span>
                                     </Button>
                                 </div>
                             ) : (
