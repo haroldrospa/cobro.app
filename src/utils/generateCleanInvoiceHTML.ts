@@ -1,5 +1,4 @@
 // Utility to generate clean, black & white invoice HTML matching the selected Paper Size (80mm, 58mm, A4, Carta)
-import appLogo from '@/assets/cobro-logo.png';
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -153,62 +152,8 @@ export const generateCleanInvoiceHTML = (
       overflow: hidden;
     }
     
-    /* Watermark Cobroapp */
-    .watermark-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 0;
-      overflow: hidden;
-    }
-    .watermark-inner {
-      transform: rotate(-26deg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.042;
-      user-select: none;
-    }
-    .watermark-brand-row {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-    }
-    .watermark-logo-img {
-      width: 76px;
-      height: 76px;
-      object-fit: contain;
-      filter: grayscale(100%);
-    }
-    .watermark-title {
-      font-size: 76px;
-      font-weight: 900;
-      letter-spacing: 16px;
-      color: #0f172a;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .watermark-subtitle {
-      margin-top: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 10px;
-      color: #0f172a;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    /* Content over watermark */
     .invoice-content {
       position: relative;
-      z-index: 1;
       display: flex;
       flex-direction: column;
       flex-grow: 1;
@@ -265,32 +210,12 @@ export const generateCleanInvoiceHTML = (
         padding: 4mm 6mm !important;
         max-width: 100% !important;
       }
-      .watermark-inner {
-        opacity: 0.055 !important;
-      }
     }
   </style>
 </head>
 <body>
   <div class="invoice-sheet">
     
-    <!-- MARCA DE AGUA COBROAPP DE FONDO -->
-    <div class="watermark-layer" aria-hidden="true">
-      <div class="watermark-inner">
-        <div class="watermark-brand-row">
-          <img src="${appLogo}" class="watermark-logo-img" alt="Cobroapp" onerror="this.style.display='none'" />
-          <svg class="watermark-logo-img" viewBox="0 0 40 40" fill="none" style="display:none;" onerror="this.style.display='block'">
-            <rect width="40" height="40" rx="10" fill="#0f172a"/>
-            <path d="M12 20C12 15.5817 15.5817 12 20 12C23.3137 12 26.1667 14.0147 27.3556 16.9091" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
-            <path d="M28 20C28 24.4183 24.4183 28 20 28C16.6863 28 13.8333 25.9853 12.6444 23.0909" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="20" cy="20" r="3" fill="#10b981"/>
-          </svg>
-          <span class="watermark-title">COBROAPP</span>
-        </div>
-        <div class="watermark-subtitle">DOCUMENTO FISCAL AUTÉNTICO</div>
-      </div>
-    </div>
-
     <!-- CONTENIDO DE LA FACTURA -->
     <div class="invoice-content">
       
