@@ -3,6 +3,8 @@
 -- ==============================================================================
 
 -- 1. Actualizar get_all_stores_admin para que solo devuelva empresas reales creadas por sus dueños
+DROP FUNCTION IF EXISTS public.get_all_stores_admin();
+
 CREATE OR REPLACE FUNCTION public.get_all_stores_admin()
 RETURNS TABLE (
     id UUID,
