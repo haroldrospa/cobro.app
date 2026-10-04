@@ -469,7 +469,7 @@ export const generateCleanInvoiceHTML = (
       <div style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
         <span>Emitido con</span>
         <strong style="color: #0f172a; letter-spacing: 0.05em;">COBROAPP</strong>
-        <span>• cobroapp.com</span>
+        <span>• cobroapp.app</span>
       </div>
     </div>
 
