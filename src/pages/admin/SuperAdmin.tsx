@@ -404,7 +404,11 @@ const SuperAdmin = () => {
             queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
         },
         onError: (err: any) => {
-            toast.error("Error al eliminar la tienda: " + err.message);
+            if (err?.message?.includes("delete_store_and_owner") || err?.message?.includes("schema cache")) {
+                toast.error("Función no encontrada en Supabase. Debes ejecutar el script SQL 'delete_store_and_owner' en el Editor SQL de Supabase.", { duration: 6000 });
+            } else {
+                toast.error("Error al eliminar la tienda: " + err.message);
+            }
         }
     });
 

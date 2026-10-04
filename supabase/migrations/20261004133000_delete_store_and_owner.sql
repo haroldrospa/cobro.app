@@ -1,5 +1,5 @@
 -- ==============================================================================
--- SCRIPT: ELIMINACIÓN DE TIENDAS Y USUARIOS EN CASCADA (SUPERADMIN)
+-- MIGRACIÓN: ELIMINACIÓN DE TIENDAS Y USUARIOS EN CASCADA (SUPERADMIN)
 -- ==============================================================================
 
 CREATE OR REPLACE FUNCTION public.delete_store_and_owner(p_store_id UUID)
