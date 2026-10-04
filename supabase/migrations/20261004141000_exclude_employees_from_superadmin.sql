@@ -35,7 +35,7 @@ BEGIN
         s.is_active,
         s.created_at,
         p.email as owner_email,
-        COALESCE(sp.name, 'Sin Plan') as plan_name,
+        COALESCE(sub.plan_id, 'basic') as plan_name,
         sub.end_date as plan_end_date,
         sub.status as plan_status
     FROM public.stores s
@@ -91,7 +91,86 @@ BEGIN
     END LOOP;
 END $$;
 
--- 3. Actualizar trigger handle_new_user para que no genere tiendas cuando se registren empleados
+-- 3. Función RPC segura para extender y actualizar suscripciones sin violar foreign keys
+CREATE OR REPLACE FUNCTION public.admin_update_subscription(
+    p_store_id UUID,
+    p_plan_id TEXT,
+    p_days_duration INTEGER
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+    v_end_date TIMESTAMP WITH TIME ZONE;
+    v_status TEXT := 'active';
+    v_clean_plan TEXT;
+    v_final_plan TEXT;
+BEGIN
+    -- Validar que solo SuperAdmin pueda actualizar planes
+    IF NOT public.is_platform_admin() THEN
+        RETURN jsonb_build_object('success', false, 'message', 'Acceso denegado: solo SuperAdmin.');
+    END IF;
+
+    -- Normalizar el ID del plan para que coincida exactamente con subscription_plans(id)
+    v_clean_plan := LOWER(TRIM(COALESCE(p_plan_id, 'basic')));
+    IF v_clean_plan = 'pro' OR v_clean_plan LIKE '%empresarial%' OR v_clean_plan LIKE '%profesional%' OR v_clean_plan LIKE '%negocio%' THEN
+        v_final_plan := 'pro';
+    ELSIF v_clean_plan = 'enterprise' OR v_clean_plan LIKE '%corporativo%' THEN
+        v_final_plan := 'enterprise';
+    ELSE
+        v_final_plan := 'basic';
+    END IF;
+
+    IF p_days_duration <= 0 THEN
+        v_end_date := now();
+        v_status := 'expired';
+    ELSE
+        v_end_date := now() + (p_days_duration || ' days')::INTERVAL;
+        v_status := 'active';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM public.company_subscriptions WHERE company_id = p_store_id) THEN
+        UPDATE public.company_subscriptions
+        SET 
+            plan_id = v_final_plan,
+            status = v_status,
+            end_date = v_end_date,
+            payment_method = 'other',
+            updated_at = now()
+        WHERE company_id = p_store_id;
+    ELSE
+        INSERT INTO public.company_subscriptions (
+            company_id,
+            plan_id,
+            status,
+            start_date,
+            end_date,
+            payment_method
+        ) VALUES (
+            p_store_id,
+            v_final_plan,
+            v_status,
+            now(),
+            v_end_date,
+            'other'
+        );
+    END IF;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'message', 'Suscripción actualizada correctamente',
+        'end_date', v_end_date,
+        'plan_id', v_final_plan
+    );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_update_subscription(UUID, TEXT, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_update_subscription(UUID, TEXT, INTEGER) TO service_role;
+
+-- 4. Actualizar trigger handle_new_user para que no genere tiendas cuando se registren empleados
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql

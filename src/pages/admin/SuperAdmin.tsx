@@ -89,6 +89,18 @@ const PLAN_NAMES: Record<string, string> = {
     'enterprise': 'Corporativo'
 };
 
+export const normalizePlanId = (rawPlan: any): 'basic' | 'pro' | 'enterprise' => {
+    if (!rawPlan || typeof rawPlan !== 'string') return 'basic';
+    const clean = rawPlan.toLowerCase().trim();
+    if (clean === 'pro' || clean.includes('empresarial') || clean.includes('profesional') || clean.includes('negocio')) {
+        return 'pro';
+    }
+    if (clean === 'enterprise' || clean.includes('corporativo')) {
+        return 'enterprise';
+    }
+    return 'basic';
+};
+
 const SuperAdmin = () => {
     const [selectedProof, setSelectedProof] = useState<string | null>(null);
     const { isPlatformAdmin, loading: checkingAdmin } = usePlatformAdmin();
@@ -267,7 +279,7 @@ const SuperAdmin = () => {
     const saveCompanySubscriptionAdmin = async (companyId: string, planId: string, endDateIso: string) => {
         const endDateTime = new Date(endDateIso).getTime();
         const nowTime = Date.now();
-        const finalPlanId = planId || 'basic';
+        const finalPlanId = normalizePlanId(planId);
         const diffMs = endDateTime - nowTime;
         let daysDuration = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
         if (daysDuration < 0) daysDuration = 0;
@@ -489,8 +501,9 @@ const SuperAdmin = () => {
 
     // Cálculo Realista de MRR
     const mrrTotal = stores?.reduce((sum: number, store: any) => {
-        if (store.is_active && store.plan_name) {
-            return sum + (PLAN_PRICES[store.plan_name] || 0);
+        if (store.is_active && store.plan_name && store.plan_name !== 'Sin Plan') {
+            const planKey = normalizePlanId(store.plan_name);
+            return sum + (PLAN_PRICES[planKey] || 0);
         }
         return sum;
     }, 0) || 0;
@@ -512,7 +525,7 @@ const SuperAdmin = () => {
         if (planFilter !== "all") {
             if (planFilter === "none") {
                 if (store.plan_name && store.plan_name !== 'Sin Plan') return false;
-            } else if (store.plan_name !== planFilter) {
+            } else if (normalizePlanId(store.plan_name) !== planFilter) {
                 return false;
             }
         }
@@ -1033,7 +1046,7 @@ const SuperAdmin = () => {
                                                         <TableCell className="py-3.5">
                                                             <div className="flex items-center gap-2">
                                                                 <Select
-                                                                    value={store.plan_name || "basic"}
+                                                                    value={normalizePlanId(store.plan_name)}
                                                                     onValueChange={(newPlan) => handleChangeStorePlan(store, newPlan)}
                                                                 >
                                                                     <SelectTrigger className="w-[125px] h-7 text-xs font-medium rounded-lg bg-background/50 border-border/60 hover:bg-muted/50 px-2.5 transition-colors">
@@ -1110,7 +1123,7 @@ const SuperAdmin = () => {
                                                                     className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-medium px-2 rounded-lg shadow-none transition-colors"
                                                                     onClick={() => updateSubscriptionMutation.mutate({
                                                                         companyId: store.id,
-                                                                        planId: store.plan_name || 'basic',
+                                                                        planId: normalizePlanId(store.plan_name),
                                                                         months: 1,
                                                                         currentEndDate: store.plan_end_date
                                                                     })}
@@ -1125,7 +1138,7 @@ const SuperAdmin = () => {
                                                                     className="h-7 text-xs border-primary/30 text-primary bg-primary/10 hover:bg-primary/20 font-medium px-2 rounded-lg shadow-none transition-colors"
                                                                     onClick={() => updateSubscriptionMutation.mutate({
                                                                         companyId: store.id,
-                                                                        planId: store.plan_name || 'basic',
+                                                                        planId: normalizePlanId(store.plan_name),
                                                                         months: 12,
                                                                         currentEndDate: store.plan_end_date
                                                                     })}
@@ -1386,7 +1399,7 @@ const SuperAdmin = () => {
                                     { name: 'Empresarial', key: 'pro', color: 'bg-blue-600', price: 1495 },
                                     { name: 'Corporativo', key: 'enterprise', color: 'bg-purple-600', price: 3500 }
                                 ].map((plan) => {
-                                    const count = stores?.filter((s: any) => s.is_active && s.plan_name === plan.key).length || 0;
+                                    const count = stores?.filter((s: any) => s.is_active && normalizePlanId(s.plan_name) === plan.key).length || 0;
                                     const percentage = activeCount > 0 ? Math.round((count / activeCount) * 100) : 0;
 
                                     return (
