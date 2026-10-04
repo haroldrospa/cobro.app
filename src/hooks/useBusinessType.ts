@@ -56,6 +56,9 @@ export const useBusinessType = () => {
     // Delivery page — defaults to true so existing users keep seeing it (disabled for services by default)
     const hasDelivery = isServices ? false : settings?.use_delivery !== false;
 
+    // PedidosYa integration is for food/retail delivery, strictly not for services
+    const hasPedidosYa = !isServices;
+
     // Kitchen order step should be skipped when kitchen is not active
     const skipKitchenStep = !hasKitchenDisplay;
 
@@ -90,6 +93,7 @@ export const useBusinessType = () => {
         isServices,
         hasKitchenDisplay,
         hasDelivery,
+        hasPedidosYa,
         useKitchen,
         skipKitchenStep,
         orderTypeLabels,

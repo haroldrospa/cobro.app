@@ -2011,7 +2011,7 @@ const Settings = () => {
         <MobileSettingsLayout
           activeSection={mobileActiveSection}
           onSectionChange={setMobileActiveSection}
-          businessType={shopType === 'store' ? 'store' : shopType === 'supermarket' ? 'supermarket' : 'restaurant'}
+          businessType={shopType === 'store' ? 'store' : shopType === 'supermarket' ? 'supermarket' : shopType === 'services' ? 'services' : 'restaurant'}
         >
           {{
             store: mobileStoreSectionContent,
@@ -2077,9 +2077,11 @@ const Settings = () => {
                 <Sparkles className="h-4 w-4" />
                 Inteligencia Artificial
               </TabsTrigger>
-              <TabsTrigger value="pedidosya" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center gap-1.5">
-                🛵 PedidosYa
-              </TabsTrigger>
+              {shopType !== 'services' && (
+                <TabsTrigger value="pedidosya" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center gap-1.5">
+                  🛵 PedidosYa
+                </TabsTrigger>
+              )}
               <TabsTrigger value="system" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Apariencia</TabsTrigger>
               <TabsTrigger value="advanced" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Avanzado</TabsTrigger>
               
@@ -3714,9 +3716,11 @@ const Settings = () => {
         </TabsContent>
 
         {/* PedidosYa Integration Tab */}
-        <TabsContent value="pedidosya" className="space-y-6 mt-0">
-          <PedidosYaSettingsSection userStore={userStore} />
-        </TabsContent>
+        {shopType !== 'services' && (
+          <TabsContent value="pedidosya" className="space-y-6 mt-0">
+            <PedidosYaSettingsSection userStore={userStore} />
+          </TabsContent>
+        )}
           </div>
         </Tabs>
       </div>
