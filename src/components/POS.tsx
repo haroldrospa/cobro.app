@@ -80,6 +80,7 @@ import { useAwardLoyaltyPoints, calculatePointsValue } from '@/hooks/useLoyaltyP
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 import { GenerateServiceInvoiceDialog } from './pos/GenerateServiceInvoiceDialog';
+import { ServicePOSWorkspace } from './pos/ServicePOSWorkspace';
 
 class SimpleErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -129,6 +130,7 @@ const POSContent: React.FC = () => {
   const [selectedInvoiceType, setSelectedInvoiceType] = useState('B02');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showServiceInvoiceDialog, setShowServiceInvoiceDialog] = useState(false);
+  const [servicesViewMode, setServicesViewMode] = useState<'services' | 'catalog'>('services');
   const [isEmittingServiceInvoice, setIsEmittingServiceInvoice] = useState(false);
   const [userClosedRegisterDialog, setUserClosedRegisterDialog] = useState(false);
   const [showOpenRegisterDialog, setShowOpenRegisterDialog] = useState(false);
@@ -1897,29 +1899,58 @@ const POSContent: React.FC = () => {
       <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background">
         <MobilePOSLayout
           productSearchComponent={
-            <MobileProductSearch
-              ref={mobileSearchRef}
-              products={products}
-              cart={cartWithOffers}
-              onAddToCart={addToCart}
-              onUpdateQuantity={updateQuantity}
-              onRemoveFromCart={removeFromCart}
-              orderType={posOrderType}
-              onOrderTypeChange={setPosOrderType}
-              onSearchFocus={handleSearchFocus}
-              onRefresh={handleRefreshMobile}
-              isLoading={loadingProducts}
-              menuButton={menuButton}
-              actionButton={actionButtons}
-              gridCols={storeSettings?.pos_layout_grid_cols || 4}
-              viewMode={mobileViewMode}
-              onViewModeChange={handleMobileViewModeChange}
-              onGridColsChange={handleGridColsChangeMobile}
-              mode={storeSettings?.pos_layout_mode || 'catalog'}
-              onLayoutModeChange={handleLayoutModeChangeMobile}
-              companyLogo={companyInfo?.logo}
-              userName={profile?.full_name}
-            />
+            isServices && servicesViewMode === 'services' ? (
+              <ServicePOSWorkspace
+                customers={customers}
+                invoiceTypes={invoiceTypes}
+                products={products}
+                menuButton={menuButton}
+                actionButton={actionButtons}
+                onDirectEmit={handleDirectEmitServiceInvoice}
+                isEmitting={isEmittingServiceInvoice}
+                onLoadToCart={handleLoadServicesToCart}
+                onSwitchToCatalog={() => setServicesViewMode('catalog')}
+              />
+            ) : (
+              <div className="flex flex-col h-full">
+                {isServices && (
+                  <div className="p-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-400">Modo Catálogo</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setServicesViewMode('services')}
+                      className="h-6 px-2 text-[11px] text-emerald-400 hover:bg-emerald-500/20"
+                    >
+                      ← Volver a Facturar Servicios
+                    </Button>
+                  </div>
+                )}
+                <MobileProductSearch
+                  ref={mobileSearchRef}
+                  products={products}
+                  cart={cartWithOffers}
+                  onAddToCart={addToCart}
+                  onUpdateQuantity={updateQuantity}
+                  onRemoveFromCart={removeFromCart}
+                  orderType={posOrderType}
+                  onOrderTypeChange={setPosOrderType}
+                  onSearchFocus={handleSearchFocus}
+                  onRefresh={handleRefreshMobile}
+                  isLoading={loadingProducts}
+                  menuButton={menuButton}
+                  actionButton={actionButtons}
+                  gridCols={storeSettings?.pos_layout_grid_cols || 4}
+                  viewMode={mobileViewMode}
+                  onViewModeChange={handleMobileViewModeChange}
+                  onGridColsChange={handleGridColsChangeMobile}
+                  mode={storeSettings?.pos_layout_mode || 'catalog'}
+                  onLayoutModeChange={handleLayoutModeChangeMobile}
+                  companyLogo={companyInfo?.logo}
+                  userName={profile?.full_name}
+                />
+              </div>
+            )
           }
           cart={cartWithOffers}
           cartComponent={
@@ -2227,81 +2258,101 @@ const POSContent: React.FC = () => {
             /* --- CLASSIC LAYOUT (Search top-left, Cart bottom-left, Payment right) --- */
             <>
               <div className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-3 overflow-hidden pr-0.5">
-                {isServices && (
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
-                        <Briefcase className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-emerald-300">Modo de Negocio: Servicios</p>
-                        <p className="text-[11px] text-muted-foreground">Facturación para contabilidad, consultoría y servicios en formato Carta.</p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => setShowServiceInvoiceDialog(true)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 px-3.5 rounded-lg gap-2 shadow-sm shadow-emerald-600/20"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      Generar Factura
-                    </Button>
+                {isServices && servicesViewMode === 'services' ? (
+                  <div className="flex-1 min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm">
+                    <ServicePOSWorkspace
+                      customers={customers}
+                      invoiceTypes={invoiceTypes}
+                      products={products}
+                      menuButton={menuButton}
+                      actionButton={actionButtons}
+                      onDirectEmit={handleDirectEmitServiceInvoice}
+                      isEmitting={isEmittingServiceInvoice}
+                      onLoadToCart={handleLoadServicesToCart}
+                      onSwitchToCatalog={() => setServicesViewMode('catalog')}
+                      currencySymbol={storeSettings?.currency_symbol || 'RD$'}
+                      defaultTaxRate={storeSettings?.default_tax_rate ?? 18}
+                    />
                   </div>
-                )}
-                <div className="flex-shrink-0 z-20 relative">
-                  <ProductSearchList
-                    ref={searchInputRef}
-                    products={products}
-                    onAddToCart={addToCart}
-                    onSearchFocus={handleSearchFocus}
-                    menuButton={menuButton}
-                    actionButton={actionButtons}
-                    gridCols={storeSettings?.pos_layout_grid_cols || 4}
-                    viewMode={storeSettings?.pos_view_mode || 'list'}
-                    onViewModeChange={handleViewModeChange}
-                    onGridColsChange={handleGridColsChange}
-                    mode="classic"
-                    onLayoutModeChange={handleLayoutModeChange}
-                    onRefresh={handleRefreshProducts}
-                    recipeAvailability={recipeAvailability}
-                    isLoading={loadingProducts}
-                    userName={profile?.full_name}
-                  />
-                  {products.length === 0 && !loadingProducts && (
-                    <div className="mt-2 p-3 bg-muted/40 border rounded-xl text-xs flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-muted-foreground font-medium">No hay productos disponibles en el catálogo.</span>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-7 text-[11px]"
-                          onClick={() => refreshMasterData()}
+                ) : (
+                  <>
+                    {isServices && (
+                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                            <Briefcase className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-emerald-300">Modo Catálogo de Productos</p>
+                            <p className="text-[11px] text-muted-foreground">Estás viendo el catálogo físico en lugar del facturador de servicios.</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setServicesViewMode('services')}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 px-3.5 rounded-lg gap-2 shadow-sm shadow-emerald-600/20"
                         >
-                          <RefreshCcw className="w-3 h-3 mr-1" />
-                          Recargar Catálogo
+                          <FileText className="h-3.5 w-3.5" />
+                          Facturar Servicios
                         </Button>
                       </div>
+                    )}
+                    <div className="flex-shrink-0 z-20 relative">
+                      <ProductSearchList
+                        ref={searchInputRef}
+                        products={products}
+                        onAddToCart={addToCart}
+                        onSearchFocus={handleSearchFocus}
+                        menuButton={menuButton}
+                        actionButton={actionButtons}
+                        gridCols={storeSettings?.pos_layout_grid_cols || 4}
+                        viewMode={storeSettings?.pos_view_mode || 'list'}
+                        onViewModeChange={handleViewModeChange}
+                        onGridColsChange={handleGridColsChange}
+                        mode="classic"
+                        onLayoutModeChange={handleLayoutModeChange}
+                        onRefresh={handleRefreshProducts}
+                        recipeAvailability={recipeAvailability}
+                        isLoading={loadingProducts}
+                        userName={profile?.full_name}
+                      />
+                      {products.length === 0 && !loadingProducts && (
+                        <div className="mt-2 p-3 bg-muted/40 border rounded-xl text-xs flex items-center justify-between flex-wrap gap-2">
+                          <span className="text-muted-foreground font-medium">No hay productos disponibles en el catálogo.</span>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-7 text-[11px]"
+                              onClick={() => refreshMasterData()}
+                            >
+                              <RefreshCcw className="w-3 h-3 mr-1" />
+                              Recargar Catálogo
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div id="pos-cart-area" className="flex-1 min-h-[140px] md:min-h-[250px] overflow-hidden rounded-xl border bg-card shadow-sm z-10">
-                  <CartSummary
-                    cart={cartWithOffers}
-                    onUpdateQuantity={updateQuantity}
-                    onUpdateComment={updateComment}
-                    onUpdateDiscount={updateDiscount}
-                    onAddExtra={addExtraToCartItem}
-                    onRemoveExtra={removeExtraFromCartItem}
-                    onRemoveFromCart={removeFromCart}
-                    calculateItemTotal={calculateItemTotal}
-                    currentOrderInfo={currentOrderInfo}
-                    onClearOrder={handleClearOrder}
-                    orderType={posOrderType}
-                    onOrderTypeChange={setPosOrderType}
-                    cartTotal={parseFloat(totals.total) || 0}
-                  />
-                </div>
+                    <div id="pos-cart-area" className="flex-1 min-h-[140px] md:min-h-[250px] overflow-hidden rounded-xl border bg-card shadow-sm z-10">
+                      <CartSummary
+                        cart={cartWithOffers}
+                        onUpdateQuantity={updateQuantity}
+                        onUpdateComment={updateComment}
+                        onUpdateDiscount={updateDiscount}
+                        onAddExtra={addExtraToCartItem}
+                        onRemoveExtra={removeExtraFromCartItem}
+                        onRemoveFromCart={removeFromCart}
+                        calculateItemTotal={calculateItemTotal}
+                        currentOrderInfo={currentOrderInfo}
+                        onClearOrder={handleClearOrder}
+                        orderType={posOrderType}
+                        onOrderTypeChange={setPosOrderType}
+                        cartTotal={parseFloat(totals.total) || 0}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Divisor arrastrable interactivo */}
@@ -2348,58 +2399,76 @@ const POSContent: React.FC = () => {
             <>
               {/* Panel principal - Catálogo de productos */}
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm pr-0">
-                {isServices && (
-                  <div className="m-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
-                        <Briefcase className="h-4 w-4" />
+                {isServices && servicesViewMode === 'services' ? (
+                  <ServicePOSWorkspace
+                    customers={customers}
+                    invoiceTypes={invoiceTypes}
+                    products={products}
+                    menuButton={menuButton}
+                    actionButton={actionButtons}
+                    onDirectEmit={handleDirectEmitServiceInvoice}
+                    isEmitting={isEmittingServiceInvoice}
+                    onLoadToCart={handleLoadServicesToCart}
+                    onSwitchToCatalog={() => setServicesViewMode('catalog')}
+                    currencySymbol={storeSettings?.currency_symbol || 'RD$'}
+                    defaultTaxRate={storeSettings?.default_tax_rate ?? 18}
+                  />
+                ) : (
+                  <>
+                    {isServices && (
+                      <div className="m-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 flex-wrap animate-in fade-in duration-200">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                            <Briefcase className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-emerald-300">Modo Catálogo de Productos</p>
+                            <p className="text-[11px] text-muted-foreground">Estás viendo el catálogo físico en lugar del facturador de servicios.</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setServicesViewMode('services')}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 px-3.5 rounded-lg gap-2 shadow-sm shadow-emerald-600/20"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Facturar Servicios
+                        </Button>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-emerald-300">Modo de Negocio: Servicios</p>
-                        <p className="text-[11px] text-muted-foreground">Facturación para contabilidad, consultoría y servicios en formato Carta.</p>
+                    )}
+                    <ProductSearchList
+                      ref={searchInputRef}
+                      products={products}
+                      onAddToCart={addToCart}
+                      menuButton={menuButton}
+                      actionButton={actionButtons}
+                      gridCols={storeSettings?.pos_layout_grid_cols || 4}
+                      viewMode={storeSettings?.pos_view_mode || 'grid'}
+                      onViewModeChange={handleViewModeChange}
+                      onGridColsChange={handleGridColsChange}
+                      mode="catalog"
+                      onLayoutModeChange={handleLayoutModeChange}
+                      isLoading={loadingProducts}
+                      recipeAvailability={recipeAvailability}
+                      userName={profile?.full_name}
+                    />
+                    {products.length === 0 && !loadingProducts && (
+                      <div className="m-2 p-3 bg-muted/40 border rounded-xl text-xs flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-muted-foreground font-medium">No hay productos disponibles en el catálogo.</span>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-7 text-[11px]"
+                            onClick={() => refreshMasterData()}
+                          >
+                            <RefreshCcw className="w-3 h-3 mr-1" />
+                            Recargar Catálogo
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => setShowServiceInvoiceDialog(true)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 px-3.5 rounded-lg gap-2 shadow-sm shadow-emerald-600/20"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      Generar Factura
-                    </Button>
-                  </div>
-                )}
-                <ProductSearchList
-                  ref={searchInputRef}
-                  products={products}
-                  onAddToCart={addToCart}
-                  menuButton={menuButton}
-                  actionButton={actionButtons}
-                  gridCols={storeSettings?.pos_layout_grid_cols || 4}
-                  viewMode={storeSettings?.pos_view_mode || 'grid'}
-                  onViewModeChange={handleViewModeChange}
-                  onGridColsChange={handleGridColsChange}
-                  mode="catalog"
-                  onLayoutModeChange={handleLayoutModeChange}
-                  isLoading={loadingProducts}
-                  recipeAvailability={recipeAvailability}
-                  userName={profile?.full_name}
-                />
-                {products.length === 0 && !loadingProducts && (
-                  <div className="m-2 p-3 bg-muted/40 border rounded-xl text-xs flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-muted-foreground font-medium">No hay productos disponibles en el catálogo.</span>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="h-7 text-[11px]"
-                        onClick={() => refreshMasterData()}
-                      >
-                        <RefreshCcw className="w-3 h-3 mr-1" />
-                        Recargar Catálogo
-                      </Button>
-                    </div>
-                  </div>
+                    )}
+                  </>
                 )}
               </div>
 

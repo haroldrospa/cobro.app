@@ -17,9 +17,11 @@ import {
   SlidersHorizontal, 
   RotateCcw,
   Star,
-  Unlock 
+  Unlock,
+  FileText 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useBusinessType } from '@/hooks/useBusinessType';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -110,6 +112,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
   const [dragOverBlock, setDragOverBlock] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { isServices } = useBusinessType();
 
   const filteredCustomers = React.useMemo(() => {
     if (!customerSearch) return customers.slice(0, 30);
@@ -735,7 +738,8 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               onClick={onCheckout}
               className={cn(
                 "w-full h-9 md:h-10 text-sm font-semibold",
-                isInvoiceLimitReached && "opacity-80"
+                isInvoiceLimitReached && "opacity-80",
+                isServices && !isInvoiceLimitReached && "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-700/20"
               )}
               variant={isInvoiceLimitReached ? "destructive" : "default"}
               disabled={isCheckoutDisabled || isInvoiceLimitReached}
@@ -744,6 +748,12 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                 <>
                   <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
                   Límite Alcanzado
+                </>
+              ) : isServices ? (
+                <>
+                  <FileText className="mr-1.5 h-3.5 w-3.5" />
+                  Emitir Factura (Carta)
+                  {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F10</span>}
                 </>
               ) : (
                 <>
@@ -775,11 +785,23 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
           ) : (
             <Button
               onClick={onCheckout}
-              className="h-9 px-4 text-xs font-semibold flex-1 max-w-[150px]"
+              className={cn(
+                "h-9 px-4 text-xs font-semibold flex-1 max-w-[150px]",
+                isServices && "bg-emerald-600 hover:bg-emerald-500 text-white"
+              )}
               disabled={isCheckoutDisabled}
             >
-              <CreditCard className="mr-1.5 h-3.5 w-3.5" />
-              Cobrar
+              {isServices ? (
+                <>
+                  <FileText className="mr-1.5 h-3.5 w-3.5" />
+                  Facturar (Carta)
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+                  Cobrar
+                </>
+              )}
             </Button>
           )}
         </div>
