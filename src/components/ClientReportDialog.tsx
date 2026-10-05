@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquarePlus, Send, HelpCircle, CheckCircle2, Clock, Phone, Mail, Loader2 } from 'lucide-react';
+import { MessageSquarePlus, Send, HelpCircle, CheckCircle2, Clock, Phone, Mail, Loader2, AlertTriangle, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
@@ -73,12 +73,25 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
     }
   });
 
+  // Límite de 3 reportes mensuales por cliente
+  const MAX_MONTHLY_REPORTS = 3;
+  const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const reportsThisMonth = myReports.filter((r: any) => new Date(r.created_at) >= currentMonthStart);
+  const monthlyCount = reportsThisMonth.length;
+  const reportsRemaining = Math.max(0, MAX_MONTHLY_REPORTS - monthlyCount);
+  const hasReachedLimit = monthlyCount >= MAX_MONTHLY_REPORTS;
+  const currentMonthName = new Date().toLocaleDateString('es-DO', { month: 'long' });
+
   // Mutación para crear reporte
   const createReportMutation = useMutation({
     mutationFn: async () => {
+      if (hasReachedLimit) {
+        throw new Error('Has alcanzado el límite de 3 reportes mensuales para este mes.');
+      }
       if (!title.trim()) throw new Error('Por favor escribe un asunto para el reporte');
       if (!message.trim()) throw new Error('Por favor detalla tu consulta o requerimiento');
       if (!storeId) throw new Error('No se encontró el ID de tu negocio. Intenta recargar la página');
+
 
       const { data, error } = await supabase
         .from('client_support_reports')
@@ -196,9 +209,60 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
         <div className="p-6 space-y-4">
           {activeTab === 'create' ? (
             <div className="space-y-4">
+              {/* Barra de cuota mensual: 3 reportes mensuales */}
+              <div className={`p-3 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all ${
+                hasReachedLimit
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
+                  : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-800 dark:text-emerald-300'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold flex items-center gap-1.5">
+                    {hasReachedLimit ? (
+                      <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    )}
+                    {hasReachedLimit
+                      ? `Límite mensual alcanzado (3 de 3 usados este mes)`
+                      : `Cuota mensual: ${monthlyCount} de ${MAX_MONTHLY_REPORTS} reportes usados`}
+                  </span>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`font-mono text-[10px] font-bold ${
+                    hasReachedLimit
+                      ? 'bg-rose-500/20 text-rose-700 border-rose-500/40 dark:text-rose-200'
+                      : 'bg-emerald-500/20 text-emerald-800 border-emerald-500/40 dark:text-emerald-200'
+                  }`}
+                >
+                  {reportsRemaining} {reportsRemaining === 1 ? 'disponible' : 'disponibles'}
+                </Badge>
+              </div>
+
+              {hasReachedLimit && (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                    Has alcanzado el límite de 3 reportes para el mes de {currentMonthName}.
+                  </p>
+                  <p className="text-[11px] opacity-90 leading-relaxed">
+                    Tu cuota de 3 reportes mensuales se restablecerá automáticamente el primer día del próximo mes. Si necesitas asistencia urgente, puedes escribirnos directamente por WhatsApp.
+                  </p>
+                  <a
+                    href="https://wa.me/18099175744?text=Hola%20Harold,%20tengo%20una%20consulta%20urgente%20sobre%20mi%20cuenta%20en%20Cobro%20App"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline pt-1"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Contactar soporte urgente por WhatsApp →
+                  </a>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold">Tipo de Requerimiento</Label>
-                <Select value={reportType} onValueChange={setReportType}>
+                <Select value={reportType} onValueChange={setReportType} disabled={hasReachedLimit}>
                   <SelectTrigger className="h-10 text-xs rounded-xl">
                     <SelectValue placeholder="Selecciona un tipo" />
                   </SelectTrigger>
@@ -220,6 +284,7 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                   placeholder="Ej: Necesito ayuda configurando impresora térmica o mis productos"
                   className="h-10 text-xs rounded-xl"
                   maxLength={120}
+                  disabled={hasReachedLimit}
                 />
               </div>
 
@@ -231,6 +296,7 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                   placeholder="Explícanos con detalle en qué podemos apoyarte para darte una solución rápida..."
                   className="min-h-[110px] text-xs rounded-xl resize-none"
                   maxLength={1000}
+                  disabled={hasReachedLimit}
                 />
                 <span className="text-[10px] text-muted-foreground float-right">
                   {message.length} / 1000
@@ -248,6 +314,7 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                     onChange={(e) => setContactPhone(e.target.value)}
                     placeholder="809-000-0000"
                     className="h-9 text-xs rounded-xl font-mono"
+                    disabled={hasReachedLimit}
                   />
                 </div>
 
@@ -261,6 +328,7 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                     onChange={(e) => setContactEmail(e.target.value)}
                     placeholder="tucorreo@ejemplo.com"
                     className="h-9 text-xs rounded-xl font-mono"
+                    disabled={hasReachedLimit}
                   />
                 </div>
               </div>
@@ -278,19 +346,24 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                 <Button
                   type="button"
                   size="sm"
-                  disabled={createReportMutation.isPending || !title.trim() || !message.trim()}
+                  disabled={createReportMutation.isPending || !title.trim() || !message.trim() || hasReachedLimit}
                   onClick={() => createReportMutation.mutate()}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 rounded-xl shadow-sm h-9 px-4"
+                  className={`font-bold text-xs gap-1.5 rounded-xl shadow-sm h-9 px-4 ${
+                    hasReachedLimit
+                      ? 'bg-muted text-muted-foreground opacity-60 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  }`}
                 >
                   {createReportMutation.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Send className="h-3.5 w-3.5" />
                   )}
-                  <span>Enviar Reporte</span>
+                  <span>{hasReachedLimit ? 'Límite Mensual Alcanzado (3/3)' : 'Enviar Reporte'}</span>
                 </Button>
               </div>
             </div>
+
           ) : (
             <div className="space-y-3">
               {loadingReports ? (

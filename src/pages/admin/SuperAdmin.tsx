@@ -667,8 +667,11 @@ const SuperAdmin = () => {
     // Enriquecer cada tienda con reportes de soporte y notas de seguimiento CRM
     const enrichedStores = React.useMemo(() => {
         if (!stores) return [];
+        const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
         return stores.map((store: any) => {
             const storeReports = allSupportReports.filter((r: any) => r.store_id === store.id);
+            const monthlyReports = storeReports.filter((r: any) => new Date(r.created_at) >= currentMonthStart);
             const storeNotes = allFollowUpNotes.filter((n: any) => n.store_id === store.id);
             const latestNote = storeNotes[0] || null;
             const followUpStatus = latestNote?.status || store.latest_follow_up_status || 'new';
@@ -677,6 +680,7 @@ const SuperAdmin = () => {
             return {
                 ...store,
                 support_reports: storeReports,
+                monthly_reports_count: monthlyReports.length,
                 follow_up_notes: storeNotes,
                 latest_note: latestNote,
                 follow_up_status: followUpStatus,
@@ -684,6 +688,7 @@ const SuperAdmin = () => {
             };
         });
     }, [stores, allSupportReports, allFollowUpNotes]);
+
 
     // Conteo y Cálculos Generales
     const totalStoresCount = enrichedStores.length;
@@ -1386,14 +1391,16 @@ const SuperAdmin = () => {
                                                                         type="button"
                                                                         onClick={() => setReportsStore(store)}
                                                                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition-all ${
-                                                                            store.total_reports_count > 0
-                                                                                ? 'bg-blue-500/10 text-blue-600 border-blue-500/30 hover:bg-blue-500/20'
+                                                                            store.monthly_reports_count > 0
+                                                                                ? store.monthly_reports_count >= 3
+                                                                                    ? 'bg-rose-500/10 text-rose-600 border-rose-500/30 hover:bg-rose-500/20'
+                                                                                    : 'bg-blue-500/10 text-blue-600 border-blue-500/30 hover:bg-blue-500/20'
                                                                                 : 'bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted'
                                                                         }`}
-                                                                        title="Haz clic para ver las veces y reportes generados por este cliente"
+                                                                        title={`Reportes de este mes: ${store.monthly_reports_count}/3 (Total histórico: ${store.total_reports_count})`}
                                                                     >
                                                                         <MessageSquare className="h-3 w-3" />
-                                                                        <span>{store.total_reports_count} {store.total_reports_count === 1 ? 'reporte' : 'reportes'}</span>
+                                                                        <span>{store.monthly_reports_count}/3 mes</span>
                                                                     </button>
                                                                 </div>
 
@@ -1763,7 +1770,10 @@ const SuperAdmin = () => {
                                                             <MessageSquare className="h-4 w-4 text-blue-500 shrink-0" />
                                                             <div>
                                                                 <span className="font-bold text-foreground">
-                                                                    {store.total_reports_count} {store.total_reports_count === 1 ? 'reporte generado' : 'reportes generados'}
+                                                                    {store.monthly_reports_count}/3 reportes este mes
+                                                                </span>
+                                                                <span className="text-[10px] text-muted-foreground ml-1.5 font-medium">
+                                                                    ({store.total_reports_count} total)
                                                                 </span>
                                                                 {pendingStoreReports.length > 0 && (
                                                                     <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold ml-1.5 animate-pulse">
@@ -2748,7 +2758,7 @@ const SuperAdmin = () => {
                                     Reportes Generados: {reportsStore?.store_name}
                                 </DialogTitle>
                                 <DialogDescription className="text-xs text-muted-foreground">
-                                    {reportsStore?.total_reports_count || 0} {reportsStore?.total_reports_count === 1 ? 'reporte recibido' : 'reportes recibidos'} de este cliente para seguimiento
+                                    {reportsStore?.monthly_reports_count || 0}/3 reportes este mes ({reportsStore?.total_reports_count || 0} en total histórico) para seguimiento
                                 </DialogDescription>
                             </div>
                         </div>
