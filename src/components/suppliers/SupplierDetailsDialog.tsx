@@ -28,7 +28,9 @@ import {
   CheckCircle,
   Loader2,
   FlaskConical,
+  ChevronDown,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Supplier } from '@/hooks/useSuppliers';
@@ -95,6 +97,10 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<Set<string>>(new Set());
   const [isSavingIngredientsLinking, setIsSavingIngredientsLinking] = useState(false);
 
+  // Estados para colapsar / minimizar productos e ingredientes en tab overview
+  const [isProductsMinimized, setIsProductsMinimized] = useState(true);
+  const [isIngredientsMinimized, setIsIngredientsMinimized] = useState(true);
+
   // Estado para eliminar deuda con confirmación y loading
   const [deletingDebtId, setDeletingDebtId] = useState<string | null>(null);
 
@@ -115,6 +121,8 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
     if (open) {
       setCurrentTab(initialTab);
       setProductSearch('');
+      setIsProductsMinimized(true);
+      setIsIngredientsMinimized(true);
     }
   }, [open, initialTab]);
 
@@ -723,11 +731,16 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 </div>
 
                 {/* 2. SECCIÓN DE PRODUCTOS ASOCIADOS */}
-                <div className="bg-card rounded-2xl border border-border/50 p-4 space-y-3 shadow-xs">
+                <div className="bg-card rounded-2xl border border-border/50 p-3.5 space-y-3 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Package className="h-4 w-4 text-primary" />
-                      <h3 className="text-sm font-black text-foreground">Productos Asociados</h3>
+                    <div 
+                      className="flex items-center gap-2 flex-wrap cursor-pointer select-none group"
+                      onClick={() => setIsProductsMinimized(!isProductsMinimized)}
+                    >
+                      <Package className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                      <h3 className="text-sm font-black text-foreground group-hover:text-primary transition-colors">
+                        Productos Asociados
+                      </h3>
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold">
                         {supplierProducts.length} {supplierProducts.length === 1 ? 'artículo' : 'artículos'}
                       </Badge>
@@ -736,7 +749,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
                       <Button
                         size="sm"
                         variant="outline"
@@ -745,9 +758,9 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                           setLinkingSearch('');
                           setIsLinkingModalOpen(true);
                         }}
-                        className="h-8 text-xs font-bold gap-1.5 rounded-xl border-primary/30 text-primary hover:bg-primary/10"
+                        className="h-7 text-xs font-bold gap-1 rounded-xl border-primary/30 text-primary hover:bg-primary/10"
                       >
-                        <Link2 className="h-3.5 w-3.5" /> Vincular Productos
+                        <Link2 className="h-3 w-3" /> Vincular Productos
                       </Button>
                       <Button
                         size="sm"
@@ -755,12 +768,27 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                           setEditingProduct(undefined);
                           setIsProductFormOpen(true);
                         }}
-                        className="h-8 text-xs font-bold gap-1.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                        className="h-7 text-xs font-bold gap-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Nuevo Producto
+                        <Plus className="h-3 w-3" /> Nuevo
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setIsProductsMinimized(!isProductsMinimized)}
+                        className="h-7 px-2 text-xs font-bold rounded-xl gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                        title={isProductsMinimized ? "Expandir productos" : "Minimizar productos"}
+                      >
+                        <span className="text-[11px] font-medium hidden sm:inline">
+                          {isProductsMinimized ? 'Expandir' : 'Minimizar'}
+                        </span>
+                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", !isProductsMinimized && "rotate-180")} />
                       </Button>
                     </div>
                   </div>
+
+                  {!isProductsMinimized && (
+                    <div className="space-y-3 pt-1">
 
                   {/* Buscador de productos si hay artículos */}
                   {supplierProducts.length > 0 && (
@@ -924,95 +952,121 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       </Table>
                     </div>
                   )}
+                    </div>
+                  )}
 
                   {/* Ingredientes de restaurante vinculados */}
-                  <div className="mt-5 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <FlaskConical className="h-3.5 w-3.5 text-emerald-500" />
-                        Materia Prima / Ingredientes ({supplierIngredients.length})
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs font-bold rounded-xl gap-1 border-primary/40 text-primary hover:bg-primary/10"
-                        onClick={() => {
-                          setSelectedIngredientIds(new Set());
-                          setLinkingIngredientsSearch('');
-                          setIsLinkingIngredientsModalOpen(true);
-                        }}
+                  <div className="mt-3 pt-3 border-t border-border/40 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div 
+                        className="flex items-center gap-1.5 cursor-pointer select-none group"
+                        onClick={() => setIsIngredientsMinimized(!isIngredientsMinimized)}
                       >
-                        <Link2 className="h-3 w-3" /> Vincular Ingredientes
-                      </Button>
+                        <FlaskConical className="h-3.5 w-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                        <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                          Materia Prima / Ingredientes ({supplierIngredients.length})
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-[11px] font-bold rounded-xl gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                          onClick={() => {
+                            setSelectedIngredientIds(new Set());
+                            setLinkingIngredientsSearch('');
+                            setIsLinkingIngredientsModalOpen(true);
+                          }}
+                        >
+                          <Link2 className="h-3 w-3" /> Vincular Ingredientes
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsIngredientsMinimized(!isIngredientsMinimized)}
+                          className="h-6 px-1.5 text-xs font-bold rounded-xl gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          title={isIngredientsMinimized ? "Expandir ingredientes" : "Minimizar ingredientes"}
+                        >
+                          <span className="text-[10px] font-medium hidden sm:inline">
+                            {isIngredientsMinimized ? 'Expandir' : 'Minimizar'}
+                          </span>
+                          <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", !isIngredientsMinimized && "rotate-180")} />
+                        </Button>
+                      </div>
                     </div>
 
-                    {supplierIngredients.length > 0 ? (
-                      <div className="rounded-xl border border-border/40 overflow-hidden max-h-[220px] overflow-y-auto">
-                        <Table>
-                          <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm z-10">
-                            <TableRow>
-                              <TableHead className="text-xs font-bold py-2">Ingrediente</TableHead>
-                              <TableHead className="text-xs font-bold py-2">Categoría</TableHead>
-                              <TableHead className="text-right text-xs font-bold py-2">Costo/Unidad</TableHead>
-                              <TableHead className="text-center text-xs font-bold py-2">Stock Actual</TableHead>
-                              <TableHead className="text-center text-xs font-bold py-2">Stock Mínimo</TableHead>
-                              <TableHead className="w-10 py-2 text-center"></TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {supplierIngredients.map((ing) => (
-                              <TableRow key={ing.id} className="hover:bg-muted/20">
-                                <TableCell className="py-2 text-xs font-semibold text-foreground">
-                                  {ing.name}
-                                  {ing.notes && (
-                                    <span className="block text-[10px] text-muted-foreground font-normal">
-                                      {ing.notes}
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="py-2 text-xs text-muted-foreground">
-                                  {ing.category || 'General'}
-                                </TableCell>
-                                <TableCell className="py-2 text-right text-xs font-mono text-muted-foreground">
-                                  ${Number(ing.cost_per_unit || 0).toFixed(2)} / {ing.unit}
-                                </TableCell>
-                                <TableCell className="py-2 text-center">
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-[9px] font-bold ${
-                                      ing.stock <= ing.min_stock
-                                        ? 'border-red-500/30 text-red-500 bg-red-500/10'
-                                        : 'border-border/60 text-foreground bg-muted/40'
-                                    }`}
-                                  >
-                                    {ing.stock} {ing.unit}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="py-2 text-center text-xs text-muted-foreground font-mono">
-                                  {ing.min_stock} {ing.unit}
-                                </TableCell>
-                                <TableCell className="py-2 text-center">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-6 w-6 text-muted-foreground hover:text-destructive rounded-md"
-                                    onClick={() => handleUnlinkIngredient(ing)}
-                                    title={`Desvincular "${ing.name}"`}
-                                  >
-                                    <Unlink className="h-3 w-3" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ) : (
-                      <div className="text-center py-6 px-4 bg-muted/10 rounded-xl border border-dashed border-border/60">
-                        <FlaskConical className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1" />
-                        <p className="text-xs text-muted-foreground">
-                          No hay ingredientes o materia prima vinculados a este proveedor.
-                        </p>
+                    {!isIngredientsMinimized && (
+                      <div className="pt-1">
+                        {supplierIngredients.length > 0 ? (
+                          <div className="rounded-xl border border-border/40 overflow-hidden max-h-[220px] overflow-y-auto">
+                            <Table>
+                              <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm z-10">
+                                <TableRow>
+                                  <TableHead className="text-xs font-bold py-2">Ingrediente</TableHead>
+                                  <TableHead className="text-xs font-bold py-2">Categoría</TableHead>
+                                  <TableHead className="text-right text-xs font-bold py-2">Costo/Unidad</TableHead>
+                                  <TableHead className="text-center text-xs font-bold py-2">Stock Actual</TableHead>
+                                  <TableHead className="text-center text-xs font-bold py-2">Stock Mínimo</TableHead>
+                                  <TableHead className="w-10 py-2 text-center"></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {supplierIngredients.map((ing) => (
+                                  <TableRow key={ing.id} className="hover:bg-muted/20">
+                                    <TableCell className="py-2 text-xs font-semibold text-foreground">
+                                      {ing.name}
+                                      {ing.notes && (
+                                        <span className="block text-[10px] text-muted-foreground font-normal">
+                                          {ing.notes}
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="py-2 text-xs text-muted-foreground">
+                                      {ing.category || 'General'}
+                                    </TableCell>
+                                    <TableCell className="py-2 text-right text-xs font-mono text-muted-foreground">
+                                      ${Number(ing.cost_per_unit || 0).toFixed(2)} / {ing.unit}
+                                    </TableCell>
+                                    <TableCell className="py-2 text-center">
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-[9px] font-bold ${
+                                          ing.stock <= ing.min_stock
+                                            ? 'border-red-500/30 text-red-500 bg-red-500/10'
+                                            : 'border-border/60 text-foreground bg-muted/40'
+                                        }`}
+                                      >
+                                        {ing.stock} {ing.unit}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="py-2 text-center text-xs text-muted-foreground font-mono">
+                                      {ing.min_stock} {ing.unit}
+                                    </TableCell>
+                                    <TableCell className="py-2 text-center">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 text-muted-foreground hover:text-destructive rounded-md"
+                                        onClick={() => handleUnlinkIngredient(ing)}
+                                        title={`Desvincular "${ing.name}"`}
+                                      >
+                                        <Unlink className="h-3 w-3" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 px-4 bg-muted/10 rounded-xl border border-dashed border-border/60">
+                            <FlaskConical className="h-5 w-5 mx-auto text-muted-foreground/40 mb-1" />
+                            <p className="text-xs text-muted-foreground">
+                              No hay ingredientes o materia prima vinculados a este proveedor.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
