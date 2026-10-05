@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Truck, Landmark, Sparkles } from 'lucide-react';
+import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Truck, Landmark, Sparkles, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ClientReportDialog } from '@/components/ClientReportDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -381,6 +382,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </div>
                 )}
 
+                {/* Botón de Generar Reporte / Contacto */}
+                <ClientReportDialog />
+
                 {/* User Dropdown / Profile Avatar */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -422,6 +426,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       )}
                     </div>
 
+                    <ClientReportDialog
+                      trigger={
+                        <DropdownMenuItem
+                          onSelect={(e) => e.preventDefault()}
+                          className="cursor-pointer text-xs font-semibold py-2 rounded-xl text-emerald-600 dark:text-emerald-400 focus:text-emerald-500"
+                        >
+                          <MessageSquarePlus className="h-4 w-4 mr-2 text-emerald-500" /> Generar Reporte / Ayuda
+                        </DropdownMenuItem>
+                      }
+                    />
+
                     <DropdownMenuItem
                       onSelect={triggerQuickGuide}
                       onClick={triggerQuickGuide}
@@ -429,6 +444,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     >
                       <Sparkles className="h-4 w-4 mr-2 text-emerald-400" /> Guía Rápida
                     </DropdownMenuItem>
+
                     <DropdownMenuItem
                       onSelect={() => navigate('/subscription')}
                       onClick={() => navigate('/subscription')}

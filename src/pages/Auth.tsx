@@ -409,14 +409,28 @@ const Auth = () => {
         throw error;
       }
 
+      // Enviar correo de bienvenida al nuevo cliente registrado
+      try {
+        supabase.functions.invoke('send-welcome-email', {
+          body: {
+            email: cleanEmail,
+            fullName: fullName,
+            companyName: companyName,
+          }
+        }).catch((err) => console.warn('Error enviando correo de bienvenida:', err));
+      } catch (e) {
+        console.warn('Silent error sending welcome email:', e);
+      }
+
       // Mark that user just registered to show the minimalist quick guide
       localStorage.setItem('cobro_show_quick_guide', 'true');
 
       setLoading(false);
       toast({
         title: 'Registro exitoso',
-        description: 'Te hemos enviado un email de confirmación. Revisa tu bandeja de entrada.'
+        description: '¡Bienvenido a Cobro App! Te hemos enviado un correo de bienvenida.'
       });
+
 
       if (signUpData?.session) {
         navigate('/app', { replace: true });
