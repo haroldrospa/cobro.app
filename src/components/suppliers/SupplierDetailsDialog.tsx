@@ -404,40 +404,34 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
             <DialogDescription>Ficha completa del proveedor, productos asociados y deudas</DialogDescription>
           </DialogHeader>
           {/* Header Banner */}
-          <div className="p-5 sm:p-6 bg-muted/40 border-b border-border/50 rounded-t-3xl">
+          <div className="p-5 sm:p-6 bg-muted/20 border-b border-border/40 rounded-t-3xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div
-                  className={`h-13 w-13 rounded-2xl flex items-center justify-center text-xl font-black shrink-0 ${
-                    hasDebt
-                      ? 'bg-red-500/10 text-red-500 border border-red-500/20'
-                      : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                  }`}
-                >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-muted/60 text-foreground border border-border/50 flex items-center justify-center text-sm font-bold shrink-0">
                   {supplier.name?.charAt(0).toUpperCase() || 'P'}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-xl font-black text-foreground tracking-tight">{supplier.name}</h2>
+                    <h2 className="text-lg font-bold text-foreground tracking-tight">{supplier.name}</h2>
                     {isTransfer ? (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-[10px] font-bold">
-                        💳 Transferencia
+                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[10px] font-medium">
+                        Transferencia
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] font-bold">
-                        💵 Efectivo
+                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[10px] font-medium">
+                        Efectivo
                       </Badge>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3 flex-wrap">
+                  <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2.5 flex-wrap">
                     <span>
-                      RNC / Cédula: <strong className="font-mono text-foreground">{supplier.rnc || 'N/A'}</strong>
+                      RNC / Cédula: <strong className="font-mono text-foreground font-medium">{supplier.rnc || 'N/A'}</strong>
                     </span>
                     {supplier.created_at && isValid(new Date(supplier.created_at)) && (
                       <>
                         <span>•</span>
                         <span>
-                          Registrado: <strong className="text-foreground">{format(new Date(supplier.created_at), 'dd/MM/yyyy')}</strong>
+                          Registrado: <strong className="text-foreground font-medium">{format(new Date(supplier.created_at), 'dd/MM/yyyy')}</strong>
                         </span>
                       </>
                     )}
@@ -445,11 +439,11 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                     <span>
                       Deuda Pendiente:{' '}
                       {hasDebt ? (
-                        <span className="text-red-500 font-black">
+                        <strong className="text-foreground font-bold">
                           RD$ {outstandingDebt.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                        </span>
+                        </strong>
                       ) : (
-                        <span className="text-emerald-500 font-bold">Al Día (Sin Deuda)</span>
+                        <span className="text-muted-foreground">Al Día</span>
                       )}
                     </span>
                   </div>
@@ -461,18 +455,18 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 px-3 text-xs font-bold rounded-xl gap-1.5"
+                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5"
                   onClick={() => {
                     onOpenChange(false);
                     onOpenEdit(supplier);
                   }}
                 >
-                  <Pencil className="h-3.5 w-3.5 text-amber-500" />
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
                   Editar
                 </Button>
                 <Button
                   size="sm"
-                  className="h-9 px-3.5 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-500 text-white gap-1.5 shadow-sm"
+                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={() => onOpenAddDebt(supplier)}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -482,13 +476,13 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
             </div>
 
             {/* Quick Contact & Bank Bar */}
-            <div className="mt-4 pt-3.5 border-t border-border/40 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div className="mt-4 pt-3 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
               {/* Phone Empresa */}
-              <div className="flex items-center gap-2 bg-background/60 p-2.5 rounded-xl border border-border/40">
-                <Phone className="h-4 w-4 text-emerald-500 shrink-0" />
+              <div className="flex items-center gap-2 bg-background/50 p-2.5 rounded-xl border border-border/40">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Tel. Empresa</span>
-                  <span className="font-bold truncate font-mono block text-xs">
+                  <span className="font-semibold truncate font-mono block text-xs text-foreground">
                     {supplier.phone || 'No especificado'}
                   </span>
                 </div>
@@ -496,7 +490,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   <div className="flex gap-1">
                     <a
                       href={`tel:${getCleanPhone(supplier.phone)}`}
-                      className="p-1.5 bg-muted/60 hover:bg-emerald-500/10 text-emerald-500 rounded-lg transition-colors"
+                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                       title="Llamar a Empresa"
                     >
                       <Phone className="h-3.5 w-3.5" />
@@ -505,7 +499,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       href={`https://wa.me/${getCleanPhone(supplier.phone)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 bg-muted/60 hover:bg-emerald-500/10 text-emerald-500 rounded-lg transition-colors"
+                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                       title="WhatsApp Empresa"
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
@@ -515,13 +509,13 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               </div>
 
               {/* Contact & Contact Phone */}
-              <div className="flex items-center gap-2 bg-background/60 p-2.5 rounded-xl border border-border/40">
-                <MessageCircle className="h-4 w-4 text-teal-500 shrink-0" />
+              <div className="flex items-center gap-2 bg-background/50 p-2.5 rounded-xl border border-border/40">
+                <MessageCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] text-muted-foreground uppercase font-semibold block">
                     Contacto: {supplier.contact || 'No registrado'}
                   </span>
-                  <span className="font-bold truncate font-mono block text-xs">
+                  <span className="font-semibold truncate font-mono block text-xs text-foreground">
                     {supplier.contact_phone || (supplier.contact ? 'Sin teléfono directo' : 'No especificado')}
                   </span>
                 </div>
@@ -529,7 +523,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   <div className="flex gap-1">
                     <a
                       href={`tel:${getCleanPhone(supplier.contact_phone)}`}
-                      className="p-1.5 bg-muted/60 hover:bg-teal-500/10 text-teal-500 rounded-lg transition-colors"
+                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                       title="Llamar al Contacto"
                     >
                       <Phone className="h-3.5 w-3.5" />
@@ -538,7 +532,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       href={`https://wa.me/${getCleanPhone(supplier.contact_phone)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 bg-muted/60 hover:bg-teal-500/10 text-teal-500 rounded-lg transition-colors"
+                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                       title="WhatsApp al Contacto"
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
@@ -548,9 +542,9 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               </div>
 
               {/* Bank Account */}
-              <div className="flex items-center justify-between gap-3 bg-background/60 p-2.5 rounded-xl border border-border/40">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <Landmark className="h-4 w-4 text-blue-500 shrink-0" />
+              <div className="flex items-center justify-between gap-2.5 bg-background/50 p-2.5 rounded-xl border border-border/40">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <div className="min-w-0 flex-1">
                     <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Cuenta Bancaria</span>
                     <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
@@ -575,7 +569,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 px-2 text-[10px] font-bold rounded-lg text-primary hover:bg-primary/10 gap-1 shrink-0"
+                    className="h-7 px-2 text-[10px] font-semibold rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 gap-1 shrink-0"
                     onClick={handleCopyAccount}
                   >
                     {copiedAccount ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -589,37 +583,34 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
           {/* Body Tabs */}
           <div className="p-5 sm:p-6 space-y-4">
             <Tabs value={currentTab} onValueChange={(val) => setCurrentTab(val as any)} className="w-full">
-              <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/40 h-9 w-fit flex items-center gap-1 mb-4 flex-wrap">
-                <TabsTrigger value="overview" className="rounded-lg px-3.5 h-7 text-xs font-bold gap-1.5">
-                  <Building2 className="h-3.5 w-3.5 text-primary" />
+              <TabsList className="bg-muted/30 p-1 rounded-xl border border-border/30 h-9 w-fit flex items-center gap-1 mb-4 flex-wrap">
+                <TabsTrigger value="overview" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
                   Productos y Deudas
                 </TabsTrigger>
-                <TabsTrigger value="products" className="rounded-lg px-3.5 h-7 text-xs font-bold gap-1.5">
-                  <Package className="h-3.5 w-3.5 text-primary" />
+                <TabsTrigger value="products" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
                   Productos {supplierIngredients.length > 0 ? `e Ingredientes (${supplierProducts.length + supplierIngredients.length})` : `(${supplierProducts.length})`}
                 </TabsTrigger>
-                <TabsTrigger value="debts" className="rounded-lg px-3.5 h-7 text-xs font-bold">
+                <TabsTrigger value="debts" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
                   Solo Deudas ({supplierDebts.length})
                 </TabsTrigger>
-                <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-bold">
+                <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
                   Historial de Pagos ({supplierExpenses.length})
                 </TabsTrigger>
               </TabsList>
 
               {/* Tab Principal Unificado: Productos y Deudas Juntos */}
-              <TabsContent value="overview" className="space-y-6 outline-none">
+              <TabsContent value="overview" className="space-y-4 outline-none">
                 {/* 1. SECCIÓN DE CUENTAS POR PAGAR (DEUDAS) */}
-                <div className="bg-card rounded-2xl border border-border/50 p-4 space-y-3 shadow-xs">
+                <div className="bg-card rounded-2xl border border-border/40 p-4 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                      <Receipt className="h-4 w-4 text-rose-500" />
-                      <h3 className="text-sm font-black text-foreground">Cuentas por Pagar</h3>
+                      <h3 className="text-sm font-bold text-foreground">Cuentas por Pagar</h3>
                       {hasDebt ? (
-                        <Badge variant="outline" className="bg-rose-500/10 text-rose-500 border-rose-500/30 text-[10px] font-bold">
+                        <Badge variant="outline" className="bg-muted/50 text-foreground border-border/50 text-[10px] font-medium">
                           RD$ {outstandingDebt.toLocaleString('es-DO', { minimumFractionDigits: 2 })} Pendiente
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px] font-bold">
+                        <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 text-[10px] font-medium">
                           Al Día
                         </Badge>
                       )}
@@ -629,28 +620,27 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => onOpenAddDebt(supplier)}
-                      className="h-8 text-xs font-bold gap-1 rounded-xl text-rose-500 border-rose-500/30 hover:bg-rose-500/10"
+                      className="h-7 text-xs font-medium gap-1 rounded-lg"
                     >
                       <Plus className="h-3.5 w-3.5" /> Registrar Deuda
                     </Button>
                   </div>
 
                   {supplierDebts.length === 0 ? (
-                    <div className="p-3.5 bg-muted/20 rounded-xl border border-border/40 text-xs text-muted-foreground flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
-                      <span>No hay deudas ni facturas pendientes registradas con este proveedor.</span>
+                    <div className="p-3.5 bg-muted/20 rounded-xl border border-border/40 text-xs text-muted-foreground">
+                      No hay deudas ni facturas pendientes registradas con este proveedor.
                     </div>
                   ) : (
                     <div className="rounded-xl border border-border/40 overflow-hidden">
                       <Table>
                         <TableHeader className="bg-muted/30">
                           <TableRow>
-                            <TableHead className="text-xs font-bold py-2">Concepto / Vencimiento</TableHead>
-                            <TableHead className="text-right text-xs font-bold py-2">Monto</TableHead>
-                            <TableHead className="text-right text-xs font-bold py-2">Pagado</TableHead>
-                            <TableHead className="text-right text-xs font-bold py-2">Pendiente</TableHead>
-                            <TableHead className="text-center text-xs font-bold py-2">Estado</TableHead>
-                            <TableHead className="text-right text-xs font-bold py-2">Acciones</TableHead>
+                            <TableHead className="text-xs font-semibold py-2">Concepto / Vencimiento</TableHead>
+                            <TableHead className="text-right text-xs font-semibold py-2">Monto</TableHead>
+                            <TableHead className="text-right text-xs font-semibold py-2">Pagado</TableHead>
+                            <TableHead className="text-right text-xs font-semibold py-2">Pendiente</TableHead>
+                            <TableHead className="text-center text-xs font-semibold py-2">Estado</TableHead>
+                            <TableHead className="text-right text-xs font-semibold py-2">Acciones</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -660,35 +650,33 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                             return (
                               <TableRow key={debt.id} className="hover:bg-muted/20">
                                 <TableCell className="py-2 text-xs">
-                                  <span className="font-bold text-foreground block">{debt.description}</span>
-                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                                  <span className="font-semibold text-foreground block">{debt.description}</span>
+                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5 font-mono">
                                     <span>{debt.category}</span>
                                     {debt.due_date && (
                                       <>
                                         <span>•</span>
-                                        <span className="flex items-center gap-1 font-mono text-amber-500">
-                                          <Calendar className="h-3 w-3" /> Vence: {debt.due_date}
-                                        </span>
+                                        <span>Vence: {debt.due_date}</span>
                                       </>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="py-2 text-right text-xs font-mono font-semibold">
+                                <TableCell className="py-2 text-right text-xs font-mono font-medium text-foreground">
                                   ${Number(debt.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                 </TableCell>
-                                <TableCell className="py-2 text-right text-xs font-mono text-emerald-500 font-semibold">
+                                <TableCell className="py-2 text-right text-xs font-mono text-muted-foreground">
                                   ${Number(debt.amount_paid).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                 </TableCell>
-                                <TableCell className="py-2 text-right text-xs font-mono text-red-500 font-black">
+                                <TableCell className="py-2 text-right text-xs font-mono font-semibold text-foreground">
                                   ${rem.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                 </TableCell>
                                 <TableCell className="py-2 text-center">
                                   {isPaid ? (
-                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[9px] font-bold">
+                                    <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[9px] font-medium">
                                       Pagado
                                     </Badge>
                                   ) : (
-                                    <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-[9px] font-bold">
+                                    <Badge variant="outline" className="bg-muted/40 text-foreground border-border/40 text-[9px] font-medium">
                                       Pendiente
                                     </Badge>
                                   )}
@@ -699,7 +687,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
+                                        className="h-6 px-2.5 text-[10px] font-medium rounded-md hover:bg-muted/40 text-foreground"
                                         onClick={() => onOpenPayDebt(debt)}
                                       >
                                         Pagar
@@ -709,12 +697,12 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                                       size="icon"
                                       variant="ghost"
                                       disabled={deletingDebtId === debt.id}
-                                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                      className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
                                       onClick={() => handleDeleteDebtClick(debt.id, debt.description)}
                                       title="Eliminar Factura / Deuda"
                                     >
                                       {deletingDebtId === debt.id ? (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                                       ) : (
                                         <Trash2 className="h-3.5 w-3.5" />
                                       )}
@@ -731,17 +719,16 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 </div>
 
                 {/* 2. SECCIÓN DE PRODUCTOS ASOCIADOS */}
-                <div className="bg-card rounded-2xl border border-border/50 p-3.5 space-y-3 shadow-xs">
+                <div className="bg-card rounded-2xl border border-border/40 p-3.5 space-y-3 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div 
-                      className="flex items-center gap-2 flex-wrap cursor-pointer select-none group"
+                      className="flex items-center gap-2 flex-wrap cursor-pointer select-none"
                       onClick={() => setIsProductsMinimized(!isProductsMinimized)}
                     >
-                      <Package className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                      <h3 className="text-sm font-black text-foreground group-hover:text-primary transition-colors">
+                      <h3 className="text-sm font-bold text-foreground">
                         Productos Asociados
                       </h3>
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold">
+                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[10px] font-medium">
                         {supplierProducts.length} {supplierProducts.length === 1 ? 'artículo' : 'artículos'}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
@@ -758,17 +745,18 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                           setLinkingSearch('');
                           setIsLinkingModalOpen(true);
                         }}
-                        className="h-7 text-xs font-bold gap-1 rounded-xl border-primary/30 text-primary hover:bg-primary/10"
+                        className="h-7 text-xs font-medium rounded-lg"
                       >
-                        <Link2 className="h-3 w-3" /> Vincular Productos
+                        Vincular Productos
                       </Button>
                       <Button
                         size="sm"
+                        variant="outline"
                         onClick={() => {
                           setEditingProduct(undefined);
                           setIsProductFormOpen(true);
                         }}
-                        className="h-7 text-xs font-bold gap-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                        className="h-7 text-xs font-medium gap-1 rounded-lg"
                       >
                         <Plus className="h-3 w-3" /> Nuevo
                       </Button>
@@ -776,10 +764,10 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                         size="sm"
                         variant="ghost"
                         onClick={() => setIsProductsMinimized(!isProductsMinimized)}
-                        className="h-7 px-2 text-xs font-bold rounded-xl gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                        className="h-7 px-2 text-xs font-medium rounded-lg gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                         title={isProductsMinimized ? "Expandir productos" : "Minimizar productos"}
                       >
-                        <span className="text-[11px] font-medium hidden sm:inline">
+                        <span className="text-[11px] hidden sm:inline">
                           {isProductsMinimized ? 'Expandir' : 'Minimizar'}
                         </span>
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", !isProductsMinimized && "rotate-180")} />
@@ -959,11 +947,10 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   <div className="mt-3 pt-3 border-t border-border/40 space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div 
-                        className="flex items-center gap-1.5 cursor-pointer select-none group"
+                        className="flex items-center gap-1.5 cursor-pointer select-none"
                         onClick={() => setIsIngredientsMinimized(!isIngredientsMinimized)}
                       >
-                        <FlaskConical className="h-3.5 w-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                        <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                        <p className="text-xs font-semibold text-foreground">
                           Materia Prima / Ingredientes ({supplierIngredients.length})
                         </p>
                       </div>
@@ -972,23 +959,23 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-6 px-2 text-[11px] font-bold rounded-xl gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                          className="h-6 px-2 text-[11px] font-medium rounded-lg"
                           onClick={() => {
                             setSelectedIngredientIds(new Set());
                             setLinkingIngredientsSearch('');
                             setIsLinkingIngredientsModalOpen(true);
                           }}
                         >
-                          <Link2 className="h-3 w-3" /> Vincular Ingredientes
+                          Vincular Ingredientes
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => setIsIngredientsMinimized(!isIngredientsMinimized)}
-                          className="h-6 px-1.5 text-xs font-bold rounded-xl gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          className="h-6 px-1.5 text-xs font-medium rounded-lg gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                           title={isIngredientsMinimized ? "Expandir ingredientes" : "Minimizar ingredientes"}
                         >
-                          <span className="text-[10px] font-medium hidden sm:inline">
+                          <span className="text-[10px] hidden sm:inline">
                             {isIngredientsMinimized ? 'Expandir' : 'Minimizar'}
                           </span>
                           <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", !isIngredientsMinimized && "rotate-180")} />
