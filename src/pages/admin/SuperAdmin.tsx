@@ -205,6 +205,11 @@ const SuperAdmin = () => {
     const [newNoteType, setNewNoteType] = useState<string>("call");
     const [isSendingWelcomeEmail, setIsSendingWelcomeEmail] = useState<string | null>(null);
 
+    // ESTADO PARA EDICIÓN DE TELÉFONO DE CLIENTE
+    const [editingPhoneStore, setEditingPhoneStore] = useState<{ id: string; store_name: string; phone: string } | null>(null);
+    const [phoneInputValue, setPhoneInputValue] = useState<string>("");
+    const [notePhoneInput, setNotePhoneInput] = useState<string>("");
+
     // ESTADO PARA MODAL DE REPORTES GENERADOS POR EL CLIENTE
     const [reportsStore, setReportsStore] = useState<any | null>(null);
     const [adminResponseInput, setAdminResponseInput] = useState<Record<string, string>>({});
@@ -309,6 +314,37 @@ const SuperAdmin = () => {
         },
         onError: (err: any) => {
             toast.error("Error al actualizar reporte: " + err.message);
+        }
+    });
+
+    // Mutación para guardar o actualizar teléfono de cliente
+    const updateClientPhoneMutation = useMutation({
+        mutationFn: async ({ storeId, phone }: { storeId: string; phone: string }) => {
+            const clean = phone.trim();
+            try {
+                // @ts-ignore
+                const { data, error } = await supabase.rpc("admin_update_client_phone", {
+                    p_store_id: storeId,
+                    p_phone: clean
+                });
+                if (error) throw error;
+                return data;
+            } catch (rpcErr) {
+                console.warn("RPC admin_update_client_phone fallback to direct updates:", rpcErr);
+                // Fallback directo a company_settings y profiles
+                await supabase.from("company_settings").upsert({ store_id: storeId, phone: clean });
+                await supabase.from("profiles").update({ phone: clean }).eq("store_id", storeId);
+                return { success: true };
+            }
+        },
+        onSuccess: () => {
+            toast.success("Teléfono guardado exitosamente");
+            setEditingPhoneStore(null);
+            setPhoneInputValue("");
+            refetchStores();
+        },
+        onError: (err: any) => {
+            toast.error("Error al guardar teléfono: " + err.message);
         }
     });
 
@@ -676,9 +712,12 @@ const SuperAdmin = () => {
             const latestNote = storeNotes[0] || null;
             const followUpStatus = latestNote?.status || store.latest_follow_up_status || 'new';
             const totalReportsCount = storeReports.length + (Number(store.reports_count) || 0);
+            const reportWithPhone = storeReports.find((r: any) => r.contact_phone && r.contact_phone.trim() !== '');
+            const resolvedPhone = store.owner_phone || reportWithPhone?.contact_phone || '';
 
             return {
                 ...store,
+                owner_phone: resolvedPhone,
                 support_reports: storeReports,
                 monthly_reports_count: monthlyReports.length,
                 follow_up_notes: storeNotes,
@@ -1650,13 +1689,13 @@ const SuperAdmin = () => {
                                                         <TableCell className="py-3.5">
                                                             <div className="flex flex-col gap-1 text-xs">
                                                                 {store.owner_phone ? (
-                                                                    <div className="flex items-center gap-1.5">
+                                                                    <div className="flex items-center gap-1.5 flex-wrap">
                                                                         <a
                                                                             href={`tel:${store.owner_phone}`}
-                                                                            className="font-mono font-semibold text-foreground hover:text-emerald-500 flex items-center gap-1 transition-colors"
+                                                                            className="font-mono font-bold text-foreground hover:text-emerald-500 flex items-center gap-1 transition-colors text-xs"
                                                                             title={`Llamar a ${store.owner_phone}`}
                                                                         >
-                                                                            <Phone className="h-3 w-3 text-emerald-500 shrink-0" />
+                                                                            <Phone className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                                                                             <span>{store.owner_phone}</span>
                                                                         </a>
                                                                         <a
@@ -1668,9 +1707,39 @@ const SuperAdmin = () => {
                                                                         >
                                                                             <MessageCircle className="h-3 w-3" />
                                                                         </a>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setEditingPhoneStore({
+                                                                                    id: store.id,
+                                                                                    store_name: store.store_name || "Comercio",
+                                                                                    phone: store.owner_phone || ""
+                                                                                });
+                                                                                setPhoneInputValue(store.owner_phone || "");
+                                                                            }}
+                                                                            className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                                                                            title="Editar número de teléfono"
+                                                                        >
+                                                                            <Pencil className="h-2.5 w-2.5" />
+                                                                        </button>
                                                                     </div>
                                                                 ) : (
-                                                                    <span className="text-[10px] text-muted-foreground/60 italic">Sin teléfono</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setEditingPhoneStore({
+                                                                                id: store.id,
+                                                                                store_name: store.store_name || "Comercio",
+                                                                                phone: ""
+                                                                            });
+                                                                            setPhoneInputValue("");
+                                                                        }}
+                                                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-500 hover:underline"
+                                                                        title="Haz clic para registrar el teléfono de este cliente"
+                                                                    >
+                                                                        <Phone className="h-3 w-3" />
+                                                                        <span>+ Agregar Teléfono</span>
+                                                                    </button>
                                                                 )}
                                                                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate max-w-[180px]" title={store.owner_email}>
                                                                     <Mail className="h-3 w-3 shrink-0 text-muted-foreground/60" />
@@ -1687,6 +1756,7 @@ const SuperAdmin = () => {
                                                                 onClick={() => {
                                                                     setCrmStore(store);
                                                                     setNewNoteStatus(store.follow_up_status || 'called');
+                                                                    setNotePhoneInput(store.owner_phone || '');
                                                                 }}
                                                                 title="Haz clic para cambiar estado o registrar nota"
                                                             >
@@ -1736,7 +1806,62 @@ const SuperAdmin = () => {
 
                                                         {/* COL 6: ACCIONES */}
                                                         <TableCell className="py-3.5 pr-5 text-right">
-                                                            <div className="inline-flex items-center gap-1.5 justify-end">
+                                                            <div className="inline-flex items-center gap-1.5 justify-end flex-wrap">
+                                                                {store.owner_phone ? (
+                                                                    <>
+                                                                        {/* Botón Llamar con número */}
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            asChild
+                                                                            className="h-7 text-xs font-bold rounded-lg border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-1 px-2"
+                                                                            title={`Llamar a ${store.owner_phone}`}
+                                                                        >
+                                                                            <a href={`tel:${store.owner_phone}`}>
+                                                                                <Phone className="h-3 w-3 text-emerald-500" />
+                                                                                <span className="font-mono">{store.owner_phone}</span>
+                                                                            </a>
+                                                                        </Button>
+
+                                                                        {/* Botón WhatsApp Directo */}
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            asChild
+                                                                            className="h-7 text-xs font-bold rounded-lg border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-1 px-2"
+                                                                            title="Enviar WhatsApp"
+                                                                        >
+                                                                            <a
+                                                                                href={getWhatsAppUrl(store.owner_phone, store.owner_name, store.store_name) || '#'}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                            >
+                                                                                <MessageCircle className="h-3.5 w-3.5" />
+                                                                                <span>WhatsApp</span>
+                                                                            </a>
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => {
+                                                                            setEditingPhoneStore({
+                                                                                id: store.id,
+                                                                                store_name: store.store_name || "Comercio",
+                                                                                phone: ""
+                                                                            });
+                                                                            setPhoneInputValue("");
+                                                                        }}
+                                                                        className="h-7 text-xs font-bold rounded-lg border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-1 px-2"
+                                                                        title="Registrar número para llamar o mandar WhatsApp"
+                                                                    >
+                                                                        <Phone className="h-3 w-3" />
+                                                                        <span>+ Teléfono</span>
+                                                                    </Button>
+                                                                )}
+
+                                                                {/* Botón Correo Bienvenida */}
                                                                 <Button
                                                                     size="sm"
                                                                     variant="ghost"
@@ -1752,11 +1877,13 @@ const SuperAdmin = () => {
                                                                     )}
                                                                 </Button>
 
+                                                                {/* Botón Registrar Nota */}
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => {
                                                                         setCrmStore(store);
                                                                         setNewNoteStatus(store.follow_up_status || 'called');
+                                                                        setNotePhoneInput(store.owner_phone || '');
                                                                     }}
                                                                     className="h-7 text-xs font-bold rounded-lg bg-purple-600 hover:bg-purple-500 text-white gap-1 px-2.5 shadow-sm"
                                                                 >
@@ -2448,13 +2575,14 @@ const SuperAdmin = () => {
                                 </div>
                             </div>
 
-                            {crmStore?.owner_phone && (
+                            {crmStore?.owner_phone ? (
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     <Button
                                         size="sm"
                                         variant="outline"
                                         asChild
                                         className="h-8 text-xs font-bold rounded-xl border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-1 px-2.5"
+                                        title={`Llamar a ${crmStore.owner_phone}`}
                                     >
                                         <a href={`tel:${crmStore.owner_phone}`}>
                                             <Phone className="h-3.5 w-3.5" />
@@ -2477,7 +2605,41 @@ const SuperAdmin = () => {
                                             <MessageCircle className="h-4 w-4" />
                                         </a>
                                     </Button>
+
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            setEditingPhoneStore({
+                                                id: crmStore.id,
+                                                store_name: crmStore.store_name || "Comercio",
+                                                phone: crmStore.owner_phone || ""
+                                            });
+                                            setPhoneInputValue(crmStore.owner_phone || "");
+                                        }}
+                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                        title="Editar teléfono"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
                                 </div>
+                            ) : (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setEditingPhoneStore({
+                                            id: crmStore.id,
+                                            store_name: crmStore.store_name || "Comercio",
+                                            phone: ""
+                                        });
+                                        setPhoneInputValue("");
+                                    }}
+                                    className="h-8 text-xs font-bold rounded-xl border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-1 px-2.5"
+                                >
+                                    <Phone className="h-3.5 w-3.5" />
+                                    <span>+ Agregar Teléfono</span>
+                                </Button>
                             )}
                         </div>
                     </DialogHeader>
@@ -2490,7 +2652,7 @@ const SuperAdmin = () => {
                                 Registrar Nueva Nota de Llamada / Contacto
                             </h4>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-[11px] font-bold text-muted-foreground">Medio de Contacto</Label>
                                     <Select value={newNoteType} onValueChange={setNewNoteType}>
@@ -2523,6 +2685,16 @@ const SuperAdmin = () => {
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                <div className="space-y-1">
+                                    <Label className="text-[11px] font-bold text-muted-foreground">Teléfono del Cliente</Label>
+                                    <Input
+                                        value={notePhoneInput}
+                                        onChange={(e) => setNotePhoneInput(e.target.value)}
+                                        placeholder="Ej: 809-555-1234"
+                                        className="h-9 text-xs rounded-xl bg-background font-mono font-semibold"
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-1">
@@ -2547,6 +2719,12 @@ const SuperAdmin = () => {
                                     disabled={addFollowUpNoteMutation.isPending || !newNoteFeedback.trim()}
                                     onClick={() => {
                                         if (crmStore) {
+                                            if (notePhoneInput.trim() && notePhoneInput.trim() !== crmStore.owner_phone) {
+                                                updateClientPhoneMutation.mutate({
+                                                    storeId: crmStore.id,
+                                                    phone: notePhoneInput.trim()
+                                                });
+                                            }
                                             addFollowUpNoteMutation.mutate({
                                                 storeId: crmStore.id,
                                                 contactType: newNoteType,
@@ -2626,6 +2804,74 @@ const SuperAdmin = () => {
                                     })}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL EDITAR / REGISTRAR TELÉFONO DE CONTACTO */}
+            <Dialog open={!!editingPhoneStore} onOpenChange={(open) => !open && setEditingPhoneStore(null)}>
+                <DialogContent className="max-w-md bg-card border border-border text-foreground rounded-2xl p-6 shadow-2xl">
+                    <DialogHeader className="space-y-2 text-left pb-3 border-b border-border/60">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-600 dark:text-emerald-400">
+                                <Phone className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-base font-bold text-foreground">
+                                    Teléfono del Cliente
+                                </DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground">
+                                    {editingPhoneStore?.store_name}
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-3">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-bold">Número de Teléfono / WhatsApp</Label>
+                            <Input
+                                value={phoneInputValue}
+                                onChange={(e) => setPhoneInputValue(e.target.value)}
+                                placeholder="Ej: 809-555-1234"
+                                className="h-10 text-sm font-mono font-bold rounded-xl bg-background border-border/70 focus:border-emerald-500"
+                                autoFocus
+                            />
+                            <p className="text-[11px] text-muted-foreground">
+                                Este número se usará para llamadas directas y mensajes de WhatsApp desde el Panel Maestro.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setEditingPhoneStore(null)}
+                                className="h-9 text-xs rounded-xl"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={updateClientPhoneMutation.isPending || !phoneInputValue.trim()}
+                                onClick={() => {
+                                    if (editingPhoneStore) {
+                                        updateClientPhoneMutation.mutate({
+                                            storeId: editingPhoneStore.id,
+                                            phone: phoneInputValue.trim()
+                                        });
+                                    }
+                                }}
+                                className="h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl gap-1.5 px-4 shadow-sm"
+                            >
+                                {updateClientPhoneMutation.isPending ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    <Check className="h-3.5 w-3.5" />
+                                )}
+                                <span>Guardar Teléfono</span>
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>
