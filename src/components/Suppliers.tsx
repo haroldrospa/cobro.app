@@ -633,7 +633,7 @@ export const Suppliers: React.FC = () => {
                               {supplier.bank_name || 'Cuenta Bancaria'}
                             </span>
                             {supplier.bank_account_number && (
-                              <span className="font-mono text-[11px] text-muted-foreground">
+                              <span className="font-mono text-[11px] font-bold text-foreground select-all break-all block">
                                 {supplier.bank_account_number}
                                 {supplier.bank_account_type ? ` (${supplier.bank_account_type})` : ''}
                               </span>
@@ -829,12 +829,19 @@ export const Suppliers: React.FC = () => {
                           </div>
 
                           {(supplier.bank_name || supplier.bank_account_number) && (
-                            <div className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
+                            <div className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5 flex-wrap">
                               <Landmark className="h-3 w-3 text-muted-foreground/70 shrink-0" />
-                              <span className="truncate">
-                                {supplier.bank_name || 'Banco'}{' '}
-                                {supplier.bank_account_number ? `• ${supplier.bank_account_number}` : ''}
+                              <span className="font-semibold text-foreground">
+                                {supplier.bank_name || 'Banco'}
                               </span>
+                              {supplier.bank_account_number && (
+                                <>
+                                  <span className="text-muted-foreground/60">•</span>
+                                  <span className="font-bold text-foreground select-all break-all">
+                                    {supplier.bank_account_number}
+                                  </span>
+                                </>
+                              )}
                               {supplier.bank_account_number && (
                                 <button
                                   type="button"

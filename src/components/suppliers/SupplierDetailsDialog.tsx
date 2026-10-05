@@ -540,15 +540,28 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               </div>
 
               {/* Bank Account */}
-              <div className="flex items-center gap-2 bg-background/60 p-2.5 rounded-xl border border-border/40">
-                <Landmark className="h-4 w-4 text-blue-500 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Cuenta Bancaria</span>
-                  <span className="font-mono font-bold truncate block text-xs">
-                    {supplier.bank_name ? `${supplier.bank_name} • ` : ''}
-                    {supplier.bank_account_number || 'Sin cuenta'}
-                    {supplier.bank_account_type ? ` (${supplier.bank_account_type})` : ''}
-                  </span>
+              <div className="flex items-center justify-between gap-3 bg-background/60 p-2.5 rounded-xl border border-border/40">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <Landmark className="h-4 w-4 text-blue-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Cuenta Bancaria</span>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                      {supplier.bank_name && (
+                        <span className="font-semibold text-xs text-foreground">
+                          {supplier.bank_name}
+                          <span className="text-muted-foreground mx-1">•</span>
+                        </span>
+                      )}
+                      <span className="font-mono font-bold text-xs text-foreground tracking-wider select-all break-all">
+                        {supplier.bank_account_number || 'Sin cuenta'}
+                      </span>
+                      {supplier.bank_account_type && (
+                        <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                          ({supplier.bank_account_type})
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 {supplier.bank_account_number && (
                   <Button
