@@ -1535,159 +1535,59 @@ const SuperAdmin = () => {
                 {/* ============================================================== */}
                 {/* TAB: SEGUIMIENTO CRM DE CLIENTES NUEVOS */}
                 {/* ============================================================== */}
-                <TabsContent value="crm" className="space-y-6 outline-none">
-                    {/* Tarjetas Resumen CRM */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                        <Card 
-                            className={`border transition-all rounded-2xl shadow-xs cursor-pointer ${
-                                crmFilter === 'new' ? 'border-yellow-500 bg-yellow-500/10' : 'border-border/60 bg-card/60 hover:border-yellow-500/50'
-                            }`}
-                            onClick={() => setCrmFilter(crmFilter === 'new' ? 'all' : 'new')}
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3.5 px-4">
-                                <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    Nuevos sin contactar
-                                </CardTitle>
-                                <div className="h-7 w-7 rounded-xl bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 flex items-center justify-center font-bold">
-                                    <Sparkles className="h-4 w-4" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-4 pb-3.5">
-                                <div className="text-2xl font-black text-yellow-600 dark:text-yellow-400">
-                                    {newClientsCount}
-                                </div>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    Llamar para dar la bienvenida
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card 
-                            className={`border transition-all rounded-2xl shadow-xs cursor-pointer ${
-                                crmFilter === 'called' ? 'border-blue-500 bg-blue-500/10' : 'border-border/60 bg-card/60 hover:border-blue-500/50'
-                            }`}
-                            onClick={() => setCrmFilter(crmFilter === 'called' ? 'all' : 'called')}
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3.5 px-4">
-                                <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    Llamados / En Seguimiento
-                                </CardTitle>
-                                <div className="h-7 w-7 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-                                    <PhoneCall className="h-4 w-4" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-4 pb-3.5">
-                                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                                    {enrichedStores.filter((s: any) => s.follow_up_status === 'called').length}
-                                </div>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    Con historial de contacto
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card 
-                            className={`border transition-all rounded-2xl shadow-xs cursor-pointer ${
-                                crmFilter === 'has_reports' ? 'border-purple-500 bg-purple-500/10' : 'border-border/60 bg-card/60 hover:border-purple-500/50'
-                            }`}
-                            onClick={() => setCrmFilter(crmFilter === 'has_reports' ? 'all' : 'has_reports')}
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3.5 px-4">
-                                <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    Reportes de Contacto
-                                </CardTitle>
-                                <div className="h-7 w-7 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-                                    <MessageSquarePlus className="h-4 w-4" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-4 pb-3.5">
-                                <div className="text-2xl font-black text-purple-600 dark:text-purple-400">
-                                    {allSupportReports.length}
-                                    <span className="text-xs font-normal text-muted-foreground ml-1">
-                                        ({allSupportReports.filter((r: any) => r.status === 'pending').length} pendientes)
-                                    </span>
-                                </div>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    Solicitudes de ayuda directas
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card 
-                            className={`border transition-all rounded-2xl shadow-xs cursor-pointer ${
-                                crmFilter === 'active' ? 'border-emerald-500 bg-emerald-500/10' : 'border-border/60 bg-card/60 hover:border-emerald-500/50'
-                            }`}
-                            onClick={() => setCrmFilter(crmFilter === 'active' ? 'all' : 'active')}
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3.5 px-4">
-                                <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    Convertidos / Activos
-                                </CardTitle>
-                                <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-4 pb-3.5">
-                                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                                    {enrichedStores.filter((s: any) => s.follow_up_status === 'active').length}
-                                </div>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    Clientes operando con éxito
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Filtros de estado CRM */}
-                    <Card className="border border-border/60 bg-card/60 shadow-xs rounded-2xl overflow-hidden">
+                {/* ============================================================== */}
+                {/* TAB: SEGUIMIENTO CRM DE CLIENTES (DISEÑO SIMPLE Y COMPACTO) */}
+                {/* ============================================================== */}
+                <TabsContent value="crm" className="space-y-4 outline-none">
+                    <Card className="border border-border/60 bg-card/60 shadow-sm rounded-2xl overflow-hidden">
                         <CardHeader className="p-4 sm:p-5 border-b border-border/40 space-y-3">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <div>
                                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                                        <Headphones className="h-5 w-5 text-purple-500" />
-                                        Seguimiento & Llamadas a Clientes Nuevos
+                                        <Headphones className="h-4 w-4 text-purple-500" />
+                                        Seguimiento & Llamadas a Clientes
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        Llama a los dueños de negocios registrados, registra qué dijeron y responde a los reportes que generaron.
+                                        Registro simple de llamadas, notas y atención a reportes generados.
                                     </CardDescription>
                                 </div>
 
                                 <div className="relative w-full sm:w-64">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                                     <Input
-                                        placeholder="Buscar por cliente, tel..."
-                                        className="pl-9 h-9 text-xs rounded-xl"
+                                        placeholder="Buscar cliente, teléfono o email..."
+                                        className="pl-9 h-8 text-xs rounded-xl bg-background/80 border-border/60 focus:border-purple-500"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
                             </div>
 
-                            {/* Píldoras de filtro CRM */}
+                            {/* Píldoras de filtro limpias */}
                             <div className="flex flex-wrap items-center gap-1.5 pt-1">
                                 {[
-                                    { id: 'all', label: 'Todos los Clientes', count: enrichedStores.length },
-                                    { id: 'new', label: 'Nuevos sin contactar', count: newClientsCount, color: 'text-yellow-600' },
-                                    { id: 'has_reports', label: 'Con Reportes Generados', count: storesWithReportsCount, color: 'text-blue-500' },
-                                    { id: 'called', label: 'Llamados / En seguimiento', count: enrichedStores.filter((s: any) => s.follow_up_status === 'called').length, color: 'text-blue-600' },
-                                    { id: 'interested', label: 'Interesados', count: enrichedStores.filter((s: any) => s.follow_up_status === 'interested').length, color: 'text-purple-600' },
-                                    { id: 'active', label: 'Activos / Convertidos', count: enrichedStores.filter((s: any) => s.follow_up_status === 'active').length, color: 'text-emerald-600' },
-                                    { id: 'unreachable', label: 'No contestan', count: enrichedStores.filter((s: any) => s.follow_up_status === 'unreachable').length, color: 'text-amber-600' },
+                                    { id: 'all', label: 'Todos', count: enrichedStores.length },
+                                    { id: 'new', label: 'Nuevos sin contactar', count: newClientsCount },
+                                    { id: 'has_reports', label: 'Con Reportes', count: storesWithReportsCount },
+                                    { id: 'called', label: 'Llamados / En seguimiento', count: enrichedStores.filter((s: any) => s.follow_up_status === 'called').length },
+                                    { id: 'interested', label: 'Interesados', count: enrichedStores.filter((s: any) => s.follow_up_status === 'interested').length },
+                                    { id: 'active', label: 'Activos / Convertidos', count: enrichedStores.filter((s: any) => s.follow_up_status === 'active').length },
+                                    { id: 'unreachable', label: 'No contestan', count: enrichedStores.filter((s: any) => s.follow_up_status === 'unreachable').length },
                                 ].map((pill) => {
                                     const isSelected = crmFilter === pill.id;
                                     return (
                                         <button
                                             key={pill.id}
                                             onClick={() => setCrmFilter(pill.id)}
-                                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
                                                 isSelected 
-                                                    ? 'bg-foreground text-background border-foreground shadow-sm' 
+                                                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm' 
                                                     : 'bg-background/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground'
                                             }`}
                                         >
                                             <span>{pill.label}</span>
                                             <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
-                                                isSelected ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'
+                                                isSelected ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
                                             }`}>
                                                 {pill.count}
                                             </span>
@@ -1697,193 +1597,179 @@ const SuperAdmin = () => {
                             </div>
                         </CardHeader>
 
-                        <CardContent className="p-4 sm:p-5">
+                        <CardContent className="p-0">
                             {filteredCrmStores.length === 0 ? (
                                 <div className="text-center py-12 text-muted-foreground">
-                                    <Headphones className="h-10 w-10 mx-auto mb-2 opacity-30 text-purple-500" />
+                                    <Headphones className="h-8 w-8 mx-auto mb-2 opacity-30 text-purple-500" />
                                     <p className="font-bold text-foreground text-sm">No hay clientes con este filtro</p>
                                     <p className="text-xs mt-0.5">Prueba seleccionando otro filtro de estado arriba.</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {filteredCrmStores.map((store: any) => {
-                                        const crmStatus = getCrmStatusConfig(store.follow_up_status);
-                                        const pendingStoreReports = store.support_reports.filter((r: any) => r.status === 'pending');
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="hover:bg-transparent border-border/40 text-xs">
+                                                <TableHead className="pl-5">Comercio / Cliente</TableHead>
+                                                <TableHead>Contacto</TableHead>
+                                                <TableHead>Estado</TableHead>
+                                                <TableHead>Reportes</TableHead>
+                                                <TableHead className="min-w-[200px] max-w-[320px]">Última Nota / Lo que dijeron</TableHead>
+                                                <TableHead className="text-right pr-5">Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredCrmStores.map((store: any) => {
+                                                const crmStatus = getCrmStatusConfig(store.follow_up_status);
+                                                const pendingStoreReports = store.support_reports.filter((r: any) => r.status === 'pending');
 
-                                        return (
-                                            <Card 
-                                                key={`crm-${store.id}`}
-                                                className="border border-border/70 bg-card hover:border-purple-500/40 transition-all rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between"
-                                            >
-                                                <div className="p-4 sm:p-5 space-y-3">
-                                                    {/* Header Card: Nombre + Estado */}
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center font-black text-purple-600 dark:text-purple-400 text-sm shrink-0">
-                                                                {(store.store_name || 'T')[0].toUpperCase()}
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="font-black text-sm text-foreground leading-tight" title={store.store_name}>
-                                                                    {store.store_name || "Comercio"}
-                                                                </h3>
-                                                                <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                                                                    {store.owner_name || 'Propietario'} • <span className="font-mono text-[11px]">{store.store_code}</span>
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        <Badge 
-                                                            variant="outline" 
-                                                            className={`text-[10px] font-bold shrink-0 cursor-pointer ${crmStatus.color}`}
-                                                            onClick={() => {
-                                                                setCrmStore(store);
-                                                                setNewNoteStatus(store.follow_up_status || 'called');
-                                                            }}
-                                                        >
-                                                            {crmStatus.label}
-                                                        </Badge>
-                                                    </div>
-
-                                                    {/* Datos de contacto */}
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 rounded-xl bg-muted/40 border border-border/40 text-xs">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <Phone className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                                            {store.owner_phone ? (
-                                                                <span className="font-mono font-semibold text-foreground truncate select-all">
-                                                                    {store.owner_phone}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-muted-foreground/60 italic text-[11px]">Sin teléfono registrado</span>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <Mail className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                                                            <span className="font-mono text-muted-foreground truncate select-all" title={store.owner_email}>
-                                                                {store.owner_email || 'Sin correo'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Contador de reportes generados */}
-                                                    <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs">
-                                                        <div className="flex items-center gap-2">
-                                                            <MessageSquare className="h-4 w-4 text-blue-500 shrink-0" />
-                                                            <div>
-                                                                <span className="font-bold text-foreground">
-                                                                    {store.monthly_reports_count}/3 reportes este mes
-                                                                </span>
-                                                                <span className="text-[10px] text-muted-foreground ml-1.5 font-medium">
-                                                                    ({store.total_reports_count} total)
-                                                                </span>
-                                                                {pendingStoreReports.length > 0 && (
-                                                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold ml-1.5 animate-pulse">
-                                                                        ({pendingStoreReports.length} por atender)
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setReportsStore(store)}
-                                                            className="h-7 text-[11px] font-bold rounded-lg border-blue-500/30 text-blue-600 hover:bg-blue-500/10 px-2.5"
-                                                        >
-                                                            Ver Reportes
-                                                        </Button>
-                                                    </div>
-
-                                                    {/* Última nota de llamada */}
-                                                    <div className="p-3 rounded-xl bg-card border border-border/60 text-xs space-y-1">
-                                                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                                                            <span className="font-bold text-foreground flex items-center gap-1">
-                                                                <PhoneCall className="h-3 w-3 text-purple-500" />
-                                                                Último contacto / Lo que dijeron:
-                                                            </span>
-                                                            {store.latest_note?.created_at && (
-                                                                <span className="font-mono text-[10px]">
-                                                                    {new Date(store.latest_note.created_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' })}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {store.latest_note ? (
-                                                            <p className="text-xs text-muted-foreground italic line-clamp-2 pl-4 border-l-2 border-purple-500/40">
-                                                                "{store.latest_note.client_feedback}"
-                                                            </p>
-                                                        ) : (
-                                                            <p className="text-[11px] text-muted-foreground/70 italic">
-                                                                Sin notas de llamada todavía. ¡Llámalo para darle la bienvenida y asesorarlo!
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Barra de botones de acción rápida */}
-                                                <div className="p-3 bg-muted/30 border-t border-border/50 flex flex-wrap items-center justify-between gap-1.5">
-                                                    <div className="flex items-center gap-1.5">
-                                                        {store.owner_phone && (
-                                                            <>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    asChild
-                                                                    className="h-8 text-xs font-bold rounded-xl border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-1.5"
-                                                                >
-                                                                    <a href={`tel:${store.owner_phone}`}>
-                                                                        <Phone className="h-3.5 w-3.5" />
-                                                                        <span>Llamar</span>
-                                                                    </a>
-                                                                </Button>
-
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    asChild
-                                                                    className="h-8 text-xs font-bold rounded-xl border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-1.5"
-                                                                >
-                                                                    <a 
-                                                                        href={getWhatsAppUrl(store.owner_phone, store.owner_name, store.store_name) || '#'}
-                                                                        target="_blank"
-                                                                        rel="noreferrer"
-                                                                    >
-                                                                        <MessageCircle className="h-3.5 w-3.5" />
-                                                                        <span>WhatsApp</span>
-                                                                    </a>
-                                                                </Button>
-                                                            </>
-                                                        )}
-
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => handleSendWelcomeEmail(store)}
-                                                            disabled={isSendingWelcomeEmail === store.id}
-                                                            className="h-8 text-xs font-semibold rounded-xl border-blue-500/30 text-blue-600 hover:bg-blue-500/10 gap-1.5"
-                                                            title="Enviar o reenviar correo de bienvenida"
-                                                        >
-                                                            {isSendingWelcomeEmail === store.id ? (
-                                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                            ) : (
-                                                                <Mail className="h-3.5 w-3.5" />
-                                                            )}
-                                                            <span className="hidden sm:inline">Bienvenida</span>
-                                                        </Button>
-                                                    </div>
-
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setCrmStore(store);
-                                                            setNewNoteStatus(store.follow_up_status || 'called');
-                                                        }}
-                                                        className="h-8 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-500 text-white gap-1.5 shadow-sm"
+                                                return (
+                                                    <TableRow 
+                                                        key={`crm-row-${store.id}`}
+                                                        className="hover:bg-muted/40 transition-colors border-b border-border/30"
                                                     >
-                                                        <Plus className="h-3.5 w-3.5" />
-                                                        <span>Registrar Nota</span>
-                                                    </Button>
-                                                </div>
-                                            </Card>
-                                        );
-                                    })}
+                                                        {/* COL 1: COMERCIO */}
+                                                        <TableCell className="py-3.5 pl-5">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="h-8 w-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center font-black text-purple-600 dark:text-purple-400 text-xs shrink-0">
+                                                                    {(store.store_name || 'T')[0].toUpperCase()}
+                                                                </div>
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="font-bold text-xs text-foreground truncate max-w-[170px]" title={store.store_name}>
+                                                                        {store.store_name || "Comercio"}
+                                                                    </span>
+                                                                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                                                                        <span className="font-medium">{store.owner_name || 'Propietario'}</span>
+                                                                        <span>•</span>
+                                                                        <span className="font-mono bg-muted/60 px-1 rounded">{store.store_code}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+
+                                                        {/* COL 2: CONTACTO */}
+                                                        <TableCell className="py-3.5">
+                                                            <div className="flex flex-col gap-1 text-xs">
+                                                                {store.owner_phone ? (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <a
+                                                                            href={`tel:${store.owner_phone}`}
+                                                                            className="font-mono font-semibold text-foreground hover:text-emerald-500 flex items-center gap-1 transition-colors"
+                                                                            title={`Llamar a ${store.owner_phone}`}
+                                                                        >
+                                                                            <Phone className="h-3 w-3 text-emerald-500 shrink-0" />
+                                                                            <span>{store.owner_phone}</span>
+                                                                        </a>
+                                                                        <a
+                                                                            href={getWhatsAppUrl(store.owner_phone, store.owner_name, store.store_name) || '#'}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="h-5 w-5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 flex items-center justify-center transition-colors"
+                                                                            title="Enviar WhatsApp"
+                                                                        >
+                                                                            <MessageCircle className="h-3 w-3" />
+                                                                        </a>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-muted-foreground/60 italic">Sin teléfono</span>
+                                                                )}
+                                                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate max-w-[180px]" title={store.owner_email}>
+                                                                    <Mail className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                                                                    <span className="truncate">{store.owner_email || 'Sin correo'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+
+                                                        {/* COL 3: ESTADO CRM */}
+                                                        <TableCell className="py-3.5">
+                                                            <Badge 
+                                                                variant="outline" 
+                                                                className={`text-[10px] font-bold cursor-pointer py-0.5 px-2 ${crmStatus.color}`}
+                                                                onClick={() => {
+                                                                    setCrmStore(store);
+                                                                    setNewNoteStatus(store.follow_up_status || 'called');
+                                                                }}
+                                                                title="Haz clic para cambiar estado o registrar nota"
+                                                            >
+                                                                {crmStatus.label}
+                                                            </Badge>
+                                                        </TableCell>
+
+                                                        {/* COL 4: REPORTES */}
+                                                        <TableCell className="py-3.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setReportsStore(store)}
+                                                                className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${
+                                                                    store.monthly_reports_count > 0
+                                                                        ? store.monthly_reports_count >= 3
+                                                                            ? 'bg-rose-500/10 text-rose-600 border-rose-500/30 hover:bg-rose-500/20'
+                                                                            : 'bg-blue-500/10 text-blue-600 border-blue-500/30 hover:bg-blue-500/20'
+                                                                        : 'bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted'
+                                                                }`}
+                                                                title={`Reportes de este mes: ${store.monthly_reports_count}/3 (Total: ${store.total_reports_count})`}
+                                                            >
+                                                                <MessageSquare className="h-3 w-3" />
+                                                                <span>{store.monthly_reports_count}/3 mes</span>
+                                                                {pendingStoreReports.length > 0 && (
+                                                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse ml-0.5" title="Tiene reporte pendiente" />
+                                                                )}
+                                                            </button>
+                                                        </TableCell>
+
+                                                        {/* COL 5: ÚLTIMA NOTA / LO QUE DIJERON */}
+                                                        <TableCell className="py-3.5 max-w-[280px]">
+                                                            {store.latest_note ? (
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <p className="text-xs text-foreground/90 italic truncate" title={store.latest_note.client_feedback}>
+                                                                        "{store.latest_note.client_feedback}"
+                                                                    </p>
+                                                                    <span className="text-[10px] text-muted-foreground/60 font-mono">
+                                                                        {new Date(store.latest_note.created_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' })}
+                                                                    </span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-[11px] text-muted-foreground/50 italic">
+                                                                    Sin notas registradas
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+
+                                                        {/* COL 6: ACCIONES */}
+                                                        <TableCell className="py-3.5 pr-5 text-right">
+                                                            <div className="inline-flex items-center gap-1.5 justify-end">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => handleSendWelcomeEmail(store)}
+                                                                    disabled={isSendingWelcomeEmail === store.id}
+                                                                    className="h-7 w-7 p-0 rounded-lg text-blue-600 hover:text-blue-500 hover:bg-blue-500/10"
+                                                                    title="Enviar correo de bienvenida"
+                                                                >
+                                                                    {isSendingWelcomeEmail === store.id ? (
+                                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                                    ) : (
+                                                                        <Mail className="h-3.5 w-3.5" />
+                                                                    )}
+                                                                </Button>
+
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        setCrmStore(store);
+                                                                        setNewNoteStatus(store.follow_up_status || 'called');
+                                                                    }}
+                                                                    className="h-7 text-xs font-bold rounded-lg bg-purple-600 hover:bg-purple-500 text-white gap-1 px-2.5 shadow-sm"
+                                                                >
+                                                                    <Plus className="h-3 w-3" />
+                                                                    <span>Nota</span>
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             )}
                         </CardContent>
