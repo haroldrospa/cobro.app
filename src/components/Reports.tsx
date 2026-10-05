@@ -1451,8 +1451,21 @@ const Reports = () => {
     const cols = Object.keys(data[0]).map(key => ({ wch: Math.max(key.length, 20) }));
     ws['!cols'] = cols;
 
-    const dateStr = format(new Date(), 'yyyy-MM-dd');
-    XLSX.writeFile(wb, `${fileName}-${dateStr}.xlsx`);
+    // Determinar el nombre del mes para el archivo según el rango seleccionado o fecha actual
+    let monthLabel = '';
+    const refDate = dateRange?.from || new Date();
+    if (dateRange?.from && dateRange?.to) {
+      const fromMonth = format(dateRange.from, 'MMMM', { locale: es });
+      const toMonth = format(dateRange.to, 'MMMM', { locale: es });
+      const capFrom = fromMonth.charAt(0).toUpperCase() + fromMonth.slice(1);
+      const capTo = toMonth.charAt(0).toUpperCase() + toMonth.slice(1);
+      monthLabel = capFrom === capTo ? capFrom : `${capFrom}-${capTo}`;
+    } else {
+      const m = format(refDate, 'MMMM', { locale: es });
+      monthLabel = m.charAt(0).toUpperCase() + m.slice(1);
+    }
+
+    XLSX.writeFile(wb, `${fileName}-${monthLabel}.xlsx`);
     toast({
       title: 'Excel Generado',
       description: 'El archivo Excel se ha descargado correctamente.'

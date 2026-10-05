@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Plus, RefreshCw, CheckCircle2, Clock, XCircle, DollarSign, Download, FileSpreadsheet } from 'lucide-react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -222,8 +223,10 @@ const Invoices: React.FC = () => {
     const cols = Object.keys(data[0]).map(key => ({ wch: Math.max(key.length, 18) }));
     ws['!cols'] = cols;
 
-    const dateStr = format(new Date(), 'yyyy-MM-dd');
-    XLSX.writeFile(wb, `facturas-export-${dateStr}.xlsx`);
+    const refDate = filters?.startDate ? new Date(filters.startDate) : new Date();
+    const monthName = format(refDate, 'MMMM', { locale: es });
+    const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    XLSX.writeFile(wb, `facturas-export-${capMonth}.xlsx`);
     toast({
       title: 'Excel Generado',
       description: 'El listado de facturas se ha exportado correctamente.'
