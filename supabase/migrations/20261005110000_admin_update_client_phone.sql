@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- Migración: Actualizar teléfono de clientes en SuperAdmin y sincronizar con auth
 -- ==============================================================================
 
@@ -7,20 +7,20 @@ DO $$
 BEGIN
     -- Actualizar perfiles que no tienen teléfono
     UPDATE public.profiles p
-    SET phone = NULLIF(TRIM(u.raw_user_meta_data ->> 'phone'), '')
+    SET phone = NULLIF(TRIM(COALESCE(u.raw_user_meta_data ->> 'phone', u.phone)), '')
     FROM auth.users u
     WHERE p.id = u.id
       AND (p.phone IS NULL OR p.phone = '')
-      AND NULLIF(TRIM(u.raw_user_meta_data ->> 'phone'), '') IS NOT NULL;
+      AND NULLIF(TRIM(COALESCE(u.raw_user_meta_data ->> 'phone', u.phone)), '') IS NOT NULL;
 
     -- Actualizar company_settings de la tienda si no tiene teléfono
     UPDATE public.company_settings cs
-    SET phone = NULLIF(TRIM(u.raw_user_meta_data ->> 'phone'), '')
+    SET phone = NULLIF(TRIM(COALESCE(u.raw_user_meta_data ->> 'phone', u.phone)), '')
     FROM public.stores s
     JOIN auth.users u ON s.owner_id = u.id
     WHERE cs.store_id = s.id
       AND (cs.phone IS NULL OR cs.phone = '')
-      AND NULLIF(TRIM(u.raw_user_meta_data ->> 'phone'), '') IS NOT NULL;
+      AND NULLIF(TRIM(COALESCE(u.raw_user_meta_data ->> 'phone', u.phone)), '') IS NOT NULL;
 END $$;
 
 -- 2. Función para que el SuperAdmin pueda actualizar el teléfono de un cliente
@@ -121,6 +121,7 @@ BEGIN
             NULLIF(TRIM(p.phone), ''), 
             NULLIF(TRIM(cs_set.phone), ''), 
             NULLIF(TRIM(u.raw_user_meta_data ->> 'phone'), ''),
+            NULLIF(TRIM(u.phone), ''),
             NULLIF(TRIM((
                 SELECT csr.contact_phone 
                 FROM public.client_support_reports csr 

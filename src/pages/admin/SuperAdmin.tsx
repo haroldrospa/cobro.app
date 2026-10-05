@@ -713,7 +713,7 @@ const SuperAdmin = () => {
             const followUpStatus = latestNote?.status || store.latest_follow_up_status || 'new';
             const totalReportsCount = storeReports.length + (Number(store.reports_count) || 0);
             const reportWithPhone = storeReports.find((r: any) => r.contact_phone && r.contact_phone.trim() !== '');
-            const resolvedPhone = store.owner_phone || reportWithPhone?.contact_phone || '';
+            const resolvedPhone = store.owner_phone || store.phone || reportWithPhone?.contact_phone || '';
 
             return {
                 ...store,
