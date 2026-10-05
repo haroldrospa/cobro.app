@@ -34,7 +34,8 @@ serve(async (req) => {
 
     const clientName = fullName?.trim() || "Emprendedor"
     const businessName = companyName?.trim() || "Tu Negocio"
-    const appUrl = "https://cobroapp.com/app"
+    const appUrl = "https://cobroapp.app"
+    const logoUrl = "https://cobroapp.app/cobro-logo.png"
 
     console.log(`Sending welcome email to: ${email} (${businessName})`)
 
@@ -46,96 +47,160 @@ serve(async (req) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>¡Bienvenido a Cobro App!</title>
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; }
-          .container { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
-          .header { background: linear-gradient(135deg, #059669 0%, #10b981 50%, #047857 100%); padding: 40px 30px; text-align: center; color: white; }
-          .logo-badge { display: inline-block; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px); padding: 8px 18px; border-radius: 9999px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-          .header h1 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px; }
-          .header p { margin: 8px 0 0 0; opacity: 0.92; font-size: 15px; font-weight: 400; }
-          .content { padding: 36px 30px; }
-          .greeting { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 14px; }
-          .description { font-size: 15px; line-height: 1.65; color: #475569; margin-bottom: 28px; }
-          .card-step { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 14px; padding: 18px; margin-bottom: 14px; display: flex; align-items: flex-start; }
-          .step-icon { width: 36px; height: 36px; border-radius: 10px; background: #d1fae5; color: #059669; font-size: 18px; display: flex; align-items: center; justify-content: center; margin-right: 14px; flex-shrink: 0; }
-          .step-title { font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 4px; }
-          .step-text { font-size: 13px; color: #64748b; line-height: 1.45; }
-          .cta-box { text-align: center; margin: 34px 0 20px 0; }
-          .btn-primary { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff !important; font-weight: 700; font-size: 16px; padding: 16px 36px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); transition: all 0.2s ease; }
-          .support-box { background: #eff6ff; border-radius: 14px; padding: 18px; border: 1px solid #dbeafe; margin-top: 26px; }
-          .support-title { font-size: 13px; font-weight: 700; color: #1e40af; margin-bottom: 4px; }
-          .support-text { font-size: 12px; color: #3b82f6; line-height: 1.5; }
-          .footer { background: #f8fafc; border-top: 1px solid #f1f5f9; padding: 24px; text-align: center; font-size: 12px; color: #94a3b8; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; margin: 0; padding: 0; color: #cbd5e1; -webkit-font-smoothing: antialiased; }
+          table { border-collapse: separate; }
+          a { text-decoration: none; }
         </style>
       </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo-badge">Cobro App</div>
-            <h1>¡Te damos la bienvenida!</h1>
-            <p>La plataforma moderna para gestionar las ventas y facturación de tu negocio</p>
-          </div>
-          
-          <div class="content">
-            <div class="greeting">¡Hola, ${clientName}! 👋</div>
-            <div class="description">
-              Nos emociona tener a <strong>${businessName}</strong> a bordo. Tu cuenta ha sido creada exitosamente y ya tienes todo listo para empezar a registrar ventas, emitir comprobantes fiscales y llevar el control total de tu comercio.
-            </div>
+      <body style="background-color: #0f172a; margin: 0; padding: 24px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #cbd5e1;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0f172a;">
+          <tr>
+            <td align="center" style="padding: 10px 0 30px 0;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #1e262d; border-radius: 18px; overflow: hidden; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.45);">
+                <!-- Header Top Emerald Bar -->
+                <tr>
+                  <td style="background-color: #10b981; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
+                </tr>
+                
+                <!-- Header Content with Logo -->
+                <tr>
+                  <td align="center" style="background-color: #141c24; padding: 36px 24px 28px 24px; text-align: center; border-bottom: 1px solid #283543;">
+                    <table border="0" cellspacing="0" cellpadding="0" align="center" style="margin: 0 auto 14px auto;">
+                      <tr>
+                        <td style="vertical-align: middle;">
+                          <img src="${logoUrl}" alt="Cobro App Logo" width="46" height="46" style="display: block; width: 46px; height: 46px; border: 0; border-radius: 10px;" />
+                        </td>
+                        <td style="vertical-align: middle; padding-left: 12px; text-align: left;">
+                          <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">Cobro<span style="color: #10b981;">app</span></span>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <div style="display: inline-block; background-color: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 4px 14px; border-radius: 9999px; margin-bottom: 12px;">
+                      Facturación &bull; POS &bull; Inventario
+                    </div>
+                    
+                    <h1 style="color: #ffffff; margin: 8px 0 6px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">¡Te damos la bienvenida!</h1>
+                    <p style="color: #94a3b8; font-size: 14px; margin: 0; line-height: 1.4;">Tu negocio en control, en cualquier lugar</p>
+                  </td>
+                </tr>
 
-            <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.8px; margin-bottom: 14px;">
-              Primeros pasos recomendados:
-            </div>
+                <!-- Main Content -->
+                <tr>
+                  <td style="padding: 32px 28px; background-color: #1e262d;">
+                    <div style="font-size: 19px; font-weight: 700; color: #ffffff; margin-bottom: 12px;">
+                      ¡Hola, ${clientName}! 👋
+                    </div>
+                    <div style="font-size: 14px; line-height: 1.65; color: #cbd5e1; margin-bottom: 26px;">
+                      Nos emociona darte la bienvenida junto a <strong style="color: #34d399; font-weight: 700;">${businessName}</strong>. Tu cuenta ha sido activada exitosamente y tienes acceso inmediato a todas las herramientas para organizar tu inventario, registrar ventas y emitir facturas en segundos.
+                    </div>
 
-            <div class="card-step">
-              <div class="step-icon">📦</div>
-              <div>
-                <div class="step-title">1. Registra tus productos</div>
-                <div class="step-text">Organiza tu inventario por categorías, agrega precios y códigos de barra para cobrar en segundos.</div>
-              </div>
-            </div>
+                    <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.8px; margin-bottom: 14px;">
+                      Primeros pasos recomendados:
+                    </div>
 
-            <div class="card-step">
-              <div class="step-icon">⚡</div>
-              <div>
-                <div class="step-title">2. Realiza tu primera venta en el POS</div>
-                <div class="step-text">Prueba nuestro punto de venta táctil, rápido y optimizado para teléfonos, tablets o computadoras.</div>
-              </div>
-            </div>
+                    <!-- Step 1 -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 12px;">
+                      <tr>
+                        <td style="padding: 16px; width: 42px; vertical-align: top;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                            📦
+                          </div>
+                        </td>
+                        <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
+                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">1. Registra tus productos</div>
+                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">Organiza tu inventario por categorías, define precios e ingresa códigos de barra para ventas rápidas.</div>
+                        </td>
+                      </tr>
+                    </table>
 
-            <div class="card-step">
-              <div class="step-icon">🖨️</div>
-              <div>
-                <div class="step-title">3. Conecta tu impresora térmica</div>
-                <div class="step-text">Imprime tickets y facturas al instante vía Bluetooth o conexión de red desde cualquier dispositivo.</div>
-              </div>
-            </div>
+                    <!-- Step 2 -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 12px;">
+                      <tr>
+                        <td style="padding: 16px; width: 42px; vertical-align: top;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                            ⚡
+                          </div>
+                        </td>
+                        <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
+                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">2. Realiza tu primera venta en el POS</div>
+                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">Prueba nuestro punto de venta táctil, diseñado para ser rápido e intuitivo desde teléfono, tablet o PC.</div>
+                        </td>
+                      </tr>
+                    </table>
 
-            <div class="card-step">
-              <div class="step-icon">🤝</div>
-              <div>
-                <div class="step-title">4. Soporte y Acompañamiento Personalizado</div>
-                <div class="step-text">¿Necesitas ayuda configurando tu negocio? Genera un reporte directo en tu panel de Cobro App y nuestro equipo se comunicará contigo de inmediato.</div>
-              </div>
-            </div>
+                    <!-- Step 3 -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 12px;">
+                      <tr>
+                        <td style="padding: 16px; width: 42px; vertical-align: top;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                            🖨️
+                          </div>
+                        </td>
+                        <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
+                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">3. Conecta tu impresora térmica</div>
+                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">Imprime tickets y facturas al instante vía Bluetooth, conexión de red o USB desde cualquier equipo.</div>
+                        </td>
+                      </tr>
+                    </table>
 
-            <div class="cta-box">
-              <a href="${appUrl}" class="btn-primary" target="_blank">
-                Ingresar a mi Negocio en Cobro App →
-              </a>
-            </div>
+                    <!-- Step 4 -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 24px;">
+                      <tr>
+                        <td style="padding: 16px; width: 42px; vertical-align: top;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                            🤝
+                          </div>
+                        </td>
+                        <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
+                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">4. Soporte y Acompañamiento Personalizado</div>
+                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">¿Necesitas ayuda configurando tu negocio? Genera un reporte directo en tu panel de Cobro App y nuestro equipo se comunicará contigo de inmediato.</div>
+                        </td>
+                      </tr>
+                    </table>
 
-            <div class="support-box">
-              <div class="support-title">💬 ¿Tienes dudas o necesitas asistencia?</div>
-              <div class="support-text">
-                Estamos aquí para ayudarte a crecer. Si necesitas ayuda con la configuración o requieres asesoría, puedes generar un reporte desde el menú superior de tu cuenta o contactar a Harold directamente por WhatsApp o llamada.
-              </div>
-            </div>
-          </div>
+                    <!-- CTA Button -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 28px 0 24px 0;">
+                      <tr>
+                        <td align="center">
+                          <a href="${appUrl}" target="_blank" style="background-color: #10b981; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; display: inline-block; font-size: 15px; font-weight: 700; text-align: center; padding: 15px 36px; border-radius: 12px; text-decoration: none; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);">
+                            Ingresar a mi Negocio en Cobro App &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
 
-          <div class="footer">
-            <p style="margin: 0 0 6px 0;">Cobro App — Sistema de Facturación y Gestión de Negocios</p>
-            <p style="margin: 0;">Recibiste este correo porque registraste una cuenta en Cobro App.</p>
-          </div>
-        </div>
+                    <!-- Support Card -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px;">
+                      <tr>
+                        <td style="padding: 16px 18px;">
+                          <div style="font-size: 13px; font-weight: 700; color: #34d399; margin-bottom: 4px;">
+                            💬 ¿Tienes dudas o necesitas asistencia?
+                          </div>
+                          <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                            Estamos aquí para ayudarte a crecer. Si necesitas ayuda con la configuración o requieres asesoría, puedes generar un reporte desde el menú superior de tu cuenta o contactarnos directamente por WhatsApp o llamada.
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td align="center" style="background-color: #141c24; border-top: 1px solid #283543; padding: 22px 20px; text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #94a3b8; font-weight: 600;">
+                      Cobro App &mdash; Sistema de Facturación y Gestión de Negocios
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #64748b;">
+                      Recibiste este correo porque registraste una cuenta en <a href="${appUrl}" target="_blank" style="color: #10b981; text-decoration: none;">Cobro App</a>.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `
