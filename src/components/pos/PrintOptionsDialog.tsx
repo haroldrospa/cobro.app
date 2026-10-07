@@ -294,21 +294,33 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       ? `• *Consulta Fiscal DGII:* ${saleData.qrcode_url}\n\n`
       : '';
 
-    const plainMessage = 
-      `*${companyName}*\n` +
-      `*Notificación de Facturación*\n` +
-      `---------------------------------------------\n\n` +
-      `Estimado/a *${saleData?.customer?.name || 'Cliente'}*,\n\n` +
-      `Se ha registrado una nueva factura ${isCredit ? 'a crédito' : 'de venta'} en su cuenta:\n\n` +
-      `• *Factura:* #${invoiceNumber}\n` +
-      `• *Monto:* $${formattedInvoiceTotal}\n` +
-      (isCredit ? `• *Vencimiento:* ${formattedDueDate}\n\n` : '\n') +
-      electronicInfo +
-      `*Detalle de compra:*\n${itemsList}\n` +
-      (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\nLe recordamos realizar sus pagos a tiempo para evitar recargos.\n\n` : '') +
-      `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
-      `¡Gracias por su preferencia!\n\n` +
-      `_(Mensaje enviado vía Cobroapp)_`;
+    const plainMessage = isQuote
+      ? `*${companyName}*\n` +
+        `*Cotización de Servicios*\n` +
+        `---------------------------------------------\n\n` +
+        `Estimado/a *${saleData?.customer?.name || 'Cliente'}*,\n\n` +
+        `Se ha generado la siguiente cotización de servicios para su solicitud:\n\n` +
+        `• *Cotización:* #${invoiceNumber}\n` +
+        `• *Monto Total:* $${formattedInvoiceTotal}\n\n` +
+        `*Detalle de Servicios:*\n${itemsList}\n` +
+        `*Nota:* Esta cotización tiene una validez de 30 días a partir de su emisión.\n\n` +
+        `Para cualquier consulta o aprobación, estamos a su entera disposición.\n\n` +
+        `¡Gracias por su preferencia!\n\n` +
+        `_(Mensaje enviado vía Cobroapp)_`
+      : `*${companyName}*\n` +
+        `*Notificación de Facturación*\n` +
+        `---------------------------------------------\n\n` +
+        `Estimado/a *${saleData?.customer?.name || 'Cliente'}*,\n\n` +
+        `Se ha registrado una nueva factura ${isCredit ? 'a crédito' : 'de venta'} en su cuenta:\n\n` +
+        `• *Factura:* #${invoiceNumber}\n` +
+        `• *Monto:* $${formattedInvoiceTotal}\n` +
+        (isCredit ? `• *Vencimiento:* ${formattedDueDate}\n\n` : '\n') +
+        electronicInfo +
+        `*Detalle de compra:*\n${itemsList}\n` +
+        (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\nLe recordamos realizar sus pagos a tiempo para evitar recargos.\n\n` : '') +
+        `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
+        `¡Gracias por su preferencia!\n\n` +
+        `_(Mensaje enviado vía Cobroapp)_`;
 
     const encodedMessage = encodeURIComponent(plainMessage);
 
@@ -373,11 +385,14 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       return () => clearTimeout(timer);
     }
   }, [isOpen, saleData?.id, saleData?.paymentMethod, customerPhoneToSend]);
-  
-  const isElectronic = invoiceNumber.startsWith('E') || saleData.is_electronic || !!saleData.encf;
-  const displayInvoiceType = isElectronic 
-    ? (saleData.invoiceType === 'B01' ? 'E31' : saleData.invoiceType === 'B02' ? 'E32' : (saleData.invoiceType?.replace('B', 'E') || 'E32'))
-    : (saleData.invoiceType || 'B02');
+
+  const isQuote = saleData?.invoiceType === 'COT' || (saleData as any)?.is_quote || invoiceNumber.startsWith('COT');
+  const isElectronic = !isQuote && (invoiceNumber.startsWith('E') || saleData.is_electronic || !!saleData.encf);
+  const displayInvoiceType = isQuote
+    ? 'COT'
+    : (isElectronic 
+      ? (saleData.invoiceType === 'B01' ? 'E31' : saleData.invoiceType === 'B02' ? 'E32' : (saleData.invoiceType?.replace('B', 'E') || 'E32'))
+      : (saleData.invoiceType || 'B02'));
 
   // Robust Security Code extraction & fallback generation
   const securityCode = (() => {
@@ -755,6 +770,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       amountPaid: (saleData as any).cashReceived || (saleData as any).cash_received || (saleData as any).amountPaid || saleData.total,
       change: (saleData as any).change || 0,
       isElectronic: isElectronic,
+      isQuotation: isQuote,
       encf: saleData.encf,
       securityCode: securityCode,
       signatureDate: signatureDate,
@@ -1345,7 +1361,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               </div>
               <div>
                 <DialogTitle className="text-base font-bold">
-                  ¡Venta procesada exitosamente!
+                  {isQuote ? '¡Cotización generada exitosamente!' : '¡Venta procesada exitosamente!'}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
                   Total: ${(saleData.total || 0).toFixed(2)}
@@ -1355,7 +1371,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
           </DialogHeader>
 
           {/* Cambio destacado */}
-          {saleData.change !== undefined && saleData.change > 0 && (
+          {saleData.change !== undefined && saleData.change > 0 && !isQuote && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground mb-1">Cambio a entregar</p>
               <p className="text-4xl font-bold text-green-500">
@@ -1368,7 +1384,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             {/* Invoice Info Card */}
             <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 p-2">
               <div className="text-center">
-                <p className="text-xs text-muted-foreground">Factura {displayInvoiceType}</p>
+                <p className="text-xs text-muted-foreground">{isQuote ? 'Cotización' : `Factura ${displayInvoiceType}`}</p>
                 <p className="text-lg font-bold font-mono tracking-wider">
                   {invoiceNumber}
                 </p>

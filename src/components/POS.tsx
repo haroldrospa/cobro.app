@@ -1422,7 +1422,9 @@ const POSContent: React.FC = () => {
   }) => {
     try {
       setIsEmittingServiceInvoice(true);
-      if (!activeSession) {
+      const isQuote = data.invoiceTypeId === 'COT';
+
+      if (!isQuote && !activeSession) {
         handleOpenRegister();
         toast({
           title: "Sesión requerida",
@@ -1433,12 +1435,88 @@ const POSContent: React.FC = () => {
       }
 
       const selectedCustomerData = customers.find(c => c.id === data.customerId);
-      const targetInvoiceType = invoiceTypes.find(t => t.id === data.invoiceTypeId);
-      const code = targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02';
-
       const subtotal = data.items.reduce((s, it) => s + (it.price * it.quantity), 0);
       const tax = data.items.reduce((s, it) => s + ((it.price * it.quantity) * (it.tax || 0)), 0);
       const totalAmount = subtotal + tax;
+
+      if (isQuote) {
+        const quoteNumber = `COT-${Date.now().toString().slice(-6)}`;
+        let quoteOrderId = crypto.randomUUID();
+
+        try {
+          const { data: openOrder } = await supabase.from('open_orders').insert({
+            id: quoteOrderId,
+            order_number: quoteNumber,
+            order_status: 'quote',
+            source: 'pos',
+            customer_id: data.customerId || null,
+            customer_name: selectedCustomerData?.name || 'Cliente Ocasional',
+            customer_phone: selectedCustomerData?.phone || '',
+            subtotal,
+            tax_total: tax,
+            total: totalAmount,
+            discount_total: 0,
+            notes: data.notes || '',
+            store_id: storeId || store.id,
+            profile_id: profile?.id || null,
+            payment_method: data.paymentMethod,
+            payment_status: 'pending',
+          }).select().maybeSingle();
+
+          if (openOrder?.id) {
+            quoteOrderId = openOrder.id;
+            const openOrderItems = data.items.map(it => ({
+              order_id: openOrder.id,
+              product_name: it.name,
+              quantity: it.quantity,
+              unit_price: it.price,
+              subtotal: it.price * it.quantity,
+              tax_amount: (it.price * it.quantity) * (it.tax || 0),
+              tax_percentage: (it.tax || 0) * 100,
+              total: (it.price * it.quantity) * (1 + (it.tax || 0))
+            }));
+            await supabase.from('open_order_items').insert(openOrderItems);
+          }
+        } catch (quoteErr) {
+          console.warn('No se pudo guardar la cotización en open_orders, continuando con impresión:', quoteErr);
+        }
+
+        const printSaleData = {
+          id: quoteOrderId,
+          total: totalAmount,
+          items: data.items.map(it => ({
+            ...it,
+            product_name: it.name,
+            unit_price: it.price,
+            tax_amount: (it.price * it.quantity) * (it.tax || 0),
+            subtotal: it.price * it.quantity,
+            total: (it.price * it.quantity) * (1 + (it.tax || 0))
+          })),
+          paymentMethod: data.paymentMethod,
+          customer: selectedCustomerData,
+          invoice_number: quoteNumber,
+          invoiceType: 'COT',
+          is_quote: true,
+          notes: data.notes || '',
+          profile: {
+            full_name: profile?.full_name || 'Cajero'
+          },
+          is_service: true,
+        };
+
+        setSaleData(printSaleData);
+        setShowPrintOptionsDialog(true);
+        setShowServiceInvoiceDialog(false);
+
+        toast({
+          title: "Cotización generada",
+          description: `Cotización ${quoteNumber} generada correctamente en formato Carta.`,
+        });
+        return;
+      }
+
+      const targetInvoiceType = invoiceTypes.find(t => t.id === data.invoiceTypeId);
+      const code = targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02';
 
       let dueDate = null;
       let paymentStatus = 'paid';

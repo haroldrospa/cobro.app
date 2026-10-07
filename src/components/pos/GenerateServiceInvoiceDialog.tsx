@@ -106,6 +106,9 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
   }, [customers, selectedCustomerId]);
 
   const selectedInvoiceType = useMemo(() => {
+    if (selectedInvoiceTypeId === 'COT') {
+      return { id: 'COT', code: 'COT', name: 'Cotización' };
+    }
     return invoiceTypes.find(t => t.id === selectedInvoiceTypeId);
   }, [invoiceTypes, selectedInvoiceTypeId]);
 
@@ -319,6 +322,10 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
                   <SelectValue placeholder="Seleccione tipo de comprobante" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60 rounded-xl">
+                  <SelectItem value="COT">
+                    <span className="font-bold text-amber-500 mr-2">COT</span>
+                    <span>Cotización</span>
+                  </SelectItem>
                   {invoiceTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       <span className="font-bold text-emerald-500 mr-2">{type.code}</span>
@@ -601,18 +608,23 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
             <Button
               type="button"
               onClick={handleDirectEmitClick}
-              className="h-11 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-2 shadow-lg shadow-emerald-600/20"
+              className={cn(
+                "h-11 px-6 rounded-xl text-white font-bold text-xs gap-2 shadow-lg",
+                selectedInvoiceTypeId === 'COT'
+                  ? "bg-amber-600 hover:bg-amber-500 shadow-amber-600/20"
+                  : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20"
+              )}
               disabled={isEmitting}
             >
               {isEmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Emitiendo Comprobante...
+                  {selectedInvoiceTypeId === 'COT' ? 'Generando Cotización...' : 'Emitiendo Comprobante...'}
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4" />
-                  Emitir y Facturar Ahora (Carta)
+                  {selectedInvoiceTypeId === 'COT' ? 'Generar Cotización (Carta)' : 'Emitir y Facturar Ahora (Carta)'}
                 </>
               )}
             </Button>

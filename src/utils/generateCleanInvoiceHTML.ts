@@ -31,6 +31,7 @@ export interface InvoiceData {
   amountPaid?: number;
   change?: number;
   isElectronic?: boolean;
+  isQuotation?: boolean;
   encf?: string;
   securityCode?: string;
   signatureDate?: string;
@@ -93,18 +94,23 @@ export const generateCleanInvoiceHTML = (
 
   const pMethod = (invoiceData.paymentMethod?.trim() || 'EFECTIVO').toUpperCase();
   const rawInvoiceNum = invoiceData.invoiceNumber || '000000';
-  const displayNCF = invoiceData.isElectronic
-    ? (invoiceData.encf || rawInvoiceNum)
-    : rawInvoiceNum;
+  const isQuotation = Boolean(invoiceData.isQuotation || rawInvoiceNum.startsWith('COT') || invoiceData.invoicePrefix === 'COT');
+  const displayNCF = isQuotation
+    ? rawInvoiceNum
+    : (invoiceData.isElectronic
+      ? (invoiceData.encf || rawInvoiceNum)
+      : rawInvoiceNum);
 
   const displayPrefix = invoiceData.invoicePrefix || 'FAC-';
-  const fullInvoiceCode = rawInvoiceNum.startsWith('FAC-') || rawInvoiceNum.startsWith('E') || rawInvoiceNum.startsWith('B')
+  const fullInvoiceCode = rawInvoiceNum.startsWith('FAC-') || rawInvoiceNum.startsWith('E') || rawInvoiceNum.startsWith('B') || rawInvoiceNum.startsWith('COT')
     ? rawInvoiceNum
     : `${displayPrefix}${rawInvoiceNum}`;
 
-  const customerTypeLabel = invoiceData.customerName && invoiceData.customerName.toUpperCase() !== 'CLIENTE FINAL' && invoiceData.customerName.toUpperCase() !== 'CONSUMIDOR FINAL'
-    ? 'Comprobante Fiscal'
-    : 'Consumidor Final';
+  const customerTypeLabel = isQuotation
+    ? 'Presupuesto'
+    : (invoiceData.customerName && invoiceData.customerName.toUpperCase() !== 'CLIENTE FINAL' && invoiceData.customerName.toUpperCase() !== 'CONSUMIDOR FINAL'
+      ? 'Comprobante Fiscal'
+      : 'Consumidor Final');
 
   const companyInitials = companyData.name
     ? companyData.name.split(' ').map(w => w[0]).join('').substring(0, 8).toUpperCase()
@@ -243,11 +249,11 @@ export const generateCleanInvoiceHTML = (
         <!-- Tarjeta NCF y Metadatos -->
         <div style="display: flex; flex-direction: column; align-items: flex-end;">
           <div style="font-size: 20px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 6px;">
-            FACTURA
+            ${isQuotation ? 'COTIZACIÓN' : 'FACTURA'}
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; text-align: right; width: 100%; max-width: 260px;">
-            <div style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px;">
-              ${invoiceData.isElectronic ? 'e-CF Electrónico' : 'Comprobante Fiscal'}
+            <div style="display: inline-block; background: ${isQuotation ? '#fef3c7' : (invoiceData.isElectronic ? '#e0f2fe' : '#e2e8f0')}; color: ${isQuotation ? '#92400e' : (invoiceData.isElectronic ? '#0369a1' : '#334155')}; padding: 2px 8px; border-radius: 4px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px;">
+              ${isQuotation ? 'Cotización / Presupuesto' : (invoiceData.isElectronic ? 'e-CF Electrónico' : 'Comprobante Fiscal')}
             </div>
             <div class="tabular-numbers" style="font-size: 17px; font-weight: 800; letter-spacing: 1px; color: #0f172a; margin-bottom: 4px; line-height: 1.2;">
               ${displayNCF}
@@ -367,7 +373,7 @@ export const generateCleanInvoiceHTML = (
           </div>
           
           <div style="border-top: 1.5px solid #0f172a; padding-top: 8px; margin-top: 4px; display: flex; justify-content: space-between; align-items: baseline;">
-            <span style="font-size: 13px; font-weight: 900; text-transform: uppercase; color: #0f172a; letter-spacing: 0.03em;">TOTAL A PAGAR:</span>
+            <span style="font-size: 13px; font-weight: 900; text-transform: uppercase; color: #0f172a; letter-spacing: 0.03em;">${isQuotation ? 'TOTAL COTIZADO:' : 'TOTAL A PAGAR:'}</span>
             <span class="tabular-numbers" style="font-size: 20px; font-weight: 900; color: #0f172a;">${invoiceData.currency} ${fmt(invoiceData.total)}</span>
           </div>
 
@@ -514,7 +520,7 @@ export const generateCleanInvoiceHTML = (
     <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 5px 6px; margin-bottom: 6px;">
       <div style="background-color: #ffffff; color: #000000; border: 2px solid #000000; border-radius: 4px; padding: 3px 4px; text-align: center; margin-bottom: 5px;">
         <div style="font-size: ${is58mm ? '10px' : '8.5px'}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000000;">
-          ${invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'COMPROBANTE DE VENTA (NCF)'}
+          ${isQuotation ? 'COTIZACIÓN / PRESUPUESTO' : (invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'COMPROBANTE DE VENTA (NCF)')}
         </div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: ${is58mm ? '15px' : '15px'}; font-weight: 900; letter-spacing: 1px; color: #000000; margin-top: 1px; word-break: break-all;">
           ${displayNCF}

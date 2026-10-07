@@ -109,8 +109,13 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   }, [customers, selectedCustomerId]);
 
   const selectedInvoiceType = useMemo(() => {
+    if (selectedInvoiceTypeId === 'COT') {
+      return { id: 'COT', code: 'COT', name: 'Cotización' };
+    }
     return invoiceTypes.find(t => t.id === selectedInvoiceTypeId);
   }, [invoiceTypes, selectedInvoiceTypeId]);
+
+  const isQuote = selectedInvoiceTypeId === 'COT';
 
   const todayDateStr = useMemo(() => {
     return new Date().toLocaleDateString('es-DO', {
@@ -495,6 +500,10 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                   <SelectValue placeholder="Seleccionar NCF" />
                 </SelectTrigger>
                 <SelectContent className="max-h-56">
+                  <SelectItem value="COT">
+                    <span className="font-bold text-amber-400 font-mono mr-1.5">COT</span>
+                    <span>Cotización</span>
+                  </SelectItem>
                   {invoiceTypes.map(t => (
                     <SelectItem key={t.id} value={t.id}>
                       <span className="font-bold text-emerald-400 font-mono mr-1.5">{t.code}</span>
@@ -629,17 +638,22 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 size="default"
                 disabled={isEmitting}
                 onClick={handleEmitDirect}
-                className="h-10 w-full font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md gap-2 transition-all cursor-pointer active:scale-95"
+                className={cn(
+                  "h-10 w-full font-bold text-xs sm:text-sm text-white rounded-xl shadow-md gap-2 transition-all cursor-pointer active:scale-95",
+                  isQuote 
+                    ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20" 
+                    : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
+                )}
               >
                 {isEmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Emitiendo Factura Carta...</span>
+                    <span>{isQuote ? 'Generando Cotización...' : 'Emitiendo Factura Carta...'}</span>
                   </>
                 ) : (
                   <>
                     <FileText className="h-4 w-4" />
-                    <span>Emitir Factura (Carta)</span>
+                    <span>{isQuote ? 'Generar Cotización (Carta)' : 'Emitir Factura (Carta)'}</span>
                   </>
                 )}
               </Button>
