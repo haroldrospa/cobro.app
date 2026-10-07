@@ -135,7 +135,7 @@ export const QuickGuideDialog: React.FC = () => {
   const navigate = useNavigate();
   const { profile } = useUserProfile();
 
-  const userStorageKey = `cobro_quick_guide_seen_${profile?.id || 'guest'}`;
+  const userStorageKey = profile?.id ? `cobro_quick_guide_seen_${profile.id}` : 'cobro_quick_guide_seen_global';
 
   useEffect(() => {
     const handleOpen = () => {
@@ -145,10 +145,17 @@ export const QuickGuideDialog: React.FC = () => {
 
     window.addEventListener('cobro:open-quick-guide', handleOpen);
 
+    // Solo mostrar automáticamente la primera vez (cuando el usuario acaba de registrarse)
     const justRegistered = localStorage.getItem('cobro_show_quick_guide');
-    const hasSeen = localStorage.getItem(userStorageKey);
+    const hasSeenUser = localStorage.getItem(userStorageKey);
+    const hasSeenGlobal = localStorage.getItem('cobro_quick_guide_seen_global');
 
-    if (justRegistered === 'true' || !hasSeen) {
+    if (justRegistered === 'true' && !hasSeenUser && !hasSeenGlobal) {
+      // Consumir el flag de registro de inmediato para que no vuelva a dispararse automáticamente
+      localStorage.removeItem('cobro_show_quick_guide');
+      localStorage.setItem(userStorageKey, 'true');
+      localStorage.setItem('cobro_quick_guide_seen_global', 'true');
+
       const timer = setTimeout(() => {
         setIsOpen(true);
       }, 600);
@@ -167,6 +174,7 @@ export const QuickGuideDialog: React.FC = () => {
     setIsOpen(false);
     localStorage.removeItem('cobro_show_quick_guide');
     localStorage.setItem(userStorageKey, 'true');
+    localStorage.setItem('cobro_quick_guide_seen_global', 'true');
   };
 
   const handleNext = () => {
