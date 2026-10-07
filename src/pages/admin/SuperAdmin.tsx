@@ -291,11 +291,19 @@ const SuperAdmin = () => {
         mutationFn: async ({
             reportId,
             status,
-            adminResponse
+            adminResponse,
+            contactEmail,
+            storeName,
+            title,
+            originalMessage
         }: {
             reportId: string;
             status: string;
             adminResponse?: string;
+            contactEmail?: string;
+            storeName?: string;
+            title?: string;
+            originalMessage?: string;
         }) => {
             const { error } = await supabase
                 .from("client_support_reports")
@@ -306,9 +314,33 @@ const SuperAdmin = () => {
                 })
                 .eq("id", reportId);
             if (error) throw error;
+
+            // Si el reporte tiene correo de contacto, enviar correo de actualización / respuesta al cliente
+            if (contactEmail && contactEmail.includes('@') && (adminResponse?.trim() || status === 'resolved')) {
+                try {
+                    await supabase.functions.invoke('send-support-report-email', {
+                        body: {
+                            action: 'report_response',
+                            reportId,
+                            storeName: storeName || 'Cobro App Negocio',
+                            contactEmail: contactEmail.trim(),
+                            title: title || 'Reporte de Soporte',
+                            message: originalMessage || '',
+                            status,
+                            adminResponse: adminResponse?.trim() || (status === 'resolved' ? 'Tu solicitud ha sido atendida y marcada como resuelta.' : '')
+                        }
+                    });
+                } catch (emailErr) {
+                    console.warn('Notice: Failed sending follow-up email to client:', emailErr);
+                }
+            }
         },
-        onSuccess: () => {
-            toast.success("Reporte actualizado correctamente");
+        onSuccess: (_data, variables) => {
+            if (variables.contactEmail) {
+                toast.success("Reporte actualizado y seguimiento enviado por correo al cliente");
+            } else {
+                toast.success("Reporte actualizado correctamente");
+            }
             refetchSupportReports();
             refetchStores();
         },
@@ -2922,9 +2954,14 @@ const SuperAdmin = () => {
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
-                                                        {report.report_type}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                                                            #{`TICK-${report.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`}
+                                                        </span>
+                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
+                                                            {report.report_type}
+                                                        </span>
+                                                    </div>
                                                     <h4 className="font-bold text-sm text-foreground">
                                                         {report.title}
                                                     </h4>
@@ -2977,42 +3014,66 @@ const SuperAdmin = () => {
                                             </div>
 
                                             {/* Respuesta del admin o acción de marcar como resuelto */}
-                                            <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-2">
-                                                <div className="flex-1">
-                                                    {report.admin_response ? (
-                                                        <div className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                                                            <strong>Respuesta dada:</strong> {report.admin_response}
-                                                        </div>
-                                                    ) : (
-                                                        <Input
-                                                            placeholder="Escribir respuesta para el cliente..."
-                                                            className="h-8 text-xs rounded-lg"
-                                                            value={adminResponseInput[report.id] || ''}
-                                                            onChange={(e) => setAdminResponseInput(prev => ({
-                                                                ...prev,
-                                                                [report.id]: e.target.value
-                                                            }))}
-                                                        />
-                                                    )}
-                                                </div>
+                                            <div className="pt-2 border-t border-border/40 space-y-2">
+                                                {report.admin_response && (
+                                                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-800 dark:text-emerald-300">
+                                                        <strong>Respuesta enviada:</strong> {report.admin_response}
+                                                    </div>
+                                                )}
 
-                                                <Button
-                                                    size="sm"
-                                                    variant={isResolved ? "outline" : "default"}
-                                                    disabled={updateReportStatusMutation.isPending}
-                                                    onClick={() => updateReportStatusMutation.mutate({
-                                                        reportId: report.id,
-                                                        status: isResolved ? 'pending' : 'resolved',
-                                                        adminResponse: adminResponseInput[report.id] || report.admin_response
-                                                    })}
-                                                    className={`h-8 text-xs font-bold rounded-lg shrink-0 ${
-                                                        isResolved
-                                                            ? 'border-border'
-                                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                                    }`}
-                                                >
-                                                    {isResolved ? 'Reabrir Reporte' : 'Marcar Resuelto'}
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        placeholder={report.admin_response ? "Actualizar respuesta (se notificará por correo)..." : "Escribir respuesta al cliente (se notificará por correo)..."}
+                                                        className="h-8 text-xs rounded-lg flex-1"
+                                                        value={adminResponseInput[report.id] || ''}
+                                                        onChange={(e) => setAdminResponseInput(prev => ({
+                                                            ...prev,
+                                                            [report.id]: e.target.value
+                                                        }))}
+                                                    />
+
+                                                    {adminResponseInput[report.id]?.trim() && (
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={updateReportStatusMutation.isPending}
+                                                            onClick={() => updateReportStatusMutation.mutate({
+                                                                reportId: report.id,
+                                                                status: isResolved ? 'resolved' : 'in_progress',
+                                                                adminResponse: adminResponseInput[report.id],
+                                                                contactEmail: report.contact_email,
+                                                                storeName: reportsStore?.name,
+                                                                title: report.title,
+                                                                originalMessage: report.message
+                                                            })}
+                                                            className="h-8 text-xs font-bold rounded-lg shrink-0 bg-blue-600 hover:bg-blue-500 text-white gap-1"
+                                                        >
+                                                            <Mail className="h-3 w-3" />
+                                                            <span>Responder</span>
+                                                        </Button>
+                                                    )}
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant={isResolved ? "outline" : "default"}
+                                                        disabled={updateReportStatusMutation.isPending}
+                                                        onClick={() => updateReportStatusMutation.mutate({
+                                                            reportId: report.id,
+                                                            status: isResolved ? 'pending' : 'resolved',
+                                                            adminResponse: adminResponseInput[report.id] || report.admin_response,
+                                                            contactEmail: report.contact_email,
+                                                            storeName: reportsStore?.name,
+                                                            title: report.title,
+                                                            originalMessage: report.message
+                                                        })}
+                                                        className={`h-8 text-xs font-bold rounded-lg shrink-0 ${
+                                                            isResolved
+                                                                ? 'border-border'
+                                                                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                                        }`}
+                                                    >
+                                                        {isResolved ? 'Reabrir Reporte' : 'Marcar Resuelto'}
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     );

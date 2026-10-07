@@ -92,6 +92,8 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
       if (!message.trim()) throw new Error('Por favor detalla tu consulta o requerimiento');
       if (!storeId) throw new Error('No se encontró el ID de tu negocio. Intenta recargar la página');
 
+      const targetEmail = contactEmail.trim() || profile?.email || null;
+      const targetPhone = contactPhone.trim() || profile?.phone || null;
 
       const { data, error } = await supabase
         .from('client_support_reports')
@@ -101,18 +103,39 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
           report_type: reportType,
           title: title.trim(),
           message: message.trim(),
-          contact_phone: contactPhone.trim() || null,
-          contact_email: contactEmail.trim() || profile?.email || null,
+          contact_phone: targetPhone,
+          contact_email: targetEmail,
           status: 'pending'
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Enviar correo de confirmación al cliente y alerta al administrador
+      try {
+        await supabase.functions.invoke('send-support-report-email', {
+          body: {
+            action: 'new_report',
+            reportId: data.id,
+            storeName: companySettings?.name || 'Mi Negocio',
+            userName: profile?.full_name || profile?.email || 'Usuario',
+            contactEmail: targetEmail,
+            contactPhone: targetPhone || 'No especificado',
+            reportType: reportType,
+            reportTypeLabel: getReportTypeLabel(reportType),
+            title: title.trim(),
+            message: message.trim()
+          }
+        });
+      } catch (emailErr) {
+        console.warn('Notice: email dispatch returned:', emailErr);
+      }
+
       return data;
     },
     onSuccess: () => {
-      toast.success('¡Reporte generado con éxito! Nos pondremos en contacto contigo pronto.');
+      toast.success('¡Reporte generado! Te enviamos una confirmación por correo para darle seguimiento al caso.');
       setTitle('');
       setMessage('');
       queryClient.invalidateQueries({ queryKey: ['my-support-reports', storeId] });
@@ -321,7 +344,7 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold flex items-center gap-1.5">
                     <Mail className="h-3 w-3 text-blue-500" />
-                    <span>Correo Electrónico</span>
+                    <span>Correo Electrónico para Seguimiento</span>
                   </Label>
                   <Input
                     value={contactEmail}
@@ -330,6 +353,9 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                     className="h-9 text-xs rounded-xl font-mono"
                     disabled={hasReachedLimit}
                   />
+                  <p className="text-[10px] text-muted-foreground">
+                    Te enviaremos la confirmación y podrás dar seguimiento directo respondiendo al correo.
+                  </p>
                 </div>
               </div>
 
@@ -396,9 +422,14 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <Badge variant="outline" className="text-[10px] font-semibold bg-muted/60 mb-1">
-                            {getReportTypeLabel(report.report_type)}
-                          </Badge>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                              #{`TICK-${report.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] font-semibold bg-muted/60">
+                              {getReportTypeLabel(report.report_type)}
+                            </Badge>
+                          </div>
                           <h4 className="font-bold text-foreground text-xs leading-tight">
                             {report.title}
                           </h4>
@@ -426,9 +457,10 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                       </p>
 
                       {report.admin_response && (
-                        <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-foreground">
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5">
-                            Respuesta de Cobro App:
+                        <div className="mt-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-foreground">
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5 flex items-center gap-1">
+                            <MessageSquarePlus className="h-3 w-3" />
+                            Respuesta del equipo de Cobro App:
                           </span>
                           {report.admin_response}
                         </div>
@@ -445,6 +477,12 @@ export const ClientReportDialog: React.FC<ClientReportDialogProps> = ({
                             minute: '2-digit'
                           })}
                         </span>
+                        {report.contact_email && (
+                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Mail className="h-3 w-3 text-blue-500" />
+                            <span>{report.contact_email}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
