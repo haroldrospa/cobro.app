@@ -22,7 +22,6 @@ import {
   ShoppingCart,
   UserPlus,
   Calendar,
-  Sparkles,
   RotateCcw,
   CheckCircle2,
   DollarSign,
@@ -64,15 +63,6 @@ interface ServicePOSWorkspaceProps {
   currencySymbol?: string;
   defaultTaxRate?: number;
 }
-
-const PRESET_SERVICES = [
-  { title: 'Honorarios Profesionales', defaultPrice: 15000, taxRate: 18 },
-  { title: 'Asesoría Contable / Fiscal', defaultPrice: 10000, taxRate: 18 },
-  { title: 'Consultoría / Soporte TI', defaultPrice: 8000, taxRate: 18 },
-  { title: 'Mantenimiento y Reparación', defaultPrice: 5000, taxRate: 18 },
-  { title: 'Mano de Obra Especializada', defaultPrice: 3500, taxRate: 18 },
-  { title: 'Servicios de Diseño / Marketing', defaultPrice: 12000, taxRate: 18 },
-];
 
 export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   customers = [],
@@ -162,15 +152,15 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
     };
   }, [serviceLines]);
 
-  const handleAddLine = (preset?: { title: string; defaultPrice: number; taxRate: number }) => {
+  const handleAddLine = () => {
     setServiceLines(prev => [
       ...prev,
       {
         id: crypto.randomUUID(),
-        description: preset ? preset.title : '',
+        description: '',
         quantity: 1,
-        unitPrice: preset ? preset.defaultPrice : 0,
-        taxRate: preset ? preset.taxRate : defaultTaxRate,
+        unitPrice: 0,
+        taxRate: defaultTaxRate,
       }
     ]);
   };
@@ -373,27 +363,6 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 <UserPlus className="h-3 w-3" />
                 <span className="hidden sm:inline">Nuevo Cliente</span>
               </Button>
-            </div>
-
-            {/* Quick Service Pills Row */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0 flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-emerald-400" />
-                Rápidos:
-              </span>
-              {PRESET_SERVICES.map((preset, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleAddLine(preset)}
-                  className="px-2 py-0.5 rounded-lg bg-muted/40 hover:bg-emerald-500/10 hover:border-emerald-500/30 border border-border/40 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 shadow-2xs"
-                >
-                  <span>+ {preset.title}</span>
-                  <span className="text-[10px] font-mono opacity-70 text-emerald-400">
-                    ${preset.defaultPrice.toLocaleString()}
-                  </span>
-                </button>
-              ))}
             </div>
           </div>
 

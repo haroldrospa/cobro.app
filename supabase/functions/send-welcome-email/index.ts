@@ -47,114 +47,110 @@ serve(async (req) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>¡Bienvenido a Cobro App!</title>
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; margin: 0; padding: 0; color: #cbd5e1; -webkit-font-smoothing: antialiased; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; -webkit-font-smoothing: antialiased; }
           table { border-collapse: separate; }
           a { text-decoration: none; }
         </style>
       </head>
-      <body style="background-color: #0f172a; margin: 0; padding: 24px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #cbd5e1;">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0f172a;">
+      <body style="background-color: #f8fafc; margin: 0; padding: 24px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc;">
           <tr>
             <td align="center" style="padding: 10px 0 30px 0;">
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #1e262d; border-radius: 18px; overflow: hidden; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.45);">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #ffffff; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.06);">
                 <!-- Header Top Emerald Bar -->
                 <tr>
-                  <td style="background-color: #10b981; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
+                  <td style="background-color: #10b981; height: 5px; line-height: 5px; font-size: 1px;">&nbsp;</td>
                 </tr>
                 
                 <!-- Header Content with Logo -->
                 <tr>
-                  <td align="center" style="background-color: #141c24; padding: 36px 24px 28px 24px; text-align: center; border-bottom: 1px solid #283543;">
-                    <table border="0" cellspacing="0" cellpadding="0" align="center" style="margin: 0 auto 14px auto;">
+                  <td align="center" style="background-color: #ffffff; padding: 36px 24px 24px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                    <table border="0" cellspacing="0" cellpadding="0" align="center" style="margin: 0 auto 16px auto;">
                       <tr>
                         <td style="vertical-align: middle;">
                           <img src="${logoUrl}" alt="Cobro App Logo" width="46" height="46" style="display: block; width: 46px; height: 46px; border: 0; border-radius: 10px;" />
                         </td>
                         <td style="vertical-align: middle; padding-left: 12px; text-align: left;">
-                          <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">Cobro<span style="color: #10b981;">app</span></span>
+                          <span style="font-size: 26px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px;">Cobro<span style="color: #10b981;">app</span></span>
                         </td>
                       </tr>
                     </table>
                     
-                    <div style="display: inline-block; background-color: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 4px 14px; border-radius: 9999px; margin-bottom: 12px;">
-                      Facturación &bull; POS &bull; Inventario
-                    </div>
-                    
-                    <h1 style="color: #ffffff; margin: 8px 0 6px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">¡Te damos la bienvenida!</h1>
-                    <p style="color: #94a3b8; font-size: 14px; margin: 0; line-height: 1.4;">Tu negocio en control, en cualquier lugar</p>
+                    <h1 style="color: #0f172a; margin: 0 0 6px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">¡Te damos la bienvenida!</h1>
+                    <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.4;">Tu negocio en control, en cualquier lugar</p>
                   </td>
                 </tr>
 
                 <!-- Main Content -->
                 <tr>
-                  <td style="padding: 32px 28px; background-color: #1e262d;">
-                    <div style="font-size: 19px; font-weight: 700; color: #ffffff; margin-bottom: 12px;">
+                  <td style="padding: 32px 28px; background-color: #ffffff;">
+                    <div style="font-size: 19px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">
                       ¡Hola, ${clientName}! 👋
                     </div>
-                    <div style="font-size: 14px; line-height: 1.65; color: #cbd5e1; margin-bottom: 26px;">
-                      Nos emociona darte la bienvenida junto a <strong style="color: #34d399; font-weight: 700;">${businessName}</strong>. Tu cuenta ha sido activada exitosamente y tienes acceso inmediato a todas las herramientas para organizar tu inventario, registrar ventas y emitir facturas en segundos.
+                    <div style="font-size: 14px; line-height: 1.65; color: #334155; margin-bottom: 26px;">
+                      Nos emociona darte la bienvenida junto a <strong style="color: #059669; font-weight: 700;">${businessName}</strong>. Tu cuenta ha sido activada exitosamente y tienes acceso inmediato a todas las herramientas para organizar tu inventario, registrar ventas y emitir facturas en segundos.
                     </div>
 
-                    <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.8px; margin-bottom: 14px;">
+                    <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.8px; margin-bottom: 14px;">
                       Primeros pasos recomendados:
                     </div>
 
                     <!-- Step 1 -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 12px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px;">
                       <tr>
                         <td style="padding: 16px; width: 42px; vertical-align: top;">
-                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: #ecfdf5; border: 1px solid #a7f3d0; text-align: center; line-height: 36px; font-size: 18px;">
                             📦
                           </div>
                         </td>
                         <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
-                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">1. Registra tus productos</div>
-                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">Organiza tu inventario por categorías, define precios e ingresa códigos de barra para ventas rápidas.</div>
+                          <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 3px;">1. Registra tus productos</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.45;">Organiza tu inventario por categorías, define precios e ingresa códigos de barra para ventas rápidas.</div>
                         </td>
                       </tr>
                     </table>
 
                     <!-- Step 2 -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 12px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px;">
                       <tr>
                         <td style="padding: 16px; width: 42px; vertical-align: top;">
-                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: #ecfdf5; border: 1px solid #a7f3d0; text-align: center; line-height: 36px; font-size: 18px;">
                             ⚡
                           </div>
                         </td>
                         <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
-                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">2. Realiza tu primera venta en el POS</div>
-                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">Prueba nuestro punto de venta táctil, diseñado para ser rápido e intuitivo desde teléfono, tablet o PC.</div>
+                          <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 3px;">2. Realiza tu primera venta en el POS</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.45;">Prueba nuestro punto de venta táctil, diseñado para ser rápido e intuitivo desde teléfono, tablet o PC.</div>
                         </td>
                       </tr>
                     </table>
 
                     <!-- Step 3 -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 12px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px;">
                       <tr>
                         <td style="padding: 16px; width: 42px; vertical-align: top;">
-                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: #ecfdf5; border: 1px solid #a7f3d0; text-align: center; line-height: 36px; font-size: 18px;">
                             🖨️
                           </div>
                         </td>
                         <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
-                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">3. Conecta tu impresora térmica</div>
-                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">Imprime tickets y facturas al instante vía Bluetooth, conexión de red o USB desde cualquier equipo.</div>
+                          <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 3px;">3. Conecta tu impresora térmica</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.45;">Imprime tickets y facturas al instante vía Bluetooth, conexión de red o USB desde cualquier equipo.</div>
                         </td>
                       </tr>
                     </table>
 
                     <!-- Step 4 -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #161e27; border: 1px solid #2b394a; border-radius: 12px; margin-bottom: 24px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px;">
                       <tr>
                         <td style="padding: 16px; width: 42px; vertical-align: top;">
-                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.25); text-align: center; line-height: 36px; font-size: 18px;">
+                          <div style="width: 36px; height: 36px; border-radius: 8px; background-color: #ecfdf5; border: 1px solid #a7f3d0; text-align: center; line-height: 36px; font-size: 18px;">
                             🤝
                           </div>
                         </td>
                         <td style="padding: 16px 16px 16px 4px; vertical-align: middle;">
-                          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 3px;">4. Soporte y Acompañamiento Personalizado</div>
-                          <div style="font-size: 13px; color: #94a3b8; line-height: 1.45;">¿Necesitas ayuda configurando tu negocio? Genera un reporte directo en tu panel de Cobro App y nuestro equipo se comunicará contigo de inmediato.</div>
+                          <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 3px;">4. Soporte y Acompañamiento Personalizado</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.45;">¿Necesitas ayuda configurando tu negocio? Genera un reporte directo en tu panel de Cobro App y nuestro equipo se comunicará contigo de inmediato.</div>
                         </td>
                       </tr>
                     </table>
@@ -163,7 +159,7 @@ serve(async (req) => {
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 28px 0 24px 0;">
                       <tr>
                         <td align="center">
-                          <a href="${appUrl}" target="_blank" style="background-color: #10b981; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; display: inline-block; font-size: 15px; font-weight: 700; text-align: center; padding: 15px 36px; border-radius: 12px; text-decoration: none; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);">
+                          <a href="${appUrl}" target="_blank" style="background-color: #10b981; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff !important; display: inline-block; font-size: 15px; font-weight: 700; text-align: center; padding: 15px 36px; border-radius: 12px; text-decoration: none; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);">
                             Ingresar a mi Negocio en Cobro App &rarr;
                           </a>
                         </td>
@@ -171,13 +167,13 @@ serve(async (req) => {
                     </table>
 
                     <!-- Support Card -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
                       <tr>
                         <td style="padding: 16px 18px;">
-                          <div style="font-size: 13px; font-weight: 700; color: #34d399; margin-bottom: 4px;">
+                          <div style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 4px;">
                             💬 ¿Tienes dudas o necesitas asistencia?
                           </div>
-                          <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                          <div style="font-size: 12px; color: #15803d; line-height: 1.5;">
                             Estamos aquí para ayudarte a crecer. Si necesitas ayuda con la configuración o requieres asesoría, puedes generar un reporte desde el menú superior de tu cuenta o contactarnos directamente por WhatsApp o llamada.
                           </div>
                         </td>
@@ -188,12 +184,12 @@ serve(async (req) => {
 
                 <!-- Footer -->
                 <tr>
-                  <td align="center" style="background-color: #141c24; border-top: 1px solid #283543; padding: 22px 20px; text-align: center;">
-                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #94a3b8; font-weight: 600;">
+                  <td align="center" style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 22px 20px; text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b; font-weight: 600;">
                       Cobro App &mdash; Sistema de Facturación y Gestión de Negocios
                     </p>
-                    <p style="margin: 0; font-size: 11px; color: #64748b;">
-                      Recibiste este correo porque registraste una cuenta en <a href="${appUrl}" target="_blank" style="color: #10b981; text-decoration: none;">Cobro App</a>.
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                      Recibiste este correo porque registraste una cuenta en <a href="${appUrl}" target="_blank" style="color: #059669; text-decoration: none; font-weight: 600;">Cobro App</a>.
                     </p>
                   </td>
                 </tr>
