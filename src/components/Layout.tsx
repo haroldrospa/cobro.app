@@ -382,9 +382,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </div>
                 )}
 
-                {/* Botón de Generar Reporte / Contacto */}
-                <ClientReportDialog />
-
                 {/* User Dropdown / Profile Avatar */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -471,7 +468,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </>
             )}
             <PlanBadge />
-            <div className="text-xs text-muted-foreground hidden lg:block">Desarrollado por Harold Rosado</div>
+            <ClientReportDialog />
           </div>
         </div>
 
