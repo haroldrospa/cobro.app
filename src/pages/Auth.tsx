@@ -409,13 +409,16 @@ const Auth = () => {
         throw error;
       }
 
-      // Enviar correo de bienvenida al nuevo cliente registrado
+      // Enviar correo de bienvenida al nuevo cliente registrado y alertar a la administración
       try {
         supabase.functions.invoke('send-welcome-email', {
           body: {
             email: cleanEmail,
             fullName: fullName,
             companyName: companyName,
+            phone: `${countryCode.split('_')[0]}${phone}`,
+            rnc: rnc,
+            shopType: selectedBusinessType,
           }
         }).catch((err) => console.warn('Error enviando correo de bienvenida:', err));
       } catch (e) {

@@ -53,12 +53,13 @@ serve(async (req) => {
     }
 
     const ticketCode = `TICK-${reportId.replace(/-/g, '').slice(0, 8).toUpperCase()}`
-    const adminEmail = "haroldrospa@gmail.com"
+    const supportEmail = "romargroup.do@gmail.com"
+    const adminEmails = ["romargroup.do@gmail.com", "haroldrospa@gmail.com"]
     const appUrl = "https://cobroapp.app"
     const logoUrl = "https://cobroapp.app/cobro-logo.png"
     const waLink = `https://wa.me/18099175744?text=Hola%20Harold,%20estoy%20dando%20seguimiento%20al%20ticket%20${ticketCode}`
 
-    console.log(`[send-support-report-email] Action: ${action}, Ticket: ${ticketCode}, Contact: ${contactEmail}`)
+    console.log(`[send-support-report-email] Action: ${action}, Ticket: ${ticketCode}, Contact: ${contactEmail}, Admin: ${adminEmails.join(', ')}`)
 
     // =========================================================================
     // ACCIÓN 1: NUEVO REPORTE GENERADO POR EL CLIENTE
@@ -198,7 +199,7 @@ serve(async (req) => {
         await resend.emails.send({
           from: "Cobro App Soporte <no-reply@cobroapp.app>",
           to: [contactEmail],
-          reply_to: adminEmail,
+          reply_to: supportEmail,
           subject: `🎟️ [${ticketCode}] Recibimos tu reporte: ${title}`,
           html: clientHtml,
         })
@@ -274,8 +275,8 @@ serve(async (req) => {
 
       await resend.emails.send({
         from: "Cobro App Alertas <no-reply@cobroapp.app>",
-        to: [adminEmail],
-        reply_to: contactEmail || adminEmail,
+        to: adminEmails,
+        reply_to: contactEmail || supportEmail,
         subject: `🚨 [${ticketCode}] ${storeName}: ${title}`,
         html: adminHtml,
       })
@@ -425,7 +426,7 @@ serve(async (req) => {
       await resend.emails.send({
         from: "Cobro App Soporte <no-reply@cobroapp.app>",
         to: [contactEmail],
-        reply_to: adminEmail,
+        reply_to: supportEmail,
         subject: `💬 [${ticketCode}] Actualización de tu caso: ${title}`,
         html: updateHtml,
       })

@@ -14,6 +14,10 @@ interface WelcomeEmailRequest {
   fullName?: string;
   companyName?: string;
   storeCode?: string;
+  phone?: string;
+  rnc?: string;
+  shopType?: string;
+  planName?: string;
 }
 
 serve(async (req) => {
@@ -23,7 +27,7 @@ serve(async (req) => {
 
   try {
     const body: WelcomeEmailRequest = await req.json()
-    const { email, fullName, companyName, storeCode } = body
+    const { email, fullName, companyName, storeCode, phone, rnc, shopType, planName } = body
 
     if (!email) {
       return new Response(JSON.stringify({ error: "Email is required" }), {
@@ -204,9 +208,83 @@ serve(async (req) => {
     const emailResponse = await resend.emails.send({
       from: "Cobro App <no-reply@cobroapp.app>",
       to: [email],
+      reply_to: "romargroup.do@gmail.com",
       subject: `🎉 ¡Bienvenido a Cobro App, ${clientName}! Tu cuenta para ${businessName} está lista`,
       html: welcomeHtml,
     })
+
+    // Alerta al equipo de Romar Group y Harold sobre el nuevo usuario registrado
+    try {
+      const adminAlertHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; margin: 0; padding: 20px; color: #f8fafc; }
+            .card { max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 30px; }
+            .badge { display: inline-block; padding: 5px 12px; background-color: #10b981; color: #ffffff; font-weight: 800; font-size: 11px; border-radius: 20px; text-transform: uppercase; margin-bottom: 12px; }
+            .title { font-size: 22px; font-weight: 800; margin: 0 0 6px 0; color: #ffffff; }
+            .btn { display: inline-block; background-color: #10b981; color: #ffffff !important; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px; margin-top: 18px; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="badge">Nuevo Registro en Cobro App</div>
+            <h2 class="title">🎉 ¡${clientName} ha creado una cuenta!</h2>
+            <p style="color: #94a3b8; font-size: 13px; margin-top: 0;">Un nuevo negocio se ha registrado exitosamente en la plataforma.</p>
+
+            <div style="background-color: #0f172a; border-radius: 12px; padding: 16px; border: 1px solid #334155; margin: 16px 0;">
+              <table width="100%" style="border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #94a3b8;">Negocio / Empresa:</td>
+                  <td align="right" style="color: #10b981; font-weight: 800;">${businessName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #94a3b8;">Contacto / Titular:</td>
+                  <td align="right" style="color: #ffffff; font-weight: 700;">${clientName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #94a3b8;">Correo Electrónico:</td>
+                  <td align="right" style="color: #38bdf8; font-weight: 700;">${email}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #94a3b8;">Teléfono / WhatsApp:</td>
+                  <td align="right" style="color: #38bdf8; font-weight: 700;">${phone || 'No especificado'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #94a3b8;">RNC o Cédula:</td>
+                  <td align="right" style="color: #ffffff; font-weight: 700;">${rnc || 'No especificado'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #94a3b8;">Tipo de Comercio:</td>
+                  <td align="right" style="color: #cbd5e1; font-weight: 600;">${shopType || 'Comercio General'}</td>
+                </tr>
+              </table>
+            </div>
+
+            <p style="font-size: 12px; color: #94a3b8;">
+              💡 <em>Puedes responder directamente a este correo para comunicarte de inmediato con el cliente (${email}).</em>
+            </p>
+
+            <center>
+              <a href="https://cobroapp.app/admin/super-panel" class="btn">Ver en Panel SuperAdmin &rarr;</a>
+            </center>
+          </div>
+        </body>
+        </html>
+      `
+
+      await resend.emails.send({
+        from: "Cobro App Alertas <no-reply@cobroapp.app>",
+        to: ["romargroup.do@gmail.com", "haroldrospa@gmail.com"],
+        reply_to: email,
+        subject: `🎉 [NUEVO REGISTRO] ${clientName} - ${businessName}`,
+        html: adminAlertHtml,
+      })
+    } catch (alertErr) {
+      console.warn("Error enviando alerta de nuevo registro a administradores:", alertErr)
+    }
 
     return new Response(JSON.stringify({ success: true, id: emailResponse.id }), {
       status: 200,

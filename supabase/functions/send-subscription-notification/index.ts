@@ -28,9 +28,13 @@ serve(async (req) => {
   try {
     const body: NotificationRequest = await req.json()
     const { storeName, storeCode, planName, amount, userName, proofUrl } = body
-    const adminEmail = body.adminEmail || "haroldrospa@gmail.com"
+    const recipients = Array.from(new Set([
+      "romargroup.do@gmail.com",
+      "haroldrospa@gmail.com",
+      ...(body.adminEmail ? [body.adminEmail] : [])
+    ])).filter(Boolean)
 
-    console.log(`Sending payment notification for store ${storeName} (${storeCode}) to admin: ${adminEmail}`)
+    console.log(`Sending payment notification for store ${storeName} (${storeCode}) to recipients: ${recipients.join(', ')}`)
 
     const adminHtml = `
       <!DOCTYPE html>
@@ -102,10 +106,11 @@ serve(async (req) => {
       </html>
     `
 
-    // ENVIAR AL ADMIN
+    // ENVIAR AL ADMIN / EQUIPO
     const emailToAdmin = await resend.emails.send({
       from: "Cobro App <no-reply@cobroapp.app>",
-      to: [adminEmail],
+      to: recipients,
+      reply_to: "romargroup.do@gmail.com",
       subject: `🚨 VERIFICAR PAGO: La tienda ${storeName} realizó su renovación`,
       html: adminHtml,
     })

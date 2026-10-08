@@ -698,8 +698,8 @@ const SuperAdmin = () => {
                 .select("*")
                 .eq("id", "notification_email")
                 .maybeSingle();
-            if (error) return { value: "haroldrospa@gmail.com" };
-            return data || { value: "haroldrospa@gmail.com" };
+            if (error) return { value: "romargroup.do@gmail.com" };
+            return data || { value: "romargroup.do@gmail.com" };
         }
     });
 

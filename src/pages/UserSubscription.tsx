@@ -53,8 +53,8 @@ const UserSubscription = () => {
                 .select('value')
                 .eq('id', 'notification_email')
                 .maybeSingle();
-            if (error) return { value: 'haroldrospa@gmail.com' };
-            return data || { value: 'haroldrospa@gmail.com' };
+            if (error) return { value: 'romargroup.do@gmail.com' };
+            return data || { value: 'romargroup.do@gmail.com' };
         }
     });
 
@@ -283,7 +283,7 @@ const UserSubscription = () => {
 
             // 3. ENVIAR NOTIFICACIÓN POR CORREO
             try {
-                const adminEmail = globalAdminSettings?.value || 'haroldrospa@gmail.com';
+                const adminEmail = globalAdminSettings?.value || 'romargroup.do@gmail.com';
                 console.log('📧 Intentando enviar correo a:', adminEmail);
                 
                 const { data, error } = await supabase.functions.invoke('send-subscription-notification', {
