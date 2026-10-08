@@ -69,6 +69,19 @@ const UserSubscription = () => {
     // Estado para reporte de pago manual
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
     const [paymentAmount, setPaymentAmount] = useState('');
+    const [clientPhone, setClientPhone] = useState('');
+    const [clientEmail, setClientEmail] = useState('');
+
+    useEffect(() => {
+        if (!clientPhone) {
+            const phoneVal = profile?.phone || companySettings?.phone || '';
+            if (phoneVal) setClientPhone(phoneVal);
+        }
+        if (!clientEmail) {
+            const emailVal = profile?.email || companySettings?.email || '';
+            if (emailVal) setClientEmail(emailVal);
+        }
+    }, [profile, companySettings]);
 
     const plans = [
         {
@@ -211,10 +224,14 @@ const UserSubscription = () => {
 
     const handleWhatsAppNotification = () => {
         const planNameToReport = targetPlanDetails?.name || currentPlanDetails?.name || 'Suscripción';
+        const finalEmail = (clientEmail || profile?.email || companySettings?.email || '').trim();
+        const finalPhone = (clientPhone || profile?.phone || companySettings?.phone || '').trim();
         const msg = encodeURIComponent(
             `¡Hola Harold! Acabo de realizar una transferencia bancaria en Banreservas para CobroApp.\n\n` +
             `🏪 Tienda: ${store?.store_name || 'Mi Tienda'} (${store?.store_code || 'S/C'})\n` +
             `👤 Titular/Usuario: ${profile?.full_name || 'Usuario'}\n` +
+            (finalPhone ? `📱 Teléfono: ${finalPhone}\n` : '') +
+            (finalEmail ? `✉️ Correo: ${finalEmail}\n` : '') +
             `📦 Plan: ${planNameToReport}\n` +
             `💰 Monto: RD$ ${paymentAmount || '---'}\n\n` +
             `Adjunto mi comprobante por este medio para su confirmación. ¡Muchas gracias!`
@@ -285,7 +302,28 @@ const UserSubscription = () => {
             try {
                 const adminEmail = globalAdminSettings?.value || 'romargroup.do@gmail.com';
                 console.log('📧 Intentando enviar correo a:', adminEmail);
-                
+
+                // Obtener URL firmada válida por 30 días para ver el comprobante directamente desde el correo
+                let signedProofUrl = '';
+                try {
+                    const { data: signedData } = await supabase.storage
+                        .from('payment-proofs')
+                        .createSignedUrl(filePath, 60 * 60 * 24 * 30);
+                    if (signedData?.signedUrl) {
+                        signedProofUrl = signedData.signedUrl;
+                    }
+                } catch (signErr) {
+                    console.warn('⚠️ No se pudo generar signedUrl del comprobante:', signErr);
+                }
+
+                const finalUserEmail = (clientEmail || profile?.email || companySettings?.email || '').trim();
+                const finalUserPhone = (clientPhone || profile?.phone || companySettings?.phone || '').trim();
+
+                // Si el perfil no tenía teléfono guardado y ahora se especificó, actualizarlo en segundo plano
+                if (profile?.id && finalUserPhone && !profile?.phone) {
+                    supabase.from('profiles').update({ phone: finalUserPhone }).eq('id', profile.id).then();
+                }
+
                 const { data, error } = await supabase.functions.invoke('send-subscription-notification', {
                     body: {
                         adminEmail: adminEmail,
@@ -294,7 +332,9 @@ const UserSubscription = () => {
                         planName: targetPlanDetails?.name || currentPlanDetails?.name || 'Suscripción',
                         amount: parseFloat(paymentAmount),
                         userName: profile?.full_name || 'Usuario',
-                        proofUrl: filePath,
+                        userEmail: finalUserEmail,
+                        userPhone: finalUserPhone,
+                        proofUrl: signedProofUrl || filePath,
                         bankName: 'Banreservas'
                     }
                 });
@@ -530,6 +570,34 @@ const UserSubscription = () => {
                                     <span className="text-[10.5px] font-medium truncate">Adjuntar Foto o Recibo</span>
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Datos de contacto para recibir confirmación y soporte */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                        <div className="space-y-1">
+                            <Label className="text-[10px] font-semibold text-muted-foreground">
+                                📱 Teléfono / WhatsApp
+                            </Label>
+                            <Input
+                                className="h-8 text-xs font-semibold rounded-md"
+                                type="tel"
+                                placeholder="Ej: 809-555-1234"
+                                value={clientPhone}
+                                onChange={(e) => setClientPhone(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[10px] font-semibold text-muted-foreground">
+                                ✉️ Correo para Notificación
+                            </Label>
+                            <Input
+                                className="h-8 text-xs font-semibold rounded-md"
+                                type="email"
+                                placeholder="correo@ejemplo.com"
+                                value={clientEmail}
+                                onChange={(e) => setClientEmail(e.target.value)}
+                            />
                         </div>
                     </div>
                 </div>
