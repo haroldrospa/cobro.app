@@ -124,6 +124,11 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
   const [barHeight, setBarHeight] = useState<number>(savedSettings.barHeight ?? 45); // Altura en px (JsBarcode)
   const [barWidth, setBarWidth] = useState<number>(savedSettings.barWidth ?? 1.8);  // Grosor en px (JsBarcode)
 
+  // Calibración y desplazamientos para centrado en etiquetas térmicas
+  const [offsetY, setOffsetY] = useState<number>(savedSettings.offsetY ?? 0); // Desplazamiento Y en mm (-15 a +15)
+  const [offsetX, setOffsetX] = useState<number>(savedSettings.offsetX ?? 0); // Desplazamiento X en mm (-15 a +15)
+  const [contentPadding, setContentPadding] = useState<number>(savedSettings.contentPadding ?? (savedSettings.labelHeight && savedSettings.labelHeight <= 22 ? 0.8 : 1.2)); // Margen interior en mm
+
   // Persistir settings con debounce — evita escribir localStorage en cada keystroke
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -131,11 +136,12 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         labelWidth, labelHeight, columns, gapX, gapY,
         showBusinessName, showProductName, showPrice, showBarcodeText, rotation,
         bnameSize, pnameSize, priceSize, barcodeFontSize,
-        barHeight, barWidth, selectedTemplateId
+        barHeight, barWidth, selectedTemplateId,
+        offsetY, offsetX, contentPadding
       }));
     }, 500);
     return () => clearTimeout(timer);
-  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth, selectedTemplateId]);
+  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth, selectedTemplateId, offsetY, offsetX, contentPadding]);
 
   // Lista interactiva de impresión
   const [printList, setPrintList] = useState<PrintItem[]>(() =>
@@ -178,35 +184,41 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
       setLabelHeight(30);
       setColumns(1);
       setGapX(0);
-      setGapY(4);
-      setRotation(180);
+      setGapY(0);
+      setRotation(0);
       setShowBusinessName(true);
       setShowProductName(true);
       setShowPrice(true);
       setShowBarcodeText(true);
-      setBnameSize(10);
-      setPnameSize(11);
-      setPriceSize(16);
-      setBarcodeFontSize(12);
-      setBarHeight(40);
-      setBarWidth(1.6);
+      setBnameSize(9);
+      setPnameSize(10);
+      setPriceSize(14);
+      setBarcodeFontSize(10);
+      setBarHeight(32);
+      setBarWidth(1.4);
+      setOffsetY(0);
+      setOffsetX(0);
+      setContentPadding(1.2);
     } else if (profileId === 'thermal_small') {
       setLabelWidth(30);
       setLabelHeight(20);
       setColumns(1);
       setGapX(0);
-      setGapY(2);
-      setRotation(180);
-      setShowBusinessName(false);
+      setGapY(0);
+      setRotation(0);
+      setShowBusinessName(false); // En 20mm no cabe el nombre de negocio junto al producto y barcode
       setShowProductName(true);
       setShowPrice(true);
       setShowBarcodeText(true);
-      setBnameSize(8);
-      setPnameSize(9);
+      setBnameSize(7);
+      setPnameSize(8);
       setPriceSize(11);
-      setBarcodeFontSize(9);
-      setBarHeight(25);
-      setBarWidth(1.2);
+      setBarcodeFontSize(8);
+      setBarHeight(18);
+      setBarWidth(1.1);
+      setOffsetY(0);
+      setOffsetX(0);
+      setContentPadding(0.8);
     } else if (profileId === 'a4_3x10') {
       setLabelWidth(66);
       setLabelHeight(25);
@@ -224,6 +236,9 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
       setBarcodeFontSize(12);
       setBarHeight(40);
       setBarWidth(1.6);
+      setOffsetY(0);
+      setOffsetX(0);
+      setContentPadding(1.5);
     } else {
       // Buscar plantilla personalizada
       const template = customTemplates.find(t => t.id === profileId);
@@ -233,7 +248,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         setColumns(template.columns);
         setGapX(template.gapX);
         setGapY(template.gapY);
-        setRotation(template.rotation);
+        setRotation(template.rotation ?? 0);
         setShowBusinessName(template.showBusinessName);
         setShowProductName(template.showProductName);
         setShowPrice(template.showPrice);
@@ -244,9 +259,52 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         setBarcodeFontSize(template.barcodeFontSize);
         setBarHeight(template.barHeight);
         setBarWidth(template.barWidth);
+        setOffsetY(template.offsetY ?? 0);
+        setOffsetX(template.offsetX ?? 0);
+        setContentPadding(template.contentPadding ?? 1.0);
       }
     }
   }, [customTemplates]);
+
+  // Auto-optimizar fuentes y código según la altura actual de la etiqueta
+  const handleAutoOptimize = useCallback(() => {
+    if (labelHeight <= 22) {
+      setShowBusinessName(false);
+      setShowProductName(true);
+      setShowPrice(true);
+      setShowBarcodeText(true);
+      setBnameSize(7);
+      setPnameSize(8);
+      setPriceSize(11);
+      setBarcodeFontSize(8);
+      setBarHeight(18);
+      setBarWidth(1.1);
+      setContentPadding(0.8);
+      setRotation(0);
+      setOffsetY(0);
+      setOffsetX(0);
+    } else if (labelHeight <= 35) {
+      setBnameSize(9);
+      setPnameSize(10);
+      setPriceSize(14);
+      setBarcodeFontSize(10);
+      setBarHeight(30);
+      setBarWidth(1.4);
+      setContentPadding(1.2);
+    } else {
+      setBnameSize(10);
+      setPnameSize(11);
+      setPriceSize(16);
+      setBarcodeFontSize(12);
+      setBarHeight(40);
+      setBarWidth(1.6);
+      setContentPadding(1.5);
+    }
+    toast({
+      title: "Medidas optimizadas",
+      description: `Se han adaptado las fuentes y código para una altura de ${labelHeight}mm.`
+    });
+  }, [labelHeight, toast]);
 
   const handleSaveTemplate = async () => {
     const name = prompt("Introduce el nombre de la planilla de configuración (ej: Rollo 30x20):");
@@ -270,7 +328,10 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
       priceSize,
       barcodeFontSize,
       barHeight,
-      barWidth
+      barWidth,
+      offsetY,
+      offsetX,
+      contentPadding
     };
 
     const updated = [...customTemplates, newTemplate];
@@ -335,6 +396,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         const isSwapped = rotation === 90 || rotation === 270;
         const printW = isSwapped ? labelHeight : labelWidth;
         const printH = isSwapped ? labelWidth : labelHeight;
+        const isSmallHeight = labelHeight <= 25;
 
         const labelsHtml = selectedItems.flatMap(item => {
           const barcodeSvg = getCachedBarcodeSvg(item.product.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth);
@@ -343,7 +405,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
             <div class="label">
               <div class="label-content">
                 ${showBusinessName ? `<div class="business-name" style="font-size: ${bnameSize}px">${settings?.company_name || userStore?.store_name || 'Mi Negocio'}</div>` : ''}
-                ${showProductName ? `<div class="product-name" style="font-size: ${pnameSize}px">${item.product.name}</div>` : ''}
+                ${showProductName ? `<div class="product-name" style="font-size: ${pnameSize}px" title="${item.product.name}">${item.product.name}</div>` : ''}
                 ${showPrice ? `<div class="product-price" style="font-size: ${priceSize}px">$${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
                 <div class="barcode-container">
                   ${barcodeSvg}
@@ -370,21 +432,23 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 background: #f1f5f9;
                 display: flex;
                 justify-content: center;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
 
               .labels-container {
-                display: grid;
-                grid-template-columns: repeat(${columns}, ${printW}mm);
-                column-gap: ${gapX}mm;
-                row-gap: ${gapY}mm;
-                ${columns > 1 ? 'justify-content: center; padding-top: 10mm;' : ''}
-                width: max-content;
+                display: ${columns === 1 ? 'flex' : 'grid'};
+                ${columns === 1 
+                  ? 'flex-direction: column; align-items: center; width: 100%; margin: 0; padding: 0;' 
+                  : `grid-template-columns: repeat(${columns}, ${printW}mm); column-gap: ${gapX}mm; row-gap: ${gapY}mm; justify-content: center; padding-top: 10mm; width: max-content;`
+                }
                 max-width: 100%;
               }
 
               .label {
                 width: ${printW}mm;
-                height: ${printH - 2}mm;
+                height: ${printH}mm;
+                max-height: ${printH}mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -394,20 +458,33 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 box-sizing: border-box;
                 padding: 0;
                 margin: 0 auto;
-                border: 1px dotted #ccc; 
+                position: relative;
+                page-break-after: ${columns === 1 ? 'always' : 'auto'};
+                break-after: ${columns === 1 ? 'page' : 'auto'};
+                page-break-inside: avoid;
+                break-inside: avoid;
+                border: ${columns > 1 ? '1px dotted #ccc' : 'none'};
+              }
+
+              .label:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
               }
 
               .label-content {
                 display: flex;
                 flex-direction: column;
-                justify-content: center;
+                justify-content: space-evenly;
                 align-items: center;
                 width: 100%;
                 height: 100%;
-                padding: 1.5mm;
+                max-width: 100%;
+                max-height: 100%;
+                padding: ${contentPadding}mm;
                 box-sizing: border-box;
                 overflow: hidden;
-                ${rotation !== 0 ? `transform: rotate(${rotation}deg);` : ''}
+                transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
+                transform-origin: center center;
               }
 
               .label-content * {
@@ -417,50 +494,57 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               }
 
               .business-name {
-                font-size: 10px;
                 font-weight: bold;
                 text-transform: uppercase;
-                margin-bottom: 2px;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 width: 100%;
                 text-align: center;
+                line-height: 1.1;
+                margin: 0;
+                padding: 0;
+                flex-shrink: 0;
               }
 
               .product-name {
-                font-size: 11px;
-                line-height: 1.2;
-                margin-bottom: 2px;
-                max-height: 26px;
-                overflow: hidden;
+                line-height: 1.1;
+                margin: 0;
+                padding: 0;
                 width: 100%;
-                text-overflow: ellipsis;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
                 text-align: center;
+                flex-shrink: 0;
+                ${isSmallHeight 
+                  ? 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' 
+                  : 'max-height: 26px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;'
+                }
               }
 
               .product-price {
-                font-size: 16px;
                 font-weight: 800;
-                margin-bottom: 2px;
+                margin: 0;
+                padding: 0;
                 text-align: center;
+                line-height: 1.1;
+                width: 100%;
+                flex-shrink: 0;
               }
 
               .barcode-container {
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                flex-shrink: 0;
+                flex-shrink: 1;
                 width: 100%;
+                max-width: 100%;
                 overflow: hidden;
+                margin: 0;
+                padding: 0;
               }
 
               .barcode-container svg {
                 max-width: 100%;
-                max-height: ${labelHeight * barcodeMaxHeightMultiplier}mm; 
+                max-height: ${Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, barHeight * 0.45))}mm; 
                 width: auto;
                 height: auto;
                 display: block;
@@ -474,11 +558,12 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
               @media print {
                 html, body {
-                  width: ${columns === 1 ? printW + 'mm' : '100%'};
+                  width: ${columns === 1 ? printW + 'mm' : '100%'} !important;
+                  height: ${columns === 1 ? printH + 'mm' : 'auto'} !important;
                   margin: 0 !important;
                   padding: 0 !important;
                   overflow: hidden !important;
-                  background-color: #fff;
+                  background-color: #fff !important;
                 }
                 
                 ${columns === 1 ? `
@@ -487,40 +572,35 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                     flex-direction: column !important;
                     align-items: center !important;
                     width: 100% !important;
-                    column-gap: 0 !important;
-                    row-gap: 0 !important;
-                    padding: 0 !important;
                     margin: 0 !important;
+                    padding: 0 !important;
                   }
                   .label {
                     display: flex !important;
-                    width: ${printW - 1}mm !important;
-                    height: ${printH - 1.5}mm !important;
+                    width: ${printW}mm !important;
+                    height: ${printH}mm !important;
+                    max-height: ${printH}mm !important;
                     border: none !important;
-                    margin: 0 auto !important;
+                    margin: 0 !important;
                     padding: 0 !important;
                     overflow: hidden !important;
                   }
-                  .label:not(:last-child) {
-                    page-break-after: always !important;
-                    break-after: page !important;
+                  .label:last-child {
+                    page-break-after: auto !important;
+                    break-after: auto !important;
                   }
                   .label-content {
                     display: flex !important;
                     flex-direction: column !important;
-                    justify-content: center !important;
+                    justify-content: space-evenly !important;
                     align-items: center !important;
                     width: 100% !important;
                     height: 100% !important;
                     overflow: hidden !important;
-                    padding: 1.5mm !important;
+                    padding: ${contentPadding}mm !important;
                     box-sizing: border-box !important;
-                  }
-                  .label-text, .barcode-container {
-                    display: flex !important;
-                    justify-content: center !important;
-                    align-items: center !important;
-                    width: 100% !important;
+                    transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''} !important;
+                    transform-origin: center center !important;
                   }
                   .barcode-container svg {
                     display: block !important;
@@ -598,9 +678,10 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
     .preview-barcode-container svg {
       max-width: 100%;
       height: auto;
-      max-height: ${labelHeight * barcodeMaxHeightMultiplier}mm;
+      max-height: ${Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, barHeight * 0.45))}mm;
+      display: block;
     }
-  `, [labelHeight, barcodeMaxHeightMultiplier]);
+  `, [labelHeight, barcodeMaxHeightMultiplier, barHeight]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -811,13 +892,109 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                       </div>
                     </div>
                   </div>
+
+                  {/* 3. Calibración y Centrado */}
+                  <div className="space-y-4 sm:col-span-2 bg-muted/40 p-3 rounded-lg border">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-primary" />
+                        <h4 className="font-semibold text-sm">3. Calibración y Centrado Fino (Milímetros)</h4>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleAutoOptimize}
+                        className="h-7 text-xs bg-primary/10 text-primary hover:bg-primary/20 border-primary/20"
+                      >
+                        ✨ Auto-Ajustar para {labelHeight}mm
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                      {/* Desplazamiento Vertical */}
+                      <div className="space-y-1.5 bg-background p-2.5 rounded-md border">
+                        <div className="flex justify-between items-center">
+                          <Label className="text-xs font-semibold">Ajuste Vertical (Y)</Label>
+                          <span className="text-[11px] font-mono text-muted-foreground">{offsetY > 0 ? `+${offsetY}` : offsetY} mm</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          Sube (-) o baja (+) el diseño en la etiqueta física.
+                        </p>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setOffsetY(prev => Number((prev - 1).toFixed(1)))}>-1mm</Button>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min="-15"
+                            max="15"
+                            className="h-7 text-xs text-center font-mono"
+                            value={offsetY}
+                            onChange={(e) => setOffsetY(Number(e.target.value))}
+                          />
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setOffsetY(prev => Number((prev + 1).toFixed(1)))}>+1mm</Button>
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] text-muted-foreground" onClick={() => setOffsetY(0)}>0</Button>
+                        </div>
+                      </div>
+
+                      {/* Desplazamiento Horizontal */}
+                      <div className="space-y-1.5 bg-background p-2.5 rounded-md border">
+                        <div className="flex justify-between items-center">
+                          <Label className="text-xs font-semibold">Ajuste Horizontal (X)</Label>
+                          <span className="text-[11px] font-mono text-muted-foreground">{offsetX > 0 ? `+${offsetX}` : offsetX} mm</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          Mueve a la izq (-) o der (+) para centrar en el rollo.
+                        </p>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setOffsetX(prev => Number((prev - 1).toFixed(1)))}>-1mm</Button>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min="-15"
+                            max="15"
+                            className="h-7 text-xs text-center font-mono"
+                            value={offsetX}
+                            onChange={(e) => setOffsetX(Number(e.target.value))}
+                          />
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setOffsetX(prev => Number((prev + 1).toFixed(1)))}>+1mm</Button>
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] text-muted-foreground" onClick={() => setOffsetX(0)}>0</Button>
+                        </div>
+                      </div>
+
+                      {/* Margen Interior */}
+                      <div className="space-y-1.5 bg-background p-2.5 rounded-md border">
+                        <div className="flex justify-between items-center">
+                          <Label className="text-xs font-semibold">Margen Interno (Padding)</Label>
+                          <span className="text-[11px] font-mono text-muted-foreground">{contentPadding} mm</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          Margen de seguridad dentro de la etiqueta.
+                        </p>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setContentPadding(prev => Math.max(0, Number((prev - 0.2).toFixed(1))))}>-0.2</Button>
+                          <Input
+                            type="number"
+                            step="0.2"
+                            min="0"
+                            max="5"
+                            className="h-7 text-xs text-center font-mono"
+                            value={contentPadding}
+                            onChange={(e) => setContentPadding(Math.max(0, Number(e.target.value)))}
+                          />
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setContentPadding(prev => Math.min(5, Number((prev + 0.2).toFixed(1))))}>+0.2</Button>
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] text-muted-foreground" onClick={() => setContentPadding(labelHeight <= 22 ? 0.8 : 1.2)}>Reset</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {/* Lista de selección interactiva */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b pb-1">
-                  <h4 className="font-semibold text-sm">3. Productos y Cantidad</h4>
+                  <h4 className="font-semibold text-sm">4. Productos y Cantidad</h4>
                   <div className="flex gap-2 text-xs">
                     <Button variant="ghost" size="sm" onClick={() => {
                       const filteredIds = new Set(filteredPrintList.map(i => i.product.id));
@@ -926,8 +1103,16 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 </div>
               </div>
 
-              <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md text-xs">
-                <p><strong>Truco Térmico:</strong> Si usas impresora térmica continua (1 columna), asegúrate que el navegador no agregue márgenes ni encaboezados propios (Desactiva "Headers/Footers" y pon "Margins: None" en el diálogo de sistema).</p>
+              <div className="bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 p-3.5 rounded-lg text-xs space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+                  <span>💡</span> ¿El sticker sale corrido o cortado? (Impresoras 4BARCODE / Térmicas):
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-[11px] leading-relaxed text-amber-800/90 dark:text-amber-300/90 pl-1">
+                  <li><strong>Ajuste Fino de Posición:</strong> Si el contenido se corta arriba o abajo, usa los botones de <strong>Ajuste Vertical (Y)</strong> (+ / - mm) de arriba para centrarlo al milímetro.</li>
+                  <li><strong>Calibrar Sensor de la Impresora:</strong> Con la impresora encendida y el papel puesto, mantén pulsado el botón <em>FEED</em> hasta que suenen 2 pitidos y suelta. La impresora avanzará 2 stickers y calibrará el sensor de separación (gap).</li>
+                  <li><strong>Controlador Windows (Seagull):</strong> En Preferencias de Impresión &gt; pestaña <em>Material</em>, asegúrate de que el Tipo de soporte sea <strong>"Etiquetas con separación"</strong> (con 2mm o 3mm de espacio).</li>
+                  <li><strong>Diálogo de Imprimir del Navegador:</strong> Márgenes: <em>Ninguno</em> y Escala: <em>Predeterminado (100%)</em>.</li>
+                </ul>
               </div>
             </div>
           </ScrollArea>
@@ -985,28 +1170,45 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                           borderBottom: columns === 1 ? '1px dashed #ccc' : '1px dotted #ccc',
                         }}
                       >
-                        <div className="relative flex flex-col items-center justify-center text-center overflow-hidden text-black" style={{ width: `${labelWidth}mm`, height: `${labelHeight}mm`, padding: '1.5mm', transform: rotation !== 0 ? `rotate(${rotation}deg)` : 'none', transformOrigin: 'center' }}>
-                          <div className="flex flex-col items-center justify-center w-full">
-                            {showBusinessName && (
-                              <div className="font-bold uppercase mb-[2px] w-full text-center" style={{ fontSize: `${bnameSize}px`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {settings?.company_name || userStore?.store_name || 'Mi Negocio'}
-                              </div>
-                            )}
-                            {showProductName && (
-                              <div className="w-full text-center leading-tight mb-[2px]" style={{ fontSize: `${pnameSize}px`, maxHeight: '26px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                {prod.name}
-                              </div>
-                            )}
-                            {showPrice && (
-                              <div className="font-extrabold mb-[2px] w-full text-center" style={{ fontSize: `${priceSize}px` }}>
-                                ${(prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </div>
-                            )}
-                          </div>
-                          <div className="w-full flex justify-center items-center flex-shrink-0 preview-barcode-container"
+                        <div
+                          className="relative flex flex-col items-center justify-evenly text-center overflow-hidden text-black"
+                          style={{
+                            width: `${labelWidth}mm`,
+                            height: `${labelHeight}mm`,
+                            padding: `${contentPadding}mm`,
+                            transform: `translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''}`,
+                            transformOrigin: 'center'
+                          }}
+                        >
+                          {showBusinessName && (
+                            <div className="font-bold uppercase w-full text-center truncate shrink-0" style={{ fontSize: `${bnameSize}px`, lineHeight: 1.1 }}>
+                              {settings?.company_name || userStore?.store_name || 'Mi Negocio'}
+                            </div>
+                          )}
+                          {showProductName && (
+                            <div
+                              className="w-full text-center leading-tight shrink-0"
+                              style={{
+                                fontSize: `${pnameSize}px`,
+                                lineHeight: 1.1,
+                                ...(labelHeight <= 25
+                                  ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                                  : { maxHeight: '26px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }
+                                )
+                              }}
+                            >
+                              {prod.name}
+                            </div>
+                          )}
+                          {showPrice && (
+                            <div className="font-extrabold w-full text-center shrink-0" style={{ fontSize: `${priceSize}px`, lineHeight: 1.1 }}>
+                              ${(prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                          )}
+                          <div
+                            className="w-full flex justify-center items-center shrink preview-barcode-container overflow-hidden"
                             dangerouslySetInnerHTML={{ __html: getCachedBarcodeSvg(prod.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth) }}
                           />
-
                         </div>
                       </div>
                     ))}
