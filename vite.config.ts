@@ -6,6 +6,58 @@ import { VitePWA } from 'vite-plugin-pwa';
 import legacy from '@vitejs/plugin-legacy';
 import viteCompression from 'vite-plugin-compression';
 
+function directThermalPrinterPlugin() {
+  return {
+    name: 'direct-thermal-printer-plugin',
+    configureServer(server: any) {
+      server.middlewares.use('/api/print-raw-tspl', (req: any, res: any) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          return res.end();
+        }
+        let body = '';
+        req.on('data', (chunk: any) => { body += chunk; });
+        req.on('end', async () => {
+          try {
+            const data = JSON.parse(body);
+            const { spawn } = await import('child_process');
+            const fs = await import('fs');
+            const path = await import('path');
+            const os = await import('os');
+
+            const tmpFile = path.join(os.tmpdir(), `label_${Date.now()}_${Math.random().toString(36).substring(7)}.tspl`);
+            fs.writeFileSync(tmpFile, data.tspl, 'ascii');
+
+            const scriptPath = path.resolve('scripts/printer/send-raw.ps1');
+            const ps = spawn('powershell', [
+              '-ExecutionPolicy', 'Bypass',
+              '-File', scriptPath,
+              '-File', tmpFile,
+              '-Printer', data.printer || '4BARCODE 4B-2074B'
+            ]);
+
+            ps.on('close', (code: number) => {
+              try { fs.unlinkSync(tmpFile); } catch (e) {}
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: code === 0 }));
+            });
+            ps.on('error', (err: any) => {
+              try { fs.unlinkSync(tmpFile); } catch (e) {}
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: false, error: err.message }));
+            });
+          } catch (e: any) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, error: e.message }));
+          }
+        });
+      });
+    }
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -33,6 +85,7 @@ export default defineConfig(({ mode }) => ({
     }
   },
   plugins: [
+    directThermalPrinterPlugin(),
     react(),
     legacy({
       targets: ['defaults', 'not IE 11', 'chrome >= 49', 'android >= 7', 'safari >= 10'],

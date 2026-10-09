@@ -384,6 +384,104 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
 
 
+  const [isDirectPrinting, setIsDirectPrinting] = useState(false);
+
+  // Impresión directa a la 4BARCODE por comandos TSPL crudos (100% centrado, 1 solo label, sin depender de Chrome)
+  const handleDirectTsplPrint = async () => {
+    const selected = printList.filter(item => item.selected && item.quantity > 0);
+    if (selected.length === 0) {
+      toast({
+        title: "Sin productos seleccionados",
+        description: "Selecciona al menos un producto para imprimir.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsDirectPrinting(true);
+    try {
+      const is30x20 = labelWidth <= 35 && labelHeight <= 25;
+      const tsplCommands: string[] = [
+        `SIZE ${labelWidth} mm,${labelHeight} mm`,
+        `GAP 2 mm,0 mm`,
+        `DIRECTION 1`,
+        `REFERENCE 0,0`,
+        `OFFSET 0 mm`,
+        `SHIFT 0`,
+        `SET TEAR ON`,
+        `DENSITY 8`,
+        `SPEED 3`
+      ];
+
+      for (const item of selected) {
+        for (let q = 0; q < item.quantity; q++) {
+          const dotsW = Math.round(labelWidth * 8); // 240 dots para 30mm
+          const dotsH = Math.round(labelHeight * 8); // 160 dots para 20mm
+
+          // Limpiar caracteres especiales de nombre
+          const cleanName = (item.product.name || '').substring(0, is30x20 ? 22 : 35).replace(/["\\]/g, '');
+          const nameDots = cleanName.length * 8;
+          const nameX = Math.max(6, Math.round((dotsW - nameDots) / 2) + Math.round(offsetX * 8));
+          const nameY = Math.max(8, 16 + Math.round(offsetY * 8));
+
+          // Precio
+          const priceText = `$${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          const priceDots = priceText.length * 12;
+          const priceX = Math.max(6, Math.round((dotsW - priceDots) / 2) + Math.round(offsetX * 8));
+          const priceY = Math.max(24, 34 + Math.round(offsetY * 8));
+
+          // Barcode (Code128)
+          const bc = (item.product.barcode || '').trim().replace(/["\\]/g, '');
+          const narrow = (bc.length > 10 || is30x20) ? 1 : 2;
+          const estBcWidth = (35 + bc.length * 11) * narrow;
+          const bcX = Math.max(6, Math.round((dotsW - estBcWidth) / 2) + Math.round(offsetX * 8));
+          const bcY = Math.max(46, 56 + Math.round(offsetY * 8));
+          const bcH = is30x20 ? 38 : 50;
+
+          tsplCommands.push('CLS');
+          if (showProductName) {
+            tsplCommands.push(`TEXT ${nameX},${nameY},"1",0,1,1,"${cleanName}"`);
+          }
+          if (showPrice) {
+            tsplCommands.push(`TEXT ${priceX},${priceY},"2",0,1,1,"${priceText}"`);
+          }
+          if (bc) {
+            tsplCommands.push(`BARCODE ${bcX},${bcY},"128",${bcH},1,0,${narrow},${narrow},"${bc}"`);
+          }
+          tsplCommands.push('PRINT 1,1');
+        }
+      }
+
+      const res = await fetch('/api/print-raw-tspl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          printer: '4BARCODE 4B-2074B',
+          tspl: tsplCommands.join('\r\n') + '\r\n'
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: "¡Etiqueta impresa correctamente!",
+          description: `Se enviaron ${totalLabelsToPrint} etiqueta(s) directo a la 4BARCODE (1 solo sticker, perfectamente centrado).`,
+        });
+      } else {
+        throw new Error(data.error || 'No se pudo comunicar con la impresora.');
+      }
+    } catch (e: any) {
+      console.warn("Fallo impresión directa TSPL, usando fallback de ventana:", e);
+      toast({
+        title: "Impresora directa no disponible",
+        description: "Abriendo la ventana de impresión del navegador...",
+      });
+      handlePrint();
+    } finally {
+      setIsDirectPrinting(false);
+    }
+  };
+
   const handlePrint = async () => {
     setIsPrinting(true);
 
@@ -413,13 +511,13 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         const isSmallHeight = labelHeight <= 25;
 
         // Auto-clamp estricto para garantizar que el contenido NUNCA supere el alto del papel ni se divida en dos páginas
-        const effectiveBarHeight = labelHeight <= 22 ? Math.min(barHeight, 16) : (labelHeight <= 30 ? Math.min(barHeight, 26) : barHeight);
-        const effectiveBarWidth = labelWidth <= 35 ? Math.min(barWidth, 1.05) : (labelWidth <= 45 ? Math.min(barWidth, 1.3) : barWidth);
-        const effectivePnameSize = labelHeight <= 22 ? Math.min(pnameSize, 8) : (labelHeight <= 30 ? Math.min(pnameSize, 10) : pnameSize);
-        const effectivePriceSize = labelHeight <= 22 ? Math.min(priceSize, 11) : (labelHeight <= 30 ? Math.min(priceSize, 13) : priceSize);
-        const effectiveBarcodeFontSize = labelHeight <= 22 ? Math.min(barcodeFontSize, 8) : barcodeFontSize;
+        const effectiveBarHeight = labelHeight <= 22 ? Math.min(barHeight, 14) : (labelHeight <= 30 ? Math.min(barHeight, 26) : barHeight);
+        const effectiveBarWidth = labelWidth <= 35 ? Math.min(barWidth, 1.0) : (labelWidth <= 45 ? Math.min(barWidth, 1.3) : barWidth);
+        const effectivePnameSize = labelHeight <= 22 ? Math.min(pnameSize, 7.5) : (labelHeight <= 30 ? Math.min(pnameSize, 10) : pnameSize);
+        const effectivePriceSize = labelHeight <= 22 ? Math.min(priceSize, 10) : (labelHeight <= 30 ? Math.min(priceSize, 13) : priceSize);
+        const effectiveBarcodeFontSize = labelHeight <= 22 ? Math.min(barcodeFontSize, 7) : barcodeFontSize;
         const effectiveShowBusinessName = labelHeight <= 22 ? false : showBusinessName;
-        const effectivePadding = labelHeight <= 22 ? Math.min(contentPadding, 0.7) : contentPadding;
+        const labelNetHeight = columns === 1 ? (labelHeight <= 22 ? 16 : Math.max(10, printH - 1.2)) : printH;
 
         const labelsHtml = selectedItems.flatMap(item => {
           const barcodeSvg = getCachedBarcodeSvg(
@@ -433,7 +531,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
           // Si el nombre del producto es largo y la etiqueta es pequeña, reducimos la fuente para que quepa completa
           const nameLen = (item.product.name || '').length;
           const dynamicPnameSize = isSmallHeight && nameLen > 18 
-            ? Math.max(6.5, effectivePnameSize - 1.2) 
+            ? Math.max(6.0, effectivePnameSize - 1.0) 
             : effectivePnameSize;
 
           const labelHtml = `
@@ -488,8 +586,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
               .label {
                 width: ${printW}mm;
-                height: ${columns === 1 ? Math.max(10, printH - 0.6) : printH}mm;
-                max-height: ${columns === 1 ? Math.max(10, printH - 0.6) : printH}mm;
+                height: ${labelNetHeight}mm;
+                max-height: ${labelNetHeight}mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -518,15 +616,16 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               .label-content {
                 display: flex !important;
                 flex-direction: column !important;
-                justify-content: space-evenly !important;
+                justify-content: center !important;
                 align-items: center !important;
                 width: 100% !important;
                 height: 100% !important;
                 max-height: 100% !important;
-                padding-top: ${Math.max(0, 0.5 + offsetY)}mm !important;
-                padding-bottom: ${Math.max(0, 0.5 - offsetY)}mm !important;
-                padding-left: ${Math.max(0.5, 0.5 + offsetX)}mm !important;
-                padding-right: ${Math.max(0.5, 0.5 - offsetX)}mm !important;
+                gap: 0.5mm !important;
+                padding-top: ${Math.max(0, 0.4 + offsetY)}mm !important;
+                padding-bottom: ${Math.max(0, 0.4 - offsetY)}mm !important;
+                padding-left: ${Math.max(0.4, 0.4 + offsetX)}mm !important;
+                padding-right: ${Math.max(0.4, 0.4 - offsetX)}mm !important;
                 box-sizing: border-box !important;
                 overflow: hidden !important;
                 page-break-inside: avoid !important;
@@ -556,7 +655,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               }
 
               .product-name {
-                line-height: 1.1;
+                line-height: 1.0;
                 margin: 0;
                 padding: 0 0.5mm;
                 width: 100%;
@@ -574,7 +673,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 margin: 0;
                 padding: 0;
                 text-align: center;
-                line-height: 1;
+                line-height: 1.0;
                 width: 100%;
                 flex-shrink: 0;
               }
@@ -592,8 +691,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               }
 
               .barcode-container svg {
-                max-width: 96%;
-                max-height: ${isSmallHeight ? 8 : Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, effectiveBarHeight * 0.45))}mm; 
+                max-width: 95%;
+                max-height: ${isSmallHeight ? 6.5 : Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, effectiveBarHeight * 0.45))}mm; 
                 width: auto;
                 height: auto;
                 display: block;
@@ -602,10 +701,10 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               @media print {
                 html, body {
                   width: ${columns === 1 ? printW + 'mm' : '100%'} !important;
-                  height: 100% !important;
+                  height: auto !important;
                   margin: 0 !important;
                   padding: 0 !important;
-                  overflow: hidden !important;
+                  overflow: visible !important;
                   background-color: #fff !important;
                 }
                 
@@ -619,10 +718,10 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                   .label {
                     display: flex !important;
                     width: ${printW}mm !important;
-                    height: ${Math.max(10, printH - 0.6)}mm !important;
-                    max-height: ${Math.max(10, printH - 0.6)}mm !important;
+                    height: ${labelNetHeight}mm !important;
+                    max-height: ${labelNetHeight}mm !important;
                     border: none !important;
-                    margin: 0 !important;
+                    margin: 0 auto !important;
                     padding: 0 !important;
                     overflow: hidden !important;
                     page-break-inside: avoid !important;
@@ -639,15 +738,16 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                   .label-content {
                     display: flex !important;
                     flex-direction: column !important;
-                    justify-content: space-evenly !important;
+                    justify-content: center !important;
                     align-items: center !important;
                     width: 100% !important;
                     height: 100% !important;
                     max-height: 100% !important;
-                    padding-top: ${Math.max(0, 0.5 + offsetY)}mm !important;
-                    padding-bottom: ${Math.max(0, 0.5 - offsetY)}mm !important;
-                    padding-left: ${Math.max(0.5, 0.5 + offsetX)}mm !important;
-                    padding-right: ${Math.max(0.5, 0.5 - offsetX)}mm !important;
+                    gap: 0.5mm !important;
+                    padding-top: ${Math.max(0, 0.4 + offsetY)}mm !important;
+                    padding-bottom: ${Math.max(0, 0.4 - offsetY)}mm !important;
+                    padding-left: ${Math.max(0.4, 0.4 + offsetX)}mm !important;
+                    padding-right: ${Math.max(0.4, 0.4 - offsetX)}mm !important;
                     box-sizing: border-box !important;
                     overflow: hidden !important;
                     page-break-inside: avoid !important;
@@ -1278,13 +1378,28 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-4 border-t bg-secondary/20 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={isPrinting}>
+        <DialogFooter className="p-6 pt-4 border-t bg-secondary/20 shrink-0 flex flex-col sm:flex-row gap-2 sm:justify-end">
+          <Button variant="outline" onClick={onClose} disabled={isPrinting || isDirectPrinting}>
             Cancelar
           </Button>
-          <Button onClick={handlePrint} disabled={isPrinting} className="bg-primary text-white">
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            disabled={isPrinting || isDirectPrinting}
+            className="border-primary/40 text-foreground hover:bg-primary/10"
+            title="Abre la ventana de impresión tradicional de Chrome"
+          >
             {isPrinting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2" />}
-            {isPrinting ? "Generando..." : "Imprimir Etiquetas"}
+            {isPrinting ? "Generando..." : "Imprimir con Navegador"}
+          </Button>
+          <Button
+            onClick={handleDirectTsplPrint}
+            disabled={isPrinting || isDirectPrinting}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
+            title="Envía los comandos térmicos crudos directamente a la impresora 4BARCODE (1 solo sticker, centrado perfecto y sin pasar por Chrome)"
+          >
+            {isDirectPrinting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2 text-white" />}
+            {isDirectPrinting ? "Enviando a Impresora..." : "⚡ Imprimir Directo (4BARCODE)"}
           </Button>
         </DialogFooter>
       </DialogContent>
