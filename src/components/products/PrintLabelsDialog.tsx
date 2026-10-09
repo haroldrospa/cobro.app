@@ -61,9 +61,10 @@ interface PrintLabelsDialogProps {
   onClose: () => void;
   products: Product[];
   filteredProductIds?: string[];
+  initialSelectedProductId?: string;
 }
 
-export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductIds }: PrintLabelsDialogProps) {
+export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductIds, initialSelectedProductId }: PrintLabelsDialogProps) {
   const { settings } = useCompanySettings();
   const { data: userStore } = useUserStore();
   const { settings: storeSettings, updateSettings } = useStoreSettings();
@@ -159,9 +160,28 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
   // Lista interactiva de impresión
   const [printList, setPrintList] = useState<PrintItem[]>(() =>
-    products.map(p => ({ product: p, selected: false, quantity: 1 }))
+    products.map(p => ({
+      product: p,
+      selected: initialSelectedProductId ? p.id === initialSelectedProductId : false,
+      quantity: 1
+    }))
   );
-  const [previewId, setPreviewId] = useState<string>(printList[0]?.product.id || '');
+  const [previewId, setPreviewId] = useState<string>(
+    initialSelectedProductId || printList[0]?.product.id || ''
+  );
+
+  useEffect(() => {
+    if (initialSelectedProductId) {
+      setPrintList(prev =>
+        prev.map(item => ({
+          ...item,
+          selected: item.product.id === initialSelectedProductId,
+          quantity: 1
+        }))
+      );
+      setPreviewId(initialSelectedProductId);
+    }
+  }, [initialSelectedProductId]);
 
   // Paginación progresiva para evitar la lentitud al renderizar miles de productos
   const [visibleCount, setVisibleCount] = useState(80);

@@ -1159,7 +1159,104 @@ const Products: FC = () => {
     setShowForm(true);
   }, []);
 
-  const handleOpenLabels = useCallback(() => setShowPrintLabelsDialog(true), []);
+  const [targetLabelProduct, setTargetLabelProduct] = useState<Product | null>(null);
+  const [isQuickPrinting, setIsQuickPrinting] = useState<string | null>(null);
+
+  const handleOpenLabels = useCallback(() => {
+    setTargetLabelProduct(null);
+    setShowPrintLabelsDialog(true);
+  }, []);
+
+  const handleOpenLabelDesignerForProduct = useCallback((product: Product) => {
+    setTargetLabelProduct(product);
+    setShowPrintLabelsDialog(true);
+  }, []);
+
+  const handleQuickPrint = useCallback(async (product: Product, quantity = 1) => {
+    setIsQuickPrinting(product.id);
+    const bc = (product.barcode || '').trim().replace(/["\\]/g, '');
+
+    // Leemos settings guardados de etiquetas
+    let labelWidth = 30;
+    let labelHeight = 20;
+    let offsetX = 0;
+    let offsetY = 0;
+    try {
+      const saved = localStorage.getItem('cobro_label_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.labelWidth) labelWidth = parsed.labelWidth;
+        if (parsed.labelHeight) labelHeight = parsed.labelHeight;
+        if (parsed.offsetX !== undefined) offsetX = parsed.offsetX;
+        if (parsed.offsetY !== undefined) offsetY = parsed.offsetY;
+      }
+    } catch (e) {}
+
+    const is30x20 = labelWidth <= 35 && labelHeight <= 25;
+    const tsplCommands: string[] = [
+      `SIZE ${labelWidth} mm,${labelHeight} mm`,
+      `GAP 2 mm,0 mm`,
+      `DIRECTION 1`,
+      `REFERENCE 0,0`,
+      `OFFSET 0 mm`,
+      `SHIFT 0`,
+      `SET TEAR ON`,
+      `DENSITY 8`,
+      `SPEED 3`
+    ];
+
+    for (let q = 0; q < quantity; q++) {
+      const dotsW = Math.round(labelWidth * 8); // 240 dots para 30mm
+      const cleanName = (product.name || '').substring(0, is30x20 ? 22 : 35).replace(/["\\]/g, '');
+      const nameDots = cleanName.length * 8;
+      const nameX = Math.max(6, Math.round((dotsW - nameDots) / 2) + Math.round(offsetX * 8));
+      const nameY = Math.max(8, 16 + Math.round(offsetY * 8));
+
+      const priceText = `$${(product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const priceDots = priceText.length * 12;
+      const priceX = Math.max(6, Math.round((dotsW - priceDots) / 2) + Math.round(offsetX * 8));
+      const priceY = Math.max(24, 34 + Math.round(offsetY * 8));
+
+      const narrow = (bc.length > 10 || is30x20) ? 1 : 2;
+      const estBcWidth = (35 + bc.length * 11) * narrow;
+      const bcX = Math.max(6, Math.round((dotsW - estBcWidth) / 2) + Math.round(offsetX * 8));
+      const bcY = Math.max(46, 56 + Math.round(offsetY * 8));
+      const bcH = is30x20 ? 38 : 50;
+
+      tsplCommands.push('CLS');
+      tsplCommands.push(`TEXT ${nameX},${nameY},"1",0,1,1,"${cleanName}"`);
+      tsplCommands.push(`TEXT ${priceX},${priceY},"2",0,1,1,"${priceText}"`);
+      if (bc) {
+        tsplCommands.push(`BARCODE ${bcX},${bcY},"128",${bcH},1,0,${narrow},${narrow},"${bc}"`);
+      }
+      tsplCommands.push('PRINT 1,1');
+    }
+
+    try {
+      const res = await fetch('/api/print-raw-tspl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          printer: '4BARCODE 4B-2074B',
+          tspl: tsplCommands.join('\r\n') + '\r\n'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: "¡Etiqueta impresa!",
+          description: `Se imprimió ${quantity} etiqueta(s) de "${product.name}" en 4BARCODE.`,
+        });
+      } else {
+        throw new Error(data.error || 'Error al imprimir');
+      }
+    } catch (err) {
+      // Fallback: abre el modal configurado para este producto
+      handleOpenLabelDesignerForProduct(product);
+    } finally {
+      setIsQuickPrinting(null);
+    }
+  }, [handleOpenLabelDesignerForProduct, toast]);
 
   const handleDelete = async (product: Product) => {
     if (window.confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?`)) {
@@ -1764,10 +1861,29 @@ const Products: FC = () => {
                       )}
                     </div>
                   </div>
-                  <p className="text-[11px] sm:text-sm text-muted-foreground flex items-center justify-center sm:justify-start gap-1.5 opacity-70 font-mono">
-                    <Barcode className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    <span className="truncate">{product.barcode || 'Sin código'}</span>
-                  </p>
+                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                    <p className="text-[11px] sm:text-sm text-muted-foreground flex items-center gap-1.5 opacity-70 font-mono">
+                      <Barcode className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="truncate">{product.barcode || 'Sin código'}</span>
+                    </p>
+                    {product.barcode && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickPrint(product, 1)}
+                        disabled={isQuickPrinting === product.id}
+                        className="h-6 px-2 text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/25 rounded-lg gap-1 transition-all shadow-none"
+                        title="Imprimir 1 etiqueta rápida directo en 4BARCODE"
+                      >
+                        {isQuickPrinting === product.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />
+                        ) : (
+                          <Printer className="h-3 w-3 text-emerald-600" />
+                        )}
+                        <span>Imprimir Label</span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Precios, Stock y Acciones (Grid en móvil, Flex en desktop) */}
@@ -1848,6 +1964,53 @@ const Products: FC = () => {
                     <div className="flex flex-col items-end sm:items-start justify-center gap-3 w-[40%] sm:w-auto">
                       {/* Acciones */}
                       <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              disabled={isQuickPrinting === product.id}
+                              className="h-11 w-11 sm:h-9 sm:w-9 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 bg-background sm:bg-transparent rounded-xl transition-colors border-border/50 shadow-sm sm:shadow-none"
+                              title="Imprimir etiquetas de este producto"
+                            >
+                              {isQuickPrinting === product.id ? (
+                                <Loader2 className="h-5 w-5 sm:h-4 sm:w-4 animate-spin text-emerald-600" />
+                              ) : (
+                                <Printer className="h-5 w-5 sm:h-4 sm:w-4 text-emerald-600" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <div className="px-2 py-1.5 text-xs font-semibold truncate text-muted-foreground">
+                              Label: {product.name}
+                            </div>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleQuickPrint(product, 1)} 
+                              className="cursor-pointer text-xs flex items-center gap-2 font-medium"
+                            >
+                              <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>⚡ Imprimir 1 etiqueta (4BARCODE)</span>
+                            </DropdownMenuItem>
+                            {(product.stock ?? 0) > 1 && (
+                              <DropdownMenuItem 
+                                onClick={() => handleQuickPrint(product, product.stock!)} 
+                                className="cursor-pointer text-xs flex items-center gap-2 font-medium"
+                              >
+                                <Package className="h-3.5 w-3.5 text-blue-500" />
+                                <span>📦 Imprimir según stock ({product.stock} uds)</span>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => handleOpenLabelDesignerForProduct(product)} 
+                              className="cursor-pointer text-xs flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                            >
+                              <Settings2 className="h-3.5 w-3.5 text-amber-500" />
+                              <span>⚙️ Diseñar / Más opciones...</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <Button 
                           variant="outline" 
                           size="icon" 
@@ -2434,9 +2597,13 @@ const Products: FC = () => {
       {showPrintLabelsDialog && (
         <PrintLabelsDialog
           isOpen={showPrintLabelsDialog}
-          onClose={() => setShowPrintLabelsDialog(false)}
+          onClose={() => {
+            setShowPrintLabelsDialog(false);
+            setTargetLabelProduct(null);
+          }}
           products={products}
           filteredProductIds={filteredProducts.map(p => p.id)}
+          initialSelectedProductId={targetLabelProduct?.id}
         />
       )}
       {/* Diálogo Cargar Stock con IA */}
