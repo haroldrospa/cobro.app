@@ -488,8 +488,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
               .label {
                 width: ${printW}mm;
-                height: ${columns === 1 ? Math.max(10, printH - 1.2) : printH}mm;
-                max-height: ${columns === 1 ? Math.max(10, printH - 1.2) : printH}mm;
+                height: ${columns === 1 ? Math.max(10, printH - 0.6) : printH}mm;
+                max-height: ${columns === 1 ? Math.max(10, printH - 0.6) : printH}mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -523,7 +523,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 width: 100% !important;
                 height: 100% !important;
                 max-height: 100% !important;
-                padding-top: ${Math.max(0, (labelHeight <= 22 ? 3.5 : 1.5) + offsetY)}mm !important;
+                padding-top: ${Math.max(0, 0.5 + offsetY)}mm !important;
                 padding-bottom: ${Math.max(0, 0.5 - offsetY)}mm !important;
                 padding-left: ${Math.max(0.5, 0.5 + offsetX)}mm !important;
                 padding-right: ${Math.max(0.5, 0.5 - offsetX)}mm !important;
@@ -619,8 +619,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                   .label {
                     display: flex !important;
                     width: ${printW}mm !important;
-                    height: ${Math.max(10, printH - 1.2)}mm !important;
-                    max-height: ${Math.max(10, printH - 1.2)}mm !important;
+                    height: ${Math.max(10, printH - 0.6)}mm !important;
+                    max-height: ${Math.max(10, printH - 0.6)}mm !important;
                     border: none !important;
                     margin: 0 !important;
                     padding: 0 !important;
@@ -644,7 +644,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                     width: 100% !important;
                     height: 100% !important;
                     max-height: 100% !important;
-                    padding-top: ${Math.max(0, (labelHeight <= 22 ? 3.5 : 1.5) + offsetY)}mm !important;
+                    padding-top: ${Math.max(0, 0.5 + offsetY)}mm !important;
                     padding-bottom: ${Math.max(0, 0.5 - offsetY)}mm !important;
                     padding-left: ${Math.max(0.5, 0.5 + offsetX)}mm !important;
                     padding-right: ${Math.max(0.5, 0.5 - offsetX)}mm !important;
