@@ -143,6 +143,20 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
     return () => clearTimeout(timer);
   }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth, selectedTemplateId, offsetY, offsetX, contentPadding]);
 
+  // Si la etiqueta es pequeña (<= 22mm) y trae valores antiguos sobredimensionados, auto-adaptar
+  useEffect(() => {
+    if (labelHeight <= 22 && (barHeight > 22 || priceSize > 12 || pnameSize > 9 || barWidth > 1.2)) {
+      setBarHeight(18);
+      setBarWidth(1.1);
+      setPnameSize(8);
+      setPriceSize(11);
+      setBarcodeFontSize(8);
+      setShowBusinessName(false);
+      setContentPadding(0.8);
+      setRotation(0);
+    }
+  }, [labelHeight, barHeight, priceSize, pnameSize, barWidth]);
+
   // Lista interactiva de impresión
   const [printList, setPrintList] = useState<PrintItem[]>(() =>
     products.map(p => ({ product: p, selected: false, quantity: 1 }))
@@ -398,15 +412,36 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         const printH = isSwapped ? labelWidth : labelHeight;
         const isSmallHeight = labelHeight <= 25;
 
+        // Auto-clamp estricto para garantizar que el contenido NUNCA supere el alto del papel ni se divida en dos páginas
+        const effectiveBarHeight = labelHeight <= 22 ? Math.min(barHeight, 16) : (labelHeight <= 30 ? Math.min(barHeight, 26) : barHeight);
+        const effectiveBarWidth = labelWidth <= 35 ? Math.min(barWidth, 1.05) : (labelWidth <= 45 ? Math.min(barWidth, 1.3) : barWidth);
+        const effectivePnameSize = labelHeight <= 22 ? Math.min(pnameSize, 8) : (labelHeight <= 30 ? Math.min(pnameSize, 10) : pnameSize);
+        const effectivePriceSize = labelHeight <= 22 ? Math.min(priceSize, 11) : (labelHeight <= 30 ? Math.min(priceSize, 13) : priceSize);
+        const effectiveBarcodeFontSize = labelHeight <= 22 ? Math.min(barcodeFontSize, 8) : barcodeFontSize;
+        const effectiveShowBusinessName = labelHeight <= 22 ? false : showBusinessName;
+        const effectivePadding = labelHeight <= 22 ? Math.min(contentPadding, 0.7) : contentPadding;
+
         const labelsHtml = selectedItems.flatMap(item => {
-          const barcodeSvg = getCachedBarcodeSvg(item.product.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth);
+          const barcodeSvg = getCachedBarcodeSvg(
+            item.product.barcode,
+            showBarcodeText,
+            effectiveBarcodeFontSize,
+            effectiveBarHeight,
+            effectiveBarWidth
+          );
+
+          // Si el nombre del producto es largo y la etiqueta es pequeña, reducimos la fuente para que quepa completa
+          const nameLen = (item.product.name || '').length;
+          const dynamicPnameSize = isSmallHeight && nameLen > 18 
+            ? Math.max(6.5, effectivePnameSize - 1.2) 
+            : effectivePnameSize;
 
           const labelHtml = `
             <div class="label">
               <div class="label-content">
-                ${showBusinessName ? `<div class="business-name" style="font-size: ${bnameSize}px">${settings?.company_name || userStore?.store_name || 'Mi Negocio'}</div>` : ''}
-                ${showProductName ? `<div class="product-name" style="font-size: ${pnameSize}px" title="${item.product.name}">${item.product.name}</div>` : ''}
-                ${showPrice ? `<div class="product-price" style="font-size: ${priceSize}px">$${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
+                ${effectiveShowBusinessName ? `<div class="business-name" style="font-size: ${bnameSize}px">${settings?.company_name || userStore?.store_name || 'Mi Negocio'}</div>` : ''}
+                <div class="product-name" style="font-size: ${dynamicPnameSize}px" title="${item.product.name}">${item.product.name}</div>
+                ${showPrice ? `<div class="product-price" style="font-size: ${effectivePriceSize}px">$${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
                 <div class="barcode-container">
                   ${barcodeSvg}
                 </div>
@@ -427,19 +462,25 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 margin: 0;
                 padding: 0;
               }
-              body {
+              html, body {
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: #f1f5f9;
-                display: flex;
-                justify-content: center;
+                background: #fff;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
 
+              @page {
+                size: ${columns === 1 ? (printW + 'mm ' + printH + 'mm') : 'A4'};
+                margin: 0 !important;
+              }
+
               .labels-container {
-                display: ${columns === 1 ? 'flex' : 'grid'};
+                display: ${columns === 1 ? 'block' : 'grid'};
                 ${columns === 1 
-                  ? 'flex-direction: column; align-items: center; width: 100%; margin: 0; padding: 0;' 
+                  ? 'width: 100%; margin: 0; padding: 0;' 
                   : `grid-template-columns: repeat(${columns}, ${printW}mm); column-gap: ${gapX}mm; row-gap: ${gapY}mm; justify-content: center; padding-top: 10mm; width: max-content;`
                 }
                 max-width: 100%;
@@ -453,7 +494,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                overflow: hidden;
+                overflow: hidden !important;
                 background: white;
                 box-sizing: border-box;
                 padding: 0;
@@ -461,8 +502,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 position: relative;
                 page-break-after: ${columns === 1 ? 'always' : 'auto'};
                 break-after: ${columns === 1 ? 'page' : 'auto'};
-                page-break-inside: avoid;
-                break-inside: avoid;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
                 border: ${columns > 1 ? '1px dotted #ccc' : 'none'};
               }
 
@@ -472,17 +513,18 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               }
 
               .label-content {
-                display: flex;
-                flex-direction: column;
-                justify-content: space-evenly;
-                align-items: center;
-                width: 100%;
-                height: 100%;
-                max-width: 100%;
-                max-height: 100%;
-                padding: ${contentPadding}mm;
-                box-sizing: border-box;
-                overflow: hidden;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-evenly !important;
+                align-items: center !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-height: 100% !important;
+                padding: ${effectivePadding}mm !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
                 transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
                 transform-origin: center center;
               }
@@ -491,6 +533,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
               }
 
               .business-name {
@@ -501,7 +545,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 text-overflow: ellipsis;
                 width: 100%;
                 text-align: center;
-                line-height: 1.1;
+                line-height: 1;
                 margin: 0;
                 padding: 0;
                 flex-shrink: 0;
@@ -510,14 +554,15 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               .product-name {
                 line-height: 1.1;
                 margin: 0;
-                padding: 0;
+                padding: 0 0.5mm;
                 width: 100%;
+                max-width: 100%;
                 text-align: center;
                 flex-shrink: 0;
-                ${isSmallHeight 
-                  ? 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' 
-                  : 'max-height: 26px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;'
-                }
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                box-sizing: border-box;
               }
 
               .product-price {
@@ -525,7 +570,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 margin: 0;
                 padding: 0;
                 text-align: center;
-                line-height: 1.1;
+                line-height: 1;
                 width: 100%;
                 flex-shrink: 0;
               }
@@ -534,7 +579,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                flex-shrink: 1;
+                flex-shrink: 0;
                 width: 100%;
                 max-width: 100%;
                 overflow: hidden;
@@ -543,17 +588,11 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               }
 
               .barcode-container svg {
-                max-width: 100%;
-                max-height: ${Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, barHeight * 0.45))}mm; 
+                max-width: 96%;
+                max-height: ${isSmallHeight ? 8 : Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, effectiveBarHeight * 0.45))}mm; 
                 width: auto;
                 height: auto;
                 display: block;
-              }
-
-              /* Page rules for thermal continuous vs defined A4 */
-              @page {
-                size: ${columns === 1 ? (printW + 'mm ' + printH + 'mm') : 'A4'};
-                margin: 0 !important;
               }
 
               @media print {
@@ -568,9 +607,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 
                 ${columns === 1 ? `
                   .labels-container {
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center !important;
+                    display: block !important;
                     width: 100% !important;
                     margin: 0 !important;
                     padding: 0 !important;
@@ -584,6 +621,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                     margin: 0 !important;
                     padding: 0 !important;
                     overflow: hidden !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
                   }
                   .label:last-child {
                     page-break-after: auto !important;
@@ -596,9 +635,12 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                     align-items: center !important;
                     width: 100% !important;
                     height: 100% !important;
-                    overflow: hidden !important;
-                    padding: ${contentPadding}mm !important;
+                    max-height: 100% !important;
+                    padding: ${effectivePadding}mm !important;
                     box-sizing: border-box !important;
+                    overflow: hidden !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
                     transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''} !important;
                     transform-origin: center center !important;
                   }
@@ -1175,39 +1217,44 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                           style={{
                             width: `${labelWidth}mm`,
                             height: `${labelHeight}mm`,
-                            padding: `${contentPadding}mm`,
+                            padding: `${labelHeight <= 22 ? Math.min(contentPadding, 0.7) : contentPadding}mm`,
                             transform: `translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''}`,
                             transformOrigin: 'center'
                           }}
                         >
-                          {showBusinessName && (
-                            <div className="font-bold uppercase w-full text-center truncate shrink-0" style={{ fontSize: `${bnameSize}px`, lineHeight: 1.1 }}>
+                          {(labelHeight <= 22 ? false : showBusinessName) && (
+                            <div className="font-bold uppercase w-full text-center truncate shrink-0" style={{ fontSize: `${bnameSize}px`, lineHeight: 1 }}>
                               {settings?.company_name || userStore?.store_name || 'Mi Negocio'}
                             </div>
                           )}
                           {showProductName && (
                             <div
-                              className="w-full text-center leading-tight shrink-0"
+                              className="w-full text-center leading-tight shrink-0 px-0.5 truncate"
                               style={{
-                                fontSize: `${pnameSize}px`,
-                                lineHeight: 1.1,
-                                ...(labelHeight <= 25
-                                  ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
-                                  : { maxHeight: '26px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }
-                                )
+                                fontSize: `${(labelHeight <= 25 && (prod.name || '').length > 18) ? Math.max(6.5, (labelHeight <= 22 ? Math.min(pnameSize, 8) : pnameSize) - 1.2) : (labelHeight <= 22 ? Math.min(pnameSize, 8) : pnameSize)}px`,
+                                lineHeight: 1.1
                               }}
+                              title={prod.name}
                             >
                               {prod.name}
                             </div>
                           )}
                           {showPrice && (
-                            <div className="font-extrabold w-full text-center shrink-0" style={{ fontSize: `${priceSize}px`, lineHeight: 1.1 }}>
+                            <div className="font-extrabold w-full text-center shrink-0" style={{ fontSize: `${labelHeight <= 22 ? Math.min(priceSize, 11) : priceSize}px`, lineHeight: 1 }}>
                               ${(prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           )}
                           <div
                             className="w-full flex justify-center items-center shrink preview-barcode-container overflow-hidden"
-                            dangerouslySetInnerHTML={{ __html: getCachedBarcodeSvg(prod.barcode, showBarcodeText, barcodeFontSize, barHeight, barWidth) }}
+                            dangerouslySetInnerHTML={{
+                              __html: getCachedBarcodeSvg(
+                                prod.barcode,
+                                showBarcodeText,
+                                labelHeight <= 22 ? Math.min(barcodeFontSize, 8) : barcodeFontSize,
+                                labelHeight <= 22 ? Math.min(barHeight, 16) : barHeight,
+                                labelWidth <= 35 ? Math.min(barWidth, 1.05) : barWidth
+                              )
+                            }}
                           />
                         </div>
                       </div>
