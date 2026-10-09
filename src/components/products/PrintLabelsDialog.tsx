@@ -488,8 +488,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
 
               .label {
                 width: ${printW}mm;
-                height: ${printH}mm;
-                max-height: ${printH}mm;
+                height: ${columns === 1 ? Math.max(10, printH - 1.2) : printH}mm;
+                max-height: ${columns === 1 ? Math.max(10, printH - 1.2) : printH}mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -500,16 +500,19 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 padding: 0;
                 margin: 0 auto;
                 position: relative;
-                page-break-after: ${columns === 1 ? 'always' : 'auto'};
-                break-after: ${columns === 1 ? 'page' : 'auto'};
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 border: ${columns > 1 ? '1px dotted #ccc' : 'none'};
               }
 
+              .label:not(:last-child) {
+                page-break-after: always !important;
+                break-after: page !important;
+              }
+
               .label:last-child {
-                page-break-after: auto !important;
-                break-after: auto !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
               }
 
               .label-content {
@@ -520,13 +523,14 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 width: 100% !important;
                 height: 100% !important;
                 max-height: 100% !important;
-                padding: ${effectivePadding}mm !important;
+                padding-top: ${Math.max(0, (labelHeight <= 22 ? 3.5 : 1.5) + offsetY)}mm !important;
+                padding-bottom: ${Math.max(0, 0.5 - offsetY)}mm !important;
+                padding-left: ${Math.max(0.5, 0.5 + offsetX)}mm !important;
+                padding-right: ${Math.max(0.5, 0.5 - offsetX)}mm !important;
                 box-sizing: border-box !important;
                 overflow: hidden !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
-                transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
-                transform-origin: center center;
               }
 
               .label-content * {
@@ -598,7 +602,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               @media print {
                 html, body {
                   width: ${columns === 1 ? printW + 'mm' : '100%'} !important;
-                  height: ${columns === 1 ? printH + 'mm' : 'auto'} !important;
+                  height: 100% !important;
                   margin: 0 !important;
                   padding: 0 !important;
                   overflow: hidden !important;
@@ -615,8 +619,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                   .label {
                     display: flex !important;
                     width: ${printW}mm !important;
-                    height: ${printH}mm !important;
-                    max-height: ${printH}mm !important;
+                    height: ${Math.max(10, printH - 1.2)}mm !important;
+                    max-height: ${Math.max(10, printH - 1.2)}mm !important;
                     border: none !important;
                     margin: 0 !important;
                     padding: 0 !important;
@@ -624,9 +628,13 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
                   }
+                  .label:not(:last-child) {
+                    page-break-after: always !important;
+                    break-after: page !important;
+                  }
                   .label:last-child {
-                    page-break-after: auto !important;
-                    break-after: auto !important;
+                    page-break-after: avoid !important;
+                    break-after: avoid !important;
                   }
                   .label-content {
                     display: flex !important;
@@ -636,13 +644,14 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                     width: 100% !important;
                     height: 100% !important;
                     max-height: 100% !important;
-                    padding: ${effectivePadding}mm !important;
+                    padding-top: ${Math.max(0, (labelHeight <= 22 ? 3.5 : 1.5) + offsetY)}mm !important;
+                    padding-bottom: ${Math.max(0, 0.5 - offsetY)}mm !important;
+                    padding-left: ${Math.max(0.5, 0.5 + offsetX)}mm !important;
+                    padding-right: ${Math.max(0.5, 0.5 - offsetX)}mm !important;
                     box-sizing: border-box !important;
                     overflow: hidden !important;
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
-                    transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''} !important;
-                    transform-origin: center center !important;
                   }
                   .barcode-container svg {
                     display: block !important;
@@ -1217,9 +1226,11 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                           style={{
                             width: `${labelWidth}mm`,
                             height: `${labelHeight}mm`,
-                            padding: `${labelHeight <= 22 ? Math.min(contentPadding, 0.7) : contentPadding}mm`,
-                            transform: `translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''}`,
-                            transformOrigin: 'center'
+                            paddingTop: `${Math.max(0, (labelHeight <= 22 ? 3.5 : 1.5) + offsetY)}mm`,
+                            paddingBottom: `${Math.max(0, 0.5 - offsetY)}mm`,
+                            paddingLeft: `${Math.max(0.5, 0.5 + offsetX)}mm`,
+                            paddingRight: `${Math.max(0.5, 0.5 - offsetX)}mm`,
+                            boxSizing: 'border-box'
                           }}
                         >
                           {(labelHeight <= 22 ? false : showBusinessName) && (
