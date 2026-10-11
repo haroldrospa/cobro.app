@@ -244,6 +244,7 @@ export const useStoreSettings = () => {
         language: 'es',
         timezone: 'America/Santo_Domingo',
         paper_size: '80mm',
+        use_kitchen: false,
         use_thermal_printer: false,
         thermal_printer_name: null,
         show_barcode: false, 

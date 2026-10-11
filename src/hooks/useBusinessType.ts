@@ -48,9 +48,9 @@ export const useBusinessType = () => {
     const isSupermarket = businessType === 'supermarket';
     const isServices = businessType === 'services';
 
-    // Kitchen display: restaurant type + not explicitly disabled via use_kitchen toggle
-    // use_kitchen defaults to true so restaurant users keep seeing it by default
-    const useKitchen = settings?.use_kitchen !== false;
+    // Kitchen display: restaurant type + explicitly enabled via use_kitchen toggle
+    // Disabled by default (false); users can activate it in Settings -> Cocina KDS
+    const useKitchen = settings?.use_kitchen === true;
     const hasKitchenDisplay = isRestaurant && useKitchen;
 
     // Delivery page — defaults to true so existing users keep seeing it (disabled for services by default)

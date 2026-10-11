@@ -1937,6 +1937,28 @@ const Settings = () => {
   const mobileKitchenSectionContent = (
     <div className="space-y-6">
       <div className="space-y-6 bg-card border rounded-[2rem] p-6 shadow-sm">
+        <div className="flex items-center justify-between p-4 rounded-2xl border bg-muted/40">
+          <div className="flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+              storeSettings?.use_kitchen === true ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/10 text-orange-400'
+            }`}>
+              <ChefHat className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">Pantalla de Cocina (KDS)</p>
+              <p className="text-xs text-muted-foreground">
+                {storeSettings?.use_kitchen === true ? 'Habilitada en el menú' : 'Desactivada por defecto'}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={storeSettings?.use_kitchen === true}
+            onCheckedChange={async (checked) => {
+              await updateStoreSettings({ use_kitchen: checked } as any);
+              toast({ title: checked ? '✅ Pantalla de Cocina activada' : '🚫 Pantalla de Cocina desactivada' });
+            }}
+          />
+        </div>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="flex justify-between">
@@ -2069,7 +2091,7 @@ const Settings = () => {
               
               <TabsTrigger value="print" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Impresión</TabsTrigger>
               <TabsTrigger value="notifications" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Comunicaciones</TabsTrigger>
-              {(shopType === 'restaurant') && (
+              {(shopType === 'restaurant' || storeSettings?.use_kitchen === true) && (
                 <TabsTrigger value="cocina" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Cocina KDS</TabsTrigger>
               )}
 
@@ -2119,15 +2141,20 @@ const Settings = () => {
 
               {/* Kitchen toggle — functional, only shown for restaurant type */}
               {shopType === 'restaurant' && (
-                <div className={`flex items-center justify-between p-3.5 rounded-xl border bg-card transition-opacity ${storeSettings?.use_kitchen === false ? 'opacity-50' : ''}`}>
+                <div className={`flex items-center justify-between p-3.5 rounded-xl border bg-card transition-opacity ${storeSettings?.use_kitchen !== true ? 'opacity-70' : ''}`}>
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-lg bg-orange-500/10 flex items-center justify-center">
                       <ChefHat className="h-4 w-4 text-orange-400" />
                     </div>
-                    <p className="font-medium text-sm">Pantalla de Cocina (KDS)</p>
+                    <div>
+                      <p className="font-medium text-sm">Pantalla de Cocina (KDS)</p>
+                      <p className="text-xs text-muted-foreground">
+                        {storeSettings?.use_kitchen === true ? 'Activada' : 'Desactivada por defecto'}
+                      </p>
+                    </div>
                   </div>
                   <Switch
-                    checked={storeSettings?.use_kitchen !== false}
+                    checked={storeSettings?.use_kitchen === true}
                     onCheckedChange={async (checked) => {
                       await updateStoreSettings({ use_kitchen: checked } as any);
                       toast({ title: checked ? '✅ Cocina activada' : '🚫 Cocina desactivada' });
@@ -3385,21 +3412,91 @@ const Settings = () => {
         {(() => {
           const raw = shopType;
           const normalizedType = raw === 'store' ? 'store' : raw === 'supermarket' ? 'supermarket' : 'restaurant';
-          if (normalizedType !== 'restaurant') return null;
+          if (normalizedType !== 'restaurant' && storeSettings?.use_kitchen !== true) return null;
 
           return (
             <TabsContent value="cocina" className="space-y-6 mt-0">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <ChefHat className="mr-2 h-5 w-5" />
-                    Configuración de Cocina (KDS)
-                  </CardTitle>
-                  <CardDescription>
-                    Configura los umbrales de tiempo para las alertas visuales y sonoras en la pantalla de cocina.
-                  </CardDescription>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <ChefHat className="h-5 w-5 text-orange-500" />
+                        Configuración de Cocina (KDS)
+                      </CardTitle>
+                      <CardDescription>
+                        Configura y activa la pantalla de cocina y los umbrales de tiempo para alertas visuales y sonoras.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-3 self-start sm:self-center p-3 px-4 rounded-2xl border bg-muted/40">
+                      <div className="text-right">
+                        <p className="text-xs font-semibold leading-tight">
+                          {storeSettings?.use_kitchen === true ? 'Módulo Activo' : 'Módulo Inactivo'}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {storeSettings?.use_kitchen === true ? 'Visible en menú' : 'Desactivado por defecto'}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={storeSettings?.use_kitchen === true}
+                        onCheckedChange={async (checked) => {
+                          await updateStoreSettings({ use_kitchen: checked } as any);
+                          toast({
+                            title: checked ? '✅ Pantalla de Cocina activada' : '🚫 Pantalla de Cocina desactivada',
+                            description: checked
+                              ? 'La opción ahora es visible en el menú principal.'
+                              : 'La opción se ha ocultado del menú principal.'
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
+                  {/* Tarjeta de estado de activación */}
+                  <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${
+                    storeSettings?.use_kitchen === true
+                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                      : 'bg-zinc-800/40 border-zinc-700/60'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        storeSettings?.use_kitchen === true ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-700/40 text-zinc-400'
+                      }`}>
+                        <ChefHat className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {storeSettings?.use_kitchen === true ? 'Pantalla de Cocina Activada' : 'Pantalla de Cocina Desactivada'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {storeSettings?.use_kitchen === true
+                            ? 'Los pedidos enviados desde el Punto de Venta aparecerán en tiempo real en la pantalla de cocina.'
+                            : 'La opción viene desactivada por defecto. Puedes activarla aquí arriba para mostrarla en el menú y gestionar pedidos.'}
+                        </p>
+                      </div>
+                    </div>
+                    {storeSettings?.use_kitchen === true ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
+                        Habilitado
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-primary text-primary-foreground font-semibold rounded-xl"
+                        onClick={async () => {
+                          await updateStoreSettings({ use_kitchen: true } as any);
+                          toast({
+                            title: '✅ Pantalla de Cocina activada',
+                            description: 'La opción ahora es visible en el menú principal.'
+                          });
+                        }}
+                      >
+                        Activar Pantalla
+                      </Button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-4 p-4 border rounded-2xl bg-yellow-500/5 border-yellow-500/20">
                       <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 font-bold">
