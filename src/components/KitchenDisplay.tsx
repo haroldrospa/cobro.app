@@ -35,6 +35,7 @@ import { formatDistanceToNow, differenceInMinutes, differenceInSeconds } from 'd
 import { es } from 'date-fns/locale';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { playNotificationSound, NotificationSoundType } from '@/utils/notificationSounds';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -319,17 +320,22 @@ const KitchenDisplay: React.FC = () => {
         );
 
         if (hasCritical) {
+            const playAlert = () => {
+                const soundType = (settings?.kitchen_sound_type as NotificationSoundType) || 'bell';
+                const volume = settings?.kitchen_sound_volume ?? 0.8;
+                playNotificationSound(soundType, soundEnabled, volume);
+                criticalAudioRef.current?.play().catch(() => {});
+            };
+
             // Play every 30 seconds if still critical
-            const criticalInterval = setInterval(() => {
-                criticalAudioRef.current?.play().catch(e => console.log('Critical audio error:', e));
-            }, 30000);
+            const criticalInterval = setInterval(playAlert, 30000);
 
             // Play immediately once
-            criticalAudioRef.current?.play().catch(e => console.log('Critical audio error:', e));
+            playAlert();
 
             return () => clearInterval(criticalInterval);
         }
-    }, [activeOrders, alertThreshold, now, soundEnabled, showHistory]);
+    }, [activeOrders, alertThreshold, now, soundEnabled, showHistory, settings?.kitchen_sound_type, settings?.kitchen_sound_volume]);
 
     const updateStatusMutation = useMutation({
         mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {

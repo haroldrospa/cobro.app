@@ -18,6 +18,7 @@ import { offlineDB, OfflineStore } from "@/lib/offlineDB";
 import { useUserStore } from '@/hooks/useUserStore';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useStoreSettings, PaymentMethod } from '@/hooks/useStoreSettings';
+import { playNotificationSound, NotificationSoundType } from '@/utils/notificationSounds';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { ThermalPrinterDialog } from '@/components/settings/ThermalPrinterDialog';
@@ -279,7 +280,9 @@ const Settings = () => {
   const [kitchenSettings, setKitchenSettings] = useState({
     yellowThreshold: 5,
     redThreshold: 10,
-    alertThreshold: 15
+    alertThreshold: 15,
+    soundType: 'bell' as NotificationSoundType,
+    soundVolume: 0.8
   });
 
   // Sync system settings from database
@@ -303,7 +306,9 @@ const Settings = () => {
       setKitchenSettings({
         yellowThreshold: storeSettings.kitchen_yellow_threshold || 5,
         redThreshold: storeSettings.kitchen_red_threshold || 10,
-        alertThreshold: storeSettings.kitchen_alert_threshold || 15
+        alertThreshold: storeSettings.kitchen_alert_threshold || 15,
+        soundType: (storeSettings.kitchen_sound_type as NotificationSoundType) || 'bell',
+        soundVolume: storeSettings.kitchen_sound_volume ?? 0.8
       });
     }
   }, [
@@ -316,7 +321,9 @@ const Settings = () => {
     storeSettings?.timezone,
     storeSettings?.kitchen_yellow_threshold,
     storeSettings?.kitchen_red_threshold,
-    storeSettings?.kitchen_alert_threshold
+    storeSettings?.kitchen_alert_threshold,
+    storeSettings?.kitchen_sound_type,
+    storeSettings?.kitchen_sound_volume
   ]);
 
   // Payment methods state - synced with storeSettings
@@ -573,7 +580,9 @@ const Settings = () => {
           kitchen_yellow_threshold: kitchenSettings.yellowThreshold,
           kitchen_red_threshold: kitchenSettings.redThreshold,
           kitchen_alert_threshold: kitchenSettings.alertThreshold,
-        });
+          kitchen_sound_type: kitchenSettings.soundType,
+          kitchen_sound_volume: kitchenSettings.soundVolume,
+        } as any);
       }
 
       const sectionNames: Record<string, string> = {
@@ -1992,6 +2001,39 @@ const Settings = () => {
               value={kitchenSettings.alertThreshold}
               onChange={(e) => setKitchenSettings({ ...kitchenSettings, alertThreshold: parseInt(e.target.value) || 0 })}
             />
+          </div>
+          <div className="space-y-3 pt-3 border-t">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tono de Super Alerta</Label>
+            <div className="flex gap-2">
+              <Select
+                value={kitchenSettings.soundType}
+                onValueChange={(val: NotificationSoundType) => {
+                  setKitchenSettings(prev => ({ ...prev, soundType: val }));
+                  playNotificationSound(val, true, kitchenSettings.soundVolume);
+                }}
+              >
+                <SelectTrigger className="flex-1 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bell">🛎️ Campana</SelectItem>
+                  <SelectItem value="alert">⚠️ Alerta Urgente</SelectItem>
+                  <SelectItem value="chime">🔔 Campanilla</SelectItem>
+                  <SelectItem value="ding">✨ Ding</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl px-3 gap-1.5 shrink-0"
+                onClick={() => {
+                  playNotificationSound(kitchenSettings.soundType, true, kitchenSettings.soundVolume);
+                }}
+              >
+                <Volume2 className="h-4 w-4" />
+                <span className="text-xs">Probar</span>
+              </Button>
+            </div>
           </div>
         </div>
         <Button onClick={() => handleSaveSettings('cocina')} disabled={loading || isUpdatingStoreSettings} className="w-full mt-4 rounded-2xl h-12 font-bold">
@@ -3506,13 +3548,77 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <div className="bg-muted p-4 rounded-[1.5rem] border space-y-2">
-                    <h4 className="font-bold flex items-center gap-2 uppercase text-xs tracking-widest text-muted-foreground">
-                      <Volume2 className="h-4 w-4" /> Alertas Sonoras
-                    </h4>
-                    <p className="text-sm">
-                      KDS reproducirá un sonido "Campana" cada 30 segundos si hay órdenes en estado de <strong>Super Alerta</strong>.
-                    </p>
+                  <div className="bg-muted/40 p-5 rounded-2xl border space-y-4">
+                    <div className="space-y-1">
+                      <h4 className="font-bold flex items-center gap-2 uppercase text-xs tracking-widest text-foreground">
+                        <Volume2 className="h-4 w-4 text-primary" /> Alertas Sonoras (KDS)
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Selecciona el tono que sonará cada 30 segundos cuando hayan órdenes en estado de <strong>Super Alerta</strong>.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-border/50">
+                      {/* Selector de Sonido y Botón de Probar */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold">Tono de Notificación</Label>
+                        <div className="flex gap-2">
+                          <Select
+                            value={kitchenSettings.soundType}
+                            onValueChange={(val: NotificationSoundType) => {
+                              setKitchenSettings(prev => ({ ...prev, soundType: val }));
+                              playNotificationSound(val, true, kitchenSettings.soundVolume);
+                            }}
+                          >
+                            <SelectTrigger className="flex-1 rounded-xl bg-background">
+                              <SelectValue placeholder="Seleccionar sonido" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="bell">🛎️ Campana (Recomendado)</SelectItem>
+                              <SelectItem value="alert">⚠️ Alerta Urgente</SelectItem>
+                              <SelectItem value="chime">🔔 Campanilla</SelectItem>
+                              <SelectItem value="ding">✨ Ding</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl px-3.5 gap-2 shrink-0 bg-background hover:bg-primary hover:text-primary-foreground transition-all font-semibold"
+                            onClick={() => {
+                              playNotificationSound(kitchenSettings.soundType, true, kitchenSettings.soundVolume);
+                            }}
+                            title="Escuchar sonido de prueba"
+                          >
+                            <Volume2 className="h-4 w-4" />
+                            <span className="text-xs">Escuchar</span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Control de Volumen */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold">Volumen de Alerta</Label>
+                          <span className="text-xs font-mono font-bold text-primary">
+                            {Math.round(kitchenSettings.soundVolume * 100)}%
+                          </span>
+                        </div>
+                        <div className="pt-2">
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="1"
+                            step="0.05"
+                            value={kitchenSettings.soundVolume}
+                            onChange={(e) => {
+                              const vol = parseFloat(e.target.value);
+                              setKitchenSettings(prev => ({ ...prev, soundVolume: vol }));
+                            }}
+                            className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <Button onClick={() => handleSaveSettings('cocina')} disabled={loading || isUpdatingStoreSettings} className="h-12 px-8 rounded-2xl font-bold">

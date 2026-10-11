@@ -125,6 +125,8 @@ export type StoreSettings = {
   kitchen_yellow_threshold?: number;
   kitchen_red_threshold?: number;
   kitchen_alert_threshold?: number;
+  kitchen_sound_type?: string;
+  kitchen_sound_volume?: number;
   subscription_notification_email?: string;
   ai_api_key?: string | null;
   label_templates?: any[];
@@ -277,6 +279,8 @@ export const useStoreSettings = () => {
         business_hours,
         use_delivery,
         use_kitchen,
+        kitchen_sound_type,
+        kitchen_sound_volume,
         shop_type,
         subscription_notification_email,
         ...dbPayload
@@ -347,7 +351,7 @@ export const useStoreSettings = () => {
     const uiKeys = [
       'pos_view_mode', 'pos_layout_mode', 'pos_layout_grid_cols',
       'invoice_font_size', 'show_barcode', 'logo_width', 'business_hours',
-      'use_delivery', 'use_kitchen', 'shop_type',
+      'use_delivery', 'use_kitchen', 'kitchen_sound_type', 'kitchen_sound_volume', 'shop_type',
       'meta_whatsapp_enabled', 'meta_whatsapp_phone_number_id', 'meta_whatsapp_access_token',
       'bank_accounts',
       'pedidosya_enabled', 'pedidosya_store_id', 'pedidosya_client_id', 'pedidosya_client_secret', 'pedidosya_webhook_secret', 'pedidosya_auto_accept'
