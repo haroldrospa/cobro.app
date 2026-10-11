@@ -306,30 +306,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {showOfflineBanner && (
-        <div className="bg-destructive text-destructive-foreground text-center text-xs py-1 px-4 font-medium sticky top-0 w-full z-50">
-          Sin conexión a internet. Trabajando en modo offline.
-        </div>
-      )}
-
-      {showSyncBanner && (
-        <div className="bg-blue-600 text-white text-center text-xs py-1 px-4 font-medium sticky top-0 w-full z-50 flex items-center justify-center animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-2">
-            <CloudUpload className="w-3 h-3 animate-bounce" />
-            <span>Sincronizando {pendingCount} operación{pendingCount !== 1 ? 'es' : ''}...</span>
+      {/* Header fijo arriba con menú principal, banners de estado y vencimiento */}
+      <header className="sticky top-0 w-full z-50 shadow-sm bg-card/95 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
+        {showOfflineBanner && (
+          <div className="bg-destructive text-destructive-foreground text-center text-xs py-1 px-4 font-medium w-full">
+            Sin conexión a internet. Trabajando en modo offline.
           </div>
-          <button
-            onClick={() => setIsSyncBannerVisible(false)}
-            className="absolute right-4 p-0.5 hover:bg-white/20 rounded transition-colors"
-            title="Ocultar"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* Header pegado arriba con menú principal y banner de vencimiento adosado debajo */}
-      <header className="sticky top-0 w-full z-40 shadow-xs bg-card/95 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
+        {showSyncBanner && (
+          <div className="bg-blue-600 text-white text-center text-xs py-1 px-4 font-medium w-full flex items-center justify-center animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-2">
+              <CloudUpload className="w-3 h-3 animate-bounce" />
+              <span>Sincronizando {pendingCount} operación{pendingCount !== 1 ? 'es' : ''}...</span>
+            </div>
+            <button
+              onClick={() => setIsSyncBannerVisible(false)}
+              className="absolute right-4 p-0.5 hover:bg-white/20 rounded transition-colors"
+              title="Ocultar"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 h-13 sm:h-16">
           {/* Left: Page Title / Navigation Menu (Mobile & Desktop) */}
           <div className="flex items-center gap-2.5 min-w-0">
