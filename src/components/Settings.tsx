@@ -1511,9 +1511,19 @@ const Settings = () => {
       </div>
 
       <Button 
+        type="button"
+        variant="outline"
+        onClick={handleThermalTestPrint}
+        className="w-full rounded-2xl h-12 font-bold gap-2 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-all mt-4"
+      >
+        <Printer className="h-4 w-4" />
+        Imprimir Vista Previa de Prueba
+      </Button>
+
+      <Button 
         onClick={() => handleSaveSettings('facturas')} 
         disabled={loading || isUpdatingStoreSettings} 
-        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl h-12 font-bold shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all mt-4"
+        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl h-12 font-bold shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all mt-2"
       >
         <Save className="mr-2 h-4 w-4" />
         Guardar Configuración
@@ -2790,9 +2800,21 @@ const Settings = () => {
                       <div className="h-3 w-3 rounded-full bg-[#27c93f]"></div>
                       <span className="ml-3 text-xs font-medium text-white/50 tracking-wider">PREVIEW</span>
                     </div>
-                    <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse"></div>
-                      <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">En Vivo</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse"></div>
+                        <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">En Vivo</span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleThermalTestPrint}
+                        className="h-7 px-3 text-xs font-bold gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all"
+                        title="Imprimir esta vista previa"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                        <span>Imprimir</span>
+                      </Button>
                     </div>
                   </div>
 
@@ -2970,6 +2992,22 @@ const Settings = () => {
                       {/* Efecto de papel rasgado inferior (CSS puro) */}
                       <div className="absolute bottom-0 left-0 right-0 h-2 w-full bg-[radial-gradient(circle_at_10px_10px,#fcfcfc_10px,transparent_11px)]" style={{ backgroundSize: '20px 10px', marginBottom: '-10px', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.1))' }}></div>
                     </div>
+                  </div>
+
+                  {/* Barra inferior de la vista previa con botón directo */}
+                  <div className="px-4 py-2.5 border-t border-white/5 bg-[#111] flex items-center justify-between gap-3 shrink-0">
+                    <span className="text-[11px] text-zinc-400 font-medium">
+                      Papel: <strong className="text-zinc-200">{printSettings.paperSize || '80mm'}</strong>
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleThermalTestPrint}
+                      className="h-8 px-3.5 text-xs font-bold gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all cursor-pointer"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      Imprimir Vista Previa
+                    </Button>
                   </div>
                 </div>
               </div>
