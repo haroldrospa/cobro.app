@@ -2994,21 +2994,7 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  {/* Barra inferior de la vista previa con botón directo */}
-                  <div className="px-4 py-2.5 border-t border-white/5 bg-[#111] flex items-center justify-between gap-3 shrink-0">
-                    <span className="text-[11px] text-zinc-400 font-medium">
-                      Papel: <strong className="text-zinc-200">{printSettings.paperSize || '80mm'}</strong>
-                    </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleThermalTestPrint}
-                      className="h-8 px-3.5 text-xs font-bold gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all cursor-pointer"
-                    >
-                      <Printer className="h-3.5 w-3.5" />
-                      Imprimir Vista Previa
-                    </Button>
-                  </div>
+
                 </div>
               </div>
             </div>
