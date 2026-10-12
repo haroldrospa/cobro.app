@@ -54,6 +54,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const isFullScreenApp = location.pathname === '/' ||
     location.pathname === '/pos' ||
+    location.pathname === '/app' ||
     location.pathname.startsWith('/admin') ||
     profile?.role === 'kitchen' ||
     profile?.role === 'delivery';
@@ -284,15 +285,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   if (isFullScreenApp) {
-    const isPOS = location.pathname === '/pos';
+    const isPOS = location.pathname === '/pos' || location.pathname === '/' || location.pathname === '/app';
     return (
-      <div className="h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col bg-background">
+      <div className="fixed inset-0 h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col bg-background overscroll-none touch-manipulation">
         {!isOnline && (
           <div className="bg-destructive text-destructive-foreground p-1 text-center text-xs font-semibold safe-area-top shrink-0 z-50">
             Sin conexión - Trabajando offline
           </div>
         )}
-        <div className={cn("flex-1 min-h-0 w-full flex flex-col", isPOS ? "overflow-hidden" : "overflow-y-auto")}>
+        <div className={cn("flex-1 min-h-0 w-full flex flex-col overflow-hidden", !isPOS && "overflow-y-auto")}>
           {children}
         </div>
         <QuickGuideDialog />

@@ -367,7 +367,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
   };
 
   return (
-    <div className="h-full flex flex-col bg-background relative overflow-hidden">
+    <div className="h-full w-full flex flex-col bg-background relative overflow-hidden overscroll-none">
       {/* ── PREMIUM EBONY & EMERALD SEARCH BAR ── */}
       <div className="px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 mobile-landscape:pt-1.5 mobile-landscape:pb-1.5 space-y-2 mobile-landscape:space-y-0 mobile-landscape:flex mobile-landscape:items-center mobile-landscape:gap-2 bg-card border-b border-emerald-500/10 sticky top-0 z-40 shrink-0">
         {/* Top Header Section: Menu, Profile, Actions */}
@@ -458,7 +458,7 @@ const MobileProductSearch = React.forwardRef<MobileProductSearchHandle, MobilePr
       </div>
 
       {/* ── PRODUCTS FEED ── */}
-      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth overscroll-contain">
+      <div className="flex-1 min-h-0 w-full overflow-y-auto no-scrollbar scroll-smooth overscroll-contain">
         <div className={cn("px-2 pt-3 mobile-landscape:pt-2", cart && cart.length > 0 ? "pb-[calc(10rem+env(safe-area-inset-bottom))] mobile-landscape:pb-[calc(5rem+env(safe-area-inset-bottom))]" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] mobile-landscape:pb-[calc(3rem+env(safe-area-inset-bottom))]")}>
           {filteredProducts.length === 0 ? (
             cart && cart.length > 0 ? (

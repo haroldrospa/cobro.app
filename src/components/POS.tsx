@@ -1981,7 +1981,7 @@ const POSContent: React.FC = () => {
 
   if (isMobilePortrait) {
     return (
-      <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background">
+      <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background overscroll-none">
         <MobilePOSLayout
           productSearchComponent={
             isServices && servicesViewMode === 'services' ? (
