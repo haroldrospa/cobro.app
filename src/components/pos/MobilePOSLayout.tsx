@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, CreditCard, ChevronUp } from 'lucide-react';
+import { ShoppingCart, CreditCard, ChevronUp, Utensils } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CartItem } from '@/types/pos';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,10 @@ interface MobilePOSLayoutProps {
   // Cart total for quick view
   cartTotal: string;
   onCheckout: () => void;
+  isWaiter?: boolean;
+  selectedTable?: string | null;
+  onOpenTableSelector?: () => void;
+  onSaveOrder?: () => void;
 }
 
 const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
@@ -27,6 +31,10 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
   paymentComponent,
   cartTotal,
   onCheckout,
+  isWaiter = false,
+  selectedTable = null,
+  onOpenTableSelector,
+  onSaveOrder,
 }) => {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -45,6 +53,16 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
   };
 
   const hasItems = cart.length > 0;
+
+  const handleWaiterAction = () => {
+    if (selectedTable && onSaveOrder) {
+      onSaveOrder();
+    } else if (onOpenTableSelector) {
+      onOpenTableSelector();
+    } else if (onSaveOrder) {
+      onSaveOrder();
+    }
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-hidden relative overscroll-none pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
@@ -71,8 +89,12 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
             className="flex-1 flex items-center gap-3 mobile-landscape:gap-2 text-left group active:scale-[0.98] transition-transform duration-150"
           >
             <div className="relative">
-              <div className="bg-emerald-500 rounded-xl mobile-landscape:rounded-lg p-2 mobile-landscape:p-1.5">
-                <ShoppingCart className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 text-white" />
+              <div className={cn("rounded-xl mobile-landscape:rounded-lg p-2 mobile-landscape:p-1.5", isWaiter ? "bg-amber-500" : "bg-emerald-500")}>
+                {isWaiter ? (
+                  <Utensils className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 text-white" />
+                ) : (
+                  <ShoppingCart className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 text-white" />
+                )}
               </div>
               <Badge
                 variant="destructive"
@@ -82,18 +104,32 @@ const MobilePOSLayout: React.FC<MobilePOSLayoutProps> = ({
               </Badge>
             </div>
             <div>
-              <p className="text-[10px] mobile-landscape:text-[8px] uppercase tracking-widest font-black text-white/60 leading-none mb-1 mobile-landscape:mb-0.5">Total a Pagar</p>
+              <p className="text-[10px] mobile-landscape:text-[8px] uppercase tracking-widest font-black text-white/60 leading-none mb-1 mobile-landscape:mb-0.5">
+                {selectedTable ? `Comanda · ${selectedTable}` : (isWaiter ? 'Total Comanda' : 'Total a Pagar')}
+              </p>
               <p className="text-xl mobile-landscape:text-base font-black text-white leading-none">${cartTotal}</p>
             </div>
           </button>
 
-          <button
-            onClick={openPaymentSummary}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 py-2.5 px-5 mobile-landscape:py-1.5 mobile-landscape:px-3.5 rounded-xl mobile-landscape:rounded-lg active:scale-[0.98] transition-transform duration-150"
-          >
-            <CreditCard className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 text-white" />
-            <span className="text-sm mobile-landscape:text-xs uppercase font-black text-white tracking-widest">Pagar</span>
-          </button>
+          {isWaiter ? (
+            <button
+              onClick={handleWaiterAction}
+              className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 py-2.5 px-4 mobile-landscape:py-1.5 mobile-landscape:px-3 rounded-xl mobile-landscape:rounded-lg active:scale-[0.98] transition-transform duration-150 shadow-md text-white shrink-0"
+            >
+              <Utensils className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4" />
+              <span className="text-sm mobile-landscape:text-xs uppercase font-black tracking-wider">
+                {selectedTable ? 'Comandar' : 'Asignar Mesa'}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={openPaymentSummary}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 py-2.5 px-5 mobile-landscape:py-1.5 mobile-landscape:px-3.5 rounded-xl mobile-landscape:rounded-lg active:scale-[0.98] transition-transform duration-150"
+            >
+              <CreditCard className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 text-white" />
+              <span className="text-sm mobile-landscape:text-xs uppercase font-black text-white tracking-widest">Pagar</span>
+            </button>
+          )}
         </div>
       </div>
 

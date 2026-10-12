@@ -16,7 +16,7 @@ import {
   Maximize, Minimize, Menu, Home, Package, Users, FileText, BarChart,
   Settings as SettingsIcon, Store, LogOut, Save, ClipboardList, Receipt,
   RefreshCcw, HandCoins, Lock, Unlock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
-  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase
+  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils
 } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
@@ -41,10 +41,12 @@ import ProductSearchList from './pos/ProductSearchList';
 const WebSalesDialog = lazy(() => import('./pos/WebSalesDialog'));
 const OpenAccountsDialog = lazy(() => import('./pos/OpenAccountsDialog'));
 const SaveOrderDialog = lazy(() => import('./pos/SaveOrderDialog'));
+const TableSelectorDialog = lazy(() => import('./pos/TableSelectorDialog'));
 const DailySalesDialog = lazy(() => import('./pos/DailySalesDialog'));
 const RefundDialog = lazy(() => import('./pos/RefundDialog'));
 const CashMovementsDialog = lazy(() => import('./pos/CashMovementsDialog'));
 const CloseDayDialog = lazy(() => import('./pos/CloseDayDialog'));
+import { extractTableFromNotes } from './pos/OpenAccountsDialog';
 // OpenRegisterDialog se queda eager: su apertura depende de una condicion
 // automatica (!activeSession) que puede dispararse casi de inmediato al
 // entrar a POS, no de un click explicito -- no vale la pena el riesgo de
@@ -122,7 +124,7 @@ const POSContent: React.FC = () => {
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
   const isMobilePortrait = isMobile && !isLandscape;
-  const { skipKitchenStep, isStore, isSupermarket, isServices, orderTypeLabels, orderTypeTags } = useBusinessType();
+  const { skipKitchenStep, isStore, isSupermarket, isServices, isRestaurant, orderTypeLabels, orderTypeTags } = useBusinessType();
   const recipeAvailability = useRecipeAvailability();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
@@ -302,6 +304,46 @@ const POSContent: React.FC = () => {
     role: 'admin',
     is_active: true,
   };
+
+  const isWaiter = profile?.role === 'waiter' || profile?.role === 'mesero';
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [showTableSelectorDialog, setShowTableSelectorDialog] = useState(false);
+
+  // Consulta en tiempo real de mesas ocupadas
+  const { data: openOrdersForTables = [] } = useQuery({
+    queryKey: ['pos-open-orders-tables', userStore?.id],
+    queryFn: async () => {
+      if (!userStore?.id) return [];
+      const { data } = await supabase
+        .from('open_orders')
+        .select('id, order_number, customer_name, total, notes, created_at, open_order_items(id)')
+        .eq('store_id', userStore.id)
+        .eq('source', 'pos')
+        .eq('payment_status', 'pending');
+      return data || [];
+    },
+    enabled: !!userStore?.id && isRestaurant,
+    staleTime: 4000,
+  });
+
+  const occupiedTablesList = useMemo(() => {
+    return (openOrdersForTables || [])
+      .filter((o: any) => !o.notes?.startsWith('[ACTUALIZADO]'))
+      .map((o: any) => {
+        const tName = extractTableFromNotes(o.notes);
+        if (!tName) return null;
+        return {
+          tableName: tName,
+          orderId: o.id,
+          orderNumber: o.order_number,
+          customerName: o.customer_name,
+          total: o.total || 0,
+          createdAt: o.created_at,
+          itemCount: o.open_order_items?.length || 0,
+        };
+      })
+      .filter(Boolean) as any[];
+  }, [openOrdersForTables]);
 
   const storeId = (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000') ? profile.store_id : undefined;
 
@@ -709,6 +751,16 @@ const POSContent: React.FC = () => {
   const handleCheckout = useCallback(() => {
     if (cart.length === 0) return;
 
+    // Mesero/a: Solo toma comandas y las asigna a mesas. Bloqueado de cobro/facturación.
+    if (isWaiter) {
+      if (selectedTable) {
+        handleSaveOrder();
+      } else {
+        setShowTableSelectorDialog(true);
+      }
+      return;
+    }
+
     if (!activeSession) {
       handleOpenRegister();
       toast({
@@ -738,7 +790,7 @@ const POSContent: React.FC = () => {
     }
 
     setShowPaymentDialog(true);
-  }, [cart.length, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, toast]);
+  }, [cart.length, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, handleSaveOrder, toast]);
 
   const queryClient = useQueryClient();
 
@@ -1110,6 +1162,12 @@ const POSContent: React.FC = () => {
     if (order.customer_id) {
       setSelectedCustomer(order.customer_id);
     }
+
+    const effectiveNotes = notes || (order as any)?.notes;
+    const foundTable = extractTableFromNotes(effectiveNotes);
+    if (foundTable) {
+      setSelectedTable(foundTable);
+    }
   };
 
   // Save existing order directly without dialog
@@ -1193,14 +1251,17 @@ const POSContent: React.FC = () => {
 
       // 3. Determinar tipo de usuario para tag de tipo de orden
       const orderTypeTag = orderTypeTags[activePosOrderType];
+      const tableTag = selectedTable ? `[MESA: ${selectedTable.trim()}]` : '';
       const rawNotes = (activeOrderInfo?.notes || '');
       const cleanNotes = rawNotes
+        .replace(/\[MESA:[^\]]+\]/gi, '')
         .replace(/\[COMER AQUÍ\]/g, '')
         .replace(/\[PARA LLEVAR\]/g, '')
         .replace(/\[COMPRA AQUÍ\]/g, '')
         .replace(/\[DELIVERY\]/g, '')
         .trim();
-      const finalNotes = cleanNotes ? `${cleanNotes}\n${orderTypeTag}` : orderTypeTag;
+      const finalNotesParts = [cleanNotes, tableTag, orderTypeTag].filter(Boolean);
+      const finalNotes = finalNotesParts.join('\n');
 
       // 4. Preparar payload de actualización principal
       const isDelivery = activePosOrderType === 'takeout' && (isStore || isSupermarket);
@@ -1658,6 +1719,7 @@ const POSContent: React.FC = () => {
   const handleClearOrder = useCallback(() => {
     setCurrentWebOrderId(null);
     setCurrentOrderInfo(null);
+    setSelectedTable(null);
     setCart([]);
   }, []);
 
@@ -1734,10 +1796,16 @@ const POSContent: React.FC = () => {
       ];
     }
 
+    if (profile?.role === 'waiter' || profile?.role === 'mesero') {
+      return storeSettings?.restaurant_kitchen_enabled ? [
+        { name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat },
+      ] : [];
+    }
+
     return [
       { name: 'Administración', href: '/dashboard', icon: Home }
     ];
-  }, [profile]);
+  }, [profile, storeSettings]);
 
   const handleShowDailySales = useCallback(() => setShowDailySalesDialog(true), []);
   const handleShowRefund = useCallback(() => setShowRefundDialog(true), []);
@@ -1842,6 +1910,8 @@ const POSContent: React.FC = () => {
           userName={profile?.full_name}
           activeSession={activeSession}
           onOpenRegister={handleOpenRegister}
+          isWaiter={isWaiter}
+          onShowTables={() => setShowTableSelectorDialog(true)}
         />
       );
     }
@@ -1859,9 +1929,11 @@ const POSContent: React.FC = () => {
         userName={profile?.full_name}
         activeSession={activeSession}
         onOpenRegister={handleOpenRegister}
+        isWaiter={isWaiter}
+        onShowTables={() => setShowTableSelectorDialog(true)}
       />
     );
-  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile, activeSession, handleOpenRegister]);
+  }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile, activeSession, handleOpenRegister, isWaiter]);
 
   const hasCartItems = cart.length > 0;
   // Action buttons as a stable React.memo component reference
@@ -2073,10 +2145,17 @@ const POSContent: React.FC = () => {
               isElectronic={isElectronicActive}
               hasActiveSession={!!activeSession}
               onOpenRegister={handleOpenRegister}
+              isWaiter={isWaiter}
+              onSaveOrder={memoHandleSaveOrder}
+              selectedTable={selectedTable}
             />
           }
           cartTotal={totals.total}
           onCheckout={handleCheckout}
+          isWaiter={isWaiter}
+          selectedTable={selectedTable}
+          onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+          onSaveOrder={memoHandleSaveOrder}
         />
 
         {/* Dialogs - shared between mobile and desktop */}
@@ -2145,6 +2224,8 @@ const POSContent: React.FC = () => {
               orderSource={currentOrderSource}
               initialCustomerName={currentOrderInfo?.customerName || ''}
               initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
+              initialTable={selectedTable}
+              onTableSelected={(tbl) => setSelectedTable(tbl)}
               existingOrderId={currentWebOrderId}
               existingOrderNumber={currentOrderInfo?.orderNumber}
               posOrderType={posOrderType}
@@ -2156,7 +2237,27 @@ const POSContent: React.FC = () => {
                 setCurrentOrderInfo(null);
                 setCurrentOrderSource('pos');
                 setCurrentWebOrderId(null);
+                setSelectedTable(null);
               }}
+            />
+          </Suspense>
+        )}
+
+        {showTableSelectorDialog && (
+          <Suspense fallback={null}>
+            <TableSelectorDialog
+              isOpen={showTableSelectorDialog}
+              onClose={() => setShowTableSelectorDialog(false)}
+              selectedTable={selectedTable}
+              onSelectTable={(tbl) => setSelectedTable(tbl)}
+              onClearTable={() => setSelectedTable(null)}
+              onLoadTableOrder={(orderId) => {
+                const target = openOrdersForTables.find((o: any) => o.id === orderId);
+                if (target) {
+                  handleGoToPOSFromCloseDay(target.id, target.customer_name, target.order_number);
+                }
+              }}
+              occupiedTables={occupiedTablesList}
             />
           </Suspense>
         )}
@@ -2301,7 +2402,7 @@ const POSContent: React.FC = () => {
         )}
 
         <OpenRegisterDialog
-          isOpen={!activeSession && !isLoadingSession && !userClosedRegisterDialog}
+          isOpen={!isWaiter && !activeSession && !isLoadingSession && !userClosedRegisterDialog}
           onOpenChange={(open) => {
             if (!open) {
               setUserClosedRegisterDialog(true);
@@ -2566,6 +2667,8 @@ const POSContent: React.FC = () => {
                     orderType={posOrderType}
                     onOrderTypeChange={setPosOrderType}
                     cartTotal={parseFloat(totals.total) || 0}
+                    selectedTable={selectedTable}
+                    onOpenTableSelector={() => setShowTableSelectorDialog(true)}
                   />
                 </div>
 
@@ -2593,6 +2696,9 @@ const POSContent: React.FC = () => {
                     isElectronic={isElectronicActive}
                     hasActiveSession={!!activeSession}
                     onOpenRegister={handleOpenRegister}
+                    isWaiter={isWaiter}
+                    onSaveOrder={memoHandleSaveOrder}
+                    selectedTable={selectedTable}
                   />
                 </div>
               </div>
@@ -2664,6 +2770,8 @@ const POSContent: React.FC = () => {
               orderSource={currentOrderSource}
               initialCustomerName={currentOrderInfo?.customerName || ''}
               initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
+              initialTable={selectedTable}
+              onTableSelected={(tbl) => setSelectedTable(tbl)}
               existingOrderId={currentWebOrderId}
               existingOrderNumber={currentOrderInfo?.orderNumber}
               posOrderType={posOrderType}
@@ -2675,7 +2783,27 @@ const POSContent: React.FC = () => {
                 setCurrentOrderInfo(null);
                 setCurrentOrderSource('pos');
                 setCurrentWebOrderId(null);
+                setSelectedTable(null);
               }}
+            />
+          </Suspense>
+        )}
+
+        {showTableSelectorDialog && (
+          <Suspense fallback={null}>
+            <TableSelectorDialog
+              isOpen={showTableSelectorDialog}
+              onClose={() => setShowTableSelectorDialog(false)}
+              selectedTable={selectedTable}
+              onSelectTable={(tbl) => setSelectedTable(tbl)}
+              onClearTable={() => setSelectedTable(null)}
+              onLoadTableOrder={(orderId) => {
+                const target = openOrdersForTables.find((o: any) => o.id === orderId);
+                if (target) {
+                  handleGoToPOSFromCloseDay(target.id, target.customer_name, target.order_number);
+                }
+              }}
+              occupiedTables={occupiedTablesList}
             />
           </Suspense>
         )}
@@ -2820,7 +2948,7 @@ const POSContent: React.FC = () => {
         )}
 
         <OpenRegisterDialog
-          isOpen={((!activeSession && !isLoadingSession && !userClosedRegisterDialog) || showOpenRegisterDialog)}
+          isOpen={!isWaiter && (((!activeSession && !isLoadingSession && !userClosedRegisterDialog) || showOpenRegisterDialog))}
           onOpenChange={(open) => {
             if (!open) {
               setUserClosedRegisterDialog(true);
@@ -3062,6 +3190,8 @@ interface POSMenuButtonProps {
   userName?: string;
   activeSession: any;
   onOpenRegister: () => void;
+  isWaiter?: boolean;
+  onShowTables?: () => void;
 }
 
 const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
@@ -3081,6 +3211,8 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
   userName,
   activeSession,
   onOpenRegister,
+  isWaiter,
+  onShowTables,
 }) {
   if (isMobile) {
     return (
@@ -3164,13 +3296,17 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             <div className="grid grid-cols-3 gap-2.5">
               {[
                 ...navigationItems.map(item => ({ icon: item.icon, label: item.name, action: () => onNavigate(item.href) })),
-                { icon: Receipt, label: 'Ventas del Día', action: onDailySales, accent: true },
-                { icon: RefreshCcw, label: 'Devoluciones', action: onRefund },
-                { icon: HandCoins, label: 'Movimientos', action: onCashMovements },
-                { icon: DollarSign, label: 'Cobros Deudas', action: onDebtSelect },
-                activeSession
-                  ? { icon: Lock, label: 'Cierre de Caja', action: onCloseDay }
-                  : { icon: Unlock, label: 'Abrir Caja', action: onOpenRegister },
+                ...(isWaiter ? [
+                  ...(onShowTables ? [{ icon: Utensils, label: 'Mesas / Salón', action: onShowTables, accent: true }] : [])
+                ] : [
+                  { icon: Receipt, label: 'Ventas del Día', action: onDailySales, accent: true },
+                  { icon: RefreshCcw, label: 'Devoluciones', action: onRefund },
+                  { icon: HandCoins, label: 'Movimientos', action: onCashMovements },
+                  { icon: DollarSign, label: 'Cobros Deudas', action: onDebtSelect },
+                  activeSession
+                    ? { icon: Lock, label: 'Cierre de Caja', action: onCloseDay }
+                    : { icon: Unlock, label: 'Abrir Caja', action: onOpenRegister },
+                ]),
               ].map((item, idx) => (
                 <DrawerClose asChild key={idx}>
                   <Button
@@ -3227,15 +3363,26 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
           );
         })}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onDailySales} className="cursor-pointer"><Receipt className="h-4 w-4 mr-2" />Ventas del Día</DropdownMenuItem>
-        <DropdownMenuItem onSelect={onRefund} className="cursor-pointer"><RefreshCcw className="h-4 w-4 mr-2" />Devoluciones / Reembolsos</DropdownMenuItem>
-        <DropdownMenuItem onSelect={onCashMovements} className="cursor-pointer"><HandCoins className="h-4 w-4 mr-2" />Movimientos de Caja (E/S)</DropdownMenuItem>
-        {activeSession ? (
-          <DropdownMenuItem onSelect={onCloseDay} className="cursor-pointer"><Lock className="h-4 w-4 mr-2" />Cierre de Caja (Finalizar Día)</DropdownMenuItem>
+        {isWaiter ? (
+          onShowTables && (
+            <DropdownMenuItem onSelect={onShowTables} className="cursor-pointer font-medium text-emerald-400">
+              <Utensils className="h-4 w-4 mr-2 text-emerald-400" />
+              Mesas / Salón
+            </DropdownMenuItem>
+          )
         ) : (
-          <DropdownMenuItem onSelect={onOpenRegister} className="cursor-pointer"><Unlock className="h-4 w-4 mr-2" />Abrir Caja (Iniciar Turno)</DropdownMenuItem>
+          <>
+            <DropdownMenuItem onSelect={onDailySales} className="cursor-pointer"><Receipt className="h-4 w-4 mr-2" />Ventas del Día</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onRefund} className="cursor-pointer"><RefreshCcw className="h-4 w-4 mr-2" />Devoluciones / Reembolsos</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onCashMovements} className="cursor-pointer"><HandCoins className="h-4 w-4 mr-2" />Movimientos de Caja (E/S)</DropdownMenuItem>
+            {activeSession ? (
+              <DropdownMenuItem onSelect={onCloseDay} className="cursor-pointer"><Lock className="h-4 w-4 mr-2" />Cierre de Caja (Finalizar Día)</DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={onOpenRegister} className="cursor-pointer"><Unlock className="h-4 w-4 mr-2" />Abrir Caja (Iniciar Turno)</DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={onDebtSelect} className="cursor-pointer"><DollarSign className="h-4 w-4 mr-2" />Cobros a Clientes (Deudas)</DropdownMenuItem>
+          </>
         )}
-        <DropdownMenuItem onSelect={onDebtSelect} className="cursor-pointer"><DollarSign className="h-4 w-4 mr-2" />Cobros a Clientes (Deudas)</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onLogout} className="cursor-pointer text-destructive focus:text-destructive"><LogOut className="h-4 w-4 mr-2" />Cerrar Sesión</DropdownMenuItem>
       </DropdownMenuContent>

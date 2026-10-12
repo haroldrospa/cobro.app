@@ -13,7 +13,7 @@ import { calculateTotals } from '@/utils/posCalculations';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import { Customer } from '@/hooks/useCustomers';
-import { Bike, Search, Check, ChevronsUpDown, User } from 'lucide-react';
+import { Bike, Search, Check, ChevronsUpDown, User, Utensils } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,8 @@ interface SaveOrderDialogProps {
   posOrderType?: 'dine-in' | 'takeout';
   customers?: Customer[];
   initialCustomerId?: string;
+  initialTable?: string | null;
+  onTableSelected?: (table: string) => void;
 }
 
 const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
@@ -45,7 +47,9 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
   existingOrderNumber = null,
   posOrderType = 'takeout',
   customers = [],
-  initialCustomerId = ''
+  initialCustomerId = '',
+  initialTable = null,
+  onTableSelected
 }) => {
   const [customerName, setCustomerName] = useState(initialCustomerName);
   const [selectedCustomerId, setSelectedCustomerId] = useState(initialCustomerId);
@@ -56,8 +60,15 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: userStore } = useUserStore();
-  const { orderTypeTags, isStore, isSupermarket } = useBusinessType();
+  const { orderTypeTags, isStore, isSupermarket, isRestaurant } = useBusinessType();
   const isDelivery = posOrderType === 'takeout' && (isStore || isSupermarket);
+
+  const extractTableFromNotes = (txt?: string) => {
+    const match = (txt || '').match(/\[MESA:\s*([^\]]+)\]/i);
+    return match ? match[1].trim() : '';
+  };
+
+  const [table, setTable] = useState<string>(initialTable || extractTableFromNotes(initialNotes));
 
   // Update values when initial values change
   React.useEffect(() => {
@@ -66,7 +77,15 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
 
   React.useEffect(() => {
     setNotes(initialNotes);
-  }, [initialNotes]);
+    if (!initialTable) {
+      const foundTable = extractTableFromNotes(initialNotes);
+      if (foundTable) setTable(foundTable);
+    }
+  }, [initialNotes, initialTable]);
+
+  React.useEffect(() => {
+    if (initialTable) setTable(initialTable);
+  }, [initialTable]);
 
   React.useEffect(() => {
     setSelectedCustomerId(initialCustomerId);
@@ -95,13 +114,17 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
 
       // If we have an existing order, update it
       const orderTypeTag = orderTypeTags[posOrderType];
+      const tableTag = table ? `[MESA: ${table.trim()}]` : '';
       const cleanNotes = (notes || '')
+        .replace(/\[MESA:[^\]]+\]/gi, '')
         .replace(/\[COMER AQUÍ\]/g, '')
         .replace(/\[PARA LLEVAR\]/g, '')
         .replace(/\[COMPRA AQUÍ\]/g, '')
         .replace(/\[DELIVERY\]/g, '')
         .trim();
-      const finalNotes = cleanNotes ? `${cleanNotes}\n${orderTypeTag}` : orderTypeTag;
+      const finalNotesParts = [cleanNotes, tableTag, orderTypeTag].filter(Boolean);
+      const finalNotes = finalNotesParts.join('\n');
+      const effectiveCustomerName = customerName || (table ? `Mesa: ${table}` : 'Cliente');
 
       if (existingOrderId) {
         // 1. Obtenemos estado actual e ítems actuales
@@ -146,7 +169,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
         });
 
         const updatePayload: any = {
-          customer_name: customerName || 'Cliente',
+          customer_name: effectiveCustomerName,
           customer_phone: customerPhone || null,
           customer_address: customerAddress || null,
           customer_id: selectedCustomerId || null,
@@ -194,7 +217,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
             .insert({
               id: orderIdToUse,
               order_number: orderNumberToUse,
-              customer_name: customerName || 'Cliente',
+              customer_name: effectiveCustomerName,
               customer_phone: customerPhone || null,
               customer_address: customerAddress || null,
               customer_id: selectedCustomerId || null,
@@ -350,7 +373,7 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
         .from('open_orders')
         .insert({
           order_number: orderNumberToUse,
-          customer_name: customerName || 'Cliente',
+          customer_name: effectiveCustomerName,
           customer_phone: customerPhone || null,
           customer_address: customerAddress || null,
           customer_id: selectedCustomerId || null,
@@ -415,6 +438,9 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
       queryClient.refetchQueries({ queryKey: ['pos-open-orders'] });
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
+      if (onTableSelected && table) {
+        onTableSelected(table);
+      }
       toast({
         title: existingOrderId ? "Pedido actualizado" : "Pedido guardado",
         description: `Pedido ${order.order_number} ${existingOrderId ? 'actualizado' : 'guardado'} correctamente`
@@ -475,6 +501,52 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
           </div>
 
           <div className="p-4 sm:p-5 space-y-3.5 text-left">
+            {isRestaurant && (
+              <div className="space-y-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] uppercase tracking-wider font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <Utensils className="h-3.5 w-3.5" />
+                    Asignar a Mesa (Opcional)
+                  </Label>
+                  {table && (
+                    <button
+                      type="button"
+                      onClick={() => setTable('')}
+                      className="text-[10px] font-bold text-destructive hover:underline"
+                    >
+                      Quitar mesa
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4', 'Mesa 5', 'Mesa 6', 'Barra 1', 'Terraza 1'].map((tName) => (
+                    <button
+                      key={tName}
+                      type="button"
+                      onClick={() => setTable(table === tName ? '' : tName)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border",
+                        table === tName
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-background border-border hover:border-amber-500/50 text-foreground"
+                      )}
+                    >
+                      {tName}
+                    </button>
+                  ))}
+                </div>
+
+                <Input
+                  placeholder="O escribe otra mesa (ej: Mesa 12, VIP, Terraza 3)..."
+                  value={table}
+                  onChange={(e) => setTable(e.target.value)}
+                  className="bg-background border-border text-xs text-foreground placeholder:text-muted-foreground/60 rounded-xl h-9"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground ml-0.5">Cliente</Label>
               <Popover open={isCustomerPopoverOpen} onOpenChange={setIsCustomerPopoverOpen}>

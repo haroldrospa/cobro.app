@@ -18,7 +18,8 @@ import {
   RotateCcw,
   Star,
   Unlock,
-  FileText 
+  FileText,
+  Utensils
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBusinessType } from '@/hooks/useBusinessType';
@@ -73,6 +74,9 @@ interface PaymentSummaryProps {
   isElectronic?: boolean;
   hasActiveSession?: boolean;
   onOpenRegister?: () => void;
+  isWaiter?: boolean;
+  onSaveOrder?: () => void;
+  selectedTable?: string | null;
 }
 
 const PaymentSummary: React.FC<PaymentSummaryProps> = ({
@@ -98,9 +102,12 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   isElectronic = false,
   hasActiveSession,
   onOpenRegister,
+  isWaiter = false,
+  onSaveOrder,
+  selectedTable = null,
 }) => {
   const { data: sessionData } = useActiveSession();
-  const sessionActive = hasActiveSession !== undefined ? hasActiveSession : !!sessionData;
+  const sessionActive = isWaiter ? true : (hasActiveSession !== undefined ? hasActiveSession : !!sessionData);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -733,6 +740,16 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               Abrir Turno
               {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F10</span>}
             </Button>
+          ) : isWaiter ? (
+            <Button
+              onClick={onSaveOrder || onCheckout}
+              className="w-full h-9 md:h-10 text-sm font-semibold bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all"
+              disabled={isCheckoutDisabled}
+            >
+              <Utensils className="mr-1.5 h-4 w-4" />
+              {selectedTable ? `Comandar (${selectedTable})` : 'Comandar / Guardar en Mesa'}
+              {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F9</span>}
+            </Button>
           ) : (
             <Button
               onClick={onCheckout}
@@ -781,6 +798,15 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
             >
               <Unlock className="mr-1.5 h-3.5 w-3.5" />
               Abrir Turno
+            </Button>
+          ) : isWaiter ? (
+            <Button
+              onClick={onSaveOrder || onCheckout}
+              className="h-9 px-4 text-xs font-semibold flex-1 max-w-[170px] bg-amber-600 hover:bg-amber-500 text-white"
+              disabled={isCheckoutDisabled}
+            >
+              <Utensils className="mr-1.5 h-3.5 w-3.5" />
+              {selectedTable ? `Comandar (${selectedTable})` : 'Comandar Mesa'}
             </Button>
           ) : (
             <Button

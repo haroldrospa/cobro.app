@@ -36,6 +36,11 @@ const RoleRedirect: React.FC = () => {
         return <Navigate to="/delivery" replace />;
     }
 
+    // Mesero/a: va directamente al POS para tomar comandas y atender mesas
+    if (roleLower === 'waiter' || roleLower === 'mesero') {
+        return <Navigate to="/pos" replace />;
+    }
+
     // Roles que van al Dashboard directamente
     const adminRoles = ['admin', 'owner', 'manager'];
     

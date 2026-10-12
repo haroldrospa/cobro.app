@@ -119,6 +119,9 @@ const Employees: React.FC = () => {
                 return <Badge variant="default" className="bg-orange-500">Cocinero</Badge>;
             case 'delivery':
                 return <Badge variant="default" className="bg-cyan-500">Delivery</Badge>;
+            case 'waiter':
+            case 'mesero':
+                return <Badge variant="default" className="bg-amber-600 dark:bg-amber-500">Mesero/a</Badge>;
             default:
                 return <Badge variant="outline">{role}</Badge>;
         }

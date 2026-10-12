@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight } from 'lucide-react';
+import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,12 +19,19 @@ import { generatePreCheckPDF } from '@/utils/invoicePdfGenerator';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { cn } from '@/lib/utils';
 
+export const extractTableFromNotes = (notes?: string | null): string | null => {
+  if (!notes) return null;
+  const match = notes.match(/\[MESA:\s*([^\]]+)\]/i);
+  return match ? match[1].trim() : null;
+};
+
 // Al guardar un pedido (SaveOrderDialog) se le agrega al final de las notas
 // una etiqueta técnica entre corchetes (ej. "[COMPRA AQUÍ]") para que otras
 // pantallas (Cocina, Delivery) sepan el tipo de pedido sin una columna
 // dedicada. Acá solo mostramos la nota al cajero -- si se muestra tal cual,
 // una nota vacía se ve como el puro tag técnico "[COMPRA AQUÍ]" suelto.
 const displayNotes = (notes?: string | null) => (notes || '')
+  .replace(/\[MESA:[^\]]+\]/gi, '')
   .replace(/\[COMER AQUÍ\]/g, '')
   .replace(/\[PARA LLEVAR\]/g, '')
   .replace(/\[COMPRA AQUÍ\]/g, '')
@@ -365,6 +372,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
 
     const itemCount = order.open_order_items?.length || 0;
     const notesText = displayNotes(order.notes);
+    const tableName = extractTableFromNotes(order.notes);
 
     return (
       <div
@@ -399,6 +407,13 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-secondary/80 text-foreground border border-border/40">
                 {order.order_number}
               </span>
+
+              {tableName && (
+                <span className="text-xs font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-xs">
+                  <Utensils className="h-3 w-3" />
+                  {tableName}
+                </span>
+              )}
 
               <span className="font-semibold text-sm text-foreground truncate max-w-[200px] flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

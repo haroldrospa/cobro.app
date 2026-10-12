@@ -8,7 +8,7 @@ export interface Employee {
     id: string;
     email: string;
     full_name: string;
-    role: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery' | 'accountant';
+    role: 'admin' | 'manager' | 'cashier' | 'staff' | 'kitchen' | 'delivery' | 'accountant' | 'waiter';
     is_active: boolean;
     created_at: string;
     base_salary?: number;

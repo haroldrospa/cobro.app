@@ -29,6 +29,8 @@ interface CartSummaryProps {
   onLoyaltyPointsRedeemed?: (discountAmount: number, pointsUsed: number) => void;
   onLoyaltyClearRedemption?: () => void;
   loyaltyRedeemedPoints?: number;
+  selectedTable?: string | null;
+  onOpenTableSelector?: () => void;
 }
 
 const CartSummary: React.FC<CartSummaryProps> = ({
@@ -50,6 +52,8 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   onLoyaltyPointsRedeemed,
   onLoyaltyClearRedemption,
   loyaltyRedeemedPoints = 0,
+  selectedTable,
+  onOpenTableSelector,
 }) => {
   const { companyInfo } = usePrintSettings();
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
@@ -106,20 +110,44 @@ const CartSummary: React.FC<CartSummaryProps> = ({
           )}
         </div>
 
-        {/* Active order badge */}
-        {currentOrderInfo && (
-          <div className="flex items-center gap-1.5">
-            <Badge variant="secondary" className="flex items-center gap-1 text-xs py-0 h-5">
-              <ClipboardList className="h-2.5 w-2.5" />
-              {currentOrderInfo.orderNumber} · {currentOrderInfo.customerName}
-            </Badge>
-            {onClearOrder && (
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClearOrder} title="Descartar pedido">
-                <X className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-        )}
+        {/* Active order or table badge */}
+        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+          {currentOrderInfo ? (
+            <div className="flex items-center gap-1.5">
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs py-0 h-5">
+                <ClipboardList className="h-2.5 w-2.5" />
+                {currentOrderInfo.orderNumber} · {currentOrderInfo.customerName}
+                {selectedTable && ` · ${selectedTable}`}
+              </Badge>
+              {onClearOrder && (
+                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClearOrder} title="Descartar pedido">
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div />
+          )}
+
+          {/* Botón de Asignación de Mesa (Restaurante) */}
+          {isRestaurant && onOpenTableSelector && (
+            <Button
+              type="button"
+              variant={selectedTable ? "secondary" : "outline"}
+              size="sm"
+              onClick={onOpenTableSelector}
+              className={cn(
+                "h-6 px-2 text-[11px] font-bold rounded-md gap-1 transition-all ml-auto",
+                selectedTable
+                  ? "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
+                  : "border-dashed hover:border-amber-500 hover:text-amber-500"
+              )}
+            >
+              <Utensils className="h-3 w-3" />
+              <span>{selectedTable || 'Asignar Mesa'}</span>
+            </Button>
+          )}
+        </div>
 
 
       </CardHeader>

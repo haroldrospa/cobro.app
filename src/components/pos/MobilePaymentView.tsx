@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Search,
   Check,
-  Unlock
+  Unlock,
+  Utensils
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +69,9 @@ interface MobilePaymentViewProps {
   isElectronic?: boolean;
   hasActiveSession?: boolean;
   onOpenRegister?: () => void;
+  isWaiter?: boolean;
+  onSaveOrder?: () => void;
+  selectedTable?: string | null;
 }
 
 const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
@@ -86,9 +90,12 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   isElectronic = false,
   hasActiveSession,
   onOpenRegister,
+  isWaiter = false,
+  onSaveOrder,
+  selectedTable = null,
 }) => {
   const { data: sessionData } = useActiveSession();
-  const sessionActive = hasActiveSession !== undefined ? hasActiveSession : !!sessionData;
+  const sessionActive = isWaiter ? true : (hasActiveSession !== undefined ? hasActiveSession : !!sessionData);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerSelectOpen, setIsCustomerSelectOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -415,6 +422,23 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-xs uppercase opacity-90 font-bold">Requerido</span>
+                <ArrowRight className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Button>
+        ) : isWaiter ? (
+          <Button
+            onClick={onSaveOrder || onCheckout}
+            disabled={!canCheckout}
+            className="w-full h-14 sm:h-16 mobile-landscape:h-11 rounded-2xl mobile-landscape:rounded-xl text-sm sm:text-base mobile-landscape:text-xs font-black group transition-all relative overflow-hidden bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg"
+          >
+            <div className="flex items-center justify-between w-full gap-2 px-4 mobile-landscape:px-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Utensils className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 shrink-0" />
+                <span className="truncate">{selectedTable ? `Comandar (${selectedTable})` : 'Comandar a Mesa'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-base sm:text-lg mobile-landscape:text-sm">${totals.total}</span>
                 <ArrowRight className="h-4 w-4 mobile-landscape:h-3.5 mobile-landscape:w-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>

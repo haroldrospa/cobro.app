@@ -135,6 +135,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       ];
     }
 
+    // Mesero/a: Solo Punto de Venta / Mesas (y Pantalla Cocina si está habilitada)
+    if (profile?.role === 'waiter' || profile?.role === 'mesero') {
+      return [
+        { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
+        ...(hasKitchenDisplay ? [{ name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat }] : []),
+      ];
+    }
+
     // Cajero/Staff: POS, Delivery (si activo), Cocina (solo restaurante), Clientes
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
       const items = [
@@ -213,6 +221,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       if (!isAllowed) {
         navigate('/accounting', { replace: true });
+      }
+      return;
+    }
+
+    // Mesero/a: solo POS y Cocina si aplica
+    if (profile?.role === 'waiter' || profile?.role === 'mesero') {
+      const allowedPaths = ['/', '/pos', '/kitchen', '/app'];
+      const isAllowed = allowedPaths.some(path =>
+        location.pathname === path || (path !== '/' && location.pathname.startsWith(path))
+      );
+
+      if (!isAllowed) {
+        navigate('/pos', { replace: true });
       }
       return;
     }
