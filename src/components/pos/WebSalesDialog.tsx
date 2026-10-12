@@ -360,8 +360,8 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     }
   };
 
-  const getSourceBadge = (source?: string) => {
-    if (source === 'pedidosya') {
+  const getSourceBadge = (source?: string, orderNumber?: string) => {
+    if (source === 'pedidosya' || orderNumber?.toUpperCase().startsWith('PY-')) {
       return (
         <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-none font-bold text-[10px] px-1.5 py-0.5">
           🛵 PedidosYa
@@ -424,7 +424,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-semibold text-xs text-foreground">#{order.order_number}</span>
-              {getSourceBadge(order.source)}
+              {getSourceBadge(order.source, order.order_number)}
               {getOrderStatusBadge(order.order_status)}
             </div>
             <span className="font-bold text-sm text-foreground">
@@ -564,7 +564,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
                   <TableCell className="py-2.5 font-medium text-foreground text-xs">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span>#{order.order_number}</span>
-                      {getSourceBadge(order.source)}
+                      {getSourceBadge(order.source, order.order_number)}
                     </div>
                   </TableCell>
                   <TableCell className="py-2.5 text-xs text-muted-foreground whitespace-nowrap">
