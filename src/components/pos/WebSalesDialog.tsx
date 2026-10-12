@@ -776,7 +776,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
               </div>
 
               {!activeChatOrderId && validOrders.length > 2 && (
-                <div className="relative w-48 hidden sm:block">
+                <div className="relative w-48 hidden sm:block mr-8">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     placeholder="Buscar..."

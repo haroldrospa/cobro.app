@@ -119,13 +119,10 @@ const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent hideCloseButton className="max-w-md">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
+          <DialogTitle>
             Editar Factura: {sale.invoice_number}
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-              <X className="h-5 w-5" />
-            </button>
           </DialogTitle>
         </DialogHeader>
 

@@ -220,10 +220,10 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-xl"
+                  className="h-8 w-8 rounded-full bg-black/40 hover:bg-black/60 dark:bg-black/50 dark:hover:bg-black/70 text-white backdrop-blur-md border border-white/10 shadow-sm flex items-center justify-center transition-all duration-150 active:scale-95 shrink-0"
                   title="Cerrar"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 shrink-0" strokeWidth={2.5} />
                 </Button>
               </div>
             </div>

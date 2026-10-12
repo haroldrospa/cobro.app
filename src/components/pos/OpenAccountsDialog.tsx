@@ -511,7 +511,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               </div>
 
               {/* Actions & Summary Header Badge */}
-              <div className="flex items-center gap-2 self-end sm:self-auto">
+              <div className="flex items-center gap-2 self-end sm:self-auto sm:pr-8">
                 {filteredOrders.length > 0 && !mergeMode && (
                   <>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/60 border border-border/40 text-xs">

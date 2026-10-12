@@ -215,10 +215,10 @@ export const QuickGuideDialog: React.FC = () => {
           </span>
           <button
             onClick={handleClose}
-            className="text-slate-400 hover:text-white transition-colors p-1 -mr-1 rounded-md hover:bg-white/5 cursor-pointer"
+            className="h-8 w-8 rounded-full bg-black/40 hover:bg-black/60 dark:bg-black/50 dark:hover:bg-black/70 text-white backdrop-blur-md border border-white/10 shadow-sm flex items-center justify-center transition-all duration-150 active:scale-95 shrink-0 cursor-pointer"
             title="Cerrar guía"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 shrink-0" strokeWidth={2.5} />
           </button>
         </div>
 

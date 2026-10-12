@@ -90,8 +90,8 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                 </div>
                             </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted hover:bg-accent text-muted-foreground">
-                            <X className="h-5 w-5" />
+                        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full bg-black/40 hover:bg-black/60 dark:bg-black/50 dark:hover:bg-black/70 text-white backdrop-blur-md border border-white/10 shadow-sm flex items-center justify-center transition-all duration-150 active:scale-95 shrink-0" title="Cerrar">
+                            <X className="h-4 w-4 shrink-0" strokeWidth={2.5} />
                         </Button>
                     </DialogHeader>
                 </div>
