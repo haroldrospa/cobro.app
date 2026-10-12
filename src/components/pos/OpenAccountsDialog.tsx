@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search } from 'lucide-react';
+import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search, Settings2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,6 +20,9 @@ import { generatePreCheckPDF } from '@/utils/invoicePdfGenerator';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { cn } from '@/lib/utils';
 import { extractTableFromNotes } from '@/utils/tableUtils';
+import { useTableConfig } from '@/hooks/useTableConfig';
+import { TableConfigDialog } from './TableConfigDialog';
+import { TableSection } from '@/types/tableConfig';
 export { extractTableFromNotes };
 
 // Al guardar un pedido (SaveOrderDialog) se le agrega al final de las notas
@@ -35,18 +38,6 @@ const displayNotes = (notes?: string | null) => (notes || '')
   .replace(/\[DELIVERY\]/g, '')
   .trim();
 
-interface TableSection {
-  id: string;
-  name: string;
-  tables: string[];
-}
-
-const DEFAULT_TABLE_SECTIONS: TableSection[] = [
-  { id: 'salon', name: 'Salón', tables: ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4', 'Mesa 5', 'Mesa 6', 'Mesa 7', 'Mesa 8'] },
-  { id: 'barra', name: 'Barra', tables: ['Barra 1', 'Barra 2', 'Barra 3', 'Barra 4'] },
-  { id: 'terraza', name: 'Terraza', tables: ['Terraza 1', 'Terraza 2', 'Terraza 3', 'Terraza 4'] },
-];
-
 interface OpenAccountsDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -61,6 +52,8 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [showConfigTables, setShowConfigTables] = useState(false);
+  const { sections: configuredSections } = useTableConfig();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -373,30 +366,30 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     return map;
   }, [filteredOrders]);
 
-  const allDefaultTablesLower = React.useMemo(() => {
+  const allConfiguredTablesLower = React.useMemo(() => {
     const set = new Set<string>();
-    DEFAULT_TABLE_SECTIONS.forEach(sec => sec.tables.forEach(t => set.add(t.toLowerCase().trim())));
+    configuredSections.forEach(sec => sec.tables.forEach(t => set.add(t.toLowerCase().trim())));
     return set;
-  }, []);
+  }, [configuredSections]);
 
   const customOccupiedTables = React.useMemo(() => {
     const custom: string[] = [];
     filteredOrders.forEach((order: any) => {
       const tbl = extractTableFromNotes(order.notes);
-      if (tbl && !allDefaultTablesLower.has(tbl.toLowerCase().trim()) && !custom.includes(tbl)) {
+      if (tbl && !allConfiguredTablesLower.has(tbl.toLowerCase().trim()) && !custom.includes(tbl)) {
         custom.push(tbl);
       }
     });
     return custom;
-  }, [filteredOrders, allDefaultTablesLower]);
+  }, [filteredOrders, allConfiguredTablesLower]);
 
   const allSections = React.useMemo(() => {
-    const list = [...DEFAULT_TABLE_SECTIONS];
+    const list = [...configuredSections];
     if (customOccupiedTables.length > 0) {
-      list.push({ id: 'otras', name: 'Otras / VIP', tables: customOccupiedTables });
+      list.push({ id: 'otras', name: 'Otras / Personalizadas', tables: customOccupiedTables });
     }
     return list;
-  }, [customOccupiedTables]);
+  }, [configuredSections, customOccupiedTables]);
 
   const allTablesList = React.useMemo(() => {
     return allSections.flatMap(s => s.tables);
@@ -944,24 +937,38 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                     })}
                   </div>
 
-                  {/* Search Input */}
-                  <div className="relative w-full sm:w-56 shrink-0">
-                    <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-60" />
-                    <Input
-                      placeholder="Buscar mesa o cliente..."
-                      value={tableSearchQuery}
-                      onChange={(e) => setTableSearchQuery(e.target.value)}
-                      className="pl-8 h-8 text-xs bg-card border-border/60 rounded-xl"
-                    />
-                    {tableSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setTableSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+                  {/* Search Input & Config Button */}
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    <div className="relative flex-1 sm:w-56 shrink-0">
+                      <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-60" />
+                      <Input
+                        placeholder="Buscar mesa o cliente..."
+                        value={tableSearchQuery}
+                        onChange={(e) => setTableSearchQuery(e.target.value)}
+                        className="pl-8 h-8 text-xs bg-card border-border/60 rounded-xl"
+                      />
+                      {tableSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setTableSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowConfigTables(true)}
+                      className="h-8 text-xs font-bold gap-1.5 border-border/60 hover:bg-muted rounded-xl shrink-0"
+                      title="Configurar Mesas y Zonas"
+                    >
+                      <Settings2 className="h-3.5 w-3.5 text-amber-500" />
+                      <span className="hidden sm:inline">Configurar Mesas</span>
+                    </Button>
                   </div>
                 </div>
 
@@ -1164,6 +1171,14 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ─── Configurar Mesas Modal ─── */}
+      {showConfigTables && (
+        <TableConfigDialog
+          isOpen={showConfigTables}
+          onClose={() => setShowConfigTables(false)}
+        />
+      )}
     </>
   );
 };

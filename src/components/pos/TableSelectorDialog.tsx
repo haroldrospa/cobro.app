@@ -11,10 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Utensils, Plus, Check, Clock, Sparkles } from 'lucide-react';
+import { Utensils, Plus, Check, Clock, Sparkles, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useTableConfig } from '@/hooks/useTableConfig';
+import { TableConfigDialog } from './TableConfigDialog';
 
 export interface OccupiedTableInfo {
   tableName: string;
@@ -36,24 +38,6 @@ interface TableSelectorDialogProps {
   occupiedTables?: OccupiedTableInfo[];
 }
 
-const DEFAULT_SECTIONS = [
-  {
-    id: 'salon',
-    name: 'Salón Principal',
-    tables: Array.from({ length: 12 }, (_, i) => `Mesa ${i + 1}`),
-  },
-  {
-    id: 'barra',
-    name: 'Barra',
-    tables: Array.from({ length: 4 }, (_, i) => `Barra ${i + 1}`),
-  },
-  {
-    id: 'terraza',
-    name: 'Terraza / Patio',
-    tables: Array.from({ length: 4 }, (_, i) => `Terraza ${i + 1}`),
-  },
-];
-
 export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
   isOpen,
   onClose,
@@ -63,8 +47,17 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
   onLoadTableOrder,
   occupiedTables = [],
 }) => {
+  const { sections } = useTableConfig();
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [customTable, setCustomTable] = useState('');
-  const [activeTab, setActiveTab] = useState('salon');
+  const [activeTab, setActiveTab] = useState(sections[0]?.id || 'salon');
+
+  // Ajustar pestaña si las secciones cambian
+  React.useEffect(() => {
+    if (sections.length > 0 && !sections.some((s) => s.id === activeTab)) {
+      setActiveTab(sections[0].id);
+    }
+  }, [sections, activeTab]);
 
   // Mapa rápido de mesas ocupadas por nombre normalizado
   const occupiedMap = React.useMemo(() => {
@@ -117,6 +110,18 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
               </div>
             </div>
           </DialogHeader>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowConfigDialog(true)}
+            className="h-8 text-xs font-bold gap-1.5 border-border/60 hover:bg-muted rounded-xl shrink-0"
+            title="Configurar Mesas y Salones"
+          >
+            <Settings2 className="h-3.5 w-3.5 text-amber-500" />
+            <span className="hidden sm:inline">Configurar</span>
+          </Button>
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
@@ -143,14 +148,14 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
 
           {/* Pestañas de zonas / salones */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 h-10 p-1 bg-muted/60 rounded-xl">
-              {DEFAULT_SECTIONS.map((sec) => {
+            <TabsList className="flex overflow-x-auto h-10 p-1 bg-muted/60 rounded-xl scrollbar-none justify-start">
+              {sections.map((sec) => {
                 const occCount = sec.tables.filter((t) => occupiedMap.has(t.toLowerCase())).length;
                 return (
                   <TabsTrigger
                     key={sec.id}
                     value={sec.id}
-                    className="text-xs font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                    className="text-xs font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm shrink-0 px-3"
                   >
                     <span>{sec.name}</span>
                     {occCount > 0 && (
@@ -164,7 +169,7 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
             </TabsList>
 
             <ScrollArea className="h-[280px] sm:h-[320px] w-full mt-3 pr-2">
-              {DEFAULT_SECTIONS.map((sec) => (
+              {sections.map((sec) => (
                 <TabsContent key={sec.id} value={sec.id} className="mt-0">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {sec.tables.map((table) => {
@@ -317,6 +322,13 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
           )}
         </div>
       </DialogContent>
+
+      {showConfigDialog && (
+        <TableConfigDialog
+          isOpen={showConfigDialog}
+          onClose={() => setShowConfigDialog(false)}
+        />
+      )}
     </Dialog>
   );
 };

@@ -130,6 +130,7 @@ export type StoreSettings = {
   subscription_notification_email?: string;
   ai_api_key?: string | null;
   label_templates?: any[];
+  table_sections?: any[];
 }
 
 export const useStoreSettings = () => {
@@ -354,7 +355,8 @@ export const useStoreSettings = () => {
       'use_delivery', 'use_kitchen', 'kitchen_sound_type', 'kitchen_sound_volume', 'shop_type',
       'meta_whatsapp_enabled', 'meta_whatsapp_phone_number_id', 'meta_whatsapp_access_token',
       'bank_accounts',
-      'pedidosya_enabled', 'pedidosya_store_id', 'pedidosya_client_id', 'pedidosya_client_secret', 'pedidosya_webhook_secret', 'pedidosya_auto_accept'
+      'pedidosya_enabled', 'pedidosya_store_id', 'pedidosya_client_id', 'pedidosya_client_secret', 'pedidosya_webhook_secret', 'pedidosya_auto_accept',
+      'table_sections'
     ];
     
     try {
