@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, RefreshCcw, AlertTriangle, ReceiptText, ChevronLeft } from 'lucide-react';
+import { Search, RefreshCcw, AlertTriangle, ReceiptText, ChevronLeft, X } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useCreateSale } from '@/hooks/useSales';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
@@ -23,24 +23,52 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
     const [selectedSale, setSelectedSale] = useState<any>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Fetch sales based on search term (only if term is long enough to avoid fetching everything)
-    const { data: sales = [], isLoading } = useSales({
-        searchTerm: searchTerm.length > 2 ? searchTerm : undefined,
-        includeItems: true
-    });
+    const isSearchValid = searchTerm.trim().length >= 3;
+
+    // Fetch sales ONLY when the user types a specific search term of at least 3 characters
+    const { data: sales = [], isLoading } = useSales(
+        {
+            searchTerm: isSearchValid ? searchTerm.trim() : undefined,
+            includeItems: true
+        },
+        {
+            enabled: isOpen && isSearchValid
+        }
+    );
 
     const { data: invoiceTypes = [] } = useInvoiceTypes();
     const createSale = useCreateSale();
     const { toast } = useToast();
 
+    // Reset state when dialog closes
+    React.useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm('');
+            setSelectedSale(null);
+        }
+    }, [isOpen]);
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        // The query hook will auto-refetch when searchTerm changes
     };
 
     const handleSelectSale = (sale: any) => {
-        // Prevent selecting already refunded sales if possible (checking status)
-        // For MVP we warn user
+        if (sale.status === 'cancelled') {
+            toast({
+                variant: "destructive",
+                title: "Factura cancelada",
+                description: "Esta factura ya fue anulada previamente y no puede ser reembolsada."
+            });
+            return;
+        }
+        if (Number(sale.total) < 0) {
+            toast({
+                variant: "destructive",
+                title: "Comprobante de devolución",
+                description: "Este comprobante ya corresponde a una nota de crédito o reembolso."
+            });
+            return;
+        }
         setSelectedSale(sale);
     };
 
@@ -146,8 +174,21 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                             placeholder="Buscar por NCF (ej. B02...)"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="h-10 pl-10 bg-muted border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-emerald-500/30 text-xs sm:text-sm"
+                            className="h-10 pl-10 pr-9 bg-muted border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-emerald-500/30 text-xs sm:text-sm"
                         />
+                        {searchTerm && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearchTerm('');
+                                    setSelectedSale(null);
+                                }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-muted"
+                                title="Limpiar búsqueda"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -166,14 +207,37 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? (
+                                {!isSearchValid ? (
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Search className="h-8 w-8 opacity-25 text-emerald-500" />
+                                                <p className="text-xs font-bold text-foreground">Busca la factura por NCF o número</p>
+                                                <p className="text-[11px] text-muted-foreground max-w-xs">
+                                                    Escribe al menos 3 caracteres (ej. B02...) para ver únicamente la factura que deseas reembolsar.
+                                                </p>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : isLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-xs font-bold uppercase tracking-wider">Buscando...</TableCell>
+                                        <TableCell colSpan={3} className="text-center py-10 text-muted-foreground text-xs font-bold uppercase tracking-wider">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <RefreshCcw className="h-4 w-4 animate-spin text-emerald-500" />
+                                                <span>Buscando "{searchTerm}"...</span>
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 ) : sales.length === 0 ? (
                                     <TableRow className="hover:bg-transparent">
-                                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-xs font-semibold">
-                                            {searchTerm.length > 2 ? 'No se encontraron facturas' : 'Ingrese al menos 3 caracteres'}
+                                        <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <AlertTriangle className="h-8 w-8 opacity-40 text-amber-500" />
+                                                <p className="text-xs font-bold text-foreground">No se encontró ninguna factura</p>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    No hay resultados para "{searchTerm}". Verifica el NCF o número de factura.
+                                                </p>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -186,11 +250,19 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                                             )}
                                             onClick={() => handleSelectSale(sale)}
                                         >
-                                            <TableCell className="font-semibold text-xs text-foreground">{sale.invoice_number}</TableCell>
+                                            <TableCell className="font-semibold text-xs text-foreground">
+                                                <div className="flex flex-col">
+                                                    <span>{sale.invoice_number}</span>
+                                                    {sale.customer?.name && (
+                                                        <span className="text-[10px] text-muted-foreground font-normal">{sale.customer.name}</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">{format(new Date(sale.created_at), 'dd/MM/yyyy')}</TableCell>
                                             <TableCell className="text-right font-black text-xs text-emerald-500">
-                                                RD$ {sale.total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                RD$ {Number(sale.total).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                                 {sale.total < 0 && <span className="block text-[7px] text-red-500 font-bold uppercase tracking-wider mt-0.5">Reembolso</span>}
+                                                {sale.status === 'cancelled' && <span className="block text-[7px] text-red-500 font-bold uppercase tracking-wider mt-0.5">Cancelada</span>}
                                             </TableCell>
                                         </TableRow>
                                     ))

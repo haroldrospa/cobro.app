@@ -70,7 +70,10 @@ export interface SalesFilters {
   includeItems?: boolean;
 }
 
-export const useSales = (filters: SalesFilters = {}) => {
+export const useSales = (
+  filters: SalesFilters = {},
+  options?: { enabled?: boolean; refetchInterval?: number | false }
+) => {
   const { data: userStore } = useUserStore();
 
   return useQuery({
@@ -262,9 +265,10 @@ export const useSales = (filters: SalesFilters = {}) => {
 
       return allSales;
     },
+    enabled: options?.enabled !== undefined ? options.enabled : true,
     staleTime: 1000 * 30, // 30 seconds - refresh often so new sales appear quickly
     refetchOnWindowFocus: true, // Refetch when switching back to the tab
-    refetchInterval: false, // Egress Optimization: Stop aggressive polling
+    refetchInterval: options?.refetchInterval !== undefined ? options.refetchInterval : false, // Egress Optimization: Stop aggressive polling
   });
 };
 
