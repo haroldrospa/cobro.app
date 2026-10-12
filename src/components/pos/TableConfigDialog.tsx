@@ -29,10 +29,7 @@ import {
   Check,
   X,
   RotateCcw,
-  Sparkles,
   Layers,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { useTableConfig } from '@/hooks/useTableConfig';
 import { useToast } from '@/hooks/use-toast';
@@ -52,7 +49,6 @@ export const TableConfigDialog: React.FC<TableConfigDialogProps> = ({ isOpen, on
     addTable,
     updateTable,
     removeTable,
-    generateTables,
     resetToDefaults,
   } = useTableConfig();
 
@@ -71,12 +67,6 @@ export const TableConfigDialog: React.FC<TableConfigDialogProps> = ({ isOpen, on
 
   // Edición de mesa individual
   const [editingTable, setEditingTable] = useState<{ oldName: string; newName: string } | null>(null);
-
-  // Generador en lote
-  const [showBatchGenerator, setShowBatchGenerator] = useState(false);
-  const [batchPrefix, setBatchPrefix] = useState('Mesa');
-  const [batchCount, setBatchCount] = useState(8);
-  const [batchStartFrom, setBatchStartFrom] = useState(1);
 
   // Diálogo para confirmar reseteo
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
@@ -160,16 +150,6 @@ export const TableConfigDialog: React.FC<TableConfigDialogProps> = ({ isOpen, on
     }
     await updateTable(currentSection.id, editingTable.oldName, editingTable.newName.trim());
     setEditingTable(null);
-  };
-
-  const handleRunBatchGenerate = async () => {
-    if (!currentSection) return;
-    await generateTables(currentSection.id, batchPrefix, batchCount, batchStartFrom);
-    toast({
-      title: 'Mesas generadas',
-      description: `Se agregaron las mesas generadas a "${currentSection.name}"`,
-    });
-    setShowBatchGenerator(false);
   };
 
   const handleResetDefaults = async () => {
@@ -362,106 +342,19 @@ export const TableConfigDialog: React.FC<TableConfigDialogProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* Formulario de agregar mesa individual + Botón Lote */}
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <form onSubmit={handleAddSingleTable} className="flex-1 flex gap-2">
-                      <Input
-                        placeholder={`Nueva mesa en ${currentSection.name} (ej. ${currentSection.name} ${currentSection.tables.length + 1})...`}
-                        value={newTableName}
-                        onChange={(e) => setNewTableName(e.target.value)}
-                        className="h-9 text-xs bg-background"
-                      />
-                      <Button type="submit" size="sm" disabled={!newTableName.trim()} className="h-9 text-xs font-bold px-3 shrink-0">
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Agregar
-                      </Button>
-                    </form>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowBatchGenerator(!showBatchGenerator)}
-                      className={cn(
-                        'h-9 text-xs font-bold gap-1 shrink-0 border-dashed',
-                        showBatchGenerator && 'bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400'
-                      )}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Generar en Lote</span>
-                      {showBatchGenerator ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    </Button>
-                  </div>
-
-                  {/* Panel de generador en lote */}
-                  {showBatchGenerator && (
-                    <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          Generador rápido de mesas numeradas
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">
-                          Creará: {batchPrefix} {batchStartFrom} hasta {batchPrefix} {batchStartFrom + batchCount - 1}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase">Prefijo</label>
-                          <Input
-                            value={batchPrefix}
-                            onChange={(e) => setBatchPrefix(e.target.value)}
-                            placeholder="Mesa / Barra / Box"
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase">Cantidad</label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={50}
-                            value={batchCount}
-                            onChange={(e) => setBatchCount(parseInt(e.target.value) || 1)}
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase">Iniciar en</label>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={batchStartFrom}
-                            onChange={(e) => setBatchStartFrom(parseInt(e.target.value) || 1)}
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowBatchGenerator(false)}
-                          className="h-7 text-xs"
-                        >
-                          Cancelar
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={handleRunBatchGenerate}
-                          className="h-7 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white"
-                        >
-                          Generar {batchCount} Mesas
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {/* Formulario de agregar mesa individual */}
+                <form onSubmit={handleAddSingleTable} className="flex gap-2">
+                  <Input
+                    placeholder={`Nueva mesa en ${currentSection.name} (ej. ${currentSection.name} ${currentSection.tables.length + 1})...`}
+                    value={newTableName}
+                    onChange={(e) => setNewTableName(e.target.value)}
+                    className="h-9 text-xs bg-background"
+                  />
+                  <Button type="submit" size="sm" disabled={!newTableName.trim()} className="h-9 text-xs font-bold px-3 shrink-0">
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Agregar
+                  </Button>
+                </form>
 
                 {/* Cuadrícula de mesas existentes en la zona */}
                 <ScrollArea className="flex-1 pr-2 mt-1">
@@ -469,7 +362,7 @@ export const TableConfigDialog: React.FC<TableConfigDialogProps> = ({ isOpen, on
                     <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
                       <Utensils className="h-8 w-8 stroke-[1.5] mb-2 opacity-30" />
                       <p className="text-xs font-medium">No hay mesas en esta zona todavía.</p>
-                      <p className="text-[11px] opacity-75">Agrega una mesa arriba o utiliza el generador en lote.</p>
+                      <p className="text-[11px] opacity-75">Escribe un nombre arriba para agregar tu primera mesa.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pb-2">
