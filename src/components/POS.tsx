@@ -46,7 +46,7 @@ const DailySalesDialog = lazy(() => import('./pos/DailySalesDialog'));
 const RefundDialog = lazy(() => import('./pos/RefundDialog'));
 const CashMovementsDialog = lazy(() => import('./pos/CashMovementsDialog'));
 const CloseDayDialog = lazy(() => import('./pos/CloseDayDialog'));
-import { extractTableFromNotes } from './pos/OpenAccountsDialog';
+import { extractTableFromNotes } from '@/utils/tableUtils';
 // OpenRegisterDialog se queda eager: su apertura depende de una condicion
 // automatica (!activeSession) que puede dispararse casi de inmediato al
 // entrar a POS, no de un click explicito -- no vale la pena el riesgo de
@@ -124,7 +124,7 @@ const POSContent: React.FC = () => {
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
   const isMobilePortrait = isMobile && !isLandscape;
-  const { skipKitchenStep, isStore, isSupermarket, isServices, isRestaurant, orderTypeLabels, orderTypeTags } = useBusinessType();
+  const { skipKitchenStep, isStore, isSupermarket, isServices, isRestaurant, hasKitchenDisplay, orderTypeLabels, orderTypeTags } = useBusinessType();
   const recipeAvailability = useRecipeAvailability();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
@@ -309,26 +309,31 @@ const POSContent: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [showTableSelectorDialog, setShowTableSelectorDialog] = useState(false);
 
-  // Consulta en tiempo real de mesas ocupadas
+  // Consulta de mesas ocupadas (solo cuando el selector de mesas está abierto para optimizar ancho de banda)
   const { data: openOrdersForTables = [] } = useQuery({
     queryKey: ['pos-open-orders-tables', userStore?.id],
     queryFn: async () => {
       if (!userStore?.id) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('open_orders')
-        .select('id, order_number, customer_name, total, notes, created_at, open_order_items(id)')
+        .select('id, order_number, customer_name, total, notes, created_at')
         .eq('store_id', userStore.id)
         .eq('source', 'pos')
         .eq('payment_status', 'pending');
+      if (error) {
+        console.error('Error fetching open orders for tables:', error);
+        return [];
+      }
       return data || [];
     },
-    enabled: !!userStore?.id && isRestaurant,
-    staleTime: 4000,
+    enabled: !!userStore?.id && isRestaurant && showTableSelectorDialog,
+    staleTime: 10000,
   });
 
   const occupiedTablesList = useMemo(() => {
-    return (openOrdersForTables || [])
-      .filter((o: any) => !o.notes?.startsWith('[ACTUALIZADO]'))
+    if (!Array.isArray(openOrdersForTables)) return [];
+    return openOrdersForTables
+      .filter((o: any) => o && !o.notes?.startsWith('[ACTUALIZADO]'))
       .map((o: any) => {
         const tName = extractTableFromNotes(o.notes);
         if (!tName) return null;
@@ -339,7 +344,7 @@ const POSContent: React.FC = () => {
           customerName: o.customer_name,
           total: o.total || 0,
           createdAt: o.created_at,
-          itemCount: o.open_order_items?.length || 0,
+          itemCount: 0,
         };
       })
       .filter(Boolean) as any[];
@@ -645,7 +650,7 @@ const POSContent: React.FC = () => {
   }, [invoiceTypes, selectedInvoiceType]);
 
   const addToCart = useCallback((product: any, quantity: number = 1, forcedPrice?: number) => {
-    if (!activeSession) {
+    if (!isWaiter && !activeSession) {
       setUserClosedRegisterDialog(false);
       toast({
         title: "Sesión requerida",
@@ -693,7 +698,7 @@ const POSContent: React.FC = () => {
       }
     });
     // Search is cleared by the individual search components after selection
-  }, [activeSession, toast]);
+  }, [activeSession, toast, isWaiter]);
 
   const updateQuantity = useCallback((id: string, quantity: number) => {
     setCart(prevCart => {
@@ -1797,7 +1802,7 @@ const POSContent: React.FC = () => {
     }
 
     if (profile?.role === 'waiter' || profile?.role === 'mesero') {
-      return storeSettings?.restaurant_kitchen_enabled ? [
+      return hasKitchenDisplay ? [
         { name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat },
       ] : [];
     }
@@ -1805,7 +1810,7 @@ const POSContent: React.FC = () => {
     return [
       { name: 'Administración', href: '/dashboard', icon: Home }
     ];
-  }, [profile, storeSettings]);
+  }, [profile, hasKitchenDisplay]);
 
   const handleShowDailySales = useCallback(() => setShowDailySalesDialog(true), []);
   const handleShowRefund = useCallback(() => setShowRefundDialog(true), []);

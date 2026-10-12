@@ -18,12 +18,8 @@ import { useUserStore } from '@/hooks/useUserStore';
 import { generatePreCheckPDF } from '@/utils/invoicePdfGenerator';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { cn } from '@/lib/utils';
-
-export const extractTableFromNotes = (notes?: string | null): string | null => {
-  if (!notes) return null;
-  const match = notes.match(/\[MESA:\s*([^\]]+)\]/i);
-  return match ? match[1].trim() : null;
-};
+import { extractTableFromNotes } from '@/utils/tableUtils';
+export { extractTableFromNotes };
 
 // Al guardar un pedido (SaveOrderDialog) se le agrega al final de las notas
 // una etiqueta técnica entre corchetes (ej. "[COMPRA AQUÍ]") para que otras
