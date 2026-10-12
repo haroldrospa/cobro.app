@@ -14,10 +14,18 @@ import {
   ChefHat,
   Truck,
   Phone,
-  AlertTriangle
+  AlertTriangle,
+  MoreHorizontal
 } from 'lucide-react';
 import OrderChatPanel from './OrderChatPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -346,29 +354,57 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
   const getOrderStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none font-medium text-xs">Completado</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 whitespace-nowrap">
+            Completado
+          </span>
+        );
       case 'pending':
-        return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-none font-medium text-xs">Esperando</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-500 border border-amber-500/30 whitespace-nowrap">
+            Esperando
+          </span>
+        );
       case 'confirmed':
-        return <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-none font-medium text-xs">Confirmado</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 whitespace-nowrap">
+            Confirmado
+          </span>
+        );
       case 'preparing':
-        return <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border-none font-medium text-xs">{isMarket ? 'Preparando' : 'En cocina'}</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/30 whitespace-nowrap">
+            {isMarket ? 'Preparando' : 'En cocina'}
+          </span>
+        );
       case 'shipped':
-        return <Badge className="bg-sky-500/15 text-sky-600 dark:text-sky-400 border-none font-medium text-xs">En camino</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/30 whitespace-nowrap">
+            En camino
+          </span>
+        );
       default:
-        return <Badge variant="secondary" className="text-xs">{status}</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground border border-border/40 whitespace-nowrap">
+            {status}
+          </span>
+        );
     }
   };
 
   const getSourceBadge = (source?: string, orderNumber?: string) => {
     if (source === 'pedidosya' || orderNumber?.toUpperCase().startsWith('PY-')) {
       return (
-        <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-none font-bold text-[10px] px-1.5 py-0.5">
-          🛵 PedidosYa
-        </Badge>
+        <span className="inline-flex items-center gap-1 bg-red-500/15 text-red-500 dark:text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap tracking-wide">
+          <span>🛵</span> PedidosYa
+        </span>
       );
     }
-    return null;
+    return (
+      <span className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap">
+        <span>🌐</span> Web
+      </span>
+    );
   };
 
   const selectedOrder = validOrders.find((o: any) => o.id === selectedOrderId);
@@ -526,18 +562,18 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
   };
 
   const renderDesktopTable = () => (
-    <div className="rounded-lg border border-border/50 overflow-hidden">
+    <div className="rounded-xl border border-border/50 overflow-hidden bg-card shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/30 hover:bg-muted/30 text-xs">
-            <TableHead className="w-[36px]"></TableHead>
-            <TableHead className="font-medium text-muted-foreground">Pedido</TableHead>
-            <TableHead className="font-medium text-muted-foreground">Fecha</TableHead>
-            <TableHead className="font-medium text-muted-foreground min-w-[160px]">Cliente</TableHead>
-            <TableHead className="font-medium text-muted-foreground">Items</TableHead>
-            <TableHead className="font-medium text-muted-foreground">Estado</TableHead>
-            <TableHead className="text-right font-medium text-muted-foreground">Total</TableHead>
-            <TableHead className="w-[200px] text-right font-medium text-muted-foreground pr-4">Acciones</TableHead>
+          <TableRow className="bg-muted/40 hover:bg-muted/40 text-xs">
+            <TableHead className="w-[38px] text-center"></TableHead>
+            <TableHead className="font-semibold text-foreground whitespace-nowrap">Pedido</TableHead>
+            <TableHead className="font-semibold text-foreground whitespace-nowrap">Fecha</TableHead>
+            <TableHead className="font-semibold text-foreground min-w-[140px]">Cliente</TableHead>
+            <TableHead className="font-semibold text-foreground whitespace-nowrap">Productos</TableHead>
+            <TableHead className="font-semibold text-foreground whitespace-nowrap">Estado</TableHead>
+            <TableHead className="text-right font-semibold text-foreground whitespace-nowrap">Total</TableHead>
+            <TableHead className="w-[140px] text-right font-semibold text-foreground pr-4 whitespace-nowrap">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -548,61 +584,62 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
             return (
               <React.Fragment key={order.id}>
                 <TableRow
-                  className={`cursor-pointer transition-colors text-sm ${
+                  className={`cursor-pointer transition-colors text-xs ${
                     isSelected ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/30'
                   }`}
                   onClick={() => setSelectedOrderId(order.id)}
                   onDoubleClick={() => handleRowDoubleClick(order)}
                 >
-                  <TableCell className="py-2.5 px-2 text-center">
+                  <TableCell className="py-3 px-2 text-center">
                     {isSelected ? (
                       <Check className="h-4 w-4 text-primary mx-auto" />
                     ) : (
                       <span className="h-2 w-2 rounded-full bg-muted-foreground/30 inline-block" />
                     )}
                   </TableCell>
-                  <TableCell className="py-2.5 font-medium text-foreground text-xs">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span>#{order.order_number}</span>
+                  <TableCell className="py-3 font-medium text-foreground whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-foreground">#{order.order_number}</span>
                       {getSourceBadge(order.source, order.order_number)}
                     </div>
                   </TableCell>
-                  <TableCell className="py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                    {format(new Date(order.created_at), 'dd/MM/yy · HH:mm', { locale: es })}
+                  <TableCell className="py-3 text-muted-foreground whitespace-nowrap">
+                    <div className="font-medium text-foreground">{format(new Date(order.created_at), 'dd/MM/yy', { locale: es })}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">{format(new Date(order.created_at), 'HH:mm', { locale: es })}</div>
                   </TableCell>
-                  <TableCell className="py-2.5">
-                    <div className="font-medium text-foreground text-xs">{order.customer_name}</div>
+                  <TableCell className="py-3">
+                    <div className="font-semibold text-foreground leading-snug">{order.customer_name}</div>
                     {order.customer_phone && (
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
                         {order.customer_phone}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="py-2.5">
+                  <TableCell className="py-3 whitespace-nowrap">
                     <button
                       type="button"
-                      className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 hover:underline"
+                      className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50 hover:bg-muted transition-colors border border-border/40 font-medium"
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedOrderId(isExpanded ? null : order.id);
                       }}
                     >
-                      {order.open_order_items?.length || 0} prod.
+                      <span>{order.open_order_items?.length || 0} ítems</span>
                       {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                     </button>
                   </TableCell>
-                  <TableCell className="py-2.5">
+                  <TableCell className="py-3 whitespace-nowrap">
                     {getOrderStatusBadge(order.order_status)}
                   </TableCell>
-                  <TableCell className="py-2.5 text-right font-semibold text-xs text-foreground">
+                  <TableCell className="py-3 text-right font-bold text-sm text-foreground font-mono whitespace-nowrap">
                     ${Number(order.total || 0).toFixed(2)}
                   </TableCell>
-                  <TableCell className="py-2.5 pr-3">
-                    <div className="flex items-center justify-end gap-1">
+                  <TableCell className="py-3 pr-3">
+                    <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                       {order.order_status === 'pending' && (
                         <Button
                           size="sm"
-                          className="h-7 px-2.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                          className="h-7 px-3 text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg shadow-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             updateStatusMutation.mutate({ orderId: order.id, status: 'preparing' });
@@ -614,7 +651,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
                       {order.order_status === 'preparing' && (
                         <Button
                           size="sm"
-                          className="h-7 px-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                          className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             updateStatusMutation.mutate({ orderId: order.id, status: 'shipped' });
@@ -624,50 +661,81 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
                         </Button>
                       )}
 
+                      {/* Botón directo de imprimir */}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-lg"
                         onClick={(e) => handlePrint(e, order)}
                         title="Imprimir Pre-cuenta"
                       >
                         <Printer className="h-3.5 w-3.5" />
                       </Button>
 
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground relative"
-                        onClick={(e) => { e.stopPropagation(); setActiveChatOrderId(order.id); }}
-                        title="Chat"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        {unreadCounts[order.id] > 0 && (
-                          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                        )}
-                      </Button>
-
-                      {order.customer_phone && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
-                          onClick={(e) => openWhatsApp(e, order.customer_phone, order.order_number)}
-                          title="WhatsApp"
-                        >
-                          <Phone className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => handleRejectClick(e, order)}
-                        title="Rechazar pedido"
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                      </Button>
+                      {/* Menú de opciones adicionales (limpio y compacto) */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-lg relative"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            {unreadCounts[order.id] > 0 && (
+                              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl z-50">
+                          <DropdownMenuItem
+                            className="gap-2 text-xs font-medium cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLoadToCart(order);
+                            }}
+                          >
+                            <ShoppingCart className="h-3.5 w-3.5 text-primary" />
+                            Cargar al POS
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="gap-2 text-xs font-medium cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveChatOrderId(order.id);
+                            }}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5 text-blue-500" />
+                            Chat con cliente
+                            {unreadCounts[order.id] > 0 && (
+                              <Badge className="ml-auto text-[9px] px-1 py-0 bg-red-500">Nuevo</Badge>
+                            )}
+                          </DropdownMenuItem>
+                          {order.customer_phone && (
+                            <DropdownMenuItem
+                              className="gap-2 text-xs font-medium cursor-pointer text-emerald-600 dark:text-emerald-400"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openWhatsApp(e, order.customer_phone, order.order_number);
+                              }}
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                              Enviar WhatsApp
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="gap-2 text-xs font-medium cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRejectClick(e, order);
+                            }}
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            Rechazar pedido
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -690,7 +758,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full max-h-[85vh] flex flex-col p-6 rounded-xl border bg-background shadow-xl"
+          className="max-w-[95vw] sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl w-full max-h-[88vh] flex flex-col p-6 rounded-2xl border bg-background shadow-2xl"
         >
           {/* Header */}
           <DialogHeader className="pb-3 border-b flex-shrink-0">
