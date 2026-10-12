@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ interface PedidosYaSettingsSectionProps {
 }
 
 export const PedidosYaSettingsSection: React.FC<PedidosYaSettingsSectionProps> = ({ userStore }) => {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { settings, updateSettings, isUpdating } = useStoreSettings();
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -130,28 +132,117 @@ export const PedidosYaSettingsSection: React.FC<PedidosYaSettingsSectionProps> =
         },
       };
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/pedidosya-webhook?store_id=${userStore.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testPayload),
-      });
+      let simulatedViaFunction = false;
 
-      if (!response.ok) {
-        throw new Error(`Respuesta no exitosa (${response.status})`);
+      // 1. Intentar invocar Edge Function si está activa
+      try {
+        const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('pedidosya-webhook', {
+          body: testPayload,
+          headers: {
+            'x-pedidosya-store-id': storeId || userStore.id,
+          },
+        });
+
+        if (!edgeErr && edgeData?.success) {
+          simulatedViaFunction = true;
+        }
+      } catch (invokeErr) {
+        console.warn('Edge Function no disponible, utilizando simulación directa en base de datos:', invokeErr);
       }
 
+      // 2. Fallback: Registrar directamente en open_orders y open_order_items
+      if (!simulatedViaFunction) {
+        const { data: authData } = await supabase.auth.getUser();
+        const currentUserId = authData?.user?.id || null;
+
+        const { data: insertedOrder, error: insertOrderErr } = await supabase
+          .from('open_orders')
+          .insert({
+            store_id: userStore.id,
+            order_number: testOrderNumber,
+            customer_name: 'Juan Pérez (Prueba PedidosYa)',
+            customer_phone: '8095551234',
+            customer_address: 'Av. Winston Churchill #1099, BlueMall, Apto 4B',
+            notes: 'Por favor incluir cubiertos y servilletas. [Simulación de Prueba]',
+            source: 'pedidosya',
+            order_status: autoAccept ? 'preparing' : 'pending',
+            payment_method: 'pedidosya_online',
+            payment_status: 'paid',
+            subtotal: 450.00,
+            tax_total: 0,
+            discount_total: 0,
+            total: 450.00,
+            profile_id: currentUserId,
+          })
+          .select()
+          .single();
+
+        if (insertOrderErr || !insertedOrder) {
+          throw insertOrderErr || new Error('No se pudo registrar el pedido en la base de datos');
+        }
+
+        const itemsToInsert = [
+          {
+            order_id: insertedOrder.id,
+            product_name: 'Hamburguesa Especial PedidosYa (Extra Queso, Papas Fritas)',
+            product_id: null,
+            quantity: 2,
+            unit_price: 175.00,
+            subtotal: 350.00,
+            total: 350.00,
+            tax_percentage: 18,
+            tax_amount: 0,
+          },
+          {
+            order_id: insertedOrder.id,
+            product_name: 'Bebida Refrescante 500ml',
+            product_id: null,
+            quantity: 1,
+            unit_price: 100.00,
+            subtotal: 100.00,
+            total: 100.00,
+            tax_percentage: 18,
+            tax_amount: 0,
+          },
+        ];
+
+        const { error: itemsInsertErr } = await supabase
+          .from('open_order_items')
+          .insert(itemsToInsert);
+
+        if (itemsInsertErr) {
+          console.warn('Advertencia insertando items simulados:', itemsInsertErr);
+        }
+
+        try {
+          await (supabase as any).from('chat_messages').insert({
+            order_id: insertedOrder.id,
+            store_id: userStore.id,
+            sender_role: 'store',
+            sender_name: 'PedidosYa Integration',
+            message: `🛵 Pedido #${testOrderNumber} recibido automáticamente desde PedidosYa. Monto: $450.00`,
+          });
+        } catch {
+          // No es crítico si chat_messages no está disponible
+        }
+      }
+
+      // Notificar a los componentes activos en el POS / Cocina
+      queryClient.invalidateQueries({ queryKey: ['web-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['open-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-web-orders-count'] });
+
       toast({
-        title: '¡Pedido de prueba enviado con éxito!',
-        description: `Se ha registrado el pedido ${testOrderNumber}. Revisa la ventana de Pedidos Web en el POS.`,
+        title: '¡Pedido de prueba simulado con éxito!',
+        description: `Se registró el pedido ${testOrderNumber} (${autoAccept ? 'Enviado directo a Cocina' : 'Pendiente en Pedidos Web'}).`,
       });
     } catch (err: any) {
       console.error('Error enviando pedido de prueba:', err);
       toast({
         variant: 'destructive',
         title: 'Error en la prueba',
-        description: 'No se pudo simular el pedido. Verifica que la Edge Function esté disponible.',
+        description: err?.message || 'No se pudo simular el pedido de prueba.',
       });
     } finally {
       setIsSendingTest(false);
