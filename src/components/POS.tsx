@@ -234,6 +234,7 @@ const POSContent: React.FC = () => {
   const isProcessingRef = React.useRef(false);
   const searchInputRef = React.useRef<any>(null);
   const mobileSearchRef = React.useRef<any>(null);
+  const handleSaveOrderRef = React.useRef<() => void>(() => {});
 
   // Focus search input when PrintOptionsDialog is closed (only on non-touch desktop to prevent mobile keyboard from opening)
   useEffect(() => {
@@ -759,7 +760,7 @@ const POSContent: React.FC = () => {
     // Mesero/a: Solo toma comandas y las asigna a mesas. Bloqueado de cobro/facturación.
     if (isWaiter) {
       if (selectedTable) {
-        handleSaveOrder();
+        handleSaveOrderRef.current();
       } else {
         setShowTableSelectorDialog(true);
       }
@@ -795,7 +796,7 @@ const POSContent: React.FC = () => {
     }
 
     setShowPaymentDialog(true);
-  }, [cart.length, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, handleSaveOrder, toast]);
+  }, [cart.length, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, toast]);
 
   const queryClient = useQueryClient();
 
@@ -1676,6 +1677,7 @@ const POSContent: React.FC = () => {
       setShowSaveOrderDialog(true);
     }
   }, [saveExistingOrderDirectly]);
+  handleSaveOrderRef.current = handleSaveOrder;
 
   // Keyboard shortcuts
   useEffect(() => {
