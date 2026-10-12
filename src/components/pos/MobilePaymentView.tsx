@@ -443,6 +443,34 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
               </div>
             </div>
           </Button>
+        ) : selectedTable ? (
+          <div className="flex flex-col gap-2 w-full">
+            <Button
+              onClick={onSaveOrder || onCheckout}
+              disabled={!canCheckout}
+              className="w-full h-13 sm:h-14 mobile-landscape:h-10 rounded-2xl mobile-landscape:rounded-xl text-sm font-black group transition-all relative overflow-hidden bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg"
+            >
+              <div className="flex items-center justify-between w-full gap-2 px-4 mobile-landscape:px-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Utensils className="h-5 w-5 mobile-landscape:h-4 mobile-landscape:w-4 shrink-0" />
+                  <span className="truncate">Guardar en {selectedTable}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-base sm:text-lg mobile-landscape:text-sm">${totals.total}</span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </Button>
+            <Button
+              onClick={onCheckout}
+              disabled={!canCheckout || isInvoiceLimitReached}
+              variant="outline"
+              className="w-full h-10 rounded-xl text-xs font-bold"
+            >
+              <CreditCard className="mr-1.5 h-4 w-4" />
+              Cobrar Mesa (${totals.total})
+            </Button>
+          </div>
         ) : (
           <Button
             onClick={onCheckout}

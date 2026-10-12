@@ -750,6 +750,42 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               {selectedTable ? `Comandar (${selectedTable})` : 'Comandar / Guardar en Mesa'}
               {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F9</span>}
             </Button>
+          ) : selectedTable ? (
+            <div className="flex flex-col gap-2 w-full">
+              <Button
+                type="button"
+                onClick={onSaveOrder || onCheckout}
+                className="w-full h-9 md:h-10 text-sm font-semibold bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all"
+                disabled={isCheckoutDisabled}
+              >
+                <Utensils className="mr-1.5 h-4 w-4" />
+                Guardar en {selectedTable}
+                {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F9</span>}
+              </Button>
+              <Button
+                type="button"
+                onClick={onCheckout}
+                className={cn(
+                  "w-full h-9 md:h-10 text-sm font-semibold",
+                  isInvoiceLimitReached && "opacity-80"
+                )}
+                variant={isInvoiceLimitReached ? "destructive" : "outline"}
+                disabled={isCheckoutDisabled || isInvoiceLimitReached}
+              >
+                {isInvoiceLimitReached ? (
+                  <>
+                    <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
+                    Límite Alcanzado
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+                    Cobrar Mesa
+                    {!isMobile && <span className="ml-2 text-[10px] opacity-70 font-normal border border-current rounded px-1">F10</span>}
+                  </>
+                )}
+              </Button>
+            </div>
           ) : (
             <Button
               onClick={onCheckout}
@@ -808,6 +844,30 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               <Utensils className="mr-1.5 h-3.5 w-3.5" />
               {selectedTable ? `Comandar (${selectedTable})` : 'Comandar Mesa'}
             </Button>
+          ) : selectedTable ? (
+            <div className="flex items-center gap-1.5 flex-1 max-w-[220px]">
+              <Button
+                type="button"
+                onClick={onSaveOrder || onCheckout}
+                className="h-9 px-2 text-xs font-semibold flex-1 bg-amber-600 hover:bg-amber-500 text-white truncate"
+                disabled={isCheckoutDisabled}
+                title={`Guardar en ${selectedTable}`}
+              >
+                <Utensils className="mr-1 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Guardar</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={onCheckout}
+                variant="outline"
+                className="h-9 px-2 text-xs font-semibold flex-1 truncate"
+                disabled={isCheckoutDisabled}
+                title="Cobrar Mesa"
+              >
+                <CreditCard className="mr-1 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Cobrar</span>
+              </Button>
+            </div>
           ) : (
             <Button
               onClick={onCheckout}

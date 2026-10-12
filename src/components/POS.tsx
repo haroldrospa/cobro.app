@@ -119,6 +119,8 @@ class SimpleErrorBoundary extends React.Component<{ children: React.ReactNode },
   }
 }
 
+const isUuid = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+
 const POSContent: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -1201,13 +1203,18 @@ const POSContent: React.FC = () => {
   posOrderTypeRef.current = posOrderType;
 
   const saveExistingOrderDirectly = useCallback(async () => {
-    const activeOrderId = currentWebOrderIdRef.current || currentWebOrderId;
+    let activeOrderId = currentWebOrderIdRef.current || currentWebOrderId;
     const activeCart = (cartWithOffersRef.current && cartWithOffersRef.current.length > 0)
       ? cartWithOffersRef.current
       : ((cartRef.current && cartRef.current.length > 0) ? cartRef.current : cartWithOffers);
 
-    if (!activeOrderId || activeCart.length === 0) {
-      console.warn('saveExistingOrderDirectly: missing orderId or cart items', { activeOrderId, cartLength: activeCart.length });
+    if (activeCart.length === 0) {
+      console.warn('saveExistingOrderDirectly: missing cart items');
+      return;
+    }
+
+    if (!activeOrderId && !selectedTable) {
+      console.warn('saveExistingOrderDirectly: missing orderId or table', { activeOrderId, selectedTable });
       return;
     }
 
@@ -1219,22 +1226,195 @@ const POSContent: React.FC = () => {
       const activeOrderSource = currentOrderSourceRef.current || currentOrderSource || 'pos';
       const activePosOrderType = posOrderTypeRef.current || posOrderType;
       const activeStore = userStore || store;
+      const effectiveStoreId = activeStore?.id || localStorage.getItem('cobro_last_store_id') || null;
 
-      // 1. Obtener estado actual e ítems actuales de la orden
-      const { data: currentOrder, error: fetchError } = await supabase
-        .from('open_orders')
-        .select('order_status, notes, order_number, customer_name')
-        .eq('id', activeOrderId)
-        .single();
+      let isNewTableOrderWithoutLoadedCart = false;
 
-      const isOrderMissing = !!fetchError || !currentOrder;
+      // Si no tenemos activeOrderId pero hay una mesa seleccionada, buscamos si ya existe una orden activa para esa mesa
+      if (!activeOrderId && selectedTable && effectiveStoreId) {
+        try {
+          const { data: existingTableOrders } = await supabase
+            .from('open_orders')
+            .select('id, order_number, customer_name, notes, order_status, subtotal, discount_total, tax_total, total')
+            .eq('store_id', effectiveStoreId)
+            .eq('source', 'pos')
+            .eq('payment_status', 'pending')
+            .ilike('notes', `%[MESA: ${selectedTable.trim()}]%`)
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-      const { data: currentItems } = !isOrderMissing
-        ? await supabase
+          if (existingTableOrders && existingTableOrders.length > 0) {
+            activeOrderId = existingTableOrders[0].id;
+            isNewTableOrderWithoutLoadedCart = true;
+          }
+        } catch (tblErr) {
+          console.warn('Error checking existing order for table:', tblErr);
+        }
+      }
+
+      // Determinar tags de notas
+      const orderTypeTag = orderTypeTags[activePosOrderType];
+      const tableTag = selectedTable ? `[MESA: ${selectedTable.trim()}]` : '';
+      const rawNotes = (activeOrderInfo?.notes || '');
+      const cleanNotes = rawNotes
+        .replace(/\[MESA:[^\]]+\]/gi, '')
+        .replace(/\[COMER AQUÍ\]/g, '')
+        .replace(/\[PARA LLEVAR\]/g, '')
+        .replace(/\[COMPRA AQUÍ\]/g, '')
+        .replace(/\[DELIVERY\]/g, '')
+        .trim();
+      const finalNotesParts = [cleanNotes, tableTag, orderTypeTag].filter(Boolean);
+      const finalNotes = finalNotesParts.join('\n');
+      const isDelivery = activePosOrderType === 'takeout' && (isStore || isSupermarket);
+
+      // Caso A: Mesa ya ocupada con comanda previa en DB y el usuario agregó más productos sin cargarla previamente
+      if (isNewTableOrderWithoutLoadedCart && activeOrderId) {
+        const { data: existingOrder } = await supabase
+          .from('open_orders')
+          .select('id, order_number, customer_name, subtotal, discount_total, tax_total, total, notes')
+          .eq('id', activeOrderId)
+          .single();
+
+        if (existingOrder) {
+          const newSubtotal = (Number(existingOrder.subtotal) || 0) + parseFloat(totals.subtotal);
+          const newDiscount = (Number(existingOrder.discount_total) || 0) + parseFloat(totals.discount);
+          const newTax = (Number(existingOrder.tax_total) || 0) + parseFloat(totals.tax);
+          const newTotal = (Number(existingOrder.total) || 0) + parseFloat(totals.total);
+
+          await supabase
+            .from('open_orders')
+            .update({
+              subtotal: newSubtotal,
+              discount_total: newDiscount,
+              tax_total: newTax,
+              total: newTotal,
+              order_status: 'preparing',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', activeOrderId);
+
+          const newOrderItems = activeCart.map(item => {
+            const taxRate = item.tax || 0.18;
+            const itemTotalRaw = item.price * item.quantity;
+            let subtotal, taxAmount, total;
+            if (item.cost_includes_tax) {
+              total = itemTotalRaw;
+              subtotal = total / (1 + taxRate);
+              taxAmount = total - subtotal;
+            } else {
+              subtotal = itemTotalRaw;
+              taxAmount = subtotal * taxRate;
+              total = subtotal + taxAmount;
+            }
+            return {
+              order_id: activeOrderId,
+              product_id: isUuid(item.id) ? item.id : null,
+              product_name: item.comment ? `${item.name} (${item.comment})` : item.name,
+              quantity: item.quantity,
+              unit_price: item.price,
+              tax_percentage: taxRate * 100,
+              tax_amount: taxAmount,
+              subtotal,
+              total,
+              cost_includes_tax: item.cost_includes_tax || false
+            };
+          });
+
+          await supabase.from('open_order_items').insert(newOrderItems);
+
+          if (!skipKitchenStep && !isStore && !isSupermarket) {
+            try {
+              const authRes = await supabase.auth.getUser();
+              const user = authRes?.data?.user;
+              const deltaNotes = `[ACTUALIZADO]\nProductos adicionales a: ${existingOrder.customer_name || selectedTable} (#${existingOrder.order_number})\n${finalNotes}`;
+
+              const { data: deltaOrder } = await supabase
+                .from('open_orders')
+                .insert({
+                  order_number: String(900000 + (Date.now() % 99999)),
+                  customer_name: existingOrder.customer_name || `Mesa: ${selectedTable}`,
+                  payment_method: 'pending',
+                  subtotal: 0,
+                  discount_total: 0,
+                  tax_total: 0,
+                  total: 0,
+                  notes: deltaNotes,
+                  source: 'pos',
+                  order_status: 'preparing',
+                  payment_status: 'paid',
+                  profile_id: user?.id || null,
+                  store_id: effectiveStoreId
+                })
+                .select()
+                .single();
+
+              if (deltaOrder) {
+                const deltaOrderItems = activeCart.map(item => ({
+                  order_id: deltaOrder.id,
+                  product_id: isUuid(item.id) ? item.id : null,
+                  product_name: item.comment ? `${item.name} (${item.comment})` : item.name,
+                  quantity: item.quantity,
+                  unit_price: 0,
+                  tax_percentage: (item.tax || 0.18) * 100,
+                  tax_amount: 0,
+                  subtotal: 0,
+                  total: 0,
+                  cost_includes_tax: item.cost_includes_tax || false
+                }));
+                await supabase.from('open_order_items').insert(deltaOrderItems);
+              }
+            } catch (kErr) {
+              console.warn('Error ticket adicional cocina:', kErr);
+            }
+          }
+
+          queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+          queryClient.refetchQueries({ queryKey: ['pos-open-orders'] });
+          queryClient.invalidateQueries({ queryKey: ['pos-open-orders-tables'] });
+          queryClient.invalidateQueries({ queryKey: ['web-orders'] });
+          queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
+
+          toast({
+            title: `Guardado en ${selectedTable}`,
+            description: `Productos agregados a la orden #${existingOrder.order_number}`
+          });
+
+          // Reset state
+          setCart([]);
+          setSelectedCustomer('');
+          setAmountReceived('');
+          setPaymentMethod('cash');
+          setGlobalDiscount({ value: 0, type: 'percentage' });
+          setCurrentOrderInfo(null);
+          setCurrentOrderSource('pos');
+          setCurrentWebOrderId(null);
+          setSelectedTable(null);
+          return;
+        }
+      }
+
+      // Caso B: Orden cargada previamente en POS O nueva comanda para la mesa
+      let currentOrder: any = null;
+      let currentItems: any[] = [];
+      let isOrderMissing = true;
+
+      if (activeOrderId) {
+        const { data, error: fetchError } = await supabase
+          .from('open_orders')
+          .select('order_status, notes, order_number, customer_name')
+          .eq('id', activeOrderId)
+          .single();
+
+        if (!fetchError && data) {
+          currentOrder = data;
+          isOrderMissing = false;
+          const { data: items } = await supabase
             .from('open_order_items')
             .select('product_id, quantity')
-            .eq('order_id', activeOrderId)
-        : { data: [] };
+            .eq('order_id', activeOrderId);
+          currentItems = items || [];
+        }
+      }
 
       const isReopened = !!(
         currentOrder &&
@@ -1255,23 +1435,6 @@ const POSContent: React.FC = () => {
         }
       });
 
-      // 3. Determinar tipo de usuario para tag de tipo de orden
-      const orderTypeTag = orderTypeTags[activePosOrderType];
-      const tableTag = selectedTable ? `[MESA: ${selectedTable.trim()}]` : '';
-      const rawNotes = (activeOrderInfo?.notes || '');
-      const cleanNotes = rawNotes
-        .replace(/\[MESA:[^\]]+\]/gi, '')
-        .replace(/\[COMER AQUÍ\]/g, '')
-        .replace(/\[PARA LLEVAR\]/g, '')
-        .replace(/\[COMPRA AQUÍ\]/g, '')
-        .replace(/\[DELIVERY\]/g, '')
-        .trim();
-      const finalNotesParts = [cleanNotes, tableTag, orderTypeTag].filter(Boolean);
-      const finalNotes = finalNotesParts.join('\n');
-
-      // 4. Preparar payload de actualización principal
-      const isDelivery = activePosOrderType === 'takeout' && (isStore || isSupermarket);
-
       let orderIdToUse = activeOrderId;
       let orderNumberToUse = currentOrder?.order_number || activeOrderInfo?.orderNumber;
 
@@ -1291,12 +1454,14 @@ const POSContent: React.FC = () => {
         orderNumberToUse = generatedOrderNumber;
         orderIdToUse = crypto.randomUUID();
 
+        const defaultCustomerName = selectedTable ? (selectedTable.toLowerCase().startsWith('mesa') ? selectedTable : `Mesa: ${selectedTable}`) : 'Cliente';
+
         const { error: insertError } = await supabase
           .from('open_orders')
           .insert({
             id: orderIdToUse,
             order_number: orderNumberToUse,
-            customer_name: activeOrderInfo?.customerName || 'Cliente',
+            customer_name: activeOrderInfo?.customerName || defaultCustomerName,
             payment_method: 'pending',
             subtotal: parseFloat(totals.subtotal),
             discount_total: parseFloat(totals.discount),
@@ -1307,7 +1472,7 @@ const POSContent: React.FC = () => {
             order_status: isDelivery ? 'shipped' : 'preparing',
             payment_status: 'pending',
             profile_id: profile?.id || null,
-            store_id: activeStore?.id || localStorage.getItem('cobro_last_store_id') || null
+            store_id: effectiveStoreId
           });
 
         if (insertError) throw insertError;
@@ -1349,8 +1514,6 @@ const POSContent: React.FC = () => {
         .eq('order_id', orderIdToUse);
 
       if (deleteError) throw deleteError;
-
-      const isUuid = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
 
       const orderItems = activeCart.map(item => {
         const taxRate = item.tax || 0.18;
@@ -1439,11 +1602,12 @@ const POSContent: React.FC = () => {
 
       queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
       queryClient.refetchQueries({ queryKey: ['pos-open-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-open-orders-tables'] });
       queryClient.invalidateQueries({ queryKey: ['web-orders'] });
       queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
 
       toast({
-        title: isOrderMissing ? "Pedido guardado como nuevo" : "Pedido actualizado",
+        title: selectedTable ? `Guardado en ${selectedTable}` : (isOrderMissing ? "Pedido guardado como nuevo" : "Pedido actualizado"),
         description: `${orderNumberToUse} guardado correctamente${hasNewOrModifiedItems && !isOrderMissing ? ' · Ticket enviado a cocina' : ''}`
       });
 
@@ -1456,6 +1620,7 @@ const POSContent: React.FC = () => {
       setCurrentOrderInfo(null);
       setCurrentOrderSource('pos');
       setCurrentWebOrderId(null);
+      setSelectedTable(null);
     } catch (error: any) {
       console.error('Error saving order:', error);
       toast({
@@ -1466,7 +1631,7 @@ const POSContent: React.FC = () => {
     } finally {
       setIsSavingOrder(false);
     }
-  }, [userStore, store, profile, orderTypeTags, isStore, isSupermarket, skipKitchenStep, queryClient, toast]);
+  }, [userStore, store, profile, orderTypeTags, isStore, isSupermarket, skipKitchenStep, queryClient, toast, selectedTable]);
 
   const handleLoadServicesToCart = useCallback((serviceItems: CartItem[], customerId: string, invoiceTypeId: string) => {
     setCart(prev => [...prev, ...serviceItems]);
@@ -1666,17 +1831,19 @@ const POSContent: React.FC = () => {
   }, [activeSession, customers, invoiceTypes, selectedInvoiceTypeData, creditDays, storeId, store.id, createSale, profile, handleOpenRegister, toast]);
 
   const handleSaveOrder = useCallback(() => {
-    const currentCart = cartRef.current;
+    const currentCart = (cartWithOffersRef.current && cartWithOffersRef.current.length > 0)
+      ? cartWithOffersRef.current
+      : ((cartRef.current && cartRef.current.length > 0) ? cartRef.current : cart);
     if (!currentCart || currentCart.length === 0) return;
 
-    // If editing an existing order, save directly
-    if (currentWebOrderIdRef.current) {
+    // Si hay una orden cargada O una mesa asignada, guardar directamente
+    if (currentWebOrderIdRef.current || selectedTable) {
       saveExistingOrderDirectly();
     } else {
-      // New order - show dialog
+      // Pedido general sin mesa asignada: mostrar diálogo
       setShowSaveOrderDialog(true);
     }
-  }, [saveExistingOrderDirectly]);
+  }, [saveExistingOrderDirectly, selectedTable, cart]);
   handleSaveOrderRef.current = handleSaveOrder;
 
   // Keyboard shortcuts
@@ -2551,6 +2718,7 @@ const POSContent: React.FC = () => {
                     selectedTable={selectedTable}
                     onOpenTableSelector={() => setShowTableSelectorDialog(true)}
                     onClearTable={() => setSelectedTable(null)}
+                    onSaveOrder={memoHandleSaveOrder}
                   />
                 </div>
               </div>
@@ -2690,6 +2858,7 @@ const POSContent: React.FC = () => {
                     selectedTable={selectedTable}
                     onOpenTableSelector={() => setShowTableSelectorDialog(true)}
                     onClearTable={() => setSelectedTable(null)}
+                    onSaveOrder={memoHandleSaveOrder}
                   />
                 </div>
 
@@ -3177,7 +3346,9 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
           title="Guardar Pedido (F9)"
         >
           <Save className="h-3.5 w-3.5 text-primary" />
-          <span className="hidden lg:inline">{currentWebOrderId ? 'Actualizar' : 'Guardar'}</span>
+          <span className="hidden lg:inline">
+            {selectedTable ? `Guardar (${selectedTable})` : (currentWebOrderId ? 'Actualizar' : 'Guardar')}
+          </span>
         </Button>
       )}
 

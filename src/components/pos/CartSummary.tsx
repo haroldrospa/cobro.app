@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { ShoppingCart, ClipboardList, X, Utensils, ShoppingBag, Tag } from 'lucide-react';
+import { ShoppingCart, ClipboardList, X, Utensils, ShoppingBag, Tag, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ interface CartSummaryProps {
   selectedTable?: string | null;
   onOpenTableSelector?: () => void;
   onClearTable?: () => void;
+  onSaveOrder?: () => void;
 }
 
 const CartSummary: React.FC<CartSummaryProps> = ({
@@ -56,6 +57,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   selectedTable,
   onOpenTableSelector,
   onClearTable,
+  onSaveOrder,
 }) => {
   const { companyInfo } = usePrintSettings();
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
@@ -125,6 +127,18 @@ const CartSummary: React.FC<CartSummaryProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              {cart.length > 0 && onSaveOrder && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={onSaveOrder}
+                  className="h-6 px-2 text-[11px] font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  title="Guardar comanda en esta mesa (F9)"
+                >
+                  <Save className="h-3 w-3 mr-1" />
+                  Guardar
+                </Button>
+              )}
               {onOpenTableSelector && (
                 <Button
                   type="button"
