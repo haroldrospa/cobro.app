@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2, ChevronDown } from 'lucide-react';
+import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2, ChevronDown, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
@@ -34,8 +34,7 @@ interface CloseDayDialogProps {
 
 const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoToPOS }) => {
     const [activeTab, setActiveTab] = useState<'close' | 'history'>('close');
-    const [card2Tab, setCard2Tab] = useState<'shifts' | 'movements'>('shifts');
-    const [showDetails, setShowDetails] = useState(false);
+    const [detailTab, setDetailTab] = useState<'movements' | 'invoices' | 'breakdown' | 'shifts'>('movements');
     const [actualCash, setActualCash] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [showCashCount, setShowCashCount] = useState(false);
@@ -543,67 +542,84 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                         <div className="lg:col-span-7 flex flex-col gap-3 min-h-0">
                             {/* 4 Stats Cards in 2x2 grid on mobile, 4x1 on desktop */}
                             <div className="order-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
-                                <div className="bg-card/70 border border-border/50 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm">
-                                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                                        <Wallet className="h-3.5 w-3.5 text-muted-foreground/80" />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Fondo</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setDetailTab('breakdown')}
+                                    className={cn(
+                                        "bg-card/70 border p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
+                                        detailTab === 'breakdown' ? "border-muted-foreground/40 ring-2 ring-muted-foreground/20" : "border-border/50 hover:bg-card"
+                                    )}
+                                    title="Ver desglose por métodos"
+                                >
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                            <Wallet className="h-3.5 w-3.5 text-muted-foreground/80" />
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Fondo</span>
+                                        </div>
                                     </div>
                                     <p className="text-xs sm:text-sm font-black text-foreground truncate">
                                         RD$ {stats.initialCash.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                     </p>
-                                </div>
+                                </button>
 
-                                <div className="bg-card/70 border border-border/50 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm">
-                                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                                        <Calculator className="h-3.5 w-3.5 text-muted-foreground/80" />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Ventas</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setDetailTab('invoices')}
+                                    className={cn(
+                                        "bg-card/70 border p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
+                                        detailTab === 'invoices' ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5" : "border-border/50 hover:bg-card"
+                                    )}
+                                    title="Ver facturas emitidas"
+                                >
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                            <Calculator className="h-3.5 w-3.5 text-muted-foreground/80" />
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Ventas</span>
+                                        </div>
+                                        <span className="text-[8px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                                            {stats.salesCount}
+                                        </span>
                                     </div>
                                     <p className="text-xs sm:text-sm font-black text-foreground truncate">
                                         RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                     </p>
-                                </div>
+                                </button>
 
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setCard2Tab('movements');
-                                        setShowDetails(true);
-                                    }}
+                                    onClick={() => setDetailTab('movements')}
                                     className={cn(
                                         "p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
-                                        card2Tab === 'movements' && showDetails
-                                            ? "bg-green-500/15 border-2 border-green-500 ring-2 ring-green-500/20"
-                                            : "bg-green-500/10 border border-green-500/30 hover:bg-green-500/15"
+                                        detailTab === 'movements'
+                                            ? "bg-emerald-500/15 border-2 border-emerald-500 ring-2 ring-emerald-500/20"
+                                            : "bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/15"
                                     )}
-                                    title="Ver lista de entradas"
+                                    title="Ver movimientos de caja"
                                 >
                                     <div className="flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-1.5 text-green-500 font-bold">
+                                        <div className="flex items-center gap-1.5 text-emerald-500 font-bold">
                                             <TrendingUp className="h-3.5 w-3.5" />
                                             <span className="text-[10px] uppercase tracking-wider">Entradas</span>
                                         </div>
-                                        <span className="text-[8px] font-bold text-green-600 dark:text-green-400 bg-green-500/15 px-1.5 py-0.5 rounded-full">
+                                        <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded-full">
                                             Ver
                                         </span>
                                     </div>
-                                    <p className="text-xs sm:text-sm font-black text-green-500 truncate">
+                                    <p className="text-xs sm:text-sm font-black text-emerald-500 truncate">
                                         RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                     </p>
                                 </button>
 
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setCard2Tab('movements');
-                                        setShowDetails(true);
-                                    }}
+                                    onClick={() => setDetailTab('movements')}
                                     className={cn(
                                         "p-2.5 sm:p-3 rounded-xl flex flex-col justify-between min-h-[64px] backdrop-blur-sm transition-all text-left cursor-pointer active:scale-[0.98]",
-                                        card2Tab === 'movements' && showDetails
+                                        detailTab === 'movements'
                                             ? "bg-red-500/15 border-2 border-red-500 ring-2 ring-red-500/20"
                                             : "bg-red-500/10 border border-red-500/30 hover:bg-red-500/15"
                                     )}
-                                    title="Ver lista de salidas"
+                                    title="Ver movimientos de caja"
                                 >
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center gap-1.5 text-red-500 font-bold">
@@ -620,120 +636,186 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                 </button>
                             </div>
 
-                            {/* Mobile Accordion Toggle for Breakdown and Movements */}
-                            <div className="order-3 lg:hidden">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDetails(!showDetails)}
-                                    className="w-full py-2.5 px-3.5 rounded-xl bg-card/80 hover:bg-card border border-border/60 flex items-center justify-between text-xs font-bold text-muted-foreground hover:text-foreground transition-all active:scale-[0.99] shadow-sm"
-                                >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <FileText className="h-4 w-4 text-green-500 shrink-0" />
-                                        <span className="truncate">
-                                            {showDetails ? 'Ocultar desglose y turnos' : `Ver desglose por métodos y movimientos (${sessionMovements.length})`}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[11px] text-green-500 font-bold shrink-0 ml-2">
-                                        <span>{showDetails ? 'Cerrar' : 'Ver'}</span>
-                                        <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", showDetails && "rotate-180")} />
-                                    </div>
-                                </button>
-                            </div>
-
-                            {/* Middle Details: Breakdown + Active Shifts/Movements */}
-                            <div className={cn(
-                                "order-3 lg:order-2 gap-2.5 sm:gap-3 shrink-0 lg:shrink lg:flex-1 lg:min-h-0",
-                                showDetails ? "grid grid-cols-1 sm:grid-cols-2" : "hidden lg:grid lg:grid-cols-2"
-                            )}>
-                                {/* Card 1: Desglose por Método */}
-                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col justify-between overflow-hidden shrink-0 min-h-fit">
-                                    <div className="flex items-center gap-1.5 text-muted-foreground border-b border-border/40 pb-2">
-                                        <FileText className="h-3.5 w-3.5 text-green-500" />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Desglose por Métodos</span>
-                                    </div>
-                                    <div className="space-y-2 py-2">
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-muted-foreground font-medium">Efectivo</span>
-                                            <span className="font-bold text-foreground">RD$ {stats.cashSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-muted-foreground font-medium">Tarjeta</span>
-                                            <span className="font-bold text-foreground">RD$ {stats.cardSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-muted-foreground font-medium">Transferencia</span>
-                                            <span className="font-bold text-foreground">RD$ {stats.transferSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-muted-foreground font-medium">Crédito / Otros</span>
-                                            <span className="font-bold text-foreground">RD$ {stats.otherSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                    </div>
-                                    <div className="pt-2 border-t border-border/30 flex justify-between items-center text-[10px] text-muted-foreground">
-                                        <span>Total Facturas:</span>
-                                        <span className="font-bold text-foreground bg-muted/60 px-2 py-0.5 rounded-md">{stats.salesCount}</span>
-                                    </div>
-                                </div>
-
-                                {/* Card 2: Turnos & Movimientos */}
-                                <div className="bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-xl flex flex-col overflow-hidden shrink-0">
-                                    <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2 shrink-0">
-                                        <div className="flex items-center gap-1 bg-muted/80 p-0.5 rounded-lg shrink-0">
-                                            <button
-                                                type="button"
-                                                onClick={() => setCard2Tab('shifts')}
-                                                className={cn(
-                                                    "px-2 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap",
-                                                    card2Tab === 'shifts'
-                                                        ? "bg-background text-foreground shadow-sm"
-                                                        : "text-muted-foreground hover:text-foreground"
-                                                )}
-                                            >
-                                                <Clock className="h-3 w-3 text-green-500 shrink-0" />
+                            {/* Middle Details: Movimientos de Caja, Facturas Emitidas, Desglose & Turnos */}
+                            <div className="order-2 bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-2xl flex flex-col flex-1 min-h-[260px] max-h-[380px] lg:max-h-none overflow-hidden backdrop-blur-sm shadow-sm">
+                                <Tabs value={detailTab} onValueChange={(val: any) => setDetailTab(val)} className="flex-1 flex flex-col min-h-0">
+                                    <TabsList className={cn(
+                                        "grid w-full mb-2.5 bg-muted/70 p-1 rounded-xl h-9 shrink-0",
+                                        openSessions.length > 1 ? "grid-cols-4" : "grid-cols-3"
+                                    )}>
+                                        <TabsTrigger value="movements" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all">
+                                            <span className="hidden sm:inline">Movimientos de Caja</span>
+                                            <span className="sm:hidden">Movimientos</span>
+                                            <span className="ml-1 opacity-80">({sessionMovements.length})</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger value="invoices" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all">
+                                            <span className="hidden sm:inline">Facturas Emitidas</span>
+                                            <span className="sm:hidden">Facturas</span>
+                                            <span className="ml-1 opacity-80">({sessionSales.length})</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger value="breakdown" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all">
+                                            <span className="hidden sm:inline">Desglose de Métodos</span>
+                                            <span className="sm:hidden">Desglose</span>
+                                        </TabsTrigger>
+                                        {openSessions.length > 1 && (
+                                            <TabsTrigger value="shifts" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all text-amber-500">
                                                 <span>Turnos ({openSessions.length})</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setCard2Tab('movements')}
-                                                className={cn(
-                                                    "px-2 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap",
-                                                    card2Tab === 'movements'
-                                                        ? "bg-background text-foreground shadow-sm"
-                                                        : "text-muted-foreground hover:text-foreground"
-                                                )}
-                                            >
-                                                <Wallet className="h-3 w-3 text-amber-500 shrink-0" />
-                                                <span>Movimientos ({sessionMovements.length})</span>
-                                            </button>
-                                        </div>
-
-                                        {card2Tab === 'shifts' ? (
-                                            <Badge variant="outline" className="text-[10px] h-6 px-2 border-green-500/30 text-green-500 font-bold whitespace-nowrap shrink-0 flex items-center gap-1.5">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0 animate-pulse" />
-                                                <span>{openSessions.length} {openSessions.length === 1 ? 'Activo' : 'Activos'}</span>
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="outline" className={cn(
-                                                "text-[10px] h-6 px-2 font-bold whitespace-nowrap shrink-0 flex items-center gap-1.5",
-                                                sessionMovements.length > 0 ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30 text-muted-foreground"
-                                            )}>
-                                                <span>{sessionMovements.length} {sessionMovements.length === 1 ? 'Registrado' : 'Registrados'}</span>
-                                            </Badge>
+                                            </TabsTrigger>
                                         )}
-                                    </div>
+                                    </TabsList>
 
-                                    <div className="flex-1 min-h-[90px] max-h-48 sm:max-h-56 overflow-y-auto no-scrollbar space-y-1.5 py-2">
-                                        {card2Tab === 'shifts' ? (
-                                            isLoading ? (
-                                                <div className="flex items-center justify-center py-6 text-muted-foreground">
-                                                    <RefreshCcw className="h-4 w-4 animate-spin mr-1.5 opacity-50 text-green-500" />
-                                                    <span className="text-xs">Cargando turnos...</span>
+                                    {/* Tab 1: Movimientos de Caja */}
+                                    <TabsContent value="movements" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
+                                        <div className="flex-1 min-h-[140px] max-h-52 sm:max-h-60 lg:max-h-64 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+                                            {sessionMovements.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-1">
+                                                    <Wallet className="h-7 w-7 opacity-30 mb-1" />
+                                                    <p className="text-xs font-bold">Sin movimientos de caja en este turno</p>
+                                                    <p className="text-[10px] opacity-70">Las entradas y salidas extraordinarias aparecerán aquí.</p>
                                                 </div>
-                                            ) : openSessions.length > 0 ? (
-                                                openSessions.map((session: any) => (
+                                            ) : (
+                                                sessionMovements.map((m: any) => {
+                                                    const isDeposit = m.type === 'deposit' || m.type === 'income';
+                                                    return (
+                                                        <div 
+                                                            key={m.id}
+                                                            className={cn(
+                                                                "flex items-center justify-between p-2.5 rounded-xl border text-xs transition-colors",
+                                                                isDeposit 
+                                                                    ? "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10" 
+                                                                    : "border-red-500/20 bg-red-500/5 hover:bg-red-500/10"
+                                                            )}
+                                                        >
+                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                <span className={cn(
+                                                                    "inline-flex items-center gap-1 font-bold text-[10px] sm:text-[11px] px-2 py-0.5 rounded-lg shrink-0",
+                                                                    isDeposit 
+                                                                        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                                                                        : "bg-red-500/10 text-red-500 border border-red-500/20"
+                                                                )}>
+                                                                    {isDeposit ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
+                                                                    {isDeposit ? 'Entrada' : 'Salida'}
+                                                                </span>
+                                                                <div className="min-w-0 flex flex-col">
+                                                                    <span className="font-semibold text-xs text-foreground truncate">
+                                                                        {m.reason || (isDeposit ? 'Entrada de caja' : 'Salida de caja')}
+                                                                    </span>
+                                                                    {m.profile?.full_name && (
+                                                                        <span className="text-[9px] text-muted-foreground truncate">
+                                                                            {m.profile.full_name}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 text-right">
+                                                                <span className="text-[11px] text-muted-foreground font-mono">
+                                                                    {format(new Date(m.created_at), 'hh:mm a')}
+                                                                </span>
+                                                                <span className={cn(
+                                                                    "font-mono font-black text-xs sm:text-sm min-w-[80px]",
+                                                                    isDeposit ? "text-emerald-500" : "text-red-500"
+                                                                )}>
+                                                                    {isDeposit ? '+' : '-'} RD$ {Number(m.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                        {sessionMovements.length > 0 && (
+                                            <div className="pt-2 mt-auto border-t border-border/30 flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground shrink-0 px-1">
+                                                <span className="text-emerald-500 font-bold">
+                                                    Entradas: +RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                </span>
+                                                <span className="text-red-500 font-bold">
+                                                    Salidas: -RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </TabsContent>
+
+                                    {/* Tab 2: Facturas Emitidas */}
+                                    <TabsContent value="invoices" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
+                                        <div className="flex-1 min-h-[140px] max-h-52 sm:max-h-60 lg:max-h-64 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+                                            {sessionSales.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-1">
+                                                    <FileText className="h-7 w-7 opacity-30 mb-1" />
+                                                    <p className="text-xs font-bold">No hay facturas registradas en este turno</p>
+                                                </div>
+                                            ) : (
+                                                sessionSales.map((s: any) => (
+                                                    <div key={s.id} className="flex items-center justify-between p-2 rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 text-xs transition-colors">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className="font-bold text-foreground text-xs shrink-0">
+                                                                {s.invoice_number || 'S/N'}
+                                                            </span>
+                                                            <span className="text-muted-foreground text-[11px] truncate">
+                                                                {s.customer?.name || (s as any).customer_name || 'Consumidor Final'}
+                                                            </span>
+                                                            <Badge variant="outline" className="capitalize text-[8px] font-semibold border-border/40 py-0 h-4 shrink-0">
+                                                                {s.payment_method}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 text-right">
+                                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                                                {format(new Date(s.created_at), 'hh:mm a')}
+                                                            </span>
+                                                            <span className="font-mono font-bold text-xs text-foreground min-w-[70px]">
+                                                                RD$ {Number(s.total || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                        {sessionSales.length > 0 && (
+                                            <div className="pt-2 mt-auto border-t border-border/30 flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground shrink-0 px-1">
+                                                <span>Total Facturas: <strong className="text-foreground">{stats.salesCount}</strong></span>
+                                                <span>Total: <strong className="text-foreground font-mono">RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</strong></span>
+                                            </div>
+                                        )}
+                                    </TabsContent>
+
+                                    {/* Tab 3: Desglose por Método */}
+                                    <TabsContent value="breakdown" className="m-0 flex-1 flex flex-col justify-between min-h-0 outline-none">
+                                        <div className="space-y-2 py-1">
+                                            <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-muted/20 border border-border/20">
+                                                <span className="text-muted-foreground font-medium">Efectivo</span>
+                                                <span className="font-bold text-foreground font-mono">RD$ {stats.cashSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-muted/20 border border-border/20">
+                                                <span className="text-muted-foreground font-medium">Tarjeta</span>
+                                                <span className="font-bold text-foreground font-mono">RD$ {stats.cardSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-muted/20 border border-border/20">
+                                                <span className="text-muted-foreground font-medium">Transferencia</span>
+                                                <span className="font-bold text-foreground font-mono">RD$ {stats.transferSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-muted/20 border border-border/20">
+                                                <span className="text-muted-foreground font-medium">Crédito / Otros</span>
+                                                <span className="font-bold text-foreground font-mono">RD$ {stats.otherSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        </div>
+                                        <div className="pt-2 border-t border-border/30 flex justify-between items-center text-xs text-muted-foreground shrink-0 px-1">
+                                            <span>Total Facturas: <strong className="text-foreground">{stats.salesCount}</strong></span>
+                                            <span>Ventas Totales: <strong className="text-foreground font-mono">RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</strong></span>
+                                        </div>
+                                    </TabsContent>
+
+                                    {/* Tab 4: Turnos Activos (solo si hay más de 1 turno) */}
+                                    {openSessions.length > 1 && (
+                                        <TabsContent value="shifts" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
+                                            <div className="flex-1 min-h-[140px] max-h-52 sm:max-h-60 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+                                                {isLoading ? (
+                                                    <div className="flex items-center justify-center py-6 text-muted-foreground">
+                                                        <RefreshCcw className="h-4 w-4 animate-spin mr-1.5 opacity-50 text-green-500" />
+                                                        <span className="text-xs">Cargando turnos...</span>
+                                                    </div>
+                                                ) : openSessions.map((session: any) => (
                                                     <div key={session.id} className={cn(
-                                                        "flex items-center justify-between p-2 rounded-lg border text-xs transition-all",
-                                                        session.id === activeSession?.id ? "border-green-500/30 bg-green-500/5" : "border-border/30 bg-muted/40"
+                                                        "flex items-center justify-between p-2 rounded-xl border text-xs transition-all",
+                                                        session.id === activeSession?.id ? "border-green-500/30 bg-green-500/5" : "border-border/30 bg-muted/30"
                                                     )}>
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <div className={cn(
@@ -757,7 +839,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-1.5 shrink-0">
-                                                            <span className="text-[10px] font-bold text-foreground">
+                                                            <span className="text-[10px] font-bold text-foreground font-mono">
                                                                 RD$ {getSessionTotal(session).toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                             </span>
                                                             {session.id !== activeSession?.id && (
@@ -769,7 +851,6 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                                         e.stopPropagation();
                                                                         if (!confirm(`¿Cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
                                                                         try {
-                                                                            const sessionUserId = session.opener?.id || (typeof session.opened_by === 'object' && session.opened_by !== null ? session.opened_by.id : session.opened_by) || session.user_id;
                                                                             const { error } = await supabase
                                                                                 .from('cash_sessions')
                                                                                 .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: currentUserProfile?.id })
@@ -788,89 +869,11 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                             )}
                                                         </div>
                                                     </div>
-                                                ))
-                                            ) : (
-                                                <p className="text-xs text-muted-foreground text-center py-4 italic">Sin otros turnos activos.</p>
-                                            )
-                                        ) : (
-                                            /* Tab Movimientos */
-                                            sessionMovements.length > 0 ? (
-                                                sessionMovements.map((m: any) => {
-                                                    const isDeposit = m.type === 'deposit';
-                                                    return (
-                                                        <div 
-                                                            key={m.id} 
-                                                            className={cn(
-                                                                "flex items-center justify-between p-2 rounded-lg border text-xs transition-all",
-                                                                isDeposit ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"
-                                                            )}
-                                                        >
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                <div className={cn(
-                                                                    "h-6 w-6 rounded-full flex items-center justify-center shrink-0",
-                                                                    isDeposit ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-                                                                )}>
-                                                                    {isDeposit ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                                                                </div>
-                                                                <div className="truncate flex flex-col">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <span className="font-bold truncate text-[11px]">{m.reason || (isDeposit ? 'Entrada de caja' : 'Salida de caja')}</span>
-                                                                        <span className={cn(
-                                                                            "text-[7px] px-1 rounded-full font-black uppercase",
-                                                                            isDeposit ? "bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-500/20 text-red-600 dark:text-red-400"
-                                                                        )}>
-                                                                            {isDeposit ? 'Entrada' : 'Salida'}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 text-[8px] text-muted-foreground">
-                                                                        <span>{m.profile?.full_name || 'Cajero'}</span>
-                                                                        <span>•</span>
-                                                                        <span>{format(new Date(m.created_at), 'hh:mm a', { locale: es })}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="shrink-0 text-right">
-                                                                <span className={cn(
-                                                                    "text-[11px] font-black",
-                                                                    isDeposit ? "text-green-500" : "text-red-500"
-                                                                )}>
-                                                                    {isDeposit ? '+' : '-'} RD$ {Number(m.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center py-6 text-muted-foreground space-y-1">
-                                                    <Wallet className="h-6 w-6 opacity-40 mb-1 text-muted-foreground" />
-                                                    <p className="text-xs italic">Sin entradas ni salidas en este turno.</p>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-
-                                    {card2Tab === 'shifts' ? (
-                                        sessionMovements.length > 0 && (
-                                            <div className="pt-2 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
-                                                <span className="cursor-pointer hover:underline text-amber-500 font-semibold" onClick={() => setCard2Tab('movements')}>
-                                                    Ver movimientos ({sessionMovements.length}):
-                                                </span>
-                                                <span className="font-bold text-foreground">
-                                                    +RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 0 })} / -RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 0 })}
-                                                </span>
+                                                ))}
                                             </div>
-                                        )
-                                    ) : (
-                                        <div className="pt-2 border-t border-border/30 flex items-center justify-between text-[9px] text-muted-foreground shrink-0">
-                                            <span className="text-green-500 font-semibold">
-                                                Entradas: RD$ {stats.deposits.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                            </span>
-                                            <span className="text-red-500 font-semibold">
-                                                Salidas: RD$ {stats.withdrawals.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
+                                        </TabsContent>
                                     )}
-                                </div>
+                                </Tabs>
                             </div>
 
                             {/* Bottom Hero: Expected Cash */}
