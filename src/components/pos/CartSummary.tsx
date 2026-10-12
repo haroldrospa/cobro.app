@@ -31,6 +31,7 @@ interface CartSummaryProps {
   loyaltyRedeemedPoints?: number;
   selectedTable?: string | null;
   onOpenTableSelector?: () => void;
+  onClearTable?: () => void;
 }
 
 const CartSummary: React.FC<CartSummaryProps> = ({
@@ -54,6 +55,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   loyaltyRedeemedPoints = 0,
   selectedTable,
   onOpenTableSelector,
+  onClearTable,
 }) => {
   const { companyInfo } = usePrintSettings();
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
@@ -111,44 +113,77 @@ const CartSummary: React.FC<CartSummaryProps> = ({
         </div>
 
         {/* Active order or table badge */}
-        <div className="flex items-center justify-between gap-1.5 flex-wrap">
-          {currentOrderInfo ? (
-            <div className="flex items-center gap-1.5">
-              <Badge variant="secondary" className="flex items-center gap-1 text-xs py-0 h-5">
-                <ClipboardList className="h-2.5 w-2.5" />
-                {currentOrderInfo.orderNumber} · {currentOrderInfo.customerName}
-                {selectedTable && ` · ${selectedTable}`}
-              </Badge>
-              {onClearOrder && (
-                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClearOrder} title="Descartar pedido">
+        {selectedTable ? (
+          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="p-1 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+                <Utensils className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex items-center gap-1.5 truncate">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mesa:</span>
+                <span className="text-xs font-black text-foreground truncate">{selectedTable}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {onOpenTableSelector && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onOpenTableSelector}
+                  className="h-6 px-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                  title="Cambiar mesa"
+                >
+                  Cambiar
+                </Button>
+              )}
+              {onClearTable && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClearTable}
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  title="Quitar mesa asignada"
+                >
                   <X className="h-3 w-3" />
                 </Button>
               )}
             </div>
-          ) : (
-            <div />
-          )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-1.5 flex-wrap">
+            {currentOrderInfo ? (
+              <div className="flex items-center gap-1.5">
+                <Badge variant="secondary" className="flex items-center gap-1 text-xs py-0 h-5">
+                  <ClipboardList className="h-2.5 w-2.5" />
+                  {currentOrderInfo.orderNumber} · {currentOrderInfo.customerName}
+                </Badge>
+                {onClearOrder && (
+                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClearOrder} title="Descartar pedido">
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div />
+            )}
 
-          {/* Botón de Asignación de Mesa (Restaurante) */}
-          {isRestaurant && onOpenTableSelector && (
-            <Button
-              type="button"
-              variant={selectedTable ? "secondary" : "outline"}
-              size="sm"
-              onClick={onOpenTableSelector}
-              className={cn(
-                "h-6 px-2 text-[11px] font-bold rounded-md gap-1 transition-all ml-auto",
-                selectedTable
-                  ? "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
-                  : "border-dashed hover:border-amber-500 hover:text-amber-500"
-              )}
-            >
-              <Utensils className="h-3 w-3" />
-              <span>{selectedTable || 'Asignar Mesa'}</span>
-            </Button>
-          )}
-        </div>
-
+            {/* Botón de Asignación de Mesa */}
+            {onOpenTableSelector && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenTableSelector}
+                className="h-6 px-2 text-[11px] font-bold rounded-md gap-1 transition-all ml-auto border-dashed hover:border-amber-500 hover:text-amber-500"
+              >
+                <Utensils className="h-3 w-3" />
+                <span>Asignar Mesa</span>
+              </Button>
+            )}
+          </div>
+        )}
 
       </CardHeader>
 
@@ -171,9 +206,33 @@ const CartSummary: React.FC<CartSummaryProps> = ({
           className="h-full overflow-y-auto space-y-1.5 relative z-10 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent pr-1 py-2"
         >
           {cart.length === 0 ? (
-            <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
-              {!companyLogo && <ShoppingCart className="h-20 w-20 mx-auto mb-3 opacity-15" />}
-              <p className="text-sm text-muted-foreground/60">Agrega productos al carrito</p>
+            <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full p-4">
+              {selectedTable ? (
+                <div className="space-y-2.5 animate-in fade-in duration-300">
+                  <div className="relative inline-flex mx-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-amber-500">
+                      <Utensils className="h-7 w-7" />
+                    </div>
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-foreground">
+                      {selectedTable}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5 max-w-[220px] mx-auto">
+                      Mesa seleccionada. Agrega productos del catálogo para esta comanda.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {!companyLogo && <ShoppingCart className="h-20 w-20 mx-auto mb-3 opacity-15" />}
+                  <p className="text-sm text-muted-foreground/60">Agrega productos al carrito</p>
+                </>
+              )}
             </div>
           ) : (
             cart.map(item => (

@@ -16,7 +16,7 @@ import {
   Maximize, Minimize, Menu, Home, Package, Users, FileText, BarChart,
   Settings as SettingsIcon, Store, LogOut, Save, ClipboardList, Receipt,
   RefreshCcw, HandCoins, Lock, Unlock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
-  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils
+  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils, X
 } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
@@ -1958,8 +1958,11 @@ const POSContent: React.FC = () => {
       onShowWebSales={memoHandleShowWebSales}
       onToggleFullscreen={memoHandleToggleFullscreen}
       onGenerateServiceInvoice={() => setShowServiceInvoiceDialog(true)}
+      selectedTable={selectedTable}
+      onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+      onClearTable={() => setSelectedTable(null)}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, selectedTable]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
@@ -2133,6 +2136,9 @@ const POSContent: React.FC = () => {
               orderType={posOrderType}
               onOrderTypeChange={setPosOrderType}
               onSaveOrder={memoHandleSaveOrder}
+              selectedTable={selectedTable}
+              onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+              onClearTable={() => setSelectedTable(null)}
             />
           }
           paymentComponent={
@@ -2542,6 +2548,9 @@ const POSContent: React.FC = () => {
                     orderType={posOrderType}
                     onOrderTypeChange={setPosOrderType}
                     cartTotal={parseFloat(totals.total) || 0}
+                    selectedTable={selectedTable}
+                    onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+                    onClearTable={() => setSelectedTable(null)}
                   />
                 </div>
               </div>
@@ -2582,6 +2591,9 @@ const POSContent: React.FC = () => {
                   isElectronic={isElectronicActive}
                   hasActiveSession={!!activeSession}
                   onOpenRegister={handleOpenRegister}
+                  isWaiter={isWaiter}
+                  onSaveOrder={memoHandleSaveOrder}
+                  selectedTable={selectedTable}
                 />
               </div>
             </>
@@ -2677,6 +2689,7 @@ const POSContent: React.FC = () => {
                     cartTotal={parseFloat(totals.total) || 0}
                     selectedTable={selectedTable}
                     onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+                    onClearTable={() => setSelectedTable(null)}
                   />
                 </div>
 
@@ -3079,6 +3092,9 @@ interface POSActionButtonsProps {
   onShowWebSales: () => void;
   onToggleFullscreen: () => void;
   onGenerateServiceInvoice?: () => void;
+  selectedTable?: string | null;
+  onOpenTableSelector?: () => void;
+  onClearTable?: () => void;
 }
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
@@ -3094,9 +3110,37 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
   onShowWebSales,
   onToggleFullscreen,
   onGenerateServiceInvoice,
+  selectedTable,
+  onOpenTableSelector,
+  onClearTable,
 }) {
   return (
     <div className="flex items-center gap-1.5">
+      {/* Indicador de Mesa Seleccionada en Barra Superior */}
+      {selectedTable && (
+        <div className="flex items-center h-8 pl-2 pr-1 rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold shadow-xs gap-1.5 animate-in fade-in">
+          <button
+            type="button"
+            onClick={onOpenTableSelector}
+            className="flex items-center gap-1.5 hover:underline focus:outline-none"
+            title="Mesa activa - clic para cambiar de mesa"
+          >
+            <Utensils className="h-3.5 w-3.5 text-amber-500" />
+            <span>{selectedTable}</span>
+          </button>
+          {onClearTable && (
+            <button
+              type="button"
+              onClick={onClearTable}
+              className="p-1 rounded hover:bg-amber-500/20 text-muted-foreground hover:text-destructive transition-colors ml-0.5"
+              title="Quitar mesa asignada"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+
       {onGenerateServiceInvoice && !isServices && (
         <Button
           variant={isServices ? "default" : "outline"}

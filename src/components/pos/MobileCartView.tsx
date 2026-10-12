@@ -22,6 +22,9 @@ interface MobileCartViewProps {
   orderType?: 'dine-in' | 'takeout';
   onOrderTypeChange?: (type: 'dine-in' | 'takeout') => void;
   onSaveOrder?: () => void;
+  selectedTable?: string | null;
+  onOpenTableSelector?: () => void;
+  onClearTable?: () => void;
 }
 
 const MobileCartView: React.FC<MobileCartViewProps> = ({
@@ -39,6 +42,9 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
   orderType = 'dine-in',
   onOrderTypeChange,
   onSaveOrder,
+  selectedTable,
+  onOpenTableSelector,
+  onClearTable,
 }) => {
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,30 +56,44 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
   if (cart.length === 0) {
     return (
       <div className="h-[60vh] mobile-landscape:h-auto flex flex-col items-center justify-center p-8 mobile-landscape:py-4 mobile-landscape:px-2 text-center animate-in fade-in zoom-in duration-700">
-        <div className="relative mb-10 mobile-landscape:mb-2 group">
+        <div className="relative mb-8 mobile-landscape:mb-2 group">
           {/* Glowing backdrops */}
-          <div className="absolute inset-0 bg-green-500/20 blur-[80px] rounded-full animate-pulse opacity-50" />
-          <div className="absolute -inset-4 bg-green-500/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          <div className="absolute inset-0 bg-amber-500/20 blur-[80px] rounded-full animate-pulse opacity-50" />
+          <div className="absolute -inset-4 bg-amber-500/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
           
           {/* Main icon container */}
-          <div className="relative bg-card rounded-[3rem] mobile-landscape:rounded-2xl p-10 mobile-landscape:p-3 border border-border shadow-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
-            <PackageSearch className="h-20 w-20 mobile-landscape:h-8 mobile-landscape:w-8 text-green-500/40 relative z-10" />
-            <div className="absolute -top-2 -right-2 bg-green-500 h-8 w-8 mobile-landscape:h-5 mobile-landscape:w-5 rounded-xl mobile-landscape:rounded-md flex items-center justify-center shadow-lg shadow-green-500/40 border border-white/20">
+          <div className="relative bg-card rounded-[3rem] mobile-landscape:rounded-2xl p-10 mobile-landscape:p-3 border border-border shadow-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
+            {selectedTable ? (
+              <Utensils className="h-20 w-20 mobile-landscape:h-8 mobile-landscape:w-8 text-amber-500 relative z-10" />
+            ) : (
+              <PackageSearch className="h-20 w-20 mobile-landscape:h-8 mobile-landscape:w-8 text-green-500/40 relative z-10" />
+            )}
+            <div className="absolute -top-2 -right-2 bg-amber-500 h-8 w-8 mobile-landscape:h-5 mobile-landscape:w-5 rounded-xl mobile-landscape:rounded-md flex items-center justify-center shadow-lg shadow-amber-500/40 border border-white/20">
               <ShoppingCart className="h-4 w-4 mobile-landscape:h-2.5 mobile-landscape:w-2.5 text-white" />
             </div>
           </div>
         </div>
 
-        <h3 className="text-3xl mobile-landscape:text-base font-black text-foreground uppercase tracking-tighter italic mb-3 mobile-landscape:mb-1">
-          Carrito Vacío
+        <h3 className="text-2xl mobile-landscape:text-base font-black text-foreground uppercase tracking-tight mb-2 mobile-landscape:mb-1">
+          {selectedTable ? selectedTable : 'Carrito Vacío'}
         </h3>
-        <div className="space-y-1 max-w-[240px]">
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-            Tu orden está esperando
+        <div className="space-y-2 max-w-[260px]">
+          <p className="text-xs font-bold text-muted-foreground">
+            {selectedTable ? 'Mesa asignada para este pedido' : 'Tu orden está esperando'}
           </p>
-          <p className="text-[10px] font-medium text-emerald-500/70 uppercase tracking-widest leading-relaxed">
-            Agrega productos desde el catálogo para iniciar una nueva venta
+          <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 leading-relaxed">
+            {selectedTable ? 'Agrega productos del catálogo para esta mesa' : 'Agrega productos desde el catálogo para iniciar una nueva venta'}
           </p>
+          {selectedTable && onClearTable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearTable}
+              className="text-xs text-muted-foreground hover:text-destructive h-8 px-3 rounded-xl mt-2"
+            >
+              Liberar mesa
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -82,7 +102,36 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
   return (
     <div className="flex-1 h-full flex flex-col bg-transparent min-h-0">
       {/* Header Info */}
-      <div className="px-4 py-3 shrink-0">
+      <div className="px-4 py-3 shrink-0 space-y-2">
+        {selectedTable && (
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-2">
+              <Utensils className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-xs font-black">{selectedTable}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {onOpenTableSelector && (
+                <button
+                  type="button"
+                  onClick={onOpenTableSelector}
+                  className="text-[11px] font-bold hover:underline px-1.5 py-0.5"
+                >
+                  Cambiar
+                </button>
+              )}
+              {onClearTable && (
+                <button
+                  type="button"
+                  onClick={onClearTable}
+                  className="p-1 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {isInvoiceLimitReached && (
           <div className="bg-destructive/10 border border-destructive/20 p-2 rounded-xl mb-3 flex items-center gap-2">
             <div className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
