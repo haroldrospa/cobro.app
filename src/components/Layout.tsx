@@ -331,52 +331,62 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         )}
 
         <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 h-13 sm:h-16">
-          {/* Left: Page Title / Navigation Menu (Mobile & Desktop) */}
+          {/* Left: Page Title / Navigation Menu (Desktop only, hidden on mobile) */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 px-2.5 sm:px-3 h-10 hover:bg-muted/70 rounded-xl cursor-pointer">
-                  <Menu className="h-4 w-4 shrink-0" />
-                  <span className="font-bold text-sm truncate max-w-[140px] sm:max-w-none">{getCurrentPageName()}</span>
-                  <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto rounded-xl shadow-xl p-1.5 z-50">
-                {navigation.map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={item.name}
-                      onSelect={() => navigate(item.href)}
-                      onClick={() => navigate(item.href)}
-                      onMouseEnter={() => handlePrefetch(item.href)}
-                      className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-primary/10 text-primary font-bold' : ''
-                        }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span>{item.name}</span>
-                    </DropdownMenuItem>
-                  );
-                })}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={handleLogout}
-                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
-                >
-                  <LogOut className="h-4 w-4 shrink-0" />
-                  <span>Cerrar Sesión</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="hidden md:flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 px-2.5 sm:px-3 h-10 hover:bg-muted/70 rounded-xl cursor-pointer">
+                    <Menu className="h-4 w-4 shrink-0" />
+                    <span className="font-bold text-sm truncate max-w-[140px] sm:max-w-none">{getCurrentPageName()}</span>
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-popover max-h-[80vh] overflow-y-auto rounded-xl shadow-xl p-1.5 z-50">
+                  {navigation.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={item.name}
+                        onSelect={() => navigate(item.href)}
+                        onClick={() => navigate(item.href)}
+                        onMouseEnter={() => handlePrefetch(item.href)}
+                        className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer rounded-lg hover:bg-accent hover:text-accent-foreground ${location.pathname === item.href ? 'bg-primary/10 text-primary font-bold' : ''
+                          }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{item.name}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={handleLogout}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                  >
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    <span>Cerrar Sesión</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* En móvil: mostrar el nombre del negocio de forma limpia y directa */}
+            {companyName && (
+              <div className="flex md:hidden items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-xs truncate max-w-[200px]">
+                <Store className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate">{companyName}</span>
+              </div>
+            )}
           </div>
 
           {/* Right Side: Store Badge & User / Profile Actions */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {profile && (
               <>
-                {/* Store Pill — sin recuadro/fondo, solo texto con acento */}
+                {/* Store Pill — visible solo en desktop para no duplicar en móvil */}
                 {companyName && (
-                  <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs">
+                  <div className="hidden md:flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] sm:text-xs">
                     <Store className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     <span className="max-w-[110px] sm:max-w-[180px] truncate">{companyName}</span>
                   </div>
