@@ -2218,6 +2218,7 @@ const POSContent: React.FC = () => {
               onClose={() => setShowOpenAccountsDialog(false)}
               onLoadToCart={handleLoadWebOrder}
               currentLoadedOrderId={cart.length > 0 ? currentWebOrderId : null}
+              onSelectTable={(tbl) => setSelectedTable(tbl)}
             />
           </Suspense>
         )}
@@ -2764,6 +2765,7 @@ const POSContent: React.FC = () => {
               isOpen={showOpenAccountsDialog}
               onClose={() => setShowOpenAccountsDialog(false)}
               onLoadToCart={handleLoadWebOrder}
+              onSelectTable={(tbl) => setSelectedTable(tbl)}
             />
           </Suspense>
         )}

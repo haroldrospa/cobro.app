@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils } from 'lucide-react';
+import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -34,14 +35,30 @@ const displayNotes = (notes?: string | null) => (notes || '')
   .replace(/\[DELIVERY\]/g, '')
   .trim();
 
+interface TableSection {
+  id: string;
+  name: string;
+  tables: string[];
+}
+
+const DEFAULT_TABLE_SECTIONS: TableSection[] = [
+  { id: 'salon', name: 'Salón', tables: ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4', 'Mesa 5', 'Mesa 6', 'Mesa 7', 'Mesa 8'] },
+  { id: 'barra', name: 'Barra', tables: ['Barra 1', 'Barra 2', 'Barra 3', 'Barra 4'] },
+  { id: 'terraza', name: 'Terraza', tables: ['Terraza 1', 'Terraza 2', 'Terraza 3', 'Terraza 4'] },
+];
+
 interface OpenAccountsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onLoadToCart?: (items: CartItem[], orderId: string, customerName: string, orderNumber: string, source: 'pos' | 'web', notes?: string) => void;
   currentLoadedOrderId?: string | null;
+  onSelectTable?: (tableName: string) => void;
 }
 
-const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose, onLoadToCart, currentLoadedOrderId }) => {
+const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose, onLoadToCart, currentLoadedOrderId, onSelectTable }) => {
+  const [activeMainTab, setActiveMainTab] = useState<'orders' | 'tables'>('orders');
+  const [selectedZone, setSelectedZone] = useState<string>('all');
+  const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const { toast } = useToast();
@@ -344,6 +361,81 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   const selectedOrder = filteredOrders.find((o: any) => o.id === selectedOrderId);
   const totalAmount = filteredOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
 
+  // ─── Tables State & Computations ───
+  const tableToOrderMap = React.useMemo(() => {
+    const map = new Map<string, any>();
+    filteredOrders.forEach((order: any) => {
+      const tbl = extractTableFromNotes(order.notes);
+      if (tbl) {
+        map.set(tbl.toLowerCase().trim(), order);
+      }
+    });
+    return map;
+  }, [filteredOrders]);
+
+  const allDefaultTablesLower = React.useMemo(() => {
+    const set = new Set<string>();
+    DEFAULT_TABLE_SECTIONS.forEach(sec => sec.tables.forEach(t => set.add(t.toLowerCase().trim())));
+    return set;
+  }, []);
+
+  const customOccupiedTables = React.useMemo(() => {
+    const custom: string[] = [];
+    filteredOrders.forEach((order: any) => {
+      const tbl = extractTableFromNotes(order.notes);
+      if (tbl && !allDefaultTablesLower.has(tbl.toLowerCase().trim()) && !custom.includes(tbl)) {
+        custom.push(tbl);
+      }
+    });
+    return custom;
+  }, [filteredOrders, allDefaultTablesLower]);
+
+  const allSections = React.useMemo(() => {
+    const list = [...DEFAULT_TABLE_SECTIONS];
+    if (customOccupiedTables.length > 0) {
+      list.push({ id: 'otras', name: 'Otras / VIP', tables: customOccupiedTables });
+    }
+    return list;
+  }, [customOccupiedTables]);
+
+  const allTablesList = React.useMemo(() => {
+    return allSections.flatMap(s => s.tables);
+  }, [allSections]);
+
+  const occupiedTablesCount = React.useMemo(() => {
+    return allTablesList.filter(t => tableToOrderMap.has(t.toLowerCase().trim())).length;
+  }, [allTablesList, tableToOrderMap]);
+
+  const freeTablesCount = Math.max(0, allTablesList.length - occupiedTablesCount);
+
+  const tablesTotalAmount = React.useMemo(() => {
+    let sum = 0;
+    allTablesList.forEach(t => {
+      const ord = tableToOrderMap.get(t.toLowerCase().trim());
+      if (ord) sum += (ord.total || 0);
+    });
+    return sum;
+  }, [allTablesList, tableToOrderMap]);
+
+  const handleSelectFreeTable = (tableName: string) => {
+    if (onSelectTable) {
+      onSelectTable(tableName);
+      toast({
+        title: "Mesa asignada",
+        description: `Se asignó ${tableName} al carrito actual`,
+      });
+      onClose();
+    }
+  };
+
+  const getTimeElapsed = (createdAt: string) => {
+    try {
+      return formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: es });
+    } catch {
+      return '';
+    }
+  };
+
   // ─── Merge badge for an order ───
   const getMergeLabel = (orderId: string) => {
     if (!mergeMode) return null;
@@ -487,43 +579,230 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     );
   };
 
+  const renderTableCard = (tableName: string) => {
+    const order = tableToOrderMap.get(tableName.toLowerCase().trim());
+    const isOccupied = !!order;
+    const isSelected = order && selectedOrderId === order.id;
+
+    if (isOccupied) {
+      const itemCount = order.open_order_items?.length || 0;
+      const timeElapsed = getTimeElapsed(order.created_at);
+
+      return (
+        <div
+          key={tableName}
+          onClick={() => setSelectedOrderId(order.id)}
+          onDoubleClick={() => handleLoadToCart(order)}
+          className={cn(
+            "group relative flex flex-col justify-between p-3.5 rounded-2xl border transition-all duration-150 cursor-pointer gap-2.5",
+            isSelected
+              ? "border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/10 shadow-md"
+              : "border-amber-500/30 bg-card hover:border-amber-500/60 hover:bg-amber-500/[0.04] shadow-xs"
+          )}
+        >
+          {/* Top Bar of Card */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                <Utensils className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-sm text-foreground truncate">{tableName}</h4>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                  <User className="h-3 w-3 shrink-0 opacity-70" />
+                  <span className="truncate max-w-[120px] font-medium">{order.customer_name || 'Sin nombre'}</span>
+                </div>
+              </div>
+            </div>
+
+            <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] px-2 py-0.5 shrink-0 font-semibold shadow-xs">
+              Ocupada
+            </Badge>
+          </div>
+
+          {/* Details & Total */}
+          <div className="bg-muted/40 rounded-xl p-2.5 border border-border/40 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground text-[11px] font-medium flex items-center gap-1">
+                <Package className="h-3 w-3 opacity-70" />
+                {itemCount} {itemCount === 1 ? 'producto' : 'productos'}
+              </span>
+              <span className="text-base font-extrabold text-amber-700 dark:text-amber-400 tabular-nums">
+                ${(order.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/30">
+              <span className="font-mono text-[10px] text-muted-foreground/80">{order.order_number}</span>
+              {timeElapsed && (
+                <span className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-300 font-medium">
+                  <Clock className="h-3 w-3 opacity-80" />
+                  {timeElapsed}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Card Actions */}
+          <div className="flex items-center justify-end gap-1.5 pt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg gap-1"
+              onClick={(e) => handlePrint(e, order)}
+              title="Imprimir Pre-cuenta"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span className="text-[11px]">Pre-cuenta</span>
+            </Button>
+
+            <Button
+              size="sm"
+              className="h-8 px-3 text-xs font-semibold gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLoadToCart(order);
+              }}
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span>Cargar</span>
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Mesa Libre
+    return (
+      <div
+        key={tableName}
+        onClick={() => onSelectTable && handleSelectFreeTable(tableName)}
+        className={cn(
+          "group relative flex flex-col justify-between p-3.5 rounded-2xl border transition-all duration-150 gap-3",
+          onSelectTable ? "cursor-pointer hover:border-emerald-500/60 hover:bg-emerald-500/[0.04]" : "",
+          "border-border/60 bg-card/60 hover:shadow-xs"
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+              <Utensils className="h-4 w-4" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-foreground">{tableName}</h4>
+              <span className="text-[11px] text-muted-foreground">Mesa disponible</span>
+            </div>
+          </div>
+
+          <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10 text-[10px] px-2 py-0.5 font-semibold">
+            Libre
+          </Badge>
+        </div>
+
+        <div className="pt-2 border-t border-border/30 flex items-center justify-between">
+          <span className="text-[11px] text-muted-foreground">Sin comanda abierta</span>
+          {onSelectTable && (
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline flex items-center gap-1">
+              Asignar al POS
+              <ArrowRight className="h-3 w-3" />
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Filtrar mesas según la zona y búsqueda
+  const filteredTablesToDisplay = React.useMemo(() => {
+    let list: string[] = [];
+    if (selectedZone === 'all') {
+      list = allTablesList;
+    } else {
+      const sec = allSections.find(s => s.id === selectedZone);
+      list = sec ? sec.tables : [];
+    }
+
+    if (tableSearchQuery.trim()) {
+      const q = tableSearchQuery.toLowerCase().trim();
+      list = list.filter(t => {
+        const order = tableToOrderMap.get(t.toLowerCase().trim());
+        const customerName = (order?.customer_name || '').toLowerCase();
+        const orderNumber = (order?.order_number || '').toLowerCase();
+        return t.toLowerCase().includes(q) || customerName.includes(q) || orderNumber.includes(q);
+      });
+    }
+
+    return list;
+  }, [selectedZone, allTablesList, allSections, tableSearchQuery, tableToOrderMap]);
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full h-[88vh] sm:h-[82vh] flex flex-col p-0 overflow-hidden rounded-2xl border-border/60 shadow-2xl">
-          {/* Minimalist Top Header */}
-          <DialogHeader className="px-5 py-4 border-b border-border/40 bg-card/50">
+          {/* Top Header & Tab Switcher */}
+          <DialogHeader className="px-5 py-3.5 border-b border-border/40 bg-card/60">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              {/* Title & Count */}
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <ClipboardList className="h-4 w-4" />
-                  </div>
-                  <DialogTitle className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-                    <span>Pedidos Guardados</span>
+              {/* Navigation Tabs Pill */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/40">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveMainTab('orders');
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                      activeMainTab === 'orders'
+                        ? "bg-background text-foreground shadow-xs border border-border/60"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    <span>Cuentas Guardadas</span>
                     {filteredOrders.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                      <span className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
+                        activeMainTab === 'orders' ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
                         {filteredOrders.length}
                       </span>
                     )}
-                    {mergeMode && (
-                      <Badge className="bg-orange-500 text-white text-[10px] ml-1">Modo Unir</Badge>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (mergeMode) resetMergeMode();
+                      setActiveMainTab('tables');
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                      activeMainTab === 'tables'
+                        ? "bg-background text-foreground shadow-xs border border-border/60"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
-                  </DialogTitle>
+                  >
+                    <Utensils className="h-3.5 w-3.5" />
+                    <span>Mesas</span>
+                    <span className={cn(
+                      "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
+                      occupiedTablesCount > 0
+                        ? "bg-amber-500 text-white"
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {occupiedTablesCount}/{allTablesList.length}
+                    </span>
+                  </button>
                 </div>
-                <DialogDescription className="text-xs text-muted-foreground pl-10">
-                  {mergeMode
-                    ? mergeTarget
-                      ? `Destino: ${targetOrder?.customer_name || '...'} — Selecciona cuentas a fusionar`
-                      : 'Toca la cuenta DESTINO (que recibirá los productos)'
-                    : 'Toca para seleccionar o doble clic para cargar directo'}
-                </DialogDescription>
+
+                {mergeMode && (
+                  <Badge className="bg-orange-500 text-white text-[10px] ml-1">Modo Unir</Badge>
+                )}
               </div>
 
-              {/* Actions & Summary Header Badge */}
+              {/* Actions & Summary Right */}
               <div className="flex items-center gap-2 self-end sm:self-auto sm:pr-8">
-                {filteredOrders.length > 0 && !mergeMode && (
+                {activeMainTab === 'orders' && filteredOrders.length > 0 && !mergeMode && (
                   <>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/60 border border-border/40 text-xs">
                       <span className="text-muted-foreground font-medium">Total:</span>
@@ -557,6 +836,15 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                   </>
                 )}
 
+                {activeMainTab === 'tables' && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+                    <span className="text-muted-foreground font-medium">Consumo Mesas:</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-400">
+                      ${tablesTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+
                 {mergeMode && (
                   <Button 
                     variant="ghost" 
@@ -570,6 +858,19 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                 )}
               </div>
             </div>
+
+            {/* Sub-description */}
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              {activeMainTab === 'orders' ? (
+                mergeMode
+                  ? mergeTarget
+                    ? `Destino: ${targetOrder?.customer_name || '...'} — Selecciona cuentas a fusionar`
+                    : 'Toca la cuenta DESTINO (que recibirá los productos)'
+                  : 'Toca para seleccionar o doble clic para cargar directo al POS'
+              ) : (
+                'Visualiza el estado de las mesas en tiempo real. Toca una mesa libre para asignarla o una ocupada para ver su cuenta.'
+              )}
+            </DialogDescription>
           </DialogHeader>
 
           {/* Content Area */}
@@ -579,26 +880,131 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                 <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span className="text-xs">Cargando pedidos guardados...</span>
               </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mb-3 text-muted-foreground">
-                  <ClipboardList className="h-7 w-7 stroke-[1.5]" />
+            ) : activeMainTab === 'orders' ? (
+              /* TAB 1: CUENTAS GUARDADAS */
+              filteredOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mb-3 text-muted-foreground">
+                    <ClipboardList className="h-7 w-7 stroke-[1.5]" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">No hay pedidos guardados</h3>
+                  <p className="text-xs text-muted-foreground max-w-[260px]">
+                    Cuando pongas cuentas o ventas en espera desde el POS, aparecerán listadas aquí.
+                  </p>
                 </div>
-                <h3 className="text-sm font-semibold text-foreground mb-1">No hay pedidos guardados</h3>
-                <p className="text-xs text-muted-foreground max-w-[260px]">
-                  Cuando pongas cuentas o ventas en espera desde el POS, aparecerán listadas aquí.
-                </p>
-              </div>
+              ) : (
+                <ScrollArea className="flex-1 -mr-2 pr-3">
+                  <div className="space-y-2.5 pb-2">
+                    {filteredOrders.map((order: any) => renderOrderRow(order))}
+                  </div>
+                </ScrollArea>
+              )
             ) : (
-              <ScrollArea className="flex-1 -mr-2 pr-3">
-                <div className="space-y-2.5 pb-2">
-                  {filteredOrders.map((order: any) => renderOrderRow(order))}
+              /* TAB 2: MESAS */
+              <div className="flex flex-col flex-1 min-h-0 gap-3.5">
+                {/* Metrics and Filters Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+                  {/* Zone Filters */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedZone('all')}
+                      className={cn(
+                        "px-3 py-1 rounded-lg text-xs font-bold transition-all border whitespace-nowrap",
+                        selectedZone === 'all'
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                          : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Todas ({allTablesList.length})
+                    </button>
+                    {allSections.map(sec => {
+                      const secOccupied = sec.tables.filter(t => tableToOrderMap.has(t.toLowerCase().trim())).length;
+                      return (
+                        <button
+                          key={sec.id}
+                          type="button"
+                          onClick={() => setSelectedZone(sec.id)}
+                          className={cn(
+                            "px-3 py-1 rounded-lg text-xs font-bold transition-all border whitespace-nowrap flex items-center gap-1.5",
+                            selectedZone === sec.id
+                              ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                              : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <span>{sec.name}</span>
+                          <span className={cn(
+                            "px-1 py-0.2 rounded-full text-[10px] font-extrabold",
+                            secOccupied > 0 ? "bg-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground"
+                          )}>
+                            {secOccupied}/{sec.tables.length}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Search Input */}
+                  <div className="relative w-full sm:w-56 shrink-0">
+                    <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-60" />
+                    <Input
+                      placeholder="Buscar mesa o cliente..."
+                      value={tableSearchQuery}
+                      onChange={(e) => setTableSearchQuery(e.target.value)}
+                      className="pl-8 h-8 text-xs bg-card border-border/60 rounded-xl"
+                    />
+                    {tableSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setTableSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </ScrollArea>
+
+                {/* Status Bar */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 shrink-0">
+                  <div className="p-2.5 rounded-xl border border-border/40 bg-card/60 flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground font-medium">Total Mesas</span>
+                    <span className="text-xs font-bold text-foreground">{allTablesList.length}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">Libres</span>
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{freeTablesCount}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-center justify-between">
+                    <span className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">Ocupadas</span>
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">{occupiedTablesCount}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl border border-border/40 bg-card/60 hidden sm:flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground font-medium">En Cuentas</span>
+                    <span className="text-xs font-bold text-primary">
+                      ${tablesTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tables Grid */}
+                <ScrollArea className="flex-1 -mr-2 pr-3">
+                  {filteredTablesToDisplay.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                      <Utensils className="h-8 w-8 stroke-[1.5] mb-2 opacity-40" />
+                      <p className="text-xs font-medium">No se encontraron mesas para el filtro actual</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pb-3">
+                      {filteredTablesToDisplay.map((tbl) => renderTableCard(tbl))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
             )}
 
-            {/* ─── Merge summary bar ─── */}
-            {mergeMode && mergeTarget && mergeSources.length > 0 && (
+            {/* ─── Merge summary bar (solo si está en orders) ─── */}
+            {activeMainTab === 'orders' && mergeMode && mergeTarget && mergeSources.length > 0 && (
               <div className="mt-3 p-3 rounded-xl border border-orange-500/30 bg-orange-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="text-xs text-foreground flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-orange-500">{sourceOrders.length} cuenta(s)</span>
@@ -625,15 +1031,27 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
           </div>
 
           {/* Minimalist Bottom Footer */}
-          {!mergeMode && filteredOrders.length > 0 && (
+          {!mergeMode && (
             <div className="px-5 py-3.5 border-t border-border/40 bg-card/80 flex items-center justify-between gap-3">
               <div className="text-xs text-muted-foreground truncate">
-                {selectedOrder ? (
-                  <span>
-                    Seleccionado: <strong className="text-foreground">{selectedOrder.order_number}</strong> ({selectedOrder.customer_name})
-                  </span>
+                {activeMainTab === 'orders' ? (
+                  selectedOrder ? (
+                    <span>
+                      Seleccionado: <strong className="text-foreground">{selectedOrder.order_number}</strong> ({selectedOrder.customer_name})
+                    </span>
+                  ) : (
+                    <span>Selecciona un pedido para cargarlo</span>
+                  )
                 ) : (
-                  <span>Selecciona un pedido para cargarlo</span>
+                  <span>
+                    {selectedOrder ? (
+                      <span>
+                        Comanda seleccionada: <strong className="text-foreground">{selectedOrder.order_number}</strong> ({selectedOrder.customer_name})
+                      </span>
+                    ) : (
+                      <span>Toca una mesa ocupada para cargarla o una mesa libre para asignarla</span>
+                    )}
+                  </span>
                 )}
               </div>
 
@@ -641,15 +1059,26 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                 <Button variant="ghost" size="sm" onClick={onClose} className="h-9 px-3 text-xs rounded-lg">
                   Cerrar
                 </Button>
-                <Button
-                  onClick={() => handleLoadToCart()}
-                  disabled={!selectedOrder}
-                  size="sm"
-                  className="h-9 px-4 text-xs font-semibold gap-1.5 rounded-lg shadow-sm"
-                >
-                  <ShoppingCart className="h-3.5 w-3.5" />
-                  Cargar al POS
-                </Button>
+                {activeMainTab === 'orders' ? (
+                  <Button
+                    onClick={() => handleLoadToCart()}
+                    disabled={!selectedOrder}
+                    size="sm"
+                    className="h-9 px-4 text-xs font-semibold gap-1.5 rounded-lg shadow-sm"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    Cargar al POS
+                  </Button>
+                ) : selectedOrder ? (
+                  <Button
+                    onClick={() => handleLoadToCart(selectedOrder)}
+                    size="sm"
+                    className="h-9 px-4 text-xs font-semibold gap-1.5 rounded-lg shadow-sm bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    Cargar Comanda
+                  </Button>
+                ) : null}
               </div>
             </div>
           )}
