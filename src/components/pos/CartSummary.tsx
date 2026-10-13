@@ -9,6 +9,7 @@ import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useBusinessType } from '@/hooks/useBusinessType';
 import LoyaltyPanel from './LoyaltyPanel';
 import { cn } from '@/lib/utils';
+import { extractTableFromNotes } from '@/utils/tableUtils';
 
 interface CartSummaryProps {
   cart: CartItem[];
@@ -19,7 +20,7 @@ interface CartSummaryProps {
   onRemoveExtra?: (cartItemId: string, extraId: string) => void;
   onRemoveFromCart: (id: string) => void;
   calculateItemTotal: (item: CartItem) => number;
-  currentOrderInfo?: { orderNumber: string; customerName: string } | null;
+  currentOrderInfo?: { orderNumber: string; customerName: string; notes?: string } | null;
   onClearOrder?: () => void;
   orderType?: 'dine-in' | 'takeout';
   onOrderTypeChange?: (type: 'dine-in' | 'takeout') => void;
@@ -64,6 +65,8 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   const companyLogo = companyInfo.logo || null;
   const logoCartSize = companyInfo.logoCartSize;
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const effectiveTable = selectedTable || extractTableFromNotes(currentOrderInfo?.notes, currentOrderInfo?.customerName);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -115,7 +118,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
         </div>
 
         {/* Active order or table badge */}
-        {selectedTable ? (
+        {effectiveTable ? (
           <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 animate-in fade-in slide-in-from-top-1">
             <div className="flex items-center gap-2 min-w-0">
               <div className="p-1 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
@@ -123,7 +126,12 @@ const CartSummary: React.FC<CartSummaryProps> = ({
               </div>
               <div className="flex items-center gap-1.5 truncate">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mesa:</span>
-                <span className="text-xs font-black text-foreground truncate">{selectedTable}</span>
+                <span className="text-xs font-black text-foreground truncate">{effectiveTable}</span>
+                {currentOrderInfo?.orderNumber && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 ml-1 font-mono border-amber-500/40 text-amber-800 dark:text-amber-300">
+                    {currentOrderInfo.orderNumber}
+                  </Badge>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
@@ -173,6 +181,19 @@ const CartSummary: React.FC<CartSummaryProps> = ({
                   <ClipboardList className="h-2.5 w-2.5" />
                   {currentOrderInfo.orderNumber} · {currentOrderInfo.customerName}
                 </Badge>
+                {cart.length > 0 && onSaveOrder && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={onSaveOrder}
+                    className="h-5 px-1.5 text-[10px] font-bold gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                    title="Actualizar pedido pendiente (F9)"
+                  >
+                    <Save className="h-2.5 w-2.5" />
+                    Actualizar
+                  </Button>
+                )}
                 {onClearOrder && (
                   <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClearOrder} title="Descartar pedido">
                     <X className="h-3 w-3" />

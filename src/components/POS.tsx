@@ -338,7 +338,7 @@ const POSContent: React.FC = () => {
     return openOrdersForTables
       .filter((o: any) => o && !o.notes?.startsWith('[ACTUALIZADO]'))
       .map((o: any) => {
-        const tName = extractTableFromNotes(o.notes);
+        const tName = extractTableFromNotes(o.notes, o.customer_name);
         if (!tName) return null;
         return {
           tableName: tName,
@@ -352,6 +352,26 @@ const POSContent: React.FC = () => {
       })
       .filter(Boolean) as any[];
   }, [openOrdersForTables]);
+
+  const effectiveSelectedTable = useMemo(() => {
+    if (selectedTable) return selectedTable;
+    return extractTableFromNotes(currentOrderInfo?.notes, currentOrderInfo?.customerName);
+  }, [selectedTable, currentOrderInfo]);
+
+  const handleClearTable = useCallback(() => {
+    setSelectedTable(null);
+    if (currentOrderInfo) {
+      const tableInCustomer = extractTableFromNotes(null, currentOrderInfo.customerName);
+      const tableInNotes = extractTableFromNotes(currentOrderInfo.notes);
+      if (tableInCustomer || tableInNotes) {
+        setCurrentOrderInfo(prev => prev ? {
+          ...prev,
+          customerName: tableInCustomer ? 'Cliente' : prev.customerName,
+          notes: (prev.notes || '').replace(/\[MESA:[^\]]+\]/gi, '').trim()
+        } : null);
+      }
+    }
+  }, [currentOrderInfo]);
 
   const storeId = (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000') ? profile.store_id : undefined;
 
@@ -1145,6 +1165,11 @@ const POSContent: React.FC = () => {
         setCurrentOrderInfo({ orderNumber, customerName, notes });
       }
       setCurrentOrderSource(source || 'pos');
+
+      const foundTable = extractTableFromNotes(notes, customerName);
+      if (foundTable) {
+        setSelectedTable(foundTable);
+      }
       return;
     }
 
@@ -1172,7 +1197,8 @@ const POSContent: React.FC = () => {
     }
 
     const effectiveNotes = notes || (order as any)?.notes;
-    const foundTable = extractTableFromNotes(effectiveNotes);
+    const effectiveCustomer = customerName || (order as any)?.customer_name;
+    const foundTable = extractTableFromNotes(effectiveNotes, effectiveCustomer);
     if (foundTable) {
       setSelectedTable(foundTable);
     }
@@ -1213,8 +1239,11 @@ const POSContent: React.FC = () => {
       return;
     }
 
-    if (!activeOrderId && !selectedTable) {
-      console.warn('saveExistingOrderDirectly: missing orderId or table', { activeOrderId, selectedTable });
+    const activeOrderInfo = currentOrderInfoRef.current || currentOrderInfo;
+    const targetTable = selectedTable || extractTableFromNotes(activeOrderInfo?.notes, activeOrderInfo?.customerName);
+
+    if (!activeOrderId && !targetTable) {
+      console.warn('saveExistingOrderDirectly: missing orderId or table', { activeOrderId, targetTable });
       return;
     }
 
@@ -1222,7 +1251,6 @@ const POSContent: React.FC = () => {
     try {
       const activeDiscount = globalDiscountRef.current || globalDiscount;
       const totals = calculateTotals(activeCart, activeDiscount);
-      const activeOrderInfo = currentOrderInfoRef.current || currentOrderInfo;
       const activeOrderSource = currentOrderSourceRef.current || currentOrderSource || 'pos';
       const activePosOrderType = posOrderTypeRef.current || posOrderType;
       const activeStore = userStore || store;
@@ -1231,7 +1259,7 @@ const POSContent: React.FC = () => {
       let isNewTableOrderWithoutLoadedCart = false;
 
       // Si no tenemos activeOrderId pero hay una mesa seleccionada, buscamos si ya existe una orden activa para esa mesa
-      if (!activeOrderId && selectedTable && effectiveStoreId) {
+      if (!activeOrderId && targetTable && effectiveStoreId) {
         try {
           const { data: existingTableOrders } = await supabase
             .from('open_orders')
@@ -1239,7 +1267,7 @@ const POSContent: React.FC = () => {
             .eq('store_id', effectiveStoreId)
             .eq('source', 'pos')
             .eq('payment_status', 'pending')
-            .ilike('notes', `%[MESA: ${selectedTable.trim()}]%`)
+            .ilike('notes', `%[MESA: ${targetTable.trim()}]%`)
             .order('created_at', { ascending: false })
             .limit(1);
 
@@ -1254,7 +1282,7 @@ const POSContent: React.FC = () => {
 
       // Determinar tags de notas
       const orderTypeTag = orderTypeTags[activePosOrderType];
-      const tableTag = selectedTable ? `[MESA: ${selectedTable.trim()}]` : '';
+      const tableTag = targetTable ? `[MESA: ${targetTable.trim()}]` : '';
       const rawNotes = (activeOrderInfo?.notes || '');
       const cleanNotes = rawNotes
         .replace(/\[MESA:[^\]]+\]/gi, '')
@@ -1326,13 +1354,13 @@ const POSContent: React.FC = () => {
             try {
               const authRes = await supabase.auth.getUser();
               const user = authRes?.data?.user;
-              const deltaNotes = `[ACTUALIZADO]\nProductos adicionales a: ${existingOrder.customer_name || selectedTable} (#${existingOrder.order_number})\n${finalNotes}`;
+              const deltaNotes = `[ACTUALIZADO]\nProductos adicionales a: ${existingOrder.customer_name || targetTable} (#${existingOrder.order_number})\n${finalNotes}`;
 
               const { data: deltaOrder } = await supabase
                 .from('open_orders')
                 .insert({
                   order_number: String(900000 + (Date.now() % 99999)),
-                  customer_name: existingOrder.customer_name || `Mesa: ${selectedTable}`,
+                  customer_name: existingOrder.customer_name || `Mesa: ${targetTable}`,
                   payment_method: 'pending',
                   subtotal: 0,
                   discount_total: 0,
@@ -1375,7 +1403,7 @@ const POSContent: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
 
           toast({
-            title: `Guardado en ${selectedTable}`,
+            title: `Guardado en ${targetTable || 'mesa'}`,
             description: `Productos agregados a la orden #${existingOrder.order_number}`
           });
 
@@ -1454,7 +1482,7 @@ const POSContent: React.FC = () => {
         orderNumberToUse = generatedOrderNumber;
         orderIdToUse = crypto.randomUUID();
 
-        const defaultCustomerName = selectedTable ? (selectedTable.toLowerCase().startsWith('mesa') ? selectedTable : `Mesa: ${selectedTable}`) : 'Cliente';
+        const defaultCustomerName = targetTable ? (targetTable.toLowerCase().startsWith('mesa') ? targetTable : `Mesa: ${targetTable}`) : 'Cliente';
 
         const { error: insertError } = await supabase
           .from('open_orders')
@@ -1607,7 +1635,7 @@ const POSContent: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['kitchen-orders'] });
 
       toast({
-        title: selectedTable ? `Guardado en ${selectedTable}` : (isOrderMissing ? "Pedido guardado como nuevo" : "Pedido actualizado"),
+        title: targetTable ? `Guardado en ${targetTable}` : (isOrderMissing ? "Pedido guardado como nuevo" : "Pedido actualizado"),
         description: `${orderNumberToUse} guardado correctamente${hasNewOrModifiedItems && !isOrderMissing ? ' · Ticket enviado a cocina' : ''}`
       });
 
@@ -1836,8 +1864,10 @@ const POSContent: React.FC = () => {
       : ((cartRef.current && cartRef.current.length > 0) ? cartRef.current : cart);
     if (!currentCart || currentCart.length === 0) return;
 
+    const targetTable = selectedTable || extractTableFromNotes(currentOrderInfoRef.current?.notes, currentOrderInfoRef.current?.customerName);
+
     // Si hay una orden cargada O una mesa asignada, guardar directamente
-    if (currentWebOrderIdRef.current || selectedTable) {
+    if (currentWebOrderIdRef.current || targetTable) {
       saveExistingOrderDirectly();
     } else {
       // Pedido general sin mesa asignada: mostrar diálogo
@@ -2125,11 +2155,11 @@ const POSContent: React.FC = () => {
       onShowWebSales={memoHandleShowWebSales}
       onToggleFullscreen={memoHandleToggleFullscreen}
       onGenerateServiceInvoice={() => setShowServiceInvoiceDialog(true)}
-      selectedTable={selectedTable}
+      selectedTable={effectiveSelectedTable}
       onOpenTableSelector={() => setShowTableSelectorDialog(true)}
-      onClearTable={() => setSelectedTable(null)}
+      onClearTable={handleClearTable}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, selectedTable]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, effectiveSelectedTable, handleClearTable]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
@@ -2303,9 +2333,9 @@ const POSContent: React.FC = () => {
               orderType={posOrderType}
               onOrderTypeChange={setPosOrderType}
               onSaveOrder={memoHandleSaveOrder}
-              selectedTable={selectedTable}
+              selectedTable={effectiveSelectedTable}
               onOpenTableSelector={() => setShowTableSelectorDialog(true)}
-              onClearTable={() => setSelectedTable(null)}
+              onClearTable={handleClearTable}
             />
           }
           paymentComponent={
@@ -2327,13 +2357,13 @@ const POSContent: React.FC = () => {
               onOpenRegister={handleOpenRegister}
               isWaiter={isWaiter}
               onSaveOrder={memoHandleSaveOrder}
-              selectedTable={selectedTable}
+              selectedTable={effectiveSelectedTable}
             />
           }
           cartTotal={totals.total}
           onCheckout={handleCheckout}
           isWaiter={isWaiter}
-          selectedTable={selectedTable}
+          selectedTable={effectiveSelectedTable}
           onOpenTableSelector={() => setShowTableSelectorDialog(true)}
           onSaveOrder={memoHandleSaveOrder}
         />
@@ -2405,7 +2435,7 @@ const POSContent: React.FC = () => {
               orderSource={currentOrderSource}
               initialCustomerName={currentOrderInfo?.customerName || ''}
               initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
-              initialTable={selectedTable}
+              initialTable={effectiveSelectedTable}
               onTableSelected={(tbl) => setSelectedTable(tbl)}
               existingOrderId={currentWebOrderId}
               existingOrderNumber={currentOrderInfo?.orderNumber}
@@ -2429,9 +2459,9 @@ const POSContent: React.FC = () => {
             <TableSelectorDialog
               isOpen={showTableSelectorDialog}
               onClose={() => setShowTableSelectorDialog(false)}
-              selectedTable={selectedTable}
+              selectedTable={effectiveSelectedTable}
               onSelectTable={(tbl) => setSelectedTable(tbl)}
-              onClearTable={() => setSelectedTable(null)}
+              onClearTable={handleClearTable}
               onLoadTableOrder={(orderId) => {
                 const target = openOrdersForTables.find((o: any) => o.id === orderId);
                 if (target) {
@@ -2715,9 +2745,9 @@ const POSContent: React.FC = () => {
                     orderType={posOrderType}
                     onOrderTypeChange={setPosOrderType}
                     cartTotal={parseFloat(totals.total) || 0}
-                    selectedTable={selectedTable}
+                    selectedTable={effectiveSelectedTable}
                     onOpenTableSelector={() => setShowTableSelectorDialog(true)}
-                    onClearTable={() => setSelectedTable(null)}
+                    onClearTable={handleClearTable}
                     onSaveOrder={memoHandleSaveOrder}
                   />
                 </div>
@@ -2761,7 +2791,7 @@ const POSContent: React.FC = () => {
                   onOpenRegister={handleOpenRegister}
                   isWaiter={isWaiter}
                   onSaveOrder={memoHandleSaveOrder}
-                  selectedTable={selectedTable}
+                  selectedTable={effectiveSelectedTable}
                 />
               </div>
             </>
@@ -2855,9 +2885,9 @@ const POSContent: React.FC = () => {
                     orderType={posOrderType}
                     onOrderTypeChange={setPosOrderType}
                     cartTotal={parseFloat(totals.total) || 0}
-                    selectedTable={selectedTable}
+                    selectedTable={effectiveSelectedTable}
                     onOpenTableSelector={() => setShowTableSelectorDialog(true)}
-                    onClearTable={() => setSelectedTable(null)}
+                    onClearTable={handleClearTable}
                     onSaveOrder={memoHandleSaveOrder}
                   />
                 </div>
@@ -2888,7 +2918,7 @@ const POSContent: React.FC = () => {
                     onOpenRegister={handleOpenRegister}
                     isWaiter={isWaiter}
                     onSaveOrder={memoHandleSaveOrder}
-                    selectedTable={selectedTable}
+                    selectedTable={effectiveSelectedTable}
                   />
                 </div>
               </div>
@@ -2961,7 +2991,7 @@ const POSContent: React.FC = () => {
               orderSource={currentOrderSource}
               initialCustomerName={currentOrderInfo?.customerName || ''}
               initialNotes={(currentOrderInfo?.notes || '').replace(/\[COMER AQUÍ\]/g, '').replace(/\[PARA LLEVAR\]/g, '').trim()}
-              initialTable={selectedTable}
+              initialTable={effectiveSelectedTable}
               onTableSelected={(tbl) => setSelectedTable(tbl)}
               existingOrderId={currentWebOrderId}
               existingOrderNumber={currentOrderInfo?.orderNumber}
@@ -2985,9 +3015,9 @@ const POSContent: React.FC = () => {
             <TableSelectorDialog
               isOpen={showTableSelectorDialog}
               onClose={() => setShowTableSelectorDialog(false)}
-              selectedTable={selectedTable}
+              selectedTable={effectiveSelectedTable}
               onSelectTable={(tbl) => setSelectedTable(tbl)}
-              onClearTable={() => setSelectedTable(null)}
+              onClearTable={handleClearTable}
               onLoadTableOrder={(orderId) => {
                 const target = openOrdersForTables.find((o: any) => o.id === orderId);
                 if (target) {
