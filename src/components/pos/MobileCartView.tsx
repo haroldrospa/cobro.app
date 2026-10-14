@@ -25,6 +25,8 @@ interface MobileCartViewProps {
   selectedTable?: string | null;
   onOpenTableSelector?: () => void;
   onClearTable?: () => void;
+  hasExistingOrder?: boolean;
+  isSavingOrder?: boolean;
 }
 
 const MobileCartView: React.FC<MobileCartViewProps> = ({
@@ -45,6 +47,8 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
   selectedTable,
   onOpenTableSelector,
   onClearTable,
+  hasExistingOrder = false,
+  isSavingOrder = false,
 }) => {
   const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -156,9 +160,10 @@ const MobileCartView: React.FC<MobileCartViewProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={onSaveOrder}
-                className="h-8 rounded-full bg-secondary border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10 font-black uppercase tracking-widest text-[10px] px-4"
+                disabled={isSavingOrder}
+                className="h-8 rounded-full bg-secondary border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10 font-black uppercase tracking-widest text-[10px] px-4 disabled:opacity-50"
               >
-                {currentOrderInfo ? 'Actualizar Pedido' : 'Guardar Pedido'}
+                {(hasExistingOrder || currentOrderInfo) ? 'Actualizar Pedido' : 'Guardar Pedido'}
               </Button>
             )}
             

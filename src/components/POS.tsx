@@ -384,6 +384,12 @@ const POSContent: React.FC = () => {
     return currentPersonOnTable ? `${effectiveSelectedTable} - ${currentPersonOnTable}` : effectiveSelectedTable;
   }, [effectiveSelectedTable, currentPersonOnTable]);
 
+  const hasExistingOrder = useMemo(() => {
+    if (currentWebOrderId || currentOrderInfo?.orderNumber) return true;
+    if (!effectiveSelectedTable || !occupiedTablesList?.length) return false;
+    return occupiedTablesList.some((t: any) => t.tableName?.toLowerCase() === effectiveSelectedTable.toLowerCase());
+  }, [currentWebOrderId, currentOrderInfo?.orderNumber, effectiveSelectedTable, occupiedTablesList]);
+
   const handleSelectTableWithPerson = useCallback((tableName: string, personName?: string) => {
     setSelectedTable(tableName);
     const finalCustomerName = formatTableCustomerName(tableName, personName);
@@ -2378,6 +2384,8 @@ const POSContent: React.FC = () => {
               selectedTable={displayTableLabel || effectiveSelectedTable}
               onOpenTableSelector={() => setShowTableSelectorDialog(true)}
               onClearTable={handleClearTable}
+              hasExistingOrder={hasExistingOrder}
+              isSavingOrder={isSavingOrder}
             />
           }
           paymentComponent={
@@ -2408,6 +2416,8 @@ const POSContent: React.FC = () => {
           selectedTable={displayTableLabel || effectiveSelectedTable}
           onOpenTableSelector={() => setShowTableSelectorDialog(true)}
           onSaveOrder={memoHandleSaveOrder}
+          hasExistingOrder={hasExistingOrder}
+          isSavingOrder={isSavingOrder}
         />
 
         {/* Dialogs - shared between mobile and desktop */}
