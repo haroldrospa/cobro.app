@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Utensils, Plus, Check, Clock, Sparkles, Settings2 } from 'lucide-react';
+import { Utensils, Plus, Check, Clock, Sparkles, Settings2, User } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -32,10 +33,11 @@ interface TableSelectorDialogProps {
   isOpen: boolean;
   onClose: () => void;
   selectedTable: string | null;
-  onSelectTable: (tableName: string) => void;
+  onSelectTable: (tableName: string, personName?: string) => void;
   onClearTable?: () => void;
   onLoadTableOrder?: (orderId: string) => void;
   occupiedTables?: OccupiedTableInfo[];
+  initialPersonName?: string;
 }
 
 export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
@@ -46,11 +48,20 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
   onClearTable,
   onLoadTableOrder,
   occupiedTables = [],
+  initialPersonName = '',
 }) => {
   const { sections } = useTableConfig();
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [customTable, setCustomTable] = useState('');
+  const [personName, setPersonName] = useState(initialPersonName || '');
   const [activeTab, setActiveTab] = useState(sections[0]?.id || 'salon');
+
+  // Sincronizar initialPersonName
+  React.useEffect(() => {
+    if (initialPersonName) {
+      setPersonName(initialPersonName);
+    }
+  }, [initialPersonName]);
 
   // Ajustar pestaña si las secciones cambian
   React.useEffect(() => {
@@ -69,7 +80,7 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
   }, [occupiedTables]);
 
   const handleSelect = (tableName: string) => {
-    onSelectTable(tableName);
+    onSelectTable(tableName, personName.trim() || undefined);
     onClose();
   };
 
@@ -77,7 +88,8 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
     e.preventDefault();
     const clean = customTable.trim();
     if (!clean) return;
-    onSelectTable(clean.startsWith('Mesa') || clean.startsWith('mesa') ? clean : `Mesa ${clean}`);
+    const finalTable = clean.startsWith('Mesa') || clean.startsWith('mesa') ? clean : `Mesa ${clean}`;
+    onSelectTable(finalTable, personName.trim() || undefined);
     setCustomTable('');
     onClose();
   };
@@ -125,11 +137,28 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
+          {/* Input para nombre de la persona opcional */}
+          <div className="bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 space-y-1.5">
+            <Label className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              Nombre de la persona (opcional)
+            </Label>
+            <Input
+              placeholder="Ej: Harold, Juan, Familia Gómez..."
+              value={personName}
+              onChange={(e) => setPersonName(e.target.value)}
+              className="h-10 rounded-xl bg-background border-border/80 text-sm font-medium"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Al seleccionar una mesa quedará identificada como: <span className="font-semibold text-foreground">{customTable.trim() || selectedTable || 'Mesa 1'}{personName.trim() ? ` - ${personName.trim()}` : ''}</span>
+            </p>
+          </div>
+
           {/* Input de mesa personalizada rápida */}
           <form onSubmit={handleCustomSubmit} className="flex gap-2">
             <div className="relative flex-1">
               <Input
-                placeholder="Escribe un número o nombre (ej: 14, VIP, Terraza 5)..."
+                placeholder="Escribe un número o nombre de mesa (ej: 14, VIP, Terraza 5)..."
                 value={customTable}
                 onChange={(e) => setCustomTable(e.target.value)}
                 className="h-11 rounded-xl bg-muted/50 border-border/80 text-sm font-medium pr-10"

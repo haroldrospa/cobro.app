@@ -17,6 +17,7 @@ import { Bike, Search, Check, ChevronsUpDown, User, Utensils } from 'lucide-reac
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { formatTableCustomerName } from '@/utils/tableUtils';
 
 interface SaveOrderDialogProps {
   isOpen: boolean;
@@ -124,7 +125,9 @@ const SaveOrderDialog: React.FC<SaveOrderDialogProps> = ({
         .trim();
       const finalNotesParts = [cleanNotes, tableTag, orderTypeTag].filter(Boolean);
       const finalNotes = finalNotesParts.join('\n');
-      const effectiveCustomerName = customerName || (table ? `Mesa: ${table}` : 'Cliente');
+      const effectiveCustomerName = table
+        ? formatTableCustomerName(table, customerName)
+        : (customerName || 'Cliente');
 
       if (existingOrderId) {
         // 1. Obtenemos estado actual e ítems actuales

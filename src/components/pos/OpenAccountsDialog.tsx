@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search, Settings2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search, Settings2, Pencil } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,7 +20,7 @@ import { useUserStore } from '@/hooks/useUserStore';
 import { generatePreCheckPDF } from '@/utils/invoicePdfGenerator';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { cn } from '@/lib/utils';
-import { extractTableFromNotes } from '@/utils/tableUtils';
+import { extractTableFromNotes, formatTableCustomerName, extractPersonFromCustomerName } from '@/utils/tableUtils';
 import { useTableConfig } from '@/hooks/useTableConfig';
 import { TableConfigDialog } from './TableConfigDialog';
 import { TableSection } from '@/types/tableConfig';
@@ -67,6 +68,12 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   const [confirmMerge, setConfirmMerge] = useState(false);
 
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [editingNameOrder, setEditingNameOrder] = useState<{
+    orderId: string;
+    orderNumber: string;
+    tableName: string;
+    personName: string;
+  } | null>(null);
 
   const { data: orders = [], isLoading, refetch: refetchOpenOrders } = useQuery({
     queryKey: ['pos-open-orders', userStore?.id],
@@ -276,6 +283,53 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
       setConfirmMerge(false);
     }
   });
+
+  // ─── Update customer name mutation ───
+  const updateCustomerNameMutation = useMutation({
+    mutationFn: async ({ orderId, tableName, personName }: { orderId: string; tableName: string; personName: string }) => {
+      const finalName = tableName
+        ? formatTableCustomerName(tableName, personName)
+        : (personName.trim() || 'Cliente');
+
+      const { error } = await supabase
+        .from('open_orders')
+        .update({
+          customer_name: finalName,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      return finalName;
+    },
+    onSuccess: (finalName) => {
+      queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-open-orders-tables'] });
+      toast({
+        title: "Nombre asignado",
+        description: `La comanda ahora está a nombre de: ${finalName}`,
+      });
+      setEditingNameOrder(null);
+    },
+    onError: (err: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error al actualizar",
+        description: err?.message || "No se pudo actualizar el nombre",
+      });
+    }
+  });
+
+  const handleOpenEditNameModal = (order: any, tbl?: string | null) => {
+    const table = tbl || extractTableFromNotes(order.notes, order.customer_name) || '';
+    const person = extractPersonFromCustomerName(order.customer_name, table);
+    setEditingNameOrder({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      tableName: table,
+      personName: person,
+    });
+  };
 
   const handleLoadToCart = (order?: any) => {
     const orderToLoad = order || filteredOrders.find((o: any) => o.id === selectedOrderId);
@@ -496,10 +550,19 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                 </span>
               )}
 
-              <span className="font-semibold text-sm text-foreground truncate max-w-[200px] flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                {order.customer_name || 'Cliente sin nombre'}
-              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenEditNameModal(order, tableName);
+                }}
+                className="font-semibold text-sm text-foreground hover:text-amber-600 dark:hover:text-amber-400 truncate max-w-[240px] flex items-center gap-1.5 group/name transition-colors px-1.5 py-0.5 rounded-md hover:bg-muted/80 cursor-pointer"
+                title="Haz clic para asignar o cambiar el nombre a la mesa"
+              >
+                <User className="h-3.5 w-3.5 text-muted-foreground shrink-0 group-hover/name:text-amber-500" />
+                <span className="truncate">{order.customer_name || 'Cliente sin nombre'}</span>
+                <Pencil className="h-3 w-3 text-muted-foreground/60 opacity-60 group-hover/name:opacity-100 group-hover/name:text-amber-500 transition-opacity shrink-0 ml-0.5" />
+              </button>
 
               {notesText && (
                 <span className="text-[11px] text-muted-foreground/90 bg-muted/60 px-2 py-0.5 rounded truncate max-w-[180px]">
@@ -601,10 +664,19 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               </div>
               <div className="min-w-0">
                 <h4 className="font-bold text-sm text-foreground truncate">{tableName}</h4>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
-                  <User className="h-3 w-3 shrink-0 opacity-70" />
-                  <span className="truncate max-w-[120px] font-medium">{order.customer_name || 'Sin nombre'}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenEditNameModal(order, tableName);
+                  }}
+                  className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 mt-0.5 group/mname transition-colors px-1 py-0.5 -ml-1 rounded hover:bg-muted/80 cursor-pointer"
+                  title="Haz clic para asignar o cambiar el nombre a la mesa"
+                >
+                  <User className="h-3 w-3 shrink-0 opacity-70 group-hover/mname:text-amber-500" />
+                  <span className="truncate max-w-[130px] font-semibold">{order.customer_name || 'Sin nombre'}</span>
+                  <Pencil className="h-2.5 w-2.5 opacity-60 group-hover/mname:opacity-100 group-hover/mname:text-amber-500 transition-opacity shrink-0" />
+                </button>
               </div>
             </div>
 
@@ -1171,6 +1243,70 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ─── Dialog para editar / poner nombre a la mesa ─── */}
+      <Dialog open={!!editingNameOrder} onOpenChange={(open) => !open && setEditingNameOrder(null)}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md bg-background border-border rounded-2xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+              <User className="h-5 w-5 text-amber-500" />
+              Asignar nombre a {editingNameOrder?.tableName || editingNameOrder?.orderNumber}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Introduce el nombre de la persona o comensal para identificar esta mesa.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!editingNameOrder) return;
+              updateCustomerNameMutation.mutate({
+                orderId: editingNameOrder.orderId,
+                tableName: editingNameOrder.tableName,
+                personName: editingNameOrder.personName,
+              });
+            }}
+            className="space-y-4 pt-2"
+          >
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Nombre de la persona</Label>
+              <Input
+                placeholder="Ej: Harold, Juan, Familia Gómez..."
+                value={editingNameOrder?.personName || ''}
+                onChange={(e) => setEditingNameOrder(prev => prev ? { ...prev, personName: e.target.value } : null)}
+                className="h-10 rounded-xl bg-background border-border text-sm"
+                autoFocus
+              />
+              {editingNameOrder?.tableName && (
+                <p className="text-[11px] text-muted-foreground">
+                  Se mostrará como: <strong className="text-foreground">{formatTableCustomerName(editingNameOrder.tableName, editingNameOrder.personName)}</strong>
+                </p>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditingNameOrder(null)}
+                className="rounded-xl"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={updateCustomerNameMutation.isPending}
+                className="rounded-xl font-bold bg-amber-600 hover:bg-amber-500 text-white"
+              >
+                {updateCustomerNameMutation.isPending ? 'Guardando...' : 'Guardar Nombre'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Configurar Mesas Modal ─── */}
       {showConfigTables && (
