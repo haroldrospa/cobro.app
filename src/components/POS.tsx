@@ -362,18 +362,12 @@ const POSContent: React.FC = () => {
 
   const handleClearTable = useCallback(() => {
     setSelectedTable(null);
-    if (currentOrderInfo) {
-      const tableInCustomer = extractTableFromNotes(null, currentOrderInfo.customerName);
-      const tableInNotes = extractTableFromNotes(currentOrderInfo.notes);
-      if (tableInCustomer || tableInNotes) {
-        setCurrentOrderInfo(prev => prev ? {
-          ...prev,
-          customerName: tableInCustomer ? 'Cliente' : prev.customerName,
-          notes: (prev.notes || '').replace(/\[MESA:[^\]]+\]/gi, '').trim()
-        } : null);
-      }
-    }
-  }, [currentOrderInfo]);
+    setCurrentWebOrderId(null);
+    setCurrentOrderInfo(null);
+    setCart([]);
+    setGlobalDiscount({ value: 0, type: 'percentage' });
+    setSelectedCustomer('');
+  }, []);
 
   const currentPersonOnTable = useMemo(() => {
     return extractPersonFromCustomerName(currentOrderInfo?.customerName, effectiveSelectedTable);
