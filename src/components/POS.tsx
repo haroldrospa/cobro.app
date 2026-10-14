@@ -124,6 +124,7 @@ const isUuid = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-
 const POSContent: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
   const isMobilePortrait = isMobile && !isLandscape;
@@ -427,7 +428,6 @@ const POSContent: React.FC = () => {
   const customerBalances = allBalancesData?.balances || {};
   const { data: invoiceTypes = [] } = useInvoiceTypes();
   const createSale = useCreateSaleOffline();
-  const { toast } = useToast();
 
   // Detect when a customer without phone is selected
   useEffect(() => {
