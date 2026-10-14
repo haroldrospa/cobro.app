@@ -40,6 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '@/hooks/useUserStore';
 import InvoiceDetailsDialog from '@/components/invoices/InvoiceDetailsDialog';
+import { generateStatementPDF } from '@/utils/statementPdfGenerator';
 
 interface PaymentReceipt {
   customerName: string;
@@ -342,117 +343,19 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
   const handleDownloadStatementPDF = async () => {
     try {
       toast.info('Generando PDF...');
-      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-      const pageWidth = doc.internal.pageSize.width;
-
-      // ── Header bar ──
-      doc.setFillColor(15, 15, 15);
-      doc.rect(0, 0, pageWidth, 42, 'F');
-
-      // Logo
-      if (companyInfo?.logo) {
-        try {
-          const img = new Image();
-          img.crossOrigin = 'Anonymous';
-          await new Promise<void>(resolve => {
-            const t = setTimeout(() => resolve(), 3000);
-            img.onload = () => { clearTimeout(t); resolve(); };
-            img.onerror = () => { clearTimeout(t); resolve(); };
-            img.src = companyInfo.logo;
-          });
-          if (img.width > 0) {
-            const maxH = 28, aspect = img.width / img.height;
-            const w = maxH * aspect, h = maxH;
-            doc.addImage(img, 'PNG', 14, 7, w, h);
-          }
-        } catch (e) { console.warn('logo', e); }
-      }
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(20);
-      doc.text(companyInfo?.name || 'Mi Empresa', pageWidth - 14, 20, { align: 'right' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(180, 180, 180);
-      if (companyInfo?.phone) doc.text(`Tel: ${companyInfo.phone}`, pageWidth - 14, 27, { align: 'right' });
-      if (companyInfo?.address) doc.text(String(companyInfo.address), pageWidth - 14, 32, { align: 'right' });
-
-      // ── Title Box ──
-      doc.setFillColor(245, 245, 245);
-      doc.rect(0, 42, pageWidth, 20, 'F');
-      doc.setTextColor(20, 20, 20);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('ESTADO DE CUENTA', pageWidth / 2, 55, { align: 'center' });
-
-      // ── Customer info ──
-      let y = 72;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(30, 30, 30);
-      doc.text('CLIENTE:', 14, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(customer?.name || '', 40, y);
-      y += 6;
-      if (customer?.rnc) { doc.text(`RNC/Cédula: ${customer.rnc}`, 14, y); y += 6; }
-      if (customer?.phone) { doc.text(`Tel: ${customer.phone}`, 14, y); y += 6; }
-      doc.setTextColor(100, 100, 100);
-      doc.setFontSize(9);
-      doc.text(`Fecha de emisión: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, y);
-      y += 10;
-
-      // ── Invoices Table ──
-      const tableBody = (pendingSales || []).map(sale => [
-        sale.invoice_number,
-        format(new Date(sale.created_at), 'dd/MM/yyyy'),
-        sale.due_date ? format(new Date(sale.due_date), 'dd/MM/yyyy') : '-',
-        `$${sale.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-        sale.amount_paid > 0 ? `$${sale.amount_paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-',
-        `$${sale.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      ]);
-
-      autoTable(doc, {
-        head: [['Factura', 'Fecha', 'Vencimiento', 'Total', 'Abonado', 'Pendiente']],
-        body: tableBody,
-        startY: y,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 15, 15], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center' },
-        bodyStyles: { fontSize: 9, textColor: [40, 40, 40] },
-        columnStyles: {
-          0: { cellWidth: 35 },
-          1: { halign: 'center', cellWidth: 28 },
-          2: { halign: 'center', cellWidth: 28 },
-          3: { halign: 'right', cellWidth: 28 },
-          4: { halign: 'right', cellWidth: 28 },
-          5: { halign: 'right', cellWidth: 28, fontStyle: 'bold' },
+      await generateStatementPDF({
+        customer,
+        invoices: pendingSales || [],
+        totalDebt,
+        companyInfo: {
+          ...companyInfo,
+          logo: companyInfo?.logo || storeSettings?.logo_url,
         },
-        alternateRowStyles: { fillColor: [248, 248, 248] },
+        bankAccounts: (storeSettings as any)?.bank_accounts || [],
       });
-
-      const finalY = (doc as any).lastAutoTable?.finalY + 8;
-
-      // ── Total Box ──
-      doc.setFillColor(15, 15, 15);
-      doc.roundedRect(pageWidth - 80, finalY, 66, 14, 2, 2, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text('DEUDA TOTAL:', pageWidth - 76, finalY + 9);
-      doc.text(`$${totalDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, pageWidth - 14, finalY + 9, { align: 'right' });
-
-      // ── Footer ──
-      const ph = doc.internal.pageSize.height;
-      doc.setTextColor(150, 150, 150);
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.text('Favor saldar este balance a la brevedad posible. Gracias por su preferencia.', pageWidth / 2, ph - 12, { align: 'center' });
-      doc.text('COBRO', pageWidth / 2, ph - 6, { align: 'center' });
-
-      doc.save(`Estado_Cuenta_${customer?.name?.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`);
-      toast.success('PDF descargado');
+      toast.success('Estado de cuenta descargado con éxito');
     } catch (e) {
-      console.error(e);
+      console.error('Error generando el estado de cuenta PDF:', e);
       toast.error('Error generando el PDF');
     }
   };
@@ -965,12 +868,44 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
       }
 
       const isThermal = printFormat === '80mm' || printFormat === '58mm';
+
+      if (!isThermal) {
+        const pdfBlob = await generateStatementPDF({
+          customer,
+          invoices: pendingSales || [],
+          totalDebt,
+          companyInfo: {
+            ...companyInfo,
+            logo: companyInfo?.logo || storeSettings?.logo_url,
+          },
+          bankAccounts: (storeSettings as any)?.bank_accounts || [],
+          returnBlob: true,
+        });
+        if (pdfBlob) {
+          const pdfUrl = URL.createObjectURL(pdfBlob as Blob);
+          const printWindow = window.open(pdfUrl);
+          if (printWindow) {
+            printWindow.onload = () => {
+              printWindow.print();
+              URL.revokeObjectURL(pdfUrl);
+            };
+          } else {
+            const a = document.createElement('a');
+            a.href = pdfUrl;
+            a.download = `Estado_Cuenta_${customer?.name || 'Cliente'}.pdf`;
+            a.click();
+          }
+          return;
+        }
+      }
+
       const width = isThermal ? '100%' : '210mm';
+      const resolvedLogo = companyInfo?.logo || storeSettings?.logo_url || (companyInfo?.name?.toLowerCase().includes('mamajuana') ? '/mamajuana-logo.png' : '');
 
       const htmlContent = `
         <div class="invoice-container" style="font-family: monospace; width: ${width}; max-width: ${width}; margin: ${isThermal ? '0' : '0 auto'}; font-size: 12px; line-height: 1.2; padding: 5px; box-sizing: border-box; background: white;">
           <div style="text-align: center; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 5px;">
-            ${companyInfo?.logo ? `<img src="${companyInfo.logo}" style="width: ${companyInfo.logoInvoiceSize || companyInfo.logoSize || 80}px; height: auto; display: block; margin: 0 auto; object-fit: contain;"/>` : ''}
+            ${resolvedLogo ? `<img src="${resolvedLogo}" style="width: ${companyInfo?.logoInvoiceSize || companyInfo?.logoSize || 80}px; height: auto; display: block; margin: 0 auto; object-fit: contain;"/>` : ''}
             <div style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">${companyInfo?.name || 'Mi Empresa'}</div>
             ${companyInfo?.rnc ? `<div style="font-size: 11px;">RNC: ${companyInfo.rnc}</div>` : ''}
             ${companyInfo?.phone ? `<div style="font-size: 11px;">Tel: ${companyInfo.phone}</div>` : ''}
@@ -1008,8 +943,13 @@ const CustomerCreditDialog: React.FC<CustomerCreditDialogProps> = ({
             <span>$${(totalDebt || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           
-          <div style="text-align: center; margin-top: 20px; font-size: 10px; font-style: italic;">
+          <div style="text-align: center; margin-top: 15px; font-size: 10px; font-style: italic;">
             <div>Favor saldar este balance a la brevedad posible.</div>
+          </div>
+
+          <div style="text-align: center; margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px; font-size: 10px;">
+            <div>Generado con Cobro App</div>
+            <div style="font-weight: bold; color: #16a34a;">www.cobroapp.app</div>
           </div>
         </div>
       `;

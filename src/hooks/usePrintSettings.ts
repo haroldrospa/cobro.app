@@ -78,7 +78,7 @@ export const usePrintSettings = () => {
     email: companySettings?.email || '',
     address: companySettings?.address || '',
     website: companySettings?.website || '',
-    logo: companySettings?.logo_url || '',
+    logo: companySettings?.logo_url || (storeSettings as any)?.logo_url || (userStore?.store_name?.toLowerCase().includes('mamajuana') || companySettings?.company_name?.toLowerCase().includes('mamajuana') ? '/mamajuana-logo.png' : '') || '',
     slogan: companySettings?.slogan || '',
     logoCartSize: companySettings?.logo_cart_size || 200,
     logoSummarySize: companySettings?.logo_summary_size || 64,

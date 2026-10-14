@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { format } from 'date-fns';
+import { generateStatementPDF } from '@/utils/statementPdfGenerator';
 
 interface CreditInfoProps {
   selectedCustomer: string;
@@ -43,15 +44,40 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
       }
 
       const isThermal = printFormat === '80mm' || printFormat === '58mm';
-      const width = isThermal ? '100%' : '210mm';
 
-      const pendingSales = balance?.pendingSales || [];
-      const totalDebt = balance?.totalDebt || 0;
+      if (!isThermal && customer) {
+        const pdfBlob = await generateStatementPDF({
+          customer,
+          invoices: pendingSales || [],
+          totalDebt,
+          companyInfo,
+          returnBlob: true,
+        });
+        if (pdfBlob) {
+          const pdfUrl = URL.createObjectURL(pdfBlob as Blob);
+          const printWindow = window.open(pdfUrl);
+          if (printWindow) {
+            printWindow.onload = () => {
+              printWindow.print();
+              URL.revokeObjectURL(pdfUrl);
+            };
+          } else {
+            const a = document.createElement('a');
+            a.href = pdfUrl;
+            a.download = `Estado_Cuenta_${customer?.name || 'Cliente'}.pdf`;
+            a.click();
+          }
+          return;
+        }
+      }
+
+      const width = isThermal ? '100%' : '210mm';
+      const resolvedLogo = companyInfo?.logo || (companyInfo?.name?.toLowerCase().includes('mamajuana') ? '/mamajuana-logo.png' : '');
 
       const htmlContent = `
         <div class="invoice-container" style="font-family: monospace; width: ${width}; max-width: ${width}; margin: ${isThermal ? '0' : '0 auto'}; font-size: 12px; line-height: 1.2; padding: 5px; box-sizing: border-box; background: white;">
           <div style="text-align: center; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 5px;">
-            ${companyInfo?.logo ? `<img src="${companyInfo.logo}" style="width: ${companyInfo.logoInvoiceSize || companyInfo.logoSize || 80}px; height: auto; display: block; margin: 0 auto; object-fit: contain;"/>` : ''}
+            ${resolvedLogo ? `<img src="${resolvedLogo}" style="width: ${companyInfo?.logoInvoiceSize || companyInfo?.logoSize || 80}px; height: auto; display: block; margin: 0 auto; object-fit: contain;"/>` : ''}
             <div style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">${companyInfo?.name || 'Mi Empresa'}</div>
             ${companyInfo?.rnc ? `<div style="font-size: 11px;">RNC: ${companyInfo.rnc}</div>` : ''}
             ${companyInfo?.phone ? `<div style="font-size: 11px;">Tel: ${companyInfo.phone}</div>` : ''}
@@ -89,8 +115,13 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
             <span>$${(totalDebt || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           
-          <div style="text-align: center; margin-top: 20px; font-size: 10px; font-style: italic;">
+          <div style="text-align: center; margin-top: 15px; font-size: 10px; font-style: italic;">
             <div>Favor saldar este balance a la brevedad posible.</div>
+          </div>
+
+          <div style="text-align: center; margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px; font-size: 10px;">
+            <div>Generado con Cobro App</div>
+            <div style="font-weight: bold; color: #16a34a;">www.cobroapp.app</div>
           </div>
         </div>
       `;

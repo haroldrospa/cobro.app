@@ -88,6 +88,7 @@ import autoTable from 'jspdf-autotable';
 // falta para simplemente ver reportes, solo al exportar a Excel.
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { generateStatementPDF } from '@/utils/statementPdfGenerator';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
 import { supabase } from '@/integrations/supabase/client';
 import appLogo from '@/assets/cobro-logo.png';
@@ -1094,185 +1095,26 @@ const Reports = () => {
   };
 
   const generateCustomerDebtPDF = async (customer: any, pendingSales: Sale[], returnBlob = false): Promise<any> => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-
-    // 1. Modern Header with dark background (Premium Black Theme)
-    doc.setFillColor(20, 20, 20); // Dark/Black background
-    doc.rect(0, 0, pageWidth, 45, 'F');
-
-    // 2. Add company logo if available
-    if (companySettings?.logo_url) {
-      try {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-
-        await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => {
-            resolve();
-          }, 3000); // 3s Timeout safety
-
-          img.onload = () => {
-            clearTimeout(timeout);
-            resolve();
-          };
-          img.onerror = () => {
-            clearTimeout(timeout);
-            resolve();
-          };
-
-          img.src = companySettings.logo_url!;
-          if (img.complete) {
-            clearTimeout(timeout);
-            resolve();
-          }
-        });
-
-        if (img.width > 0 && img.height > 0) {
-          const maxSize = 30;
-          const aspect = img.width / img.height;
-          let w = maxSize;
-          let h = maxSize / aspect;
-
-          if (h > maxSize) {
-            h = maxSize;
-            w = maxSize * aspect;
-          }
-
-          const y = 7.5 + (maxSize - h) / 2;
-          doc.addImage(img, 'PNG', 15, y, w, h);
-        }
-      } catch (error) {
-        console.log('Could not load logo in PDF');
-      }
-    }
-
-    // 3. Company name and Generation Info
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text(companySettings?.company_name || 'Cobro App', companySettings?.logo_url ? 50 : 15, 20);
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(200, 200, 200); // Light gray for date
-    doc.text(`Generado el: ${format(new Date(), 'PPpp', { locale: es })}`, companySettings?.logo_url ? 50 : 15, 28);
-
-    // 4. Report title Section
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 45, pageWidth, 30, 'F');
-
-    doc.setTextColor(20, 20, 20); // Black text
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ESTADO DE CUENTA / DEUDA PENDIENTE', pageWidth / 2, 58, { align: 'center' });
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Cliente: ${customer.name}`, pageWidth / 2, 67, { align: 'center' });
-
-    // 5. Accent line (Black)
-    doc.setDrawColor(20, 20, 20);
-    doc.setLineWidth(1);
-    doc.line(15, 74, pageWidth - 15, 74);
-
-    // 6. Data Table
-    const head = [['Fecha', 'Factura #', 'Total Factura', 'Abonado', 'Balance Restante']];
-    const body = pendingSales.map(s => [
-      format(new Date(s.created_at), 'dd/MM/yyyy'),
-      s.invoice_number || 'S/N',
-      `$${s.total.toLocaleString()}`,
-      `$${(s.amount_paid || 0).toLocaleString()}`,
-      `$${(s.total - (s.amount_paid || 0)).toLocaleString()}`
-    ]);
-
-    autoTable(doc, {
-      startY: 85,
-      head,
-      body,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [20, 20, 20],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10,
-        halign: 'center',
-        cellPadding: 3
+    return await generateStatementPDF({
+      customer,
+      invoices: (pendingSales || []).map(s => ({
+        invoice_number: s.invoice_number,
+        created_at: s.created_at,
+        due_date: (s as any).due_date,
+        total: s.total,
+        amount_paid: s.amount_paid,
+        balance: s.balance !== undefined ? s.balance : s.total - (s.amount_paid || 0),
+      })),
+      totalDebt: customer.credit_used,
+      companyInfo: {
+        name: companySettings?.company_name || 'Mi Empresa',
+        logo: companySettings?.logo_url,
+        rnc: companySettings?.rnc,
+        phone: companySettings?.phone,
+        address: companySettings?.address,
       },
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        2: { halign: 'right' },
-        3: { halign: 'right' },
-        4: { halign: 'right' }
-      }
+      returnBlob,
     });
-
-    // 7. Total Debt Summary
-    let finalY = (doc as any).lastAutoTable.finalY + 15;
-    if (finalY + 20 > pageHeight) {
-      doc.addPage();
-      finalY = 20;
-    }
-
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(20, 20, 20);
-    const labelText = 'DEUDA TOTAL PENDIENTE:';
-    const amountText = `$${(customer.credit_used || 0).toLocaleString()}`;
-
-    // Draw a subtle background for the total
-    doc.setFillColor(248, 248, 250);
-    doc.rect(pageWidth - 110, finalY - 8, 95, 12, 'F');
-
-    doc.text(labelText, pageWidth - 105, finalY);
-    doc.setTextColor(220, 38, 38); // Clear Red for debt
-    doc.text(amountText, pageWidth - 15, finalY, { align: 'right' });
-
-    // 8. Watermark and Footers
-    const totalPages = doc.getNumberOfPages();
-    let logoImg: HTMLImageElement | null = null;
-    try {
-      logoImg = new Image();
-      logoImg.src = `${window.location.origin}/cobro-logo.png`;
-      logoImg.crossOrigin = 'Anonymous';
-      await new Promise((resolve) => {
-        logoImg!.onload = resolve;
-        logoImg!.onerror = () => resolve(null);
-        if (logoImg!.complete) resolve(null);
-      });
-    } catch (e) { }
-
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      const footerY = pageHeight - 15;
-      if (companySettings?.company_name) doc.text(companySettings.company_name, 15, footerY);
-      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 15, footerY, { align: 'right' });
-
-      // Watermark "COBRO" logic
-      const watermarkY = pageHeight - 8;
-      const logoSize = 18;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(24);
-      doc.setTextColor(80, 80, 80);
-      const text = "COBRO";
-      const textWidth = doc.getTextWidth(text);
-      const spacing = 3;
-      const totalW = logoSize + spacing + textWidth;
-      const startX = (pageWidth - totalW) / 2;
-
-      if (logoImg) {
-        try {
-          doc.addImage(logoImg, 'PNG', startX, watermarkY - 7, logoSize, logoSize, undefined, 'FAST');
-        } catch (e) { }
-      }
-      doc.text(text, startX + logoSize + spacing, watermarkY);
-    }
-
-    if (returnBlob) return doc.output('blob');
-    const safeName = customer.name.replace(/[^a-z0-9]/gi, '_');
-    doc.save(`Estado_Cuenta_${safeName}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   const handlePrintCustomerDebt = async (customer: any, pendingSales: Sale[]) => {
