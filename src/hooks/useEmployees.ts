@@ -71,15 +71,23 @@ export const useEmployees = () => {
             // Map ensure array is present with robust fallback/recovery logic
             return data.map((emp: any) => {
                 let details: DeductionDetail[] = [];
+                let applyLaw = emp.apply_law_deductions === true || emp.apply_afp === true || emp.apply_sfs === true;
+
+                let noteStr = emp.default_deduction_note || '';
+                if (typeof noteStr === 'string' && noteStr.includes('__LAW_DEDUCTIONS__:')) {
+                    const parts = noteStr.split('__LAW_DEDUCTIONS__:');
+                    noteStr = parts[0];
+                    applyLaw = parts[1]?.trim() === '1';
+                }
 
                 // 1. Try native JSONB column
                 if (Array.isArray(emp.default_deductions_details) && emp.default_deductions_details.length > 0) {
                     details = emp.default_deductions_details as DeductionDetail[];
                 } else {
                     // 2. Try recovering from Note (Polyfill)
-                    if (emp.default_deduction_note && emp.default_deduction_note.trim().startsWith('[')) {
+                    if (noteStr && noteStr.trim().startsWith('[')) {
                         try {
-                            const parsed = JSON.parse(emp.default_deduction_note);
+                            const parsed = JSON.parse(noteStr);
                             if (Array.isArray(parsed)) details = parsed;
                         } catch (e) {
                             // ignore parse error 
@@ -91,14 +99,15 @@ export const useEmployees = () => {
                 if (details.length === 0 && (emp.default_deduction || 0) > 0) {
                     details = [{
                         amount: emp.default_deduction,
-                        reason: (emp.default_deduction_note && !emp.default_deduction_note.startsWith('['))
-                            ? emp.default_deduction_note
+                        reason: (noteStr && !noteStr.startsWith('['))
+                            ? noteStr
                             : "Deducción General"
                     }];
                 }
 
                 return {
                     ...emp,
+                    apply_law_deductions: applyLaw,
                     default_deductions_details: details
                 };
             }) as Employee[];
@@ -211,29 +220,32 @@ export const useManageEmployee = () => {
             if ((payload.baseSalary !== undefined || payload.defaultDeductionsDetails !== undefined || payload.applyLawDeductions !== undefined) && targetId) {
                 const details = payload.defaultDeductionsDetails || [];
                 const totalDed = details.reduce((s, d) => s + (Number(d.amount) || 0), 0);
-                const salaryUpdates: Record<string, any> = {
+                const lawFlag = payload.applyLawDeductions === true ? '1' : '0';
+                const encodedNote = JSON.stringify(details) + `__LAW_DEDUCTIONS__:${lawFlag}`;
+
+                // Safe base updates that exist on all Supabase schemas
+                const safeUpdates: Record<string, any> = {
                     base_salary: payload.baseSalary,
                     default_deduction: totalDed,
+                    default_deduction_note: encodedNote
+                };
+
+                // Try modern columns if available in database
+                const fullUpdates: Record<string, any> = {
+                    ...safeUpdates,
                     default_deductions_details: details
                 };
 
                 if (payload.applyLawDeductions !== undefined) {
-                    salaryUpdates.apply_law_deductions = payload.applyLawDeductions;
-                    salaryUpdates.apply_afp = payload.applyLawDeductions;
-                    salaryUpdates.apply_sfs = payload.applyLawDeductions;
+                    fullUpdates.apply_law_deductions = payload.applyLawDeductions;
                 }
 
-                const { error: salaryError } = await supabase.from('profiles').update(salaryUpdates as any).eq('id', targetId);
+                const { error: salaryError } = await supabase.from('profiles').update(fullUpdates as any).eq('id', targetId);
 
                 if (salaryError) {
-                    // Fallback if column apply_law_deductions or default_deductions_details is missing
-                    if (salaryError.message?.includes('column')) {
-                        const { default_deductions_details, apply_law_deductions, ...safeUpdates } = salaryUpdates;
-                        try {
-                            (safeUpdates as any).default_deduction_note = JSON.stringify(details);
-                        } catch (e) {
-                            console.warn('Failed to stringify deduction details for polyfill', e);
-                        }
+                    // Fallback if column apply_law_deductions or default_deductions_details is missing in schema cache
+                    if (salaryError.message?.includes('column') || salaryError.message?.includes('schema cache')) {
+                        console.warn('[EMPLOYEE] Modern columns missing, saving via note polyfill:', salaryError.message);
                         const { error: retryError } = await supabase.from('profiles').update(safeUpdates as any).eq('id', targetId);
                         if (retryError) throw new Error('Error guardando salario: ' + retryError.message);
                     } else {

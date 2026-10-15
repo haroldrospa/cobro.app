@@ -113,7 +113,7 @@ export const usePayroll = () => {
                 // C. Fetch Employees and Profiles for robust matching
                 const { data: rawEmployees, error: empError } = await supabase
                     .from('profiles')
-                    .select('id, full_name, email, base_salary, default_deduction, default_deduction_note, is_active, include_in_payroll, apply_law_deductions, apply_afp, apply_sfs')
+                    .select('id, full_name, email, base_salary, default_deduction, default_deduction_note, is_active, include_in_payroll')
                     .eq('store_id', userStore.id);
 
                 // Skip inactive employees AND anyone explicitly flagged out of payroll
@@ -156,18 +156,27 @@ export const usePayroll = () => {
                 const items = employees.map((emp: any) => {
                     const base = (emp.base_salary || 0) / divisor;
 
+                    // Extract note content and law deductions flag
+                    let noteContent = emp.default_deduction_note || '';
+                    let hasLawDeductions = (emp.apply_law_deductions === true || emp.apply_afp === true || emp.apply_sfs === true);
+                    if (typeof noteContent === 'string' && noteContent.includes('__LAW_DEDUCTIONS__:')) {
+                        const parts = noteContent.split('__LAW_DEDUCTIONS__:');
+                        noteContent = parts[0];
+                        hasLawDeductions = parts[1]?.trim() === '1';
+                    }
+
                     // --- Process Deductions ---
                     let empDetails: DeductionDetail[] = [];
                     // Fallback to note parsing if detailed column is missing or empty
-                    if (emp.default_deduction_note && emp.default_deduction_note.trim().startsWith('[')) {
+                    if (noteContent && noteContent.trim().startsWith('[')) {
                         try {
-                            const parsed = JSON.parse(emp.default_deduction_note);
+                            const parsed = JSON.parse(noteContent);
                             if (Array.isArray(parsed)) empDetails = parsed;
                         } catch (e) {
                             // ignore
                         }
                     } else if ((emp.default_deduction || 0) > 0) {
-                        empDetails = [{ amount: emp.default_deduction, reason: emp.default_deduction_note || "Descuento General" }];
+                        empDetails = [{ amount: emp.default_deduction, reason: noteContent || "Descuento General" }];
                     }
 
                     // Divide deductions
@@ -178,8 +187,6 @@ export const usePayroll = () => {
                     let afpPart = 0;
                     let sfsPart = 0;
                     let calculatedInfotep = 0;
-
-                    const hasLawDeductions = (emp.apply_law_deductions === true || emp.apply_afp === true || emp.apply_sfs === true);
 
                     if (hasLawDeductions) {
                         if (settings.enable_afp) {
@@ -391,7 +398,7 @@ export const usePayroll = () => {
         // Step 1: Get all data needed
         const [{ data: customers }, { data: profiles }, { data: storeData }] = await Promise.all([
             supabase.from('customers').select('id, profile_id, name, email, credit_used').eq('store_id', userStore.id),
-            supabase.from('profiles').select('id, email, apply_law_deductions, apply_afp, apply_sfs, base_salary').eq('store_id', userStore.id),
+            supabase.from('profiles').select('id, email, base_salary, default_deduction_note').eq('store_id', userStore.id),
             supabase.from('store_settings').select('*').eq('store_id', userStore.id).maybeSingle()
         ]);
 
@@ -461,7 +468,12 @@ export const usePayroll = () => {
             });
 
             // 3. Tax Handling: Respect employee apply_law_deductions and store settings
-            const hasLawDeductions = (profile?.apply_law_deductions === true || profile?.apply_afp === true || profile?.apply_sfs === true);
+            let hasLawDeductions = (profile as any)?.apply_law_deductions === true || (profile as any)?.apply_afp === true || (profile as any)?.apply_sfs === true;
+            const noteContent = (profile as any)?.default_deduction_note;
+            if (noteContent && typeof noteContent === 'string' && noteContent.includes('__LAW_DEDUCTIONS__:')) {
+                const parts = noteContent.split('__LAW_DEDUCTIONS__:');
+                hasLawDeductions = parts[1]?.trim() === '1';
+            }
 
             let calculatedTss = 0;
             let calculatedInfotep = 0;
