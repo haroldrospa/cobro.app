@@ -213,8 +213,24 @@ export const useStoreSettings = () => {
       : null;
     const resolvedBankAccounts = cleanExistingSettings.bank_accounts || transferMethod?.bank_accounts || (localSettings as any)?.bank_accounts || [];
 
+    const payrollDefaults = {
+      afp_rate: 2.87,
+      sfs_rate: 3.04,
+      isr_rate: 0,
+      infotep_rate: 1.0,
+      enable_afp: true,
+      enable_sfs: true,
+      enable_isr: false,
+      enable_infotep: false,
+      afp_type: 'percentage' as const,
+      sfs_type: 'percentage' as const,
+      isr_type: 'percentage' as const,
+      infotep_type: 'percentage' as const,
+    };
+
     const mergedSettings = { 
       ...uiDefaults,
+      ...payrollDefaults,
       ...cleanExistingSettings, 
       ...localSettings, 
       ...userPersistedSettings,

@@ -75,21 +75,17 @@ export const usePayroll = () => {
                 .maybeSingle();
 
             const sData = storeData as any;
-            const settings = sData ? {
-                    afp: sData.afp_rate ?? 2.87,
-                    sfs: sData.sfs_rate ?? 3.04,
-                    infotep: sData.infotep_rate ?? 1.0,
-                    enable_afp: sData.enable_afp === true,
-                    enable_sfs: sData.enable_sfs === true,
-                    enable_infotep: sData.enable_infotep === true,
-                    afp_type: sData.afp_type ?? 'percentage',
-                    sfs_type: sData.sfs_type ?? 'percentage',
-                    infotep_type: sData.infotep_type ?? 'percentage'
-                } : {
-                    afp: 2.87, sfs: 3.04, infotep: 1.0,
-                    enable_afp: false, enable_sfs: false, enable_infotep: false,
-                    afp_type: 'percentage', sfs_type: 'percentage', infotep_type: 'percentage'
-                };
+            const settings = {
+                afp: Number(sData?.afp_rate) > 0 ? Number(sData.afp_rate) : 2.87,
+                sfs: Number(sData?.sfs_rate) > 0 ? Number(sData.sfs_rate) : 3.04,
+                infotep: Number(sData?.infotep_rate) > 0 ? Number(sData.infotep_rate) : 1.0,
+                enable_afp: sData?.enable_afp !== false,
+                enable_sfs: sData?.enable_sfs !== false,
+                enable_infotep: sData?.enable_infotep === true,
+                afp_type: sData?.afp_type ?? 'percentage',
+                sfs_type: sData?.sfs_type ?? 'percentage',
+                infotep_type: sData?.infotep_type ?? 'percentage'
+            };
 
             // B. Create Record
             const { data: payroll, error: payrollError } = await supabase
@@ -406,12 +402,12 @@ export const usePayroll = () => {
 
         const sData = storeData as any;
         const settings = {
-            enable_afp: sData?.enable_afp === true,
-            enable_sfs: sData?.enable_sfs === true,
+            enable_afp: sData?.enable_afp !== false,
+            enable_sfs: sData?.enable_sfs !== false,
             enable_infotep: sData?.enable_infotep === true,
-            afp_rate: sData?.afp_rate ?? 2.87,
-            sfs_rate: sData?.sfs_rate ?? 3.04,
-            infotep_rate: sData?.infotep_rate ?? 1.0,
+            afp_rate: Number(sData?.afp_rate) > 0 ? Number(sData.afp_rate) : 2.87,
+            sfs_rate: Number(sData?.sfs_rate) > 0 ? Number(sData.sfs_rate) : 3.04,
+            infotep_rate: Number(sData?.infotep_rate) > 0 ? Number(sData.infotep_rate) : 1.0,
             afp_type: sData?.afp_type ?? 'percentage',
             sfs_type: sData?.sfs_type ?? 'percentage',
             infotep_type: sData?.infotep_type ?? 'percentage',
