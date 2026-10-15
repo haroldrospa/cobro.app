@@ -246,6 +246,9 @@ const Employees: React.FC = () => {
                         ) : (
                           <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 font-black text-[9px] uppercase tracking-widest">Inactivo</Badge>
                         )}
+                        {(employee.apply_law_deductions === true || employee.apply_afp === true || employee.apply_sfs === true) && (
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20 font-black text-[9px] uppercase tracking-widest">TSS / Ley</Badge>
+                        )}
                         {employee.include_in_payroll === false && (
                           <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 font-black text-[9px] uppercase tracking-widest">Sin Nómina</Badge>
                         )}
@@ -316,6 +319,12 @@ const Employees: React.FC = () => {
                       <div className={cn("h-1.5 w-1.5 rounded-full", employee.is_active ? "bg-emerald-500" : "bg-red-500")} />
                       <span className="text-[10px] font-black uppercase tracking-widest">{employee.is_active ? "Activo" : "Inactivo"}</span>
                     </div>
+                    {(employee.apply_law_deductions === true || employee.apply_afp === true || employee.apply_sfs === true) && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-blue-600">TSS / Ley</span>
+                      </div>
+                    )}
                     {employee.include_in_payroll === false && (
                       <div className="flex items-center gap-1 mt-1">
                         <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />

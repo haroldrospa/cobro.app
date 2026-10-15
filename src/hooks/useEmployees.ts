@@ -17,6 +17,9 @@ export interface Employee {
     default_deduction?: number;
     default_deduction_note?: string;
 
+    // Legal Deductions (TSS / Ley)
+    apply_law_deductions?: boolean;
+
     // Legacy support
     apply_afp?: boolean;
     apply_sfs?: boolean;
@@ -128,6 +131,7 @@ interface ManageEmployeePayload {
     includeInPayroll?: boolean;
     baseSalary?: number;
     defaultDeductionsDetails?: DeductionDetail[];
+    applyLawDeductions?: boolean;
 }
 
 export const useManageEmployee = () => {
@@ -203,10 +207,8 @@ export const useManageEmployee = () => {
                 }
             }
 
-            // ── 4. Save base salary + deductions (direct update, same field this used
-            // to live in on the Payroll "Configurar Salarios" bulk editor — ported here
-            // now that salary lives on each employee's own edit form) ──
-            if ((payload.baseSalary !== undefined || payload.defaultDeductionsDetails !== undefined) && targetId) {
+            // ── 4. Save base salary, deductions + legal deductions (TSS / Ley) ──
+            if ((payload.baseSalary !== undefined || payload.defaultDeductionsDetails !== undefined || payload.applyLawDeductions !== undefined) && targetId) {
                 const details = payload.defaultDeductionsDetails || [];
                 const totalDed = details.reduce((s, d) => s + (Number(d.amount) || 0), 0);
                 const salaryUpdates: Record<string, any> = {
@@ -215,13 +217,18 @@ export const useManageEmployee = () => {
                     default_deductions_details: details
                 };
 
+                if (payload.applyLawDeductions !== undefined) {
+                    salaryUpdates.apply_law_deductions = payload.applyLawDeductions;
+                    salaryUpdates.apply_afp = payload.applyLawDeductions;
+                    salaryUpdates.apply_sfs = payload.applyLawDeductions;
+                }
+
                 const { error: salaryError } = await supabase.from('profiles').update(salaryUpdates as any).eq('id', targetId);
 
                 if (salaryError) {
-                    // Fallback for stores whose DB is missing the default_deductions_details
-                    // column (JSONB) — polyfill by stashing the details as JSON in the note.
+                    // Fallback if column apply_law_deductions or default_deductions_details is missing
                     if (salaryError.message?.includes('column')) {
-                        const { default_deductions_details, ...safeUpdates } = salaryUpdates;
+                        const { default_deductions_details, apply_law_deductions, ...safeUpdates } = salaryUpdates;
                         try {
                             (safeUpdates as any).default_deduction_note = JSON.stringify(details);
                         } catch (e) {

@@ -42,6 +42,7 @@ const employeeSchema = z.object({
     role: z.enum(['admin', 'manager', 'cashier', 'kitchen', 'delivery', 'accountant', 'waiter']),
     is_active: z.boolean().default(true),
     include_in_payroll: z.boolean().default(true),
+    apply_law_deductions: z.boolean().default(false),
     credit_limit: z.coerce.number().min(0).optional(),
     base_salary: z.coerce.number().min(0).optional(),
     cedula: z.string().optional(),
@@ -71,6 +72,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             role: 'cashier',
             is_active: true,
             include_in_payroll: true,
+            apply_law_deductions: false,
             credit_limit: 0,
             base_salary: 0,
             cedula: '',
@@ -86,6 +88,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 role: (['staff', 'cashier'].includes(employee.role)) ? 'cashier' : (['kitchen', 'delivery', 'accountant', 'waiter'].includes(employee.role) ? employee.role as any : employee.role),
                 is_active: employee.is_active,
                 include_in_payroll: employee.include_in_payroll !== false,
+                apply_law_deductions: employee.apply_law_deductions === true || employee.apply_afp === true || employee.apply_sfs === true,
                 password: '',
                 credit_limit: employee.credit_limit || 0,
                 base_salary: employee.base_salary || 0,
@@ -105,6 +108,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                 role: 'cashier',
                 is_active: true,
                 include_in_payroll: true,
+                apply_law_deductions: false,
                 password: '',
                 credit_limit: 0,
                 base_salary: 0,
@@ -133,6 +137,7 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
             role: values.role,
             is_active: values.is_active,
             includeInPayroll: values.include_in_payroll,
+            applyLawDeductions: values.apply_law_deductions,
             credit_limit: values.credit_limit,
             baseSalary: values.base_salary,
             defaultDeductionsDetails: deductions,
@@ -348,6 +353,27 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
                                         <FormLabel className="text-base">Incluir en Nómina</FormLabel>
                                         <FormDescription>
                                             Desactiva si tiene acceso a la app pero no recibe salario. No se le generará pago al crear una nómina.
+                                        </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="apply_law_deductions"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="text-base font-semibold">Aplicar Deducciones de Ley</FormLabel>
+                                        <FormDescription>
+                                            Aplica automáticamente retenciones de TSS (AFP y SFS) configuradas en la nómina al calcular su pago.
                                         </FormDescription>
                                     </div>
                                     <FormControl>

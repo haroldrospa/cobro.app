@@ -113,7 +113,7 @@ export const usePayroll = () => {
                 // C. Fetch Employees and Profiles for robust matching
                 const { data: rawEmployees, error: empError } = await supabase
                     .from('profiles')
-                    .select('id, full_name, email, base_salary, default_deduction, default_deduction_note, is_active, include_in_payroll')
+                    .select('id, full_name, email, base_salary, default_deduction, default_deduction_note, is_active, include_in_payroll, apply_law_deductions, apply_afp, apply_sfs')
                     .eq('store_id', userStore.id);
 
                 // Skip inactive employees AND anyone explicitly flagged out of payroll
@@ -174,38 +174,32 @@ export const usePayroll = () => {
                     const dividedDetails = empDetails.map(d => ({ ...d, amount: Math.round((d.amount / divisor) * 100) / 100 }));
                     let totalDeductions = dividedDetails.reduce((s, d) => s + d.amount, 0);
 
-                    // --- Calculate TSS & Infotep ---
+                    // --- Calculate TSS & Infotep (Deducciones de Ley) ---
                     let afpPart = 0;
                     let sfsPart = 0;
+                    let calculatedInfotep = 0;
 
-                    if (settings.enable_afp) {
-                        if (settings.afp_type === 'fixed') afpPart = settings.afp;
-                        else afpPart = base * (settings.afp / 100);
-                    }
+                    const hasLawDeductions = (emp.apply_law_deductions === true || emp.apply_afp === true || emp.apply_sfs === true);
 
-                    if (settings.enable_sfs) {
-                        if (settings.sfs_type === 'fixed') sfsPart = settings.sfs;
-                        else sfsPart = base * (settings.sfs / 100);
+                    if (hasLawDeductions) {
+                        if (settings.enable_afp) {
+                            if (settings.afp_type === 'fixed') afpPart = settings.afp;
+                            else afpPart = base * (settings.afp / 100);
+                        }
+
+                        if (settings.enable_sfs) {
+                            if (settings.sfs_type === 'fixed') sfsPart = settings.sfs;
+                            else sfsPart = base * (settings.sfs / 100);
+                        }
+
+                        if (settings.enable_infotep) {
+                            if (settings.infotep_type === 'fixed') calculatedInfotep = settings.infotep;
+                            else calculatedInfotep = base * (settings.infotep / 100);
+                        }
                     }
 
                     const calculatedTss = Math.round((afpPart + sfsPart) * 100) / 100;
-
-                    let calculatedInfotep = 0;
-                    if (settings.enable_infotep) {
-                        if (settings.infotep_type === 'fixed') calculatedInfotep = settings.infotep;
-                        else calculatedInfotep = base * (settings.infotep / 100);
-                    }
                     calculatedInfotep = Math.round(calculatedInfotep * 100) / 100;
-
-                    // Add TSS/Infotep to deductions details for transparency
-                    if (calculatedTss > 0) {
-                        dividedDetails.push({ reason: 'TSS (Seguro/AFP)', amount: calculatedTss });
-                        totalDeductions += calculatedTss;
-                    }
-                    if (calculatedInfotep > 0) {
-                        dividedDetails.push({ reason: 'INFOTEP', amount: calculatedInfotep });
-                        totalDeductions += calculatedInfotep;
-                    }
 
                     // Auto-collect Employee Credit/Debt (Local profiles field)
                     const profileCreditDue = (emp as any).credit_used || 0;
@@ -249,7 +243,7 @@ export const usePayroll = () => {
                         severance: 0,
                         deductions: totalDeductions,
                         deductions_details: dividedDetails,
-                        net_salary: Math.max(0, (base - totalDeductions)),
+                        net_salary: Math.max(0, (base - calculatedTss - calculatedInfotep - totalDeductions)),
                     };
                 });
 
@@ -257,7 +251,7 @@ export const usePayroll = () => {
                 if (items.length > 0) {
                     try {
                         const cleanItems = items.map(item => {
-                            const { tss, infotep, regalia, severance, deductions_details, ...dbItem } = item as any;
+                            const { deductions_details, ...dbItem } = item as any;
                             return {
                                 ...dbItem,
                                 status: 'pending',
@@ -319,11 +313,7 @@ export const usePayroll = () => {
     const updatePayrollItemMutation = useMutation({
         mutationFn: async (item: Partial<PayrollItem> & { id: string }) => {
             const payload = { ...item };
-            // Sanitize payload: remove virtual columns
-            delete (payload as any).tss;
-            delete (payload as any).infotep;
-            delete (payload as any).regalia;
-            delete (payload as any).severance;
+            // Sanitize payload: remove non-db virtual columns
             delete (payload as any).deductions_details;
 
             if (item.deductions_details) {
@@ -401,7 +391,7 @@ export const usePayroll = () => {
         // Step 1: Get all data needed
         const [{ data: customers }, { data: profiles }, { data: storeData }] = await Promise.all([
             supabase.from('customers').select('id, profile_id, name, email, credit_used').eq('store_id', userStore.id),
-            supabase.from('profiles').select('id, email').eq('store_id', userStore.id),
+            supabase.from('profiles').select('id, email, apply_law_deductions, apply_afp, apply_sfs, base_salary').eq('store_id', userStore.id),
             supabase.from('store_settings').select('*').eq('store_id', userStore.id).maybeSingle()
         ]);
 
@@ -411,7 +401,13 @@ export const usePayroll = () => {
         const settings = {
             enable_afp: sData?.enable_afp === true,
             enable_sfs: sData?.enable_sfs === true,
-            enable_infotep: sData?.enable_infotep === true
+            enable_infotep: sData?.enable_infotep === true,
+            afp_rate: sData?.afp_rate ?? 2.87,
+            sfs_rate: sData?.sfs_rate ?? 3.04,
+            infotep_rate: sData?.infotep_rate ?? 1.0,
+            afp_type: sData?.afp_type ?? 'percentage',
+            sfs_type: sData?.sfs_type ?? 'percentage',
+            infotep_type: sData?.infotep_type ?? 'percentage',
         };
 
         // Step 2: Get REAL balances from unpaid sales
@@ -443,7 +439,7 @@ export const usePayroll = () => {
 
             const realDebt = linkedCustomer ? (realBalances[linkedCustomer.id] || 0) : 0;
             
-            // Re-build details respecting CURRENT store settings
+            // Re-build details
             let newDetails = [...(item.deductions_details || [])];
             
             // 1. Debt Handling
@@ -453,49 +449,72 @@ export const usePayroll = () => {
                 syncCount++;
             }
 
-            // 2. Tax Handling: Respect enable_afp/sfs/infotep
-            // If they are OFF in settings, remove them from details even if they were there before
-            const hasTaxesEnabled = settings.enable_afp || settings.enable_sfs;
-            
+            // 2. Remove any accidental TSS or Infotep lines from deductions_details (they belong in item.tss / item.infotep)
             newDetails = newDetails.filter(d => {
                 const reason = (d.reason || '').toLowerCase().trim();
-                // Broad matching for tax terms including all variations of generic labels
                 const isTaxLine = reason.includes('tss') || 
                                  reason.includes('sfs') || 
                                  reason.includes('afp') || 
-                                 reason.includes('seguro') || 
-                                 reason.includes('deducción') || 
-                                 reason.includes('deduccion') ||
-                                 reason.includes('general') ||
-                                 reason === ''; // Empty reasons are usually automatic taxes
-
-                if (isTaxLine) {
-                    return hasTaxesEnabled;
-                }
-                if (reason.includes('infotep')) {
-                    return settings.enable_infotep;
-                }
-                return true;
+                                 reason.includes('seguro') ||
+                                 reason.includes('infotep');
+                return !isTaxLine;
             });
 
-            // If they are ON but missing, add them (using the existing scalar value as reference)
-            if (hasTaxesEnabled && item.tss > 0 && !newDetails.find(d => d.reason.includes('TSS'))) {
-                newDetails.push({ reason: 'TSS (Seguro/AFP)', amount: item.tss });
-            }
-            if (settings.enable_infotep && item.infotep > 0 && !newDetails.find(d => d.reason.includes('INFOTEP'))) {
-                newDetails.push({ reason: 'INFOTEP', amount: item.infotep });
+            // 3. Tax Handling: Respect employee apply_law_deductions and store settings
+            const hasLawDeductions = (profile?.apply_law_deductions === true || profile?.apply_afp === true || profile?.apply_sfs === true);
+
+            let calculatedTss = 0;
+            let calculatedInfotep = 0;
+
+            if (hasLawDeductions) {
+                let afpPart = 0;
+                let sfsPart = 0;
+
+                if (settings.enable_afp) {
+                    if (settings.afp_type === 'fixed') afpPart = settings.afp_rate;
+                    else afpPart = item.base_salary * (settings.afp_rate / 100);
+                }
+
+                if (settings.enable_sfs) {
+                    if (settings.sfs_type === 'fixed') sfsPart = settings.sfs_rate;
+                    else sfsPart = item.base_salary * (settings.sfs_rate / 100);
+                }
+
+                if (settings.enable_infotep) {
+                    if (settings.infotep_type === 'fixed') calculatedInfotep = settings.infotep_rate;
+                    else calculatedInfotep = item.base_salary * (settings.infotep_rate / 100);
+                }
+
+                calculatedTss = Math.round((afpPart + sfsPart) * 100) / 100;
+                calculatedInfotep = Math.round(calculatedInfotep * 100) / 100;
             }
 
             const totalDeductions = newDetails.reduce((s, d) => s + (Number(d.amount) || 0), 0);
             
             return {
                 ...item,
+                tss: calculatedTss,
+                infotep: calculatedInfotep,
                 deductions: totalDeductions,
                 deductions_details: newDetails,
-                // Recalculate net respecting if tss/infotep should be subtracted
-                net_salary: Math.max(0, (item.base_salary + (item.bonuses || 0) - totalDeductions))
+                net_salary: Math.max(0, (item.base_salary + (item.bonuses || 0) - calculatedTss - calculatedInfotep - totalDeductions))
             };
         });
+
+        // Save updated items to DB so it persists immediately
+        try {
+            await Promise.all(updatedItems.map(async (it) => {
+                await supabase.from('payroll_items').update({
+                    tss: it.tss,
+                    infotep: it.infotep,
+                    deductions: it.deductions,
+                    net_salary: it.net_salary,
+                    note: JSON.stringify(it.deductions_details)
+                }).eq('id', it.id);
+            }));
+        } catch (dbErr) {
+            console.error('[PAYROLL-SYNC] Error saving updated items to DB', dbErr);
+        }
 
         console.log(`[PAYROLL-SYNC] Done. Updated ${syncCount} employees with debt.`);
         return updatedItems;

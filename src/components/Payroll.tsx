@@ -120,7 +120,53 @@ function PayrollContent() {
         setLoadingItems(true);
         try {
             const data = await fetchPayrollItems(payroll.id);
-            setItems(data);
+            if (payroll.status !== 'paid') {
+                const updatedData = data.map(item => {
+                    const emp = employees.find(e => e.id === item.profile_id);
+                    const hasLawDeductions = (emp?.apply_law_deductions === true || emp?.apply_afp === true || emp?.apply_sfs === true);
+
+                    // If employee has apply_law_deductions and item.tss is 0 while taxes are enabled in store
+                    if (hasLawDeductions && item.tss === 0 && (localSettings.enable_afp || localSettings.enable_sfs || localSettings.enable_infotep)) {
+                        let afpPart = 0;
+                        let sfsPart = 0;
+                        if (localSettings.enable_afp) {
+                            if (localSettings.afp_type === 'fixed') afpPart = localSettings.afp_rate;
+                            else afpPart = item.base_salary * (localSettings.afp_rate / 100);
+                        }
+                        if (localSettings.enable_sfs) {
+                            if (localSettings.sfs_type === 'fixed') sfsPart = localSettings.sfs_rate;
+                            else sfsPart = item.base_salary * (localSettings.sfs_rate / 100);
+                        }
+                        let calculatedInfotep = 0;
+                        if (localSettings.enable_infotep) {
+                            if (localSettings.infotep_type === 'fixed') calculatedInfotep = localSettings.infotep_rate;
+                            else calculatedInfotep = item.base_salary * (localSettings.infotep_rate / 100);
+                        }
+                        const calculatedTss = Math.round((afpPart + sfsPart) * 100) / 100;
+                        calculatedInfotep = Math.round(calculatedInfotep * 100) / 100;
+
+                        const cleanDetails = (item.deductions_details || []).filter(d => {
+                            const r = (d.reason || '').toLowerCase().trim();
+                            return !r.includes('tss') && !r.includes('sfs') && !r.includes('afp') && !r.includes('infotep');
+                        });
+                        const deds = cleanDetails.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+                        const net = Math.max(0, item.base_salary + (item.bonuses || 0) - calculatedTss - calculatedInfotep - deds);
+
+                        return {
+                            ...item,
+                            tss: calculatedTss,
+                            infotep: calculatedInfotep,
+                            deductions: deds,
+                            deductions_details: cleanDetails,
+                            net_salary: net
+                        };
+                    }
+                    return item;
+                });
+                setItems(updatedData);
+            } else {
+                setItems(data);
+            }
             setSearchTerm(''); // Reset search when opening
         } catch (e) {
             console.error(e);
@@ -132,6 +178,53 @@ function PayrollContent() {
     const saveSettings = async () => {
         try {
             await updateSettings(localSettings);
+
+            if (selectedPayroll && selectedPayroll.status !== 'paid') {
+                const updatedItems = items.map(item => {
+                    const emp = employees.find(e => e.id === item.profile_id);
+                    const hasLawDeductions = (emp?.apply_law_deductions === true || emp?.apply_afp === true || emp?.apply_sfs === true);
+
+                    let calculatedTss = 0;
+                    let calculatedInfotep = 0;
+
+                    if (hasLawDeductions) {
+                        let afpPart = 0;
+                        let sfsPart = 0;
+                        if (localSettings.enable_afp) {
+                            if (localSettings.afp_type === 'fixed') afpPart = localSettings.afp_rate;
+                            else afpPart = item.base_salary * (localSettings.afp_rate / 100);
+                        }
+                        if (localSettings.enable_sfs) {
+                            if (localSettings.sfs_type === 'fixed') sfsPart = localSettings.sfs_rate;
+                            else sfsPart = item.base_salary * (localSettings.sfs_rate / 100);
+                        }
+                        if (localSettings.enable_infotep) {
+                            if (localSettings.infotep_type === 'fixed') calculatedInfotep = localSettings.infotep_rate;
+                            else calculatedInfotep = item.base_salary * (localSettings.infotep_rate / 100);
+                        }
+                        calculatedTss = Math.round((afpPart + sfsPart) * 100) / 100;
+                        calculatedInfotep = Math.round(calculatedInfotep * 100) / 100;
+                    }
+
+                    const cleanDetails = (item.deductions_details || []).filter(d => {
+                        const r = (d.reason || '').toLowerCase().trim();
+                        return !r.includes('tss') && !r.includes('sfs') && !r.includes('afp') && !r.includes('infotep');
+                    });
+                    const deds = cleanDetails.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+                    const net = Math.max(0, item.base_salary + (item.bonuses || 0) - calculatedTss - calculatedInfotep - deds);
+
+                    return {
+                        ...item,
+                        tss: calculatedTss,
+                        infotep: calculatedInfotep,
+                        deductions: deds,
+                        deductions_details: cleanDetails,
+                        net_salary: net
+                    };
+                });
+                setItems(updatedItems);
+            }
+
             toast({ title: "Guardado", description: "Configuración actualizada." });
             setIsSettingsOpen(false);
         } catch (e: any) {
@@ -188,19 +281,23 @@ function PayrollContent() {
             details.reduce((s, d) => s + (Number(d.amount) || 0), 0);
 
         let tss = 0;
-        if (localSettings.enable_afp) {
-            if (localSettings.afp_type === 'fixed') tss += localSettings.afp_rate;
-            else tss += base * (localSettings.afp_rate / 100);
-        }
-        if (localSettings.enable_sfs) {
-            if (localSettings.sfs_type === 'fixed') tss += localSettings.sfs_rate;
-            else tss += base * (localSettings.sfs_rate / 100);
-        }
-
         let infotep = 0;
-        if (localSettings.enable_infotep) {
-            if (localSettings.infotep_type === 'fixed') infotep = localSettings.infotep_rate;
-            else infotep += base * (localSettings.infotep_rate / 100);
+        const hasLawDeductions = (emp.apply_law_deductions === true || emp.apply_afp === true || emp.apply_sfs === true);
+
+        if (hasLawDeductions) {
+            if (localSettings.enable_afp) {
+                if (localSettings.afp_type === 'fixed') tss += localSettings.afp_rate;
+                else tss += base * (localSettings.afp_rate / 100);
+            }
+            if (localSettings.enable_sfs) {
+                if (localSettings.sfs_type === 'fixed') tss += localSettings.sfs_rate;
+                else tss += base * (localSettings.sfs_rate / 100);
+            }
+
+            if (localSettings.enable_infotep) {
+                if (localSettings.infotep_type === 'fixed') infotep = localSettings.infotep_rate;
+                else infotep += base * (localSettings.infotep_rate / 100);
+            }
         }
         tss = Math.round(tss * 100) / 100;
         infotep = Math.round(infotep * 100) / 100;
@@ -236,6 +333,8 @@ function PayrollContent() {
                     id: item.id,
                     base_salary: item.base_salary,
                     bonuses: item.bonuses,
+                    tss: item.tss,
+                    infotep: item.infotep,
                     deductions: item.deductions,
                     net_salary: item.net_salary,
                     deductions_details: item.deductions_details
