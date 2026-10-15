@@ -326,10 +326,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const showSyncBanner = false; // Desactivado por solicitud del usuario para evitar carteles de sincronización
   const shouldAddMargin = showOfflineBanner || showSyncBanner;
 
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Header fijo arriba con menú principal, banners de estado y vencimiento */}
-      <header className="sticky top-0 w-full z-50 shadow-sm bg-card/95 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
+    <div className="fixed inset-0 h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col bg-background">
+      {/* Header fijo arriba que NUNCA se mueve ni desaparece */}
+      <header className="shrink-0 w-full z-50 shadow-sm bg-card/95 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
         {showOfflineBanner && (
           <div className="bg-destructive text-destructive-foreground text-center text-xs py-1 px-4 font-medium w-full">
             Sin conexión a internet. Trabajando en modo offline.
@@ -508,10 +516,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <SubscriptionWarningBanner />
       </header>
 
-      {/* Contenido principal - flujo natural sin tapar nada */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6 lg:pb-8">
-        {children}
-      </main>
+      {/* Contenedor de scroll dedicado para el contenido principal */}
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden">
+        <main className="p-4 sm:p-6 lg:p-8 2xl:px-10 w-full max-w-[1920px] mx-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6 lg:pb-8">
+          {children}
+        </main>
+      </div>
 
       {/* Barra de navegación inferior para móviles */}
       <MobileBottomNav />
