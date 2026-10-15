@@ -26,6 +26,11 @@ export const printPayrollReceipt = (
         minute: '2-digit'
     });
 
+    const formatMoney = (val: number) => (val || 0).toLocaleString('es-DO', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
     const totalAmount = items.reduce((sum, item) => sum + item.net_salary, 0);
     const totalBase = items.reduce((sum, item) => sum + item.base_salary, 0);
     const totalBonuses = items.reduce((sum, item) => sum + item.bonuses, 0);
@@ -51,15 +56,28 @@ export const printPayrollReceipt = (
             <style>
                 @media print {
                     @page {
-                        margin: 1.5cm;
-                        size: letter;
+                        margin: 10mm 12mm;
+                        size: letter portrait;
                     }
-                    body {
+                    html, body {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        background: #ffffff !important;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
                     .no-print {
                         display: none !important;
+                    }
+                    .page-container {
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        box-shadow: none !important;
+                    }
+                    table, tr, td, th, .summary-section, .signatures, .footer {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
                     }
                 }
                 
@@ -73,8 +91,8 @@ export const printPayrollReceipt = (
                     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
                     background: #ffffff;
                     color: #1a1a1a;
-                    line-height: 1.6;
-                    padding: 20px;
+                    line-height: 1.4;
+                    padding: 16px;
                 }
 
                 .action-bar {
@@ -83,7 +101,7 @@ export const printPayrollReceipt = (
                     left: 0;
                     right: 0;
                     background: #2c3e50;
-                    padding: 12px 20px;
+                    padding: 10px 20px;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                     z-index: 1000;
                     display: flex;
@@ -95,9 +113,9 @@ export const printPayrollReceipt = (
                     background: white;
                     color: #2c3e50;
                     border: 1px solid #e0e0e0;
-                    padding: 10px 24px;
+                    padding: 8px 20px;
                     border-radius: 4px;
-                    font-size: 14px;
+                    font-size: 13px;
                     font-weight: 500;
                     cursor: pointer;
                     transition: all 0.2s;
@@ -109,8 +127,8 @@ export const printPayrollReceipt = (
                 }
 
                 .page-container {
-                    max-width: 900px;
-                    margin: 60px auto 0;
+                    max-width: 850px;
+                    margin: 45px auto 0;
                     background: white;
                 }
                 
@@ -118,15 +136,15 @@ export const printPayrollReceipt = (
                 .header {
                     display: flex;
                     align-items: center;
-                    gap: 20px;
-                    padding-bottom: 24px;
+                    gap: 16px;
+                    padding-bottom: 12px;
                     border-bottom: 2px solid #1a1a1a;
-                    margin-bottom: 32px;
+                    margin-bottom: 14px;
                 }
 
                 .logo-container {
-                    width: 70px;
-                    height: 70px;
+                    width: 52px;
+                    height: 52px;
                     flex-shrink: 0;
                 }
 
@@ -141,15 +159,16 @@ export const printPayrollReceipt = (
                 }
 
                 .company-name {
-                    font-size: 24px;
+                    font-size: 21px;
                     font-weight: 700;
                     color: #1a1a1a;
-                    margin-bottom: 4px;
+                    margin-bottom: 2px;
+                    line-height: 1.2;
                 }
                 
                 .document-type {
-                    font-size: 14px;
-                    font-weight: 500;
+                    font-size: 12px;
+                    font-weight: 600;
                     color: #666;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
@@ -158,37 +177,38 @@ export const printPayrollReceipt = (
                 /* Info Section */
                 .info-section {
                     display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 24px;
-                    margin-bottom: 32px;
+                    grid-template-columns: 1.3fr 0.9fr 1fr 0.8fr;
+                    gap: 14px;
+                    margin-bottom: 14px;
                 }
 
                 .info-item {
                     border-left: 3px solid #1a1a1a;
-                    padding-left: 12px;
+                    padding-left: 10px;
                 }
 
                 .info-label {
-                    font-size: 11px;
+                    font-size: 10px;
                     font-weight: 600;
                     color: #666;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
-                    margin-bottom: 4px;
+                    margin-bottom: 2px;
                 }
 
                 .info-value {
-                    font-size: 14px;
+                    font-size: 12.5px;
                     font-weight: 600;
                     color: #1a1a1a;
+                    white-space: nowrap;
                 }
 
                 /* Table */
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 32px;
-                    font-size: 13px;
+                    margin-bottom: 16px;
+                    font-size: 12px;
                 }
 
                 thead {
@@ -197,9 +217,9 @@ export const printPayrollReceipt = (
                 }
 
                 th {
-                    padding: 12px 10px;
+                    padding: 8px 8px;
                     text-align: left;
-                    font-size: 11px;
+                    font-size: 10px;
                     font-weight: 600;
                     text-transform: uppercase;
                     letter-spacing: 0.3px;
@@ -218,7 +238,7 @@ export const printPayrollReceipt = (
                 }
 
                 td {
-                    padding: 14px 10px;
+                    padding: 6.5px 8px;
                     color: #333;
                 }
 
@@ -233,40 +253,46 @@ export const printPayrollReceipt = (
                 }
 
                 td.amount {
-                    font-weight: 600;
+                    font-weight: 500;
                 }
 
                 td.net-amount {
                     font-weight: 700;
                     color: #1a1a1a;
-                    font-size: 14px;
+                    font-size: 12.5px;
                 }
 
                 /* Summary */
                 .summary-section {
-                    margin-bottom: 48px;
+                    display: grid;
+                    grid-template-columns: 1.15fr 1fr;
+                    gap: 20px;
+                    align-items: stretch;
+                    margin-bottom: 20px;
                 }
 
                 .summary-left {
-                    padding: 20px 0;
-                    margin-bottom: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    padding: 0;
                 }
 
                 .summary-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 10px 0;
+                    padding: 3.5px 0;
                     border-bottom: 1px solid #e5e5e5;
-                    font-size: 14px;
+                    font-size: 12px;
                 }
 
                 .summary-row.subtotal {
                     font-weight: 600;
-                    border-bottom: 2px solid #1a1a1a;
+                    border-bottom: 1.5px solid #1a1a1a;
                 }
 
                 .summary-label {
-                    color: #666;
+                    color: #555;
                 }
 
                 .summary-value {
@@ -276,33 +302,34 @@ export const printPayrollReceipt = (
                 }
 
                 .total-box {
-                    background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
-                    border: 2px solid #dee2e6;
-                    border-radius: 8px;
-                    padding: 32px;
-                    margin-top: 24px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                    background: linear-gradient(135deg, #f8f9fa 0%, #edf0f2 100%);
+                    border: 1.5px solid #dee2e6;
+                    border-radius: 6px;
+                    padding: 14px 18px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
                 }
 
                 .total-content {
                     display: flex;
                     justify-content: space-between;
                     align-items: baseline;
-                    padding-bottom: 16px;
-                    border-bottom: 3px double #1a1a1a;
-                    margin-bottom: 16px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid #1a1a1a;
+                    margin-bottom: 6px;
                 }
 
                 .total-label {
-                    font-size: 13px;
+                    font-size: 11px;
                     font-weight: 700;
                     text-transform: uppercase;
-                    letter-spacing: 1.5px;
+                    letter-spacing: 1px;
                     color: #495057;
                 }
 
                 .total-amount {
-                    font-size: 48px;
+                    font-size: 28px;
                     font-weight: 800;
                     color: #1a1a1a;
                     font-variant-numeric: tabular-nums;
@@ -310,8 +337,8 @@ export const printPayrollReceipt = (
                 }
 
                 .total-footer {
-                    text-align: center;
-                    font-size: 11px;
+                    text-align: right;
+                    font-size: 10px;
                     color: #868e96;
                     font-style: italic;
                 }
@@ -320,8 +347,8 @@ export const printPayrollReceipt = (
                 .signatures {
                     display: grid;
                     grid-template-columns: repeat(2, 1fr);
-                    gap: 60px;
-                    margin: 60px 0 40px;
+                    gap: 40px;
+                    margin: 22px 0 16px;
                 }
 
                 .signature-box {
@@ -329,13 +356,13 @@ export const printPayrollReceipt = (
                 }
 
                 .signature-line {
-                    border-top: 2px solid #1a1a1a;
-                    margin-bottom: 8px;
-                    padding-top: 8px;
+                    border-top: 1.5px solid #1a1a1a;
+                    margin-bottom: 4px;
+                    padding-top: 4px;
                 }
 
                 .signature-label {
-                    font-size: 11px;
+                    font-size: 10px;
                     font-weight: 600;
                     color: #666;
                     text-transform: uppercase;
@@ -345,45 +372,32 @@ export const printPayrollReceipt = (
                 /* Footer */
                 .footer {
                     text-align: center;
-                    padding-top: 24px;
+                    padding-top: 10px;
                     border-top: 1px solid #e5e5e5;
-                    font-size: 11px;
+                    font-size: 10px;
                     color: #999;
-                    line-height: 1.6;
+                    line-height: 1.4;
                 }
 
                 .footer strong {
                     color: #666;
                 }
 
-                /* Employee count badge */
-                .employee-badge {
-                    display: inline-block;
-                    background: #f5f5f5;
-                    border: 1px solid #e0e0e0;
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #333;
-                    margin-bottom: 16px;
-                }
-
                 .app-watermark {
-                    margin-top: 20px;
+                    margin-top: 8px;
                     display: flex;
                     justify-content: center;
                     align-items: center;
-                    gap: 8px;
+                    gap: 6px;
                     opacity: 0.5;
                 }
                 .app-watermark img {
-                    height: 16px;
+                    height: 14px;
                     width: auto;
                     filter: grayscale(100%);
                 }
                 .app-watermark span {
-                    font-size: 11px;
+                    font-size: 10px;
                     font-weight: 600;
                     color: #999;
                     text-transform: uppercase;
@@ -418,7 +432,11 @@ export const printPayrollReceipt = (
                     <div class="info-item">
                         <div class="info-label">Período de Nómina</div>
                         <div class="info-value">${periodStart}</div>
-                        <div class="info-value" style="font-size: 12px; font-weight: 400; color: #666;">al ${periodEnd}</div>
+                        <div class="info-value" style="font-size: 11px; font-weight: 400; color: #666;">al ${periodEnd}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Total Empleados</div>
+                        <div class="info-value">${items.length} empleados</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Fecha de Emisión</div>
@@ -428,10 +446,6 @@ export const printPayrollReceipt = (
                         <div class="info-label">Estado del Pago</div>
                         <div class="info-value" style="color: #27ae60;">✓ Pagado</div>
                     </div>
-                </div>
-
-                <div class="employee-badge">
-                    Total de Empleados: ${items.length}
                 </div>
 
                 <table>
@@ -450,12 +464,12 @@ export const printPayrollReceipt = (
                         ${items.map(item => `
                             <tr>
                                 <td>${item.employee_name}</td>
-                                <td class="text-right amount">$${item.base_salary.toLocaleString()}</td>
-                                ${showBonuses ? `<td class="text-right amount">$${item.bonuses.toLocaleString()}</td>` : ''}
-                                <td class="text-right amount">$${item.tss.toLocaleString()}</td>
-                                ${showInfotep ? `<td class="text-right amount">$${item.infotep.toLocaleString()}</td>` : ''}
-                                ${showDeductions ? `<td class="text-right amount">$${item.deductions.toLocaleString()}</td>` : ''}
-                                <td class="text-right net-amount">$${item.net_salary.toLocaleString()}</td>
+                                <td class="text-right amount">$${formatMoney(item.base_salary)}</td>
+                                ${showBonuses ? `<td class="text-right amount">$${formatMoney(item.bonuses)}</td>` : ''}
+                                <td class="text-right amount">$${formatMoney(item.tss)}</td>
+                                ${showInfotep ? `<td class="text-right amount">$${formatMoney(item.infotep)}</td>` : ''}
+                                ${showDeductions ? `<td class="text-right amount">$${formatMoney(item.deductions)}</td>` : ''}
+                                <td class="text-right net-amount">$${formatMoney(item.net_salary)}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -465,28 +479,28 @@ export const printPayrollReceipt = (
                     <div class="summary-left">
                         <div class="summary-row">
                             <span class="summary-label">Subtotal Salarios Base</span>
-                            <span class="summary-value">$${totalBase.toLocaleString()}</span>
+                            <span class="summary-value">$${formatMoney(totalBase)}</span>
                         </div>
                         ${showBonuses && totalBonuses > 0 ? `
                         <div class="summary-row">
                             <span class="summary-label">Total Bonos</span>
-                            <span class="summary-value">$${totalBonuses.toLocaleString()}</span>
+                            <span class="summary-value">$${formatMoney(totalBonuses)}</span>
                         </div>
                         ` : ''}
                         <div class="summary-row">
                             <span class="summary-label">Total TSS</span>
-                            <span class="summary-value">-$${totalTSS.toLocaleString()}</span>
+                            <span class="summary-value">-$${formatMoney(totalTSS)}</span>
                         </div>
                         ${showInfotep && totalInfotep > 0 ? `
                         <div class="summary-row">
                             <span class="summary-label">Total Infotep</span>
-                            <span class="summary-value">-$${totalInfotep.toLocaleString()}</span>
+                            <span class="summary-value">-$${formatMoney(totalInfotep)}</span>
                         </div>
                         ` : ''}
                         ${showDeductions && totalDeductions > 0 ? `
                         <div class="summary-row subtotal">
                             <span class="summary-label">Total Deducciones</span>
-                            <span class="summary-value">-$${totalDeductions.toLocaleString()}</span>
+                            <span class="summary-value">-$${formatMoney(totalDeductions)}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -494,7 +508,7 @@ export const printPayrollReceipt = (
                     <div class="total-box">
                         <div class="total-content">
                             <div class="total-label">Total a Pagar</div>
-                            <div class="total-amount">$${totalAmount.toLocaleString()}</div>
+                            <div class="total-amount">$${formatMoney(totalAmount)}</div>
                         </div>
                         <div class="total-footer">Monto neto a desembolsar</div>
                     </div>
