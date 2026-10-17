@@ -17,7 +17,8 @@ import {
   Menu,
   Trophy,
   Crown,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { triggerQuickGuide } from '@/components/guide/QuickGuideDialog';
 import { LoadingLogo } from '@/components/ui/loading-logo';
@@ -133,13 +134,46 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
-  const { data: currentMonthSales = [] } = useSales({
+  const { data: currentMonthSales = [], isLoading: isLoadingCurrentMonthSales } = useSales({
     dateFrom: currentMonthDates.from,
     dateTo: currentMonthDates.to,
     includeItems: true,
   });
   
   const monthlyInvoices = currentMonthSales.length;
+
+  // Estado para controlar que el banner de bienvenida no parpadee al cargar y se pueda descartar
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return (
+      localStorage.getItem('cobro_dismiss_welcome_banner') === 'true' ||
+      localStorage.getItem('cobro_quick_guide_seen_global') === 'true'
+    );
+  });
+
+  React.useEffect(() => {
+    if (profile?.id) {
+      const isDismissedForUser = localStorage.getItem(`cobro_dismiss_welcome_banner_${profile.id}`) === 'true';
+      const hasSeenGuide = localStorage.getItem(`cobro_quick_guide_seen_${profile.id}`) === 'true';
+      if (isDismissedForUser || hasSeenGuide) {
+        setBannerDismissed(true);
+      }
+    }
+  }, [profile?.id]);
+
+  const handleDismissBanner = () => {
+    setBannerDismissed(true);
+    localStorage.setItem('cobro_dismiss_welcome_banner', 'true');
+    if (profile?.id) {
+      localStorage.setItem(`cobro_dismiss_welcome_banner_${profile.id}`, 'true');
+    }
+  };
+
+  const showWelcomeBanner =
+    !isProfileLoading &&
+    !isLoadingCurrentMonthSales &&
+    currentMonthSales.length === 0 &&
+    !bannerDismissed;
 
   // Auto-correct store_id mismatch with more stability
   const lastInvalidatedStoreId = React.useRef<string | null>(null);
@@ -888,9 +922,9 @@ const Dashboard: React.FC = () => {
             </Button>
           </div>
 
-          {currentMonthSales.length === 0 && (
-            <div className="w-full max-w-2xl mx-auto p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-slate-950 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-fade-in mt-2">
-              <div className="flex items-center gap-3.5 text-left">
+          {showWelcomeBanner && (
+            <div className="w-full max-w-2xl mx-auto p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-slate-950 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-fade-in mt-2 relative group">
+              <div className="flex items-center gap-3.5 text-left pr-6 sm:pr-0">
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
                   <Sparkles className="h-5 w-5" />
                 </div>
@@ -899,14 +933,26 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-slate-400 mt-0.5">Te preparamos una guía rápida minimalista en 4 pasos para comenzar a vender y configurar tu negocio.</p>
                 </div>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={triggerQuickGuide}
-                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-5 rounded-xl shrink-0 cursor-pointer shadow-md transition-all active:scale-95"
-              >
-                Ver Guía Rápida
-              </Button>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={triggerQuickGuide}
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-5 rounded-xl shrink-0 cursor-pointer shadow-md transition-all active:scale-95"
+                >
+                  Ver Guía Rápida
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDismissBanner}
+                  className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg absolute top-2 right-2 sm:static shrink-0"
+                  title="Cerrar"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </div>
