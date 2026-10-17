@@ -701,7 +701,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                     {/* Tab 1: Movimientos de Caja */}
                                     <TabsContent value="movements" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
-                                        <div className="flex-1 min-h-[140px] max-h-52 sm:max-h-60 lg:max-h-64 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+                                        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
                                             {sessionMovements.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-1">
                                                     <Wallet className="h-7 w-7 opacity-30 mb-1" />
@@ -772,7 +772,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                     {/* Tab 2: Facturas Emitidas */}
                                     <TabsContent value="invoices" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
-                                        <div className="flex-1 min-h-[140px] max-h-52 sm:max-h-60 lg:max-h-64 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+                                        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
                                             {sessionSales.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-1">
                                                     <FileText className="h-7 w-7 opacity-30 mb-1" />
@@ -841,7 +841,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                     {/* Tab 4: Turnos Activos (solo si hay más de 1 turno) */}
                                     {openSessions.length > 1 && (
                                         <TabsContent value="shifts" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
-                                            <div className="flex-1 min-h-[140px] max-h-52 sm:max-h-60 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+                                            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
                                                 {isLoading ? (
                                                     <div className="flex items-center justify-center py-6 text-muted-foreground">
                                                         <RefreshCcw className="h-4 w-4 animate-spin mr-1.5 opacity-50 text-green-500" />
@@ -1000,18 +1000,18 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             </div>
 
                             {/* Middle section: Blocking Orders or Notes */}
-                            <div className="flex-1 min-h-0 flex flex-col justify-center gap-2.5">
+                            <div className="flex-1 min-h-0 flex flex-col gap-2.5">
                                 {blockingOrders.length > 0 ? (
-                                    <div className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl space-y-1.5 flex-1 min-h-0 flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-red-500">
+                                    <div className="bg-red-500/10 border border-red-500/25 p-3 rounded-2xl flex-1 min-h-0 flex flex-col gap-2 shadow-sm">
+                                        <div className="flex items-center justify-between text-red-500 pb-1.5 border-b border-red-500/20 shrink-0">
                                             <div className="flex items-center gap-1.5">
                                                 <Lock className="h-3.5 w-3.5 shrink-0" />
-                                                <span className="text-[10px] font-black uppercase">Ventas Pendientes ({blockingOrders.length})</span>
+                                                <span className="text-xs font-black uppercase tracking-wider">Ventas Pendientes ({blockingOrders.length})</span>
                                             </div>
                                             <Button
                                                 size="sm"
                                                 variant="destructive"
-                                                className="h-5 px-1.5 text-[8px] font-bold gap-1 rounded-md"
+                                                className="h-6 px-2 text-[10px] font-bold gap-1 rounded-lg shadow-sm"
                                                 onClick={async () => {
                                                     if (!confirm(`¿Eliminar los ${blockingOrders.length} pedidos pendientes?`)) return;
                                                     try {
@@ -1025,27 +1025,34 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                     }
                                                 }}
                                             >
-                                                <Trash2 className="h-2.5 w-2.5" /> Cancelar Todos
+                                                <Trash2 className="h-3 w-3" /> Cancelar Todos
                                             </Button>
                                         </div>
-                                        <div className="space-y-1 max-h-20 overflow-y-auto no-scrollbar">
+                                        <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5 no-scrollbar">
                                             {blockingOrders.map(order => (
-                                                <div key={order.id} className="flex justify-between items-center bg-background/60 p-1.5 rounded-lg text-[10px]">
-                                                    <span className="font-bold truncate text-foreground flex-1">{order.customer_name || 'Sin nombre'}</span>
-                                                    <span className="text-muted-foreground font-semibold px-1">RD$ {Number(order.total || 0).toLocaleString()}</span>
-                                                    {onGoToPOS && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-5 px-1 text-[8px] font-bold text-green-500"
-                                                            onClick={() => {
-                                                                onClose();
-                                                                onGoToPOS(order.id, order.customer_name, order.order_number);
-                                                            }}
-                                                        >
-                                                            Cobrar
-                                                        </Button>
-                                                    )}
+                                                <div key={order.id} className="flex justify-between items-center bg-background/80 hover:bg-background border border-border/40 p-2 sm:p-2.5 rounded-xl text-xs transition-colors shadow-sm">
+                                                    <div className="min-w-0 flex-1 mr-2">
+                                                        <span className="font-bold truncate text-foreground text-xs block">{order.customer_name || 'Sin nombre'}</span>
+                                                        {order.order_number && (
+                                                            <span className="text-[10px] text-muted-foreground font-mono">Orden #{order.order_number}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className="text-foreground font-mono font-black text-xs">RD$ {Number(order.total || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                                        {onGoToPOS && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-6 px-2 text-[10px] font-bold text-green-500 hover:text-green-400 hover:bg-green-500/10 rounded-md"
+                                                                onClick={() => {
+                                                                    onClose();
+                                                                    onGoToPOS(order.id, order.customer_name, order.order_number);
+                                                                }}
+                                                            >
+                                                                Cobrar
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
