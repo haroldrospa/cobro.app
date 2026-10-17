@@ -30,6 +30,7 @@ import {
   X,
   Check,
   Loader2,
+  ClipboardList,
 } from 'lucide-react';
 import { Supplier } from '@/hooks/useSuppliers';
 import { useProductsOffline, Product } from '@/hooks/useProductsOffline';
@@ -38,6 +39,7 @@ import { offlineDB, OfflineStore } from '@/lib/offlineDB';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import ProductForm from '@/components/ProductForm';
+import { SupplierPurchaseOrderDialog } from './SupplierPurchaseOrderDialog';
 
 interface SupplierProductsDialogProps {
   open: boolean;
@@ -64,12 +66,17 @@ export const SupplierProductsDialog: React.FC<SupplierProductsDialogProps> = ({
   // Estados para crear / editar producto directamente desde el diálogo
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
+  const [isPurchaseOrderOpen, setIsPurchaseOrderOpen] = useState(false);
 
   // Productos de este proveedor
   const supplierProducts = useMemo(() => {
     if (!supplier) return [];
     return allProducts.filter((p) => p.supplier_id === supplier.id);
   }, [allProducts, supplier]);
+
+  const lowStockCount = useMemo(() => {
+    return supplierProducts.filter((p) => (Number(p.stock) || 0) <= (Number(p.min_stock) || 0)).length;
+  }, [supplierProducts]);
 
   // Filtrado por buscador interno
   const filteredProducts = useMemo(() => {
@@ -248,7 +255,23 @@ export const SupplierProductsDialog: React.FC<SupplierProductsDialogProps> = ({
               </div>
 
               {/* Quick Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {supplierProducts.length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsPurchaseOrderOpen(true)}
+                    className="rounded-xl h-9 text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all active:scale-95"
+                    title="Exportar Orden de Compra de productos bajo stock"
+                  >
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    <span>Orden de Compra</span>
+                    {lowStockCount > 0 && (
+                      <Badge className="h-4 px-1 text-[9px] bg-red-500 hover:bg-red-500 text-white border-0 font-bold ml-0.5">
+                        {lowStockCount}
+                      </Badge>
+                    )}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -663,6 +686,14 @@ export const SupplierProductsDialog: React.FC<SupplierProductsDialogProps> = ({
           }}
         />
       )}
+
+      {/* Modal de Orden de Compra para productos bajo stock */}
+      <SupplierPurchaseOrderDialog
+        open={isPurchaseOrderOpen}
+        onOpenChange={setIsPurchaseOrderOpen}
+        supplier={supplier}
+        products={supplierProducts}
+      />
     </>
   );
 };

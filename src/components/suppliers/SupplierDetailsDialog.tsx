@@ -29,6 +29,8 @@ import {
   Loader2,
   FlaskConical,
   ChevronDown,
+  ClipboardList,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -45,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ProductForm from '@/components/ProductForm';
+import { SupplierPurchaseOrderDialog } from './SupplierPurchaseOrderDialog';
 
 interface SupplierDetailsDialogProps {
   open: boolean;
@@ -80,6 +83,8 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'overview' | 'debts' | 'expenses' | 'products'>(initialTab);
   const [productSearch, setProductSearch] = useState('');
+  const [productStockFilter, setProductStockFilter] = useState<'all' | 'low'>('all');
+  const [isPurchaseOrderOpen, setIsPurchaseOrderOpen] = useState(false);
 
   // Estados para vincular productos del inventario y formulario
   const [isLinkingModalOpen, setIsLinkingModalOpen] = useState(false);
@@ -165,17 +170,25 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
     return allIngredients.filter((i) => i.supplier_id === supplier.id);
   }, [allIngredients, supplier]);
 
+  const supplierLowStockProducts = useMemo(() => {
+    return supplierProducts.filter((p) => (Number(p.stock) || 0) <= (Number(p.min_stock) || 0));
+  }, [supplierProducts]);
+
   const filteredSupplierProducts = useMemo(() => {
-    if (!productSearch.trim()) return supplierProducts;
+    let list = supplierProducts;
+    if (productStockFilter === 'low') {
+      list = list.filter((p) => (Number(p.stock) || 0) <= (Number(p.min_stock) || 0));
+    }
+    if (!productSearch.trim()) return list;
     const q = productSearch.toLowerCase().trim();
-    return supplierProducts.filter(
+    return list.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         (p.barcode && p.barcode.toLowerCase().includes(q)) ||
         (p.internal_code && p.internal_code.toLowerCase().includes(q)) ||
         (p.category?.name && p.category.name.toLowerCase().includes(q))
     );
-  }, [supplierProducts, productSearch]);
+  }, [supplierProducts, productSearch, productStockFilter]);
 
   const supplierInventoryValue = useMemo(() => {
     return supplierProducts.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.cost || 0), 0);
@@ -736,7 +749,24 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto flex-wrap justify-end">
+                      {supplierProducts.length > 0 && (
+                        <Button
+                          size="sm"
+                          onClick={() => setIsPurchaseOrderOpen(true)}
+                          className="h-7 text-xs font-bold gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all active:scale-95"
+                          title="Exportar Orden de Compra de productos bajo stock a Excel, PDF o WhatsApp"
+                        >
+                          <ClipboardList className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Orden de Compra</span>
+                          <span className="sm:hidden">Orden</span>
+                          {supplierLowStockProducts.length > 0 && (
+                            <Badge className="h-4 px-1 text-[9px] bg-red-500 hover:bg-red-500 text-white border-0 font-bold ml-0.5">
+                              {supplierLowStockProducts.length}
+                            </Badge>
+                          )}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -778,16 +808,35 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   {!isProductsMinimized && (
                     <div className="space-y-3 pt-1">
 
-                  {/* Buscador de productos si hay artículos */}
+                  {/* Buscador de productos si hay artículos con botón de filtro rápido bajo stock */}
                   {supplierProducts.length > 0 && (
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Filtrar productos asociados (nombre, código, categoría)..."
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        className="pl-8 h-8 rounded-xl bg-muted/30 border-border/40 text-xs"
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Filtrar productos asociados (nombre, código, categoría)..."
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="pl-8 h-8 rounded-xl bg-muted/30 border-border/40 text-xs"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={productStockFilter === 'low' ? 'default' : 'outline'}
+                        onClick={() => setProductStockFilter(productStockFilter === 'low' ? 'all' : 'low')}
+                        className={cn(
+                          "h-8 text-xs font-bold gap-1 rounded-xl shrink-0 transition-all",
+                          productStockFilter === 'low'
+                            ? "bg-red-600 hover:bg-red-500 text-white shadow-xs"
+                            : "text-muted-foreground hover:text-foreground border-border/50"
+                        )}
+                        title="Filtrar productos con stock menor o igual al mínimo"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Bajo Stock</span>
+                        <span className="text-[10px] ml-0.5 opacity-90">({supplierLowStockProducts.length})</span>
+                      </Button>
                     </div>
                   )}
 
@@ -1765,6 +1814,14 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
           />
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Orden de Compra para productos bajo stock */}
+      <SupplierPurchaseOrderDialog
+        open={isPurchaseOrderOpen}
+        onOpenChange={setIsPurchaseOrderOpen}
+        supplier={supplier}
+        products={supplierProducts}
+      />
     </>
   );
 };
