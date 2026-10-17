@@ -558,9 +558,9 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                 </div>
 
                 <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    <TabsContent value="close" className="m-0 p-3 sm:p-4 lg:p-5 flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 outline-none">
+                    <TabsContent value="close" className="m-0 p-3 sm:p-4 lg:p-5 flex-1 min-h-0 h-full overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 outline-none">
                         {/* Left Column: Financial Overview */}
-                        <div className="lg:col-span-7 flex flex-col gap-3 min-h-0">
+                        <div className="lg:col-span-7 flex flex-col gap-3 min-h-0 h-full">
                             {/* 4 Stats Cards in 2x2 grid on mobile, 4x1 on desktop */}
                             <div className="order-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
                                 <button
@@ -658,8 +658,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             </div>
 
                             {/* Middle Details: Movimientos de Caja, Facturas Emitidas, Desglose & Turnos */}
-                            <div className="order-2 bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-2xl flex flex-col flex-1 min-h-[260px] max-h-[380px] lg:max-h-none overflow-hidden backdrop-blur-sm shadow-sm">
-                                <Tabs value={detailTab} onValueChange={(val: any) => setDetailTab(val)} className="flex-1 flex flex-col min-h-0">
+                            <div className="order-2 bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-2xl flex flex-col flex-1 min-h-[280px] overflow-hidden backdrop-blur-sm shadow-sm">
+                                <Tabs value={detailTab} onValueChange={(val: any) => setDetailTab(val)} className="flex-1 flex flex-col min-h-0 h-full w-full">
                                     <TabsList className={cn(
                                         "grid w-full mb-2.5 bg-muted/70 p-1 rounded-xl h-9 shrink-0 gap-1",
                                         openSessions.length > 1 ? "grid-cols-4" : "grid-cols-3"
@@ -700,7 +700,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                     </TabsList>
 
                                     {/* Tab 1: Movimientos de Caja */}
-                                    <TabsContent value="movements" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
+                                    <TabsContent value="movements" className="m-0 flex-1 h-full flex flex-col min-h-0 outline-none data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:flex-1">
                                         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
                                             {sessionMovements.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-1">
@@ -771,7 +771,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                     </TabsContent>
 
                                     {/* Tab 2: Facturas Emitidas */}
-                                    <TabsContent value="invoices" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
+                                    <TabsContent value="invoices" className="m-0 flex-1 h-full flex flex-col min-h-0 outline-none data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:flex-1">
                                         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
                                             {sessionSales.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground space-y-1">
@@ -813,7 +813,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                     </TabsContent>
 
                                     {/* Tab 3: Desglose por Método */}
-                                    <TabsContent value="breakdown" className="m-0 flex-1 flex flex-col justify-between min-h-0 outline-none">
+                                    <TabsContent value="breakdown" className="m-0 flex-1 h-full flex flex-col justify-between min-h-0 outline-none data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:flex-1">
                                         <div className="space-y-2 py-1">
                                             <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-muted/20 border border-border/20">
                                                 <span className="text-muted-foreground font-medium">Efectivo</span>
@@ -832,7 +832,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                 <span className="font-bold text-foreground font-mono">RD$ {stats.otherSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         </div>
-                                        <div className="pt-2 border-t border-border/30 flex justify-between items-center text-xs text-muted-foreground shrink-0 px-1">
+                                        <div className="pt-2 mt-auto border-t border-border/30 flex justify-between items-center text-xs text-muted-foreground shrink-0 px-1">
                                             <span>Total Facturas: <strong className="text-foreground">{stats.salesCount}</strong></span>
                                             <span>Ventas Totales: <strong className="text-foreground font-mono">RD$ {stats.totalSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</strong></span>
                                         </div>
@@ -840,7 +840,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
                                     {/* Tab 4: Turnos Activos (solo si hay más de 1 turno) */}
                                     {openSessions.length > 1 && (
-                                        <TabsContent value="shifts" className="m-0 flex-1 flex flex-col min-h-0 outline-none">
+                                        <TabsContent value="shifts" className="m-0 flex-1 h-full flex flex-col min-h-0 outline-none data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:flex-1">
                                             <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
                                                 {isLoading ? (
                                                     <div className="flex items-center justify-center py-6 text-muted-foreground">
