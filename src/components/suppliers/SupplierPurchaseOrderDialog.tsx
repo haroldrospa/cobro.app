@@ -223,9 +223,8 @@ export const SupplierPurchaseOrderDialog: React.FC<SupplierPurchaseOrderDialogPr
         ['DATOS DEL PROVEEDOR'],
         ['Proveedor:', supplier?.name || '—'],
         ['RNC:', supplier?.rnc || '—'],
-        ['Teléfono:', supplier?.phone || '—'],
-        ['Contacto:', supplier?.contact_person || '—'],
-        ['Email:', supplier?.email || '—'],
+        ['Teléfono:', supplier?.phone || (supplier as any)?.contact_phone || '—'],
+        ['Contacto:', supplier?.contact || (supplier as any)?.contact_person || '—'],
         [''],
         ['DETALLE DE PRODUCTOS SOLICITADOS'],
       ];
@@ -320,8 +319,8 @@ export const SupplierPurchaseOrderDialog: React.FC<SupplierPurchaseOrderDialogPr
     const businessAddress = companyInfo?.address || '';
     const supplierName = supplier?.name || 'Proveedor';
     const supplierRnc = supplier?.rnc ? `RNC: ${supplier.rnc}` : '';
-    const supplierPhone = supplier?.phone ? `Tel: ${supplier.phone}` : '';
-    const supplierContact = supplier?.contact_person ? `Contacto: ${supplier.contact_person}` : '';
+    const supplierPhone = (supplier?.phone || (supplier as any)?.contact_phone) ? `Tel: ${supplier?.phone || (supplier as any)?.contact_phone}` : '';
+    const supplierContact = (supplier?.contact || (supplier as any)?.contact_person) ? `Contacto: ${supplier?.contact || (supplier as any)?.contact_person}` : '';
     const formattedDate = format(new Date(), "dd 'de' MMMM, yyyy - hh:mm a", { locale: es });
 
     printWindow.document.write(`
@@ -332,89 +331,123 @@ export const SupplierPurchaseOrderDialog: React.FC<SupplierPurchaseOrderDialogPr
           <title>Orden de Compra - ${orderNumber}</title>
           <style>
             @page {
-              size: portrait;
-              margin: 15mm;
+              size: letter portrait;
+              margin: 12mm 14mm;
+            }
+            *, *:before, *:after {
+              box-sizing: border-box;
             }
             body {
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-              color: #0f172a;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: #1e293b;
               background: #fff;
               font-size: 11px;
               line-height: 1.4;
               margin: 0;
-              padding: 10px;
+              padding: 0;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .page-container {
+              width: 100%;
+              padding: 4px 6px;
             }
             .header {
               display: flex;
               justify-content: space-between;
               align-items: flex-start;
-              border-bottom: 2px solid #059669;
+              border-bottom: 2.5px solid #059669;
               padding-bottom: 12px;
               margin-bottom: 16px;
+              gap: 16px;
+            }
+            .company-block {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              min-width: 0;
+            }
+            .company-logo {
+              max-height: 55px;
+              max-width: 110px;
+              object-fit: contain;
+              border-radius: 4px;
             }
             .company-info h1 {
-              font-size: 18px;
+              font-size: 19px;
               font-weight: 900;
-              color: #059669;
-              margin: 0 0 4px 0;
+              color: #047857;
+              margin: 0 0 3px 0;
               text-transform: uppercase;
               letter-spacing: 0.5px;
+              line-height: 1.2;
             }
             .company-info p {
               margin: 2px 0;
               color: #475569;
               font-size: 10px;
+              line-height: 1.3;
             }
-            .order-badge {
+            .order-badge-container {
               text-align: right;
+              display: flex;
+              flex-direction: column;
+              align-items: flex-end;
+              shrink: 0;
             }
             .order-title {
               display: inline-block;
               background: #059669;
-              color: #fff;
-              padding: 4px 12px;
+              color: #ffffff;
+              padding: 5px 14px;
               border-radius: 6px;
-              font-size: 13px;
+              font-size: 12.5px;
               font-weight: 800;
-              letter-spacing: 0.5px;
+              letter-spacing: 0.8px;
               text-transform: uppercase;
             }
             .order-number {
-              font-family: monospace;
-              font-size: 14px;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+              font-size: 13.5px;
               font-weight: 800;
               color: #0f172a;
-              margin-top: 4px;
+              margin-top: 5px;
+              letter-spacing: 0.5px;
             }
             .order-date {
-              font-size: 10px;
+              font-size: 9.5px;
               color: #64748b;
               margin-top: 2px;
             }
             .info-grid {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 12px;
+              gap: 14px;
               margin-bottom: 16px;
             }
             .info-box {
               background: #f8fafc;
               border: 1px solid #e2e8f0;
               border-radius: 8px;
-              padding: 10px 12px;
+              padding: 10px 14px;
             }
             .info-box h3 {
               margin: 0 0 6px 0;
-              font-size: 10px;
+              font-size: 9.5px;
               font-weight: 800;
               text-transform: uppercase;
-              color: #059669;
-              letter-spacing: 0.5px;
+              color: #047857;
+              letter-spacing: 0.6px;
+              border-bottom: 1px solid #e2e8f0;
+              padding-bottom: 4px;
             }
             .info-box p {
-              margin: 2px 0;
-              font-size: 11px;
-              color: #1e293b;
+              margin: 2.5px 0;
+              font-size: 10.5px;
+              color: #334155;
+            }
+            .info-box strong {
+              color: #0f172a;
             }
             table {
               width: 100%;
@@ -422,35 +455,72 @@ export const SupplierPurchaseOrderDialog: React.FC<SupplierPurchaseOrderDialogPr
               margin-bottom: 16px;
             }
             th {
-              background: #0f172a;
-              color: #fff;
+              background: #1e293b;
+              color: #ffffff;
               font-size: 9px;
               font-weight: 700;
               text-transform: uppercase;
               letter-spacing: 0.5px;
-              padding: 6px 8px;
+              padding: 7px 6px;
               text-align: left;
+              border: 1px solid #1e293b;
             }
             td {
-              padding: 6px 8px;
-              border-bottom: 1px solid #e2e8f0;
+              padding: 6px 7px;
+              border: 1px solid #e2e8f0;
               font-size: 10px;
               color: #1e293b;
+              vertical-align: middle;
             }
             tr:nth-child(even) td {
               background: #f8fafc;
             }
             .text-center { text-align: center; }
             .text-right { text-align: right; }
-            .font-mono { font-family: monospace; }
-            .font-bold { font-weight: 700; }
-            .totals-container {
-              display: flex;
-              justify-content: flex-end;
+            .font-mono {
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+              font-size: 9.5px;
+              letter-spacing: -0.2px;
+            }
+            .qty-badge {
+              display: inline-block;
+              background: #ecfdf5;
+              color: #047857;
+              font-weight: 800;
+              font-size: 11px;
+              padding: 1.5px 7px;
+              border-radius: 4px;
+              border: 1px solid #a7f3d0;
+            }
+            .bottom-layout {
+              display: grid;
+              grid-template-columns: 1fr 280px;
+              gap: 16px;
+              align-items: start;
               margin-bottom: 24px;
             }
+            .notes-box {
+              background: #fffbeb;
+              border: 1px solid #fef3c7;
+              border-radius: 8px;
+              padding: 8px 12px;
+              font-size: 10px;
+              color: #92400e;
+              line-height: 1.4;
+            }
+            .notes-title {
+              font-weight: 800;
+              text-transform: uppercase;
+              margin-bottom: 3px;
+              letter-spacing: 0.4px;
+            }
+            .notes-disclaimer {
+              font-size: 9.5px;
+              color: #64748b;
+              line-height: 1.5;
+              padding: 6px 0;
+            }
             .totals-box {
-              width: 280px;
               background: #f8fafc;
               border: 1px solid #e2e8f0;
               border-radius: 8px;
@@ -459,162 +529,178 @@ export const SupplierPurchaseOrderDialog: React.FC<SupplierPurchaseOrderDialogPr
             .totals-row {
               display: flex;
               justify-content: space-between;
-              padding: 4px 0;
-              font-size: 11px;
+              padding: 3px 0;
+              font-size: 10.5px;
               color: #475569;
             }
             .totals-row.grand-total {
               border-top: 1.5px solid #059669;
-              margin-top: 4px;
+              margin-top: 5px;
               padding-top: 6px;
               color: #0f172a;
-              font-size: 13px;
+              font-size: 12.5px;
               font-weight: 900;
-            }
-            .notes-box {
-              background: #fffbeb;
-              border: 1px solid #fef3c7;
-              border-radius: 8px;
-              padding: 8px 12px;
-              margin-bottom: 24px;
-              font-size: 10px;
-              color: #92400e;
             }
             .signatures {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 40px;
-              margin-top: 40px;
+              gap: 50px;
+              margin-top: 36px;
               padding-top: 10px;
             }
-            .signature-line {
-              border-top: 1px solid #94a3b8;
+            .signature-box {
               text-align: center;
+            }
+            .signature-line {
+              border-top: 1.5px solid #94a3b8;
               padding-top: 6px;
               font-size: 10px;
               font-weight: 700;
               color: #475569;
               text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .signature-sub {
+              font-size: 9.5px;
+              color: #64748b;
+              margin-top: 2px;
             }
             .footer {
               text-align: center;
               font-size: 9px;
               color: #94a3b8;
-              margin-top: 24px;
+              margin-top: 20px;
               border-top: 1px solid #e2e8f0;
               padding-top: 8px;
             }
             @media print {
               body { padding: 0; }
+              .page-container { padding: 0; }
               .no-print { display: none; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="company-info">
-              <h1>${businessName}</h1>
-              ${businessRnc ? `<p><strong>${businessRnc}</strong></p>` : ''}
-              ${businessPhone ? `<p>${businessPhone}</p>` : ''}
-              ${businessAddress ? `<p>${businessAddress}</p>` : ''}
+          <div class="page-container">
+            <div class="header">
+              <div class="company-block">
+                ${companyInfo?.logo ? `<img src="${companyInfo.logo}" alt="Logo" class="company-logo" />` : ''}
+                <div class="company-info">
+                  <h1>${businessName}</h1>
+                  ${businessRnc ? `<p><strong>${businessRnc}</strong></p>` : ''}
+                  ${businessPhone ? `<p>${businessPhone}</p>` : ''}
+                  ${businessAddress ? `<p>${businessAddress}</p>` : ''}
+                </div>
+              </div>
+              <div class="order-badge-container">
+                <span class="order-title">Orden de Compra</span>
+                <div class="order-number">${orderNumber}</div>
+                <div class="order-date">${formattedDate}</div>
+              </div>
             </div>
-            <div class="order-badge">
-              <span class="order-title">Orden de Compra</span>
-              <div class="order-number">${orderNumber}</div>
-              <div class="order-date">${formattedDate}</div>
-            </div>
-          </div>
 
-          <div class="info-grid">
-            <div class="info-box">
-              <h3>Datos del Proveedor</h3>
-              <p><strong>${supplierName}</strong></p>
-              ${supplierRnc ? `<p>${supplierRnc}</p>` : ''}
-              ${supplierPhone ? `<p>${supplierPhone}</p>` : ''}
-              ${supplierContact ? `<p>${supplierContact}</p>` : ''}
+            <div class="info-grid">
+              <div class="info-box">
+                <h3>Datos del Proveedor</h3>
+                <p><strong>${supplierName}</strong></p>
+                ${supplierRnc ? `<p>${supplierRnc}</p>` : ''}
+                ${supplierPhone ? `<p>${supplierPhone}</p>` : ''}
+                ${supplierContact ? `<p>${supplierContact}</p>` : ''}
+              </div>
+              <div class="info-box">
+                <h3>Condiciones y Estado</h3>
+                <p><strong>Fecha requerida:</strong> Inmediata / Según disponibilidad</p>
+                <p><strong>Tipo de Solicitud:</strong> Reposición de Inventario</p>
+                <p><strong>Moneda:</strong> Pesos Dominicanos (RD$)</p>
+                <p><strong>Estado:</strong> Solicitud Emitida</p>
+              </div>
             </div>
-            <div class="info-box">
-              <h3>Condiciones de Compra</h3>
-              <p><strong>Fecha requerida:</strong> Inmediata / Según disponibilidad</p>
-              <p><strong>Total de Artículos:</strong> ${orderMetrics.totalItems} productos</p>
-              <p><strong>Total de Unidades:</strong> ${orderMetrics.totalUnits} uds</p>
-            </div>
-          </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 25px;" class="text-center">#</th>
-                <th style="width: 90px;">Código</th>
-                <th>Descripción del Producto</th>
-                <th style="width: 70px;">Categoría</th>
-                <th style="width: 55px;" class="text-center">Stock Act.</th>
-                <th style="width: 55px;" class="text-center">Stock Mín.</th>
-                <th style="width: 65px;" class="text-center">Cant. Pedir</th>
-                <th style="width: 80px;" class="text-right">Costo Unit.</th>
-                <th style="width: 85px;" class="text-right">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItems.map((item, index) => `
+            <table>
+              <thead>
                 <tr>
-                  <td class="text-center">${index + 1}</td>
-                  <td class="font-mono">${item.product.barcode || item.product.internal_code || '—'}</td>
-                  <td><strong>${item.product.name}</strong></td>
-                  <td>${item.product.category?.name || 'General'}</td>
-                  <td class="text-center">${item.product.stock}</td>
-                  <td class="text-center">${item.product.min_stock || 0}</td>
-                  <td class="text-center font-bold" style="color: #059669; font-size: 11px;">
-                    ${item.quantity}
-                  </td>
-                  <td class="text-right font-mono">
-                    ${item.cost > 0 ? `RD$ ${item.cost.toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '—'}
-                  </td>
-                  <td class="text-right font-mono font-bold">
-                    ${item.subtotal > 0 ? `RD$ ${item.subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '—'}
-                  </td>
+                  <th style="width: 26px;" class="text-center">#</th>
+                  <th style="width: 100px;">Código</th>
+                  <th>Descripción del Producto</th>
+                  <th style="width: 75px;">Categoría</th>
+                  <th style="width: 48px;" class="text-center">Stock</th>
+                  <th style="width: 48px;" class="text-center">Mínimo</th>
+                  <th style="width: 55px;" class="text-center">Cant.</th>
+                  <th style="width: 82px;" class="text-right">Costo (RD$)</th>
+                  <th style="width: 88px;" class="text-right">Subtotal (RD$)</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${orderItems.map((item, index) => {
+                  const code = item.product.barcode || item.product.internal_code;
+                  return `
+                    <tr>
+                      <td class="text-center">${index + 1}</td>
+                      <td class="font-mono text-center">${code || '<span style="color: #94a3b8;">—</span>'}</td>
+                      <td>${item.product.name}</td>
+                      <td style="color: #64748b; font-size: 9.5px;">${item.product.category?.name || 'General'}</td>
+                      <td class="text-center font-mono">${item.product.stock}</td>
+                      <td class="text-center font-mono" style="color: #64748b;">${item.product.min_stock || 0}</td>
+                      <td class="text-center">
+                        <span class="qty-badge">${item.quantity}</span>
+                      </td>
+                      <td class="text-right font-mono">
+                        ${item.cost > 0 ? item.cost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                      </td>
+                      <td class="text-right font-mono" style="font-weight: 700; color: #0f172a;">
+                        ${item.subtotal > 0 ? item.subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
 
-          <div class="totals-container">
-            <div class="totals-box">
-              <div class="totals-row">
-                <span>Artículos Diferentes:</span>
-                <strong>${orderMetrics.totalItems}</strong>
+            <div class="bottom-layout">
+              <div>
+                ${notes ? `
+                  <div class="notes-box">
+                    <div class="notes-title">Observaciones / Instrucciones de Entrega:</div>
+                    <div>${notes.replace(/\n/g, '<br/>')}</div>
+                  </div>
+                ` : `
+                  <div class="notes-disclaimer">
+                    <em>* Esta orden de compra es una solicitud formal de reposición de mercancía. Favor confirmar precios vigentes y fecha de entrega.</em>
+                  </div>
+                `}
               </div>
-              <div class="totals-row">
-                <span>Total de Unidades:</span>
-                <strong>${orderMetrics.totalUnits} uds</strong>
+              <div class="totals-box">
+                <div class="totals-row">
+                  <span>Artículos diferentes:</span>
+                  <strong>${orderMetrics.totalItems}</strong>
+                </div>
+                <div class="totals-row">
+                  <span>Total unidades:</span>
+                  <strong>${orderMetrics.totalUnits} uds</strong>
+                </div>
+                <div class="totals-row grand-total">
+                  <span>Total Estimado:</span>
+                  <span style="color: #047857;">RD$ ${orderMetrics.totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                </div>
               </div>
-              <div class="totals-row grand-total">
-                <span>Total Estimado:</span>
-                <span style="color: #059669;">RD$ ${orderMetrics.totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+            </div>
+
+            <div class="signatures">
+              <div class="signature-box">
+                <div style="height: 45px;"></div>
+                <div class="signature-line">Autorizado por (Firma y Sello)</div>
+                <div class="signature-sub">${businessName}</div>
+              </div>
+              <div class="signature-box">
+                <div style="height: 45px;"></div>
+                <div class="signature-line">Recibido y Conforme</div>
+                <div class="signature-sub">${supplierName}</div>
               </div>
             </div>
-          </div>
 
-          ${notes ? `
-            <div class="notes-box">
-              <strong>Observaciones / Instrucciones de Entrega:</strong><br/>
-              ${notes.replace(/\n/g, '<br/>')}
+            <div class="footer">
+              Documento generado por Cobro App • ${formattedDate}
             </div>
-          ` : ''}
-
-          <div class="signatures">
-            <div class="signature-line">
-              Autorizado por (Firma y Sello)<br/>
-              ${businessName}
-            </div>
-            <div class="signature-line">
-              Recibido y Conforme<br/>
-              ${supplierName}
-            </div>
-          </div>
-
-          <div class="footer">
-            Documento generado por Cobro App • ${formattedDate}
           </div>
 
           <script>
