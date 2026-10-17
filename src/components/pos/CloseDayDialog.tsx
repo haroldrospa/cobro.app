@@ -102,12 +102,29 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         return activeSessionCached ?? null;
     }, [openSessions, activeSessionCached, currentUserProfile]);
 
+    const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+
+    // Reset selected session when dialog opens or closes
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedSessionId(null);
+        }
+    }, [isOpen]);
+
+    const displayedSession = useMemo(() => {
+        if (selectedSessionId) {
+            const found = openSessions.find((s: any) => s.id === selectedSessionId);
+            if (found) return found;
+        }
+        return activeSession;
+    }, [selectedSessionId, openSessions, activeSession]);
+
     const activeSessionUserId = useMemo(() => {
-        if (!activeSession) return null;
-        return typeof activeSession.opened_by === 'object' && activeSession.opened_by !== null 
-            ? activeSession.opened_by.id 
-            : (activeSession.opened_by || activeSession.user_id || activeSession.opener?.id);
-    }, [activeSession]);
+        if (!displayedSession) return null;
+        return typeof displayedSession.opened_by === 'object' && displayedSession.opened_by !== null 
+            ? displayedSession.opened_by.id 
+            : (displayedSession.opened_by || displayedSession.user_id || displayedSession.opener?.id);
+    }, [displayedSession]);
 
     // Fetch blocking orders when dialog opens or activeSessionUserId updates
     React.useEffect(() => {
@@ -200,13 +217,13 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
     }, [isOpen, userData?.id, queryClient]);
 
     const effectiveStart = useMemo(() => {
-        if (!activeSession) {
+        if (!displayedSession) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             return today;
         }
-        return new Date(activeSession.opened_at);
-    }, [activeSession]);
+        return new Date(displayedSession.opened_at);
+    }, [displayedSession]);
 
     const earliestStart = useMemo(() => {
         let baseDate: Date = effectiveStart;
@@ -241,18 +258,20 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
     // Filter sales for the current session
     const sessionSales = useMemo(() => {
-        if (!activeSession) return [];
+        if (!displayedSession) return [];
         // Buffer de 1 minuto para absorber desincronización menor de relojes
-        const bufferStart = new Date(activeSession.opened_at);
+        const bufferStart = new Date(displayedSession.opened_at);
         bufferStart.setMinutes(bufferStart.getMinutes() - 1);
 
         return allStoreSales.filter(sale => {
             const saleDate = new Date(sale.created_at);
+            const saleUserId = sale.profile_id || sale.user_id;
             const isWithinTime = saleDate >= bufferStart;
             const isNotCancelled = sale.status !== 'cancelled';
-            return isWithinTime && isNotCancelled;
+            const isFromUser = !activeSessionUserId || saleUserId === activeSessionUserId || (!saleUserId && openSessions.length === 1);
+            return isWithinTime && isNotCancelled && isFromUser;
         });
-    }, [allStoreSales, activeSession]);
+    }, [allStoreSales, displayedSession, activeSessionUserId, openSessions.length]);
 
     // Helper to calculate sales for any open session
     const getSessionTotal = (session: any) => {
@@ -279,17 +298,19 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
     // Filter movements for the current session
     const sessionMovements = useMemo(() => {
-        if (!activeSession) return [];
-        const bufferStart = new Date(activeSession.opened_at);
+        if (!displayedSession) return [];
+        const bufferStart = new Date(displayedSession.opened_at);
         bufferStart.setMinutes(bufferStart.getMinutes() - 2);
 
         return movements.filter(m => {
             const mDate = new Date(m.created_at);
             const isAfterStart = mDate >= bufferStart;
-            const isBeforeEnd = !activeSession.closed_at || mDate <= new Date(activeSession.closed_at);
-            return isAfterStart && isBeforeEnd;
+            const isBeforeEnd = !displayedSession.closed_at || mDate <= new Date(displayedSession.closed_at);
+            // Solo incluir movimientos pertenecientes al cajero/a del turno actual
+            const isFromUser = !activeSessionUserId || m.profile_id === activeSessionUserId || (!m.profile_id && openSessions.length === 1);
+            return isAfterStart && isBeforeEnd && isFromUser;
         });
-    }, [movements, activeSession]);
+    }, [movements, displayedSession, activeSessionUserId, openSessions.length]);
 
     // Calculate Financials
     const stats = useMemo(() => {
@@ -327,7 +348,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         const deposits = sessionMovements.filter(m => m.type === 'deposit').reduce((acc, m) => acc + Number(m.amount), 0);
         const withdrawals = sessionMovements.filter(m => m.type === 'withdrawal').reduce((acc, m) => acc + Number(m.amount), 0);
 
-        const initialCash = Number(activeSession?.initial_cash || 0);
+        const initialCash = Number(displayedSession?.initial_cash || 0);
         const expectedCash = cashSales + deposits - withdrawals;
 
         return {
@@ -344,12 +365,12 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             expectedCash,
             totalSales: cashSales + cardSales + transferSales + otherSales
         };
-    }, [sessionSales, sessionMovements, activeSession]);
+    }, [sessionSales, sessionMovements, displayedSession]);
 
     const difference = (parseFloat(actualCash) || 0) - stats.expectedCash;
 
     const handleCloseDay = async () => {
-        if (!activeSession) return;
+        if (!displayedSession) return;
 
         try {
             // 1. Eliminar automáticamente tickets delta de cocina (ventas fantasmas)
@@ -399,7 +420,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             }
 
             await closeSession.mutateAsync({
-                sessionId: activeSession.id,
+                sessionId: displayedSession.id,
                 closingData: {
                     total_sales_cash: stats.cashSales,
                     total_sales_card: stats.cardSales,
@@ -418,9 +439,9 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             toast({ title: 'Cierre Exitoso', description: 'La caja se ha cerrado correctamente.' });
 
             if (downloadPdf || printReport) {
-                const openerName = history.find((h: any) => h.id === activeSession.id)?.opener?.full_name 
-                    || (typeof activeSession.opened_by === 'object' ? (activeSession.opened_by as any)?.full_name : null) 
-                    || (activeSession as any).opener?.full_name 
+                const openerName = history.find((h: any) => h.id === displayedSession.id)?.opener?.full_name 
+                    || (typeof displayedSession.opened_by === 'object' ? (displayedSession.opened_by as any)?.full_name : null) 
+                    || (displayedSession as any).opener?.full_name 
                     || currentUserProfile?.full_name 
                     || 'Desconocido';
                 const doc = await generateCloseDayPDF(companyInfo, {
@@ -428,7 +449,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                     actualCash: parseFloat(actualCash) || 0,
                     difference,
                     notes,
-                    openedAt: activeSession.opened_at,
+                    openedAt: displayedSession.opened_at,
                     closedAt: new Date().toISOString(),
                     openedBy: openerName,
                     closedBy: userData?.full_name || 'Usuario Actual'
@@ -444,7 +465,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             if (sendEmail && userData?.id) {
                 try {
                     const { error } = await supabase.functions.invoke('send-daily-report', {
-                        body: { store_id: userData.id, report_type: 'daily', session_id: activeSession.id }
+                        body: { store_id: userData.id, report_type: 'daily', session_id: displayedSession.id }
                     });
                     if (error) toast({ variant: 'destructive', title: 'Error enviando correo', description: 'No se pudo enviar el reporte.' });
                     else toast({ title: 'Reporte enviado', description: 'Se ha enviado el reporte por correo electrónico.' });
@@ -486,17 +507,17 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                 <DialogTitle className="text-base sm:text-lg font-black text-foreground tracking-tight truncate">
                                     Control de Caja
                                 </DialogTitle>
-                                {activeSession && (
+                                {displayedSession && (
                                     <p className="text-[10px] text-muted-foreground flex items-center gap-1 sm:hidden">
                                         <Clock className="h-2.5 w-2.5 text-green-500 shrink-0" />
-                                        <span>{format(new Date(activeSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}</span>
+                                        <span>{format(new Date(displayedSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}</span>
                                     </p>
                                 )}
                             </div>
-                            {activeSession && (
+                            {displayedSession && (
                                 <Badge variant="outline" className="hidden sm:inline-flex text-[10px] font-semibold text-muted-foreground border-border/40 py-0 h-5 gap-1 shrink-0">
                                     <Clock className="h-2.5 w-2.5 text-green-500" />
-                                    {format(new Date(activeSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}
+                                    {format(new Date(displayedSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}
                                 </Badge>
                             )}
                         </div>
@@ -826,64 +847,81 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                         <RefreshCcw className="h-4 w-4 animate-spin mr-1.5 opacity-50 text-green-500" />
                                                         <span className="text-xs">Cargando turnos...</span>
                                                     </div>
-                                                ) : openSessions.map((session: any) => (
-                                                    <div key={session.id} className={cn(
-                                                        "flex items-center justify-between p-2 rounded-xl border text-xs transition-all",
-                                                        session.id === activeSession?.id ? "border-green-500/30 bg-green-500/5" : "border-border/30 bg-muted/30"
-                                                    )}>
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <div className={cn(
-                                                                "h-6 w-6 rounded-full flex items-center justify-center font-bold text-[9px] shrink-0",
-                                                                session.id === activeSession?.id ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
-                                                            )}>
-                                                                {(session.opener?.full_name || 'U').charAt(0)}
-                                                            </div>
-                                                            <div className="truncate flex flex-col">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="font-bold truncate text-[11px]">{session.opener?.full_name || 'Cajero'}</span>
-                                                                    {session.id === activeSession?.id && (
-                                                                        <span className="text-[9px] leading-none bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold shrink-0">
-                                                                            TÚ
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <span className="text-[8px] text-muted-foreground">
-                                                                    {Math.floor((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60 * 60))}h {Math.floor(((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60)) % 60)}m
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 shrink-0">
-                                                            <span className="text-[10px] font-bold text-foreground font-mono">
-                                                                RD$ {getSessionTotal(session).toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                                            </span>
-                                                            {session.id !== activeSession?.id && (
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="sm" 
-                                                                    className="h-5 px-1.5 text-[8px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                                                    onClick={async (e) => {
-                                                                        e.stopPropagation();
-                                                                        if (!confirm(`¿Cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
-                                                                        try {
-                                                                            const { error } = await supabase
-                                                                                .from('cash_sessions')
-                                                                                .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: currentUserProfile?.id })
-                                                                                .eq('id', session.id);
-                                                                            if (error) throw error;
-                                                                            queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
-                                                                            queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
-                                                                            toast({ title: 'Turno cerrado' });
-                                                                        } catch (err: any) {
-                                                                            toast({ variant: 'destructive', title: 'Error', description: err.message });
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    Cerrar
-                                                                </Button>
+                                                ) : openSessions.map((session: any) => {
+                                                    const isSelected = session.id === displayedSession?.id;
+                                                    const isMyTurn = session.id === activeSession?.id;
+                                                    return (
+                                                        <div 
+                                                            key={session.id} 
+                                                            onClick={() => setSelectedSessionId(session.id)}
+                                                            className={cn(
+                                                                "flex items-center justify-between p-2 rounded-xl border text-xs transition-all cursor-pointer hover:bg-muted/50",
+                                                                isSelected ? "border-green-500/50 bg-green-500/10 ring-1 ring-green-500/30" : "border-border/30 bg-muted/30"
                                                             )}
+                                                            title={`Haz clic para ver los datos del turno de ${session.opener?.full_name || 'este cajero'}`}
+                                                        >
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <div className={cn(
+                                                                    "h-6 w-6 rounded-full flex items-center justify-center font-bold text-[9px] shrink-0",
+                                                                    isSelected ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
+                                                                )}>
+                                                                    {(session.opener?.full_name || 'U').charAt(0)}
+                                                                </div>
+                                                                <div className="truncate flex flex-col">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="font-bold truncate text-[11px]">{session.opener?.full_name || 'Cajero'}</span>
+                                                                        {isMyTurn && (
+                                                                            <span className="text-[9px] leading-none bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                                                                                TÚ
+                                                                            </span>
+                                                                        )}
+                                                                        {isSelected && !isMyTurn && (
+                                                                            <span className="text-[9px] leading-none bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                                                                                Viendo
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-[8px] text-muted-foreground">
+                                                                        {Math.floor((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60 * 60))}h {Math.floor(((new Date().getTime() - new Date(session.opened_at).getTime()) / (1000 * 60)) % 60)}m
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                                <span className="text-[10px] font-bold text-foreground font-mono">
+                                                                    RD$ {getSessionTotal(session).toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                                </span>
+                                                                {session.id !== activeSession?.id && (
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="sm" 
+                                                                        className="h-5 px-1.5 text-[8px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                                        onClick={async (e) => {
+                                                                            e.stopPropagation();
+                                                                            if (!confirm(`¿Cerrar forzosamente el turno de ${session.opener?.full_name || 'este cajero'}?`)) return;
+                                                                            try {
+                                                                                const { error } = await supabase
+                                                                                    .from('cash_sessions')
+                                                                                    .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: currentUserProfile?.id })
+                                                                                    .eq('id', session.id);
+                                                                                if (error) throw error;
+                                                                                if (selectedSessionId === session.id) {
+                                                                                    setSelectedSessionId(null);
+                                                                                }
+                                                                                queryClient.invalidateQueries({ queryKey: ['cash-session-history'] });
+                                                                                queryClient.invalidateQueries({ queryKey: ['store-open-sessions'] });
+                                                                                toast({ title: 'Turno cerrado' });
+                                                                            } catch (err: any) {
+                                                                                toast({ variant: 'destructive', title: 'Error', description: err.message });
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        Cerrar
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </TabsContent>
                                     )}
