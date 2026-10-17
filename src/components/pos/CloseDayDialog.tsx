@@ -640,26 +640,40 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             <div className="order-2 bg-card/70 border border-border/50 p-3 sm:p-3.5 rounded-2xl flex flex-col flex-1 min-h-[260px] max-h-[380px] lg:max-h-none overflow-hidden backdrop-blur-sm shadow-sm">
                                 <Tabs value={detailTab} onValueChange={(val: any) => setDetailTab(val)} className="flex-1 flex flex-col min-h-0">
                                     <TabsList className={cn(
-                                        "grid w-full mb-2.5 bg-muted/70 p-1 rounded-xl h-9 shrink-0",
+                                        "grid w-full mb-2.5 bg-muted/70 p-1 rounded-xl h-9 shrink-0 gap-1",
                                         openSessions.length > 1 ? "grid-cols-4" : "grid-cols-3"
                                     )}>
-                                        <TabsTrigger value="movements" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all">
-                                            <span className="hidden sm:inline">Movimientos de Caja</span>
-                                            <span className="sm:hidden">Movimientos</span>
-                                            <span className="ml-1 opacity-80">({sessionMovements.length})</span>
+                                        <TabsTrigger 
+                                            value="movements" 
+                                            title="Movimientos de Caja"
+                                            className="rounded-lg text-[11px] sm:text-xs font-bold px-1.5 sm:px-2 min-w-0 overflow-hidden data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all"
+                                        >
+                                            <span className="truncate">Movimientos</span>
+                                            <span className="ml-1 opacity-75 shrink-0 text-[10px] sm:text-xs">({sessionMovements.length})</span>
                                         </TabsTrigger>
-                                        <TabsTrigger value="invoices" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all">
-                                            <span className="hidden sm:inline">Facturas Emitidas</span>
-                                            <span className="sm:hidden">Facturas</span>
-                                            <span className="ml-1 opacity-80">({sessionSales.length})</span>
+                                        <TabsTrigger 
+                                            value="invoices" 
+                                            title="Facturas Emitidas"
+                                            className="rounded-lg text-[11px] sm:text-xs font-bold px-1.5 sm:px-2 min-w-0 overflow-hidden data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all"
+                                        >
+                                            <span className="truncate">Facturas</span>
+                                            <span className="ml-1 opacity-75 shrink-0 text-[10px] sm:text-xs">({sessionSales.length})</span>
                                         </TabsTrigger>
-                                        <TabsTrigger value="breakdown" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all">
-                                            <span className="hidden sm:inline">Desglose de Métodos</span>
-                                            <span className="sm:hidden">Desglose</span>
+                                        <TabsTrigger 
+                                            value="breakdown" 
+                                            title="Desglose por Métodos"
+                                            className="rounded-lg text-[11px] sm:text-xs font-bold px-1.5 sm:px-2 min-w-0 overflow-hidden data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all"
+                                        >
+                                            <span className="truncate">Desglose</span>
                                         </TabsTrigger>
                                         {openSessions.length > 1 && (
-                                            <TabsTrigger value="shifts" className="rounded-lg text-[10px] sm:text-xs font-bold truncate data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all text-amber-500">
-                                                <span>Turnos ({openSessions.length})</span>
+                                            <TabsTrigger 
+                                                value="shifts" 
+                                                title="Turnos Abiertos"
+                                                className="rounded-lg text-[11px] sm:text-xs font-bold px-1.5 sm:px-2 min-w-0 overflow-hidden data-[state=active]:bg-background data-[state=active]:text-foreground shadow-sm transition-all text-amber-500"
+                                            >
+                                                <span className="truncate">Turnos</span>
+                                                <span className="ml-1 opacity-75 shrink-0 text-[10px] sm:text-xs">({openSessions.length})</span>
                                             </TabsTrigger>
                                         )}
                                     </TabsList>
