@@ -535,63 +535,61 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
                     <ScanLine className="h-3.5 w-3.5 text-emerald-500" />
                     Escanear producto
                 </span>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onClose}
-                    className="h-6 w-6 rounded-full"
-                    aria-label="Cerrar escáner"
-                >
-                    <X className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1.5">
+                    {/* Botón de Zoom (1x / 2x) integrado limpiamente en el encabezado */}
+                    {zoomSupported && isScanning && !nativeMode && (
+                        <button
+                            type="button"
+                            onClick={toggleZoom}
+                            className={cn(
+                                "h-6 px-2 rounded-full text-[11px] font-semibold border transition-all active:scale-95 flex items-center justify-center cursor-pointer",
+                                currentZoom > 1
+                                    ? "bg-emerald-500 text-white border-emerald-400 shadow-xs"
+                                    : "bg-background/80 text-muted-foreground border-border hover:text-foreground"
+                            )}
+                            title={currentZoom > 1 ? "Volver a 1x" : "Zoom 2x"}
+                        >
+                            {currentZoom > 1 ? "2x" : "1x"}
+                        </button>
+                    )}
+
+                    {/* Botón de Linterna (Flash) integrado en el encabezado */}
+                    {torchSupported && isScanning && !nativeMode && (
+                        <button
+                            type="button"
+                            onClick={toggleTorch}
+                            className={cn(
+                                "h-6 w-6 rounded-full border transition-all active:scale-95 flex items-center justify-center cursor-pointer",
+                                torchOn
+                                    ? "bg-amber-400 text-black border-amber-300 shadow-xs"
+                                    : "bg-background/80 text-muted-foreground border-border hover:text-foreground"
+                            )}
+                            title={torchOn ? "Apagar linterna" : "Encender linterna"}
+                        >
+                            {torchOn ? <Zap className="h-3 w-3 fill-current" /> : <ZapOff className="h-3 w-3" />}
+                        </button>
+                    )}
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onClose}
+                        className="h-6 w-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                        aria-label="Cerrar escáner"
+                    >
+                        <X className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
             </div>
 
-            {/* Camera — recuadro chico, no pantalla completa. En modo nativo,
-                el plugin monta la vista de cámara real (nativa, fuera del DOM)
-                exactamente sobre este <div> — ver el efecto de arriba. Lo que
-                hay acá abajo solo se ve un instante mientras esa vista
-                termina de montarse, o si falló. */}
+            {/* Camera — recuadro limpio, sin botones que estorben la vista */}
             <div
                 ref={cameraBoxRef}
                 className={cn(
-                    "relative h-[185px] sm:h-[210px] bg-black mx-3 mt-2 mb-2.5 rounded-2xl overflow-hidden border-2 transition-colors duration-150 shadow-inner",
-                    scanFlash ? "border-emerald-400" : "border-border/40"
+                    "relative h-[180px] sm:h-[205px] bg-black mx-3 mt-2 mb-2.5 rounded-2xl overflow-hidden border transition-all duration-200",
+                    scanFlash ? "border-emerald-400 ring-2 ring-emerald-400/30" : "border-border/40"
                 )}
             >
-                {/* Botón de Linterna (Flash) si está disponible */}
-                {torchSupported && isScanning && !nativeMode && (
-                    <button
-                        type="button"
-                        onClick={toggleTorch}
-                        className={cn(
-                            "absolute top-2.5 right-2.5 z-20 p-2 rounded-full backdrop-blur-md transition-all active:scale-90 border flex items-center justify-center cursor-pointer shadow-md",
-                            torchOn
-                                ? "bg-amber-400 text-black border-amber-300 shadow-amber-400/30"
-                                : "bg-black/60 text-white/90 border-white/20 hover:bg-black/80"
-                        )}
-                        title={torchOn ? "Apagar linterna" : "Encender linterna"}
-                    >
-                        {torchOn ? <Zap className="h-4 w-4 fill-current" /> : <ZapOff className="h-4 w-4" />}
-                    </button>
-                )}
-
-                {/* Botón de Zoom (1x / 2x) si el dispositivo lo soporta */}
-                {zoomSupported && isScanning && !nativeMode && (
-                    <button
-                        type="button"
-                        onClick={toggleZoom}
-                        className={cn(
-                            "absolute top-2.5 right-12 z-20 px-2.5 py-1 rounded-full backdrop-blur-md transition-all active:scale-90 border text-xs font-black flex items-center justify-center cursor-pointer shadow-md",
-                            currentZoom > 1
-                                ? "bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/30"
-                                : "bg-black/60 text-white/90 border-white/20 hover:bg-black/80"
-                        )}
-                        title={currentZoom > 1 ? "Volver a 1x" : "Zoom 2x para códigos pequeños"}
-                    >
-                        {currentZoom > 1 ? "2x" : "1x"}
-                    </button>
-                )}
-
                 {nativeMode ? (
                     errorMsg ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-zinc-900 z-[11]">
@@ -663,17 +661,23 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
                     </>
                 )}
 
+                {/* Retícula Minimalista Profesional */}
                 {isScanning && !nativeMode && (
-                    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center p-3">
-                        <div className="relative w-[85%] max-w-[290px] h-[105px] rounded-xl shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
-                            <div className="absolute top-0 left-0 w-6 h-6 border-t-[3px] border-l-[3px] border-emerald-400 rounded-tl-lg" />
-                            <div className="absolute top-0 right-0 w-6 h-6 border-t-[3px] border-r-[3px] border-emerald-400 rounded-tr-lg" />
-                            <div className="absolute bottom-0 left-0 w-6 h-6 border-b-[3px] border-l-[3px] border-emerald-400 rounded-bl-lg" />
-                            <div className="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-emerald-400 rounded-br-lg" />
-                            <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-pulse" />
+                    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center">
+                        <div className="relative w-[80%] max-w-[270px] h-[92px] rounded-xl border border-white/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]">
+                            {/* Esquinas finas de alta precisión */}
+                            <div className="absolute -top-[1px] -left-[1px] w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400 rounded-tl-[6px]" />
+                            <div className="absolute -top-[1px] -right-[1px] w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400 rounded-tr-[6px]" />
+                            <div className="absolute -bottom-[1px] -left-[1px] w-3.5 h-3.5 border-b-2 border-l-2 border-emerald-400 rounded-bl-[6px]" />
+                            <div className="absolute -bottom-[1px] -right-[1px] w-3.5 h-3.5 border-b-2 border-r-2 border-emerald-400 rounded-br-[6px]" />
+
+                            {/* Haz láser central fino y sutil */}
+                            <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/90 to-transparent shadow-[0_0_8px_rgba(52,211,153,0.7)] animate-pulse" />
                         </div>
-                        <p className="text-[10.5px] text-white/90 font-medium tracking-wide mt-2 bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 shadow">
-                            Mantén el código enfocado a 15-20 cm (sin pegar la cámara)
+
+                        {/* Guía de distancia limpia */}
+                        <p className="text-[10.5px] text-white/80 font-medium tracking-wide mt-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                            Centra el código a 15–20 cm
                         </p>
                     </div>
                 )}
