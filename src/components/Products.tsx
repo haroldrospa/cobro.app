@@ -1439,40 +1439,44 @@ const Products: FC = () => {
           </div>
         </div>
 
-        <div className="w-full max-w-2xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 px-2">
-          {/* Botón Principal: Nuevo Producto */}
-          <Button
-            size="lg"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-xs sm:text-sm h-12 px-6 rounded-xl sm:rounded-2xl shadow-lg shadow-emerald-500/20 gap-2.5 transition-all active:scale-95 flex-1 sm:flex-initial"
-            onClick={() => {
-              if (hasReachedLimit('products', products.length)) {
-                setShowLimitDialog(true);
-              } else {
-                setShowForm(true);
-              }
-            }}
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-            <span>Nuevo Producto</span>
-          </Button>
-
-          {/* Grupo de Herramientas y Acciones */}
-          <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+        <div className="w-full max-w-sm sm:max-w-2xl mx-auto px-3">
+          <div className="grid grid-cols-2 sm:flex sm:flex-row items-center justify-center gap-2 sm:gap-3">
+            {/* 1. Nuevo Producto */}
             <Button
-              size="lg"
-              className="flex-1 sm:flex-initial bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-black uppercase tracking-wider text-xs sm:text-sm h-12 px-4 sm:px-6 rounded-xl sm:rounded-2xl shadow-lg shadow-blue-500/20 gap-2 transition-all active:scale-95"
-              onClick={() => setIsAIStockOpen(true)}
+              size="default"
+              className="h-11 sm:h-12 px-3 sm:px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md shadow-emerald-600/20 gap-2 transition-all active:scale-95 justify-center"
+              onClick={() => {
+                if (hasReachedLimit('products', products.length)) {
+                  setShowLimitDialog(true);
+                } else {
+                  setShowForm(true);
+                }
+              }}
             >
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-200 shrink-0" />
-              <span>Stock con IA</span>
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">Nuevo Producto</span>
             </Button>
 
+            {/* 2. Stock con IA */}
+            <Button
+              size="default"
+              className="h-11 sm:h-12 px-3 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold uppercase tracking-wider text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md shadow-blue-600/20 gap-2 transition-all active:scale-95 justify-center"
+              onClick={() => setIsAIStockOpen(true)}
+            >
+              <Sparkles className="h-4 w-4 text-blue-200 shrink-0" />
+              <span className="truncate">Stock con IA</span>
+            </Button>
+
+            {/* 3. Menú de Acciones */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex-1 sm:flex-initial h-12 px-4 rounded-xl sm:rounded-2xl border-border/50 bg-card/60 hover:bg-muted font-black uppercase text-xs tracking-wider gap-1.5 shrink-0">
-                  <Upload className="h-4 w-4 shrink-0" />
-                  <span>Acciones</span>
-                  <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                <Button
+                  variant="outline"
+                  className="h-11 sm:h-12 px-3 sm:px-5 rounded-xl sm:rounded-2xl border-border/60 bg-card/60 hover:bg-muted font-bold uppercase text-xs tracking-wider gap-1.5 transition-all active:scale-95 text-foreground justify-center"
+                >
+                  <Upload className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">Acciones</span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0 ml-0.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[220px]">
@@ -1506,17 +1510,18 @@ const Products: FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* 4. Sincronizar / Refrescar */}
             <Button
               variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-xl sm:rounded-2xl border-border/50 bg-card/60 hover:bg-muted shrink-0 text-muted-foreground hover:text-foreground"
+              className="h-11 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border-border/60 bg-card/60 hover:bg-muted font-bold uppercase text-xs tracking-wider gap-2 transition-all active:scale-95 text-muted-foreground hover:text-foreground justify-center"
               onClick={() => {
                 queryClient.invalidateQueries({ queryKey: ['products'] });
                 toast({ title: "Actualizando...", description: "Sincronizando inventario..." });
               }}
               title="Sincronizar Inventario"
             >
-              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
+              <RefreshCw className="h-4 w-4 shrink-0" />
+              <span className="truncate">Actualizar</span>
             </Button>
           </div>
         </div>
