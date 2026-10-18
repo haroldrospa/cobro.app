@@ -155,6 +155,18 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
         setErrorMsg(null);
         setPermissionState('requesting');
 
+        if (typeof window !== 'undefined' && !window.isSecureContext && !isAndroidNative()) {
+            setPermissionState('denied');
+            setErrorMsg('La cámara requiere conexión segura (HTTPS). Entra con https:// en lugar de http://');
+            return;
+        }
+
+        if (typeof navigator === 'undefined' || !navigator?.mediaDevices?.getUserMedia) {
+            setPermissionState('denied');
+            setErrorMsg('Tu navegador no permite la cámara en conexiones no seguras (usa https://).');
+            return;
+        }
+
         try {
             const reader = new BrowserMultiFormatReader(hints, {
                 delayBetweenScanAttempts: 80,   // ~12 intentos/s

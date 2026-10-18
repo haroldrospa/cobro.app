@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
 import legacy from '@vitejs/plugin-legacy';
 import viteCompression from 'vite-plugin-compression';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 function directThermalPrinterPlugin() {
   return {
@@ -85,6 +86,7 @@ export default defineConfig(({ mode }) => ({
     }
   },
   plugins: [
+    basicSsl(),
     directThermalPrinterPlugin(),
     react(),
     legacy({
