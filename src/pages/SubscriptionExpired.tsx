@@ -78,12 +78,6 @@ export default function SubscriptionExpired() {
           {/* Top highlight border */}
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-red-500/70 to-transparent" />
 
-          {/* Status Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/25 text-red-400 text-xs font-semibold mb-4 tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span>Período de Facturación Vencido</span>
-          </div>
-
           {/* Central Icon with Glowing Shield */}
           <div className="relative mb-4">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-red-500/20 via-red-500/10 to-transparent border border-red-500/30 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/15">
