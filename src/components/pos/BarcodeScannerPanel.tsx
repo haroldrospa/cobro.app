@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { BrowserMultiFormatReader, NotFoundException, BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { Button } from '@/components/ui/button';
-import { X, Camera, RefreshCw, ShieldAlert, ScanLine } from 'lucide-react';
+import { X, Camera, RefreshCw, ShieldAlert, ScanLine, Zap, ZapOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { isAndroidNative } from '@/utils/platform';
@@ -25,44 +25,23 @@ interface BarcodeScannerPanelProps {
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied' | 'no-device';
 
-// ── ZXing hints – enable all linear + 2D formats ─────────────────────────────
+// ── ZXing hints – optimizados para lectura ultrarrápida de retail (EAN-13, EAN-8, UPC, Code 128) ─────
 const hints = new Map();
 hints.set(DecodeHintType.POSSIBLE_FORMATS, [
     BarcodeFormat.EAN_13,
     BarcodeFormat.EAN_8,
-    BarcodeFormat.CODE_128,
-    BarcodeFormat.CODE_39,
-    BarcodeFormat.CODE_93,
     BarcodeFormat.UPC_A,
     BarcodeFormat.UPC_E,
-    BarcodeFormat.UPC_EAN_EXTENSION,
-    BarcodeFormat.ITF,
-    BarcodeFormat.CODABAR,
+    BarcodeFormat.CODE_128,
+    BarcodeFormat.CODE_39,
     BarcodeFormat.QR_CODE,
-    BarcodeFormat.DATA_MATRIX,
-    BarcodeFormat.PDF_417,
-    BarcodeFormat.AZTEC,
 ]);
 hints.set(DecodeHintType.TRY_HARDER, true);
 
 /**
- * Panel de escaneo EN LÍNEA (no modal/popup) — se renderiza directamente
- * debajo de la barra de búsqueda cuando isOpen es true. Recuadro chico a
- * propósito (h-[110px]) para no comerse la pantalla — el resultado de cada
- * lectura se avisa por toast, no con una caja fija, para no restarle espacio
- * a la lista/grilla de productos debajo.
- *
- * Nota técnica del bug que esto reemplazó: la versión anterior manejaba la
- * cámara a mano (getUserMedia + video.play()) y luego llamaba a
- * `reader.decodeFromVideoElement(video, callback)` — ese método de ZXing es
- * de UN SOLO intento y ni siquiera acepta un callback (la firma real es
- * `decodeFromVideoElement(source): Promise<Result>`), así que el callback
- * nunca se ejecutaba. Aquí se usa `decodeFromConstraints(...)`, que es quien
- * de verdad expone el modo continuo con callback y además gestiona la cámara
- * internamente (evita además una condición de carrera al reproducir el video
- * dos veces). Ese flujo web solo se usa fuera de la app nativa (navegador /
- * desarrollo) — dentro de la app Android real, ver el flujo nativo incrustado
- * más abajo.
+ * Panel de escaneo EN LÍNEA con motor dual:
+ * 1. BarcodeDetector nativo (acelerado por hardware en iOS 17+ y Android Chrome)
+ * 2. Fallback a ZXing multi-formato optimizado
  */
 const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClose, onDetect }) => {
     const { toast } = useToast();
@@ -70,21 +49,20 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
     const [permissionState, setPermissionState] = useState<PermissionState>('idle');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
-    // Recuadro que mide getBoundingClientRect() para decirle al plugin nativo
-    // dónde montar la vista de cámara incrustada (modo nativo — ver abajo).
     const cameraBoxRef = useRef<HTMLDivElement | null>(null);
-    // Se incrementa para forzar un reintento del efecto nativo tras un error.
     const [nativeRetryKey, setNativeRetryKey] = useState(0);
     const readerRef = useRef<BrowserMultiFormatReader | null>(null);
     const retryRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const onDetectRef = useRef(onDetect);
     onDetectRef.current = onDetect;
 
-    // Beep corto (Web Audio API, sin archivo de sonido) + destello verde en
-    // el borde del recuadro — feedback inmediato de "código leído" sin
-    // interrumpir con un popup. Un solo AudioContext reutilizado (crear uno
-    // nuevo por cada beep genera advertencias del navegador si se escanea
-    // rápido/seguido).
+    // Control de stream activo y linterna (torch)
+    const activeStreamRef = useRef<MediaStream | null>(null);
+    const [torchSupported, setTorchSupported] = useState(false);
+    const [torchOn, setTorchOn] = useState(false);
+    const nativeDetectorLoopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastDetectedCodeRef = useRef<{ code: string; time: number }>({ code: '', time: 0 });
+
     const audioCtxRef = useRef<AudioContext | null>(null);
     const [scanFlash, setScanFlash] = useState(false);
     const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,10 +104,6 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
         flashTimeoutRef.current = setTimeout(() => setScanFlash(false), 500);
     }, []);
 
-    // Único punto donde se procesa un código leído (web o nativo): beep +
-    // destello verde en cualquier lectura exitosa, agrega al carrito si hay
-    // match, y solo avisa por toast cuando NO hay coincidencia (para eso sí
-    // hace falta explicar qué pasó — un simple beep no alcanza).
     const reportDetection = useCallback((code: string) => {
         const result = onDetectRef.current(code);
         playBeep();
@@ -144,11 +118,41 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
     }, [toast, playBeep, triggerScanFlash]);
 
     const stopScanner = useCallback(() => {
-        if (retryRef.current) { clearInterval(retryRef.current); retryRef.current = null; }
-        readerRef.current?.reset(); // también detiene la cámara/tracks
+        if (nativeDetectorLoopRef.current) {
+            clearTimeout(nativeDetectorLoopRef.current);
+            nativeDetectorLoopRef.current = null;
+        }
+        if (retryRef.current) {
+            clearInterval(retryRef.current);
+            retryRef.current = null;
+        }
+        if (activeStreamRef.current) {
+            activeStreamRef.current.getTracks().forEach((track) => track.stop());
+            activeStreamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        readerRef.current?.reset();
         readerRef.current = null;
         setIsScanning(false);
+        setTorchOn(false);
+        setTorchSupported(false);
     }, []);
+
+    const toggleTorch = useCallback(async () => {
+        if (!activeStreamRef.current) return;
+        try {
+            const track = activeStreamRef.current.getVideoTracks()[0];
+            const nextState = !torchOn;
+            await (track as any).applyConstraints({
+                advanced: [{ torch: nextState }],
+            });
+            setTorchOn(nextState);
+        } catch (e) {
+            console.warn('Torch toggle not supported on this track:', e);
+        }
+    }, [torchOn]);
 
     const startScanner = useCallback(async () => {
         if (!videoRef.current) return;
@@ -168,44 +172,107 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
         }
 
         try {
-            const reader = new BrowserMultiFormatReader(hints, {
-                delayBetweenScanAttempts: 80,   // ~12 intentos/s
-                delayBetweenScanSuccess: 1500,  // espera 1.5s antes de aceptar otro código
-            });
-            readerRef.current = reader;
-
-            // decodeFromConstraints pide la cámara, la conecta al <video> y
-            // arranca el bucle continuo — todo en un solo paso manejado por
-            // la propia librería (evita el bug de doble-play descrito arriba).
-            await reader.decodeFromConstraints(
-                {
-                    video: {
-                        facingMode: { ideal: 'environment' },
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 },
-                        // Enfoque continuo — sin esto algunas cámaras se quedan
-                        // enfocadas a distancia de video-llamada y nunca
-                        // resuelven bien un código de barras de cerca.
-                        // (no está en el tipo estándar de TS; algunos
-                        // navegadores lo soportan igual)
-                        ...({ focusMode: 'continuous' } as any),
-                        advanced: [{ focusMode: 'continuous' } as any],
-                    },
-                    audio: false,
+            // 1. Iniciar cámara con resolución 720p (perfecta para no saturar CPU y permitir enfoque nítido de cerca)
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280, min: 640 },
+                    height: { ideal: 720, min: 480 },
+                    ...({ focusMode: 'continuous' } as any),
+                    advanced: [{ focusMode: 'continuous' } as any],
                 },
-                videoRef.current,
-                (result, err) => {
+                audio: false,
+            });
+
+            activeStreamRef.current = stream;
+            if (!videoRef.current) {
+                stream.getTracks().forEach((t) => t.stop());
+                return;
+            }
+
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+
+            // Comprobar soporte de linterna (torch)
+            try {
+                const track = stream.getVideoTracks()[0];
+                const capabilities = (track.getCapabilities?.() || {}) as any;
+                if (capabilities?.torch) {
+                    setTorchSupported(true);
+                }
+            } catch {
+                // Torch no disponible
+            }
+
+            setPermissionState('granted');
+            setIsScanning(true);
+
+            // 2. Detección nativa acelerada por hardware (BarcodeDetector en iOS 17+, Android Chrome)
+            let hasNativeDetector = false;
+            let nativeDetector: any = null;
+
+            if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+                try {
+                    const formats = await (window as any).BarcodeDetector.getSupportedFormats?.() || [];
+                    if (formats.length === 0 || formats.includes('ean_13') || formats.includes('code_128')) {
+                        nativeDetector = new (window as any).BarcodeDetector({
+                            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'],
+                        });
+                        hasNativeDetector = true;
+                    }
+                } catch {
+                    hasNativeDetector = false;
+                }
+            }
+
+            if (hasNativeDetector && nativeDetector) {
+                // Bucle nativo ultrarrápido
+                const scanNativeLoop = async () => {
+                    if (!activeStreamRef.current || !videoRef.current) return;
+
+                    try {
+                        if (videoRef.current.readyState >= 2) {
+                            const barcodes = await nativeDetector.detect(videoRef.current);
+                            if (barcodes && barcodes.length > 0) {
+                                const rawValue = barcodes[0].rawValue;
+                                const now = Date.now();
+                                if (
+                                    rawValue &&
+                                    (rawValue !== lastDetectedCodeRef.current.code ||
+                                        now - lastDetectedCodeRef.current.time > 1500)
+                                ) {
+                                    lastDetectedCodeRef.current = { code: rawValue, time: now };
+                                    reportDetection(rawValue);
+                                }
+                            }
+                        }
+                    } catch {
+                        // Error de frame individual
+                    }
+
+                    if (activeStreamRef.current) {
+                        nativeDetectorLoopRef.current = setTimeout(scanNativeLoop, 75);
+                    }
+                };
+
+                scanNativeLoop();
+            } else {
+                // 3. Fallback a ZXing optimizado
+                const reader = new BrowserMultiFormatReader(hints, {
+                    delayBetweenScanAttempts: 70,
+                    delayBetweenScanSuccess: 1500,
+                });
+                readerRef.current = reader;
+
+                reader.decodeFromVideoElementContinuously(videoRef.current, (result, err) => {
                     if (result) {
                         reportDetection(result.getText());
                     }
                     if (err && !(err instanceof NotFoundException)) {
-                        console.warn('ZXing decode error:', err);
+                        console.warn('ZXing decode warning:', err);
                     }
-                }
-            );
-
-            setPermissionState('granted');
-            setIsScanning(true);
+                });
+            }
         } catch (err: any) {
             console.error('Camera error:', err);
             stopScanner();
@@ -331,10 +398,27 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
             <div
                 ref={cameraBoxRef}
                 className={cn(
-                    "relative h-[110px] bg-black mx-3 mt-2 mb-2.5 rounded-xl overflow-hidden border-2 transition-colors duration-150",
-                    scanFlash ? "border-emerald-400" : "border-transparent"
+                    "relative h-[185px] sm:h-[210px] bg-black mx-3 mt-2 mb-2.5 rounded-2xl overflow-hidden border-2 transition-colors duration-150 shadow-inner",
+                    scanFlash ? "border-emerald-400" : "border-border/40"
                 )}
             >
+                {/* Botón de Linterna (Flash) si está disponible */}
+                {torchSupported && isScanning && !nativeMode && (
+                    <button
+                        type="button"
+                        onClick={toggleTorch}
+                        className={cn(
+                            "absolute top-2.5 right-2.5 z-20 p-2 rounded-full backdrop-blur-md transition-all active:scale-90 border flex items-center justify-center cursor-pointer shadow-md",
+                            torchOn
+                                ? "bg-amber-400 text-black border-amber-300 shadow-amber-400/30"
+                                : "bg-black/60 text-white/90 border-white/20 hover:bg-black/80"
+                        )}
+                        title={torchOn ? "Apagar linterna" : "Encender linterna"}
+                    >
+                        {torchOn ? <Zap className="h-4 w-4 fill-current" /> : <ZapOff className="h-4 w-4" />}
+                    </button>
+                )}
+
                 {nativeMode ? (
                     errorMsg ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-zinc-900 z-[11]">
@@ -407,14 +491,17 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
                 )}
 
                 {isScanning && !nativeMode && (
-                    <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
-                        <div className="relative w-[85%] h-[70%] rounded-xl shadow-[0_0_0_999px_rgba(0,0,0,0.55)]">
-                            <div className="absolute top-0 left-0 w-5 h-5 border-t-[3px] border-l-[3px] border-emerald-400 rounded-tl-lg" />
-                            <div className="absolute top-0 right-0 w-5 h-5 border-t-[3px] border-r-[3px] border-emerald-400 rounded-tr-lg" />
-                            <div className="absolute bottom-0 left-0 w-5 h-5 border-b-[3px] border-l-[3px] border-emerald-400 rounded-bl-lg" />
-                            <div className="absolute bottom-0 right-0 w-5 h-5 border-b-[3px] border-r-[3px] border-emerald-400 rounded-br-lg" />
-                            <div className="absolute left-2 right-2 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-[scan_2s_ease-in-out_infinite]" />
+                    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center p-3">
+                        <div className="relative w-[85%] max-w-[290px] h-[105px] rounded-xl shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
+                            <div className="absolute top-0 left-0 w-6 h-6 border-t-[3px] border-l-[3px] border-emerald-400 rounded-tl-lg" />
+                            <div className="absolute top-0 right-0 w-6 h-6 border-t-[3px] border-r-[3px] border-emerald-400 rounded-tr-lg" />
+                            <div className="absolute bottom-0 left-0 w-6 h-6 border-b-[3px] border-l-[3px] border-emerald-400 rounded-bl-lg" />
+                            <div className="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-emerald-400 rounded-br-lg" />
+                            <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-pulse" />
                         </div>
+                        <p className="text-[10px] text-white/75 font-semibold tracking-wide mt-2 bg-black/50 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
+                            Mantén el código enfocado a 15-20 cm
+                        </p>
                     </div>
                 )}
             </div>
