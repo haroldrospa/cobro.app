@@ -7,6 +7,7 @@ import {
     RGBLuminanceSource,
     BinaryBitmap,
     HybridBinarizer,
+    GlobalHistogramBinarizer,
 } from '@zxing/library';
 import { Button } from '@/components/ui/button';
 import { X, Camera, RefreshCw, ShieldAlert, ScanLine, Zap, ZapOff } from 'lucide-react';
@@ -208,12 +209,12 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
         }
 
         try {
-            // Iniciar cámara con alta definición (1080p ideal) para máxima nitidez de barras
+            // Iniciar cámara con resolución 720p/1080p continua para nitidez óptima de códigos 1D
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: 'environment' },
-                    width: { ideal: 1920, min: 1280 },
-                    height: { ideal: 1080, min: 720 },
+                    width: { ideal: 1280, max: 1920 },
+                    height: { ideal: 720, max: 1080 },
                     ...({ focusMode: 'continuous' } as any),
                     advanced: [
                         { focusMode: 'continuous' } as any,
@@ -252,7 +253,7 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
             const reader = new BrowserMultiFormatReader(hints);
             readerRef.current = reader;
 
-            // Preparar BarcodeDetector nativo si está disponible
+            // Preparar BarcodeDetector nativo por hardware (ML Kit / Apple Vision)
             let nativeDetector: any = null;
             if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
                 try {
@@ -271,96 +272,141 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
             const canvas = offscreenCanvasRef.current;
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-            // Bucle de escaneo ultrarrápido con ROI (Region of Interest)
+            let frameIndex = 0;
+
+            // Bucle de escaneo de ultra-precisión
             const scanTick = async () => {
                 if (!activeStreamRef.current || !videoRef.current || !ctx) return;
                 const video = videoRef.current;
 
                 if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+                    frameIndex++;
                     const vW = video.videoWidth;
                     const vH = video.videoHeight;
-
-                    // Extraer únicamente la región central de interés (mirilla verde)
-                    const cropW = Math.floor(vW * 0.85);
-                    const cropH = Math.floor(vH * 0.50);
-                    const cropX = Math.floor((vW - cropW) / 2);
-                    const cropY = Math.floor((vH - cropH) / 2);
-
-                    const targetW = 560;
-                    const targetH = Math.floor(targetW * (cropH / cropW));
-
-                    if (canvas.width !== targetW || canvas.height !== targetH) {
-                        canvas.width = targetW;
-                        canvas.height = targetH;
-                    }
-
-                    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
-
                     let detectedCode: string | null = null;
 
-                    // Método 1: Detección nativa por hardware (Apple Vision / ML Kit)
+                    // Método 1: BarcodeDetector nativo acelerado por hardware directamente sobre el video
                     if (nativeDetector) {
                         try {
-                            const barcodes = await nativeDetector.detect(canvas);
+                            const barcodes = await nativeDetector.detect(video);
                             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
                                 detectedCode = barcodes[0].rawValue;
                             }
                         } catch {
-                            // Ignorar error puntual de frame
+                            // Continuar con ZXing
                         }
                     }
 
-                    // Método 2: ZXing de alta velocidad con ROI y doble pasada de contraste
+                    // Método 2: ZXing multi-estrategia con corrección de escala y luminancia
                     if (!detectedCode && readerRef.current) {
                         try {
-                            const imgData = ctx.getImageData(0, 0, targetW, targetH);
-                            const raw = imgData.data;
+                            // Calcular el área exacta que el usuario ve dentro de la mirilla (object-cover)
+                            const box = cameraBoxRef.current?.getBoundingClientRect();
+                            const boxW = box?.width || 360;
+                            const boxH = box?.height || 185;
 
-                            // Pasada A: Grayscale normal
-                            try {
-                                const lumSource = new RGBLuminanceSource(raw, targetW, targetH);
-                                const bitmap = new BinaryBitmap(new HybridBinarizer(lumSource));
-                                const res = readerRef.current.decodeBitmap(bitmap);
-                                if (res && res.getText()) {
-                                    detectedCode = res.getText();
-                                }
-                            } catch {
-                                // Continuar a pasada B
+                            let visibleW = vW;
+                            let visibleH = vH;
+                            let offsetX = 0;
+                            let offsetY = 0;
+
+                            const videoRatio = vW / vH;
+                            const boxRatio = boxW / boxH;
+
+                            if (videoRatio > boxRatio) {
+                                visibleW = Math.floor(vH * boxRatio);
+                                offsetX = Math.floor((vW - visibleW) / 2);
+                            } else {
+                                visibleH = Math.floor(vW / boxRatio);
+                                offsetY = Math.floor((vH - visibleH) / 2);
                             }
 
-                            // Pasada B: Ecualización de contraste para botellas curvas y reflejos
-                            if (!detectedCode) {
-                                let min = 255;
-                                let max = 0;
-                                for (let i = 0; i < raw.length; i += 4) {
-                                    const g = (raw[i] * 77 + raw[i + 1] * 150 + raw[i + 2] * 29) >> 8;
-                                    if (g < min) min = g;
-                                    if (g > max) max = g;
-                                }
+                            // En la mayoría de frames analizamos el recorte de la mirilla central
+                            // Cada 4 frames analizamos el marco visible completo por si el código está un poco desalineado
+                            const isFullFrameCheck = frameIndex % 4 === 0;
 
-                                if (max - min > 20 && max - min < 215) {
-                                    const range = max - min;
-                                    const boosted = new Uint8ClampedArray(raw.length);
-                                    for (let i = 0; i < raw.length; i += 4) {
-                                        const g = (raw[i] * 77 + raw[i + 1] * 150 + raw[i + 2] * 29) >> 8;
-                                        const norm = Math.min(255, Math.max(0, Math.floor(((g - min) / range) * 255)));
-                                        boosted[i] = norm;
-                                        boosted[i + 1] = norm;
-                                        boosted[i + 2] = norm;
-                                        boosted[i + 3] = 255;
-                                    }
+                            let cropX: number, cropY: number, cropW: number, cropH: number;
+                            if (isFullFrameCheck) {
+                                cropX = offsetX;
+                                cropY = offsetY;
+                                cropW = visibleW;
+                                cropH = visibleH;
+                            } else {
+                                const reticleWFactor = Math.min(boxW * 0.90, 300) / boxW;
+                                const reticleHFactor = 120 / boxH;
+                                cropW = Math.floor(visibleW * reticleWFactor);
+                                cropH = Math.floor(visibleH * reticleHFactor);
+                                cropX = Math.floor(offsetX + (visibleW - cropW) / 2);
+                                cropY = Math.floor(offsetY + (visibleH - cropH) / 2);
+                            }
+
+                            // Limitar tamaño de canvas para procesar en menos de 6ms
+                            const targetW = isFullFrameCheck ? 520 : 600;
+                            const targetH = Math.max(80, Math.floor(targetW * (cropH / cropW)));
+
+                            if (canvas.width !== targetW || canvas.height !== targetH) {
+                                canvas.width = targetW;
+                                canvas.height = targetH;
+                            }
+
+                            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
+                            const imgData = ctx.getImageData(0, 0, targetW, targetH);
+                            const raw = imgData.data;
+                            const pixelCount = targetW * targetH;
+
+                            // Conversión limpia a escala de grises (1 byte por píxel = targetW * targetH)
+                            const gray = new Uint8ClampedArray(pixelCount);
+                            let min = 255;
+                            let max = 0;
+
+                            for (let i = 0, j = 0; i < raw.length; i += 4, j++) {
+                                const g = (raw[i] * 77 + raw[i + 1] * 150 + raw[i + 2] * 29) >> 8;
+                                gray[j] = g;
+                                if (g < min) min = g;
+                                if (g > max) max = g;
+                            }
+
+                            const lumSource = new RGBLuminanceSource(gray, targetW, targetH);
+
+                            // Intento A: HybridBinarizer estándar
+                            try {
+                                const bitmap = new BinaryBitmap(new HybridBinarizer(lumSource));
+                                const res = readerRef.current.decodeBitmap(bitmap);
+                                if (res && res.getText()) detectedCode = res.getText();
+                            } catch {}
+
+                            // Intento B: GlobalHistogramBinarizer (superior en superficies curvas y botellas)
+                            if (!detectedCode) {
+                                try {
+                                    const bitmap = new BinaryBitmap(new GlobalHistogramBinarizer(lumSource));
+                                    const res = readerRef.current.decodeBitmap(bitmap);
+                                    if (res && res.getText()) detectedCode = res.getText();
+                                } catch {}
+                            }
+
+                            // Intento C: Normalización de contraste para botellas con reflejos o poca luz
+                            if (!detectedCode && (max - min) > 15 && (max - min) < 225) {
+                                const range = max - min;
+                                const boosted = new Uint8ClampedArray(pixelCount);
+                                for (let j = 0; j < pixelCount; j++) {
+                                    boosted[j] = Math.min(255, Math.max(0, Math.floor(((gray[j] - min) / range) * 255)));
+                                }
+                                const boostedLum = new RGBLuminanceSource(boosted, targetW, targetH);
+                                try {
+                                    const bitmap = new BinaryBitmap(new HybridBinarizer(boostedLum));
+                                    const res = readerRef.current.decodeBitmap(bitmap);
+                                    if (res && res.getText()) detectedCode = res.getText();
+                                } catch {}
+                                if (!detectedCode) {
                                     try {
-                                        const lumSource2 = new RGBLuminanceSource(boosted, targetW, targetH);
-                                        const bitmap2 = new BinaryBitmap(new HybridBinarizer(lumSource2));
-                                        const res2 = readerRef.current.decodeBitmap(bitmap2);
-                                        if (res2 && res2.getText()) {
-                                            detectedCode = res2.getText();
-                                        }
+                                        const bitmap = new BinaryBitmap(new GlobalHistogramBinarizer(boostedLum));
+                                        const res = readerRef.current.decodeBitmap(bitmap);
+                                        if (res && res.getText()) detectedCode = res.getText();
                                     } catch {}
                                 }
                             }
                         } catch {
-                            // Error frame
+                            // Error puntual de fotograma
                         }
                     }
 
@@ -378,7 +424,7 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
                 }
 
                 if (activeStreamRef.current) {
-                    scanLoopRef.current = setTimeout(scanTick, 55);
+                    scanLoopRef.current = setTimeout(scanTick, 40);
                 }
             };
 
@@ -626,8 +672,8 @@ const BarcodeScannerPanel: React.FC<BarcodeScannerPanelProps> = ({ isOpen, onClo
                             <div className="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-emerald-400 rounded-br-lg" />
                             <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-pulse" />
                         </div>
-                        <p className="text-[10px] text-white/75 font-semibold tracking-wide mt-2 bg-black/50 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-                            Mantén el código enfocado a 15-20 cm
+                        <p className="text-[10.5px] text-white/90 font-medium tracking-wide mt-2 bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 shadow">
+                            Mantén el código enfocado a 15-20 cm (sin pegar la cámara)
                         </p>
                     </div>
                 )}

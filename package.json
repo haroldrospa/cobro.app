@@ -39,6 +39,7 @@
     "@capacitor/core": "^7.4.3",
     "@capacitor/ios": "^7.4.3",
     "@emotion/is-prop-valid": "^1.4.0",
+    "@ericblade/quagga2": "^1.12.1",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.9.0",
     "@paddle/paddle-js": "^1.6.4",
