@@ -231,6 +231,16 @@ const App = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/subscription-expired"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<PageLoader />}>
+                      <SubscriptionExpired />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected routes - auth required, with Layout */}
               <Route
@@ -255,7 +265,6 @@ const App = () => {
                           <Route path="/banco" element={<Bank />} />
                           <Route path="/payroll" element={<Payroll />} />
                           <Route path="/subscription" element={<UserSubscription />} />
-                          <Route path="/subscription-expired" element={<SubscriptionExpired />} />
                           <Route path="/admin/super-panel" element={<SuperAdmin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
