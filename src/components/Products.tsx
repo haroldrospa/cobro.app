@@ -1439,10 +1439,11 @@ const Products: FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="w-full max-w-2xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 px-2">
+          {/* Botón Principal: Nuevo Producto */}
           <Button
             size="lg"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl shadow-emerald-500/20 gap-3 transition-all active:scale-95"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-xs sm:text-sm h-12 px-6 rounded-xl sm:rounded-2xl shadow-lg shadow-emerald-500/20 gap-2.5 transition-all active:scale-95 flex-1 sm:flex-initial"
             onClick={() => {
               if (hasReachedLimit('products', products.length)) {
                 setShowLimitDialog(true);
@@ -1451,67 +1452,73 @@ const Products: FC = () => {
               }
             }}
           >
-            <Plus className="h-5 w-5" />
-            Nuevo Producto
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span>Nuevo Producto</span>
           </Button>
 
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl shadow-blue-500/20 gap-3 transition-all active:scale-95"
-            onClick={() => setIsAIStockOpen(true)}
-          >
-            <Sparkles className="h-5 w-5 text-blue-200" />
-            Stock con IA
-          </Button>
+          {/* Grupo de Herramientas y Acciones */}
+          <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+            <Button
+              size="lg"
+              className="flex-1 sm:flex-initial bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-black uppercase tracking-wider text-xs sm:text-sm h-12 px-4 sm:px-6 rounded-xl sm:rounded-2xl shadow-lg shadow-blue-500/20 gap-2 transition-all active:scale-95"
+              onClick={() => setIsAIStockOpen(true)}
+            >
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-200 shrink-0" />
+              <span>Stock con IA</span>
+            </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-14 px-6 rounded-2xl border-border/50 bg-muted/10 font-black uppercase text-[10px] tracking-widest gap-2">
-                <Upload className="h-4 w-4" />
-                Acciones
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="rounded-2xl p-2 min-w-[220px]">
-              <DropdownMenuItem onSelect={() => setActiveTab('settings')} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                <Settings2 className="mr-2 h-4 w-4" />
-                Configuración y Categorías
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleImportClick} disabled={isImporting} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
-                {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                Importar CSV/Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={handleDownloadTemplate} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
-                <Download className="mr-2 h-4 w-4" />
-                Descargar Plantilla
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={handleExportCSV} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
-                <Download className="mr-2 h-4 w-4" />
-                Exportar Productos
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={handleOpenLabels} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
-                <Printer className="mr-2 h-4 w-4" />
-                Imprimir Etiquetas
-              </DropdownMenuItem>
-              {products.length > 0 && (
-                <DropdownMenuItem onSelect={handleDeleteAll} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Eliminar Todo
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex-1 sm:flex-initial h-12 px-4 rounded-xl sm:rounded-2xl border-border/50 bg-card/60 hover:bg-muted font-black uppercase text-xs tracking-wider gap-1.5 shrink-0">
+                  <Upload className="h-4 w-4 shrink-0" />
+                  <span>Acciones</span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[220px]">
+                <DropdownMenuItem onSelect={() => setActiveTab('settings')} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Configuración y Categorías
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={handleImportClick} disabled={isImporting} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
+                  {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                  Importar CSV/Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleDownloadTemplate} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
+                  <Download className="mr-2 h-4 w-4" />
+                  Descargar Plantilla
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleExportCSV} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar Productos
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleOpenLabels} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider">
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimir Etiquetas
+                </DropdownMenuItem>
+                {products.length > 0 && (
+                  <DropdownMenuItem onSelect={handleDeleteAll} className="rounded-xl py-2.5 font-bold text-xs uppercase tracking-wider text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar Todo
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <Button
-            variant="outline"
-            className="h-14 w-14 rounded-2xl border-border/50 bg-muted/10"
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['products'] });
-              toast({ title: "Actualizando...", description: "Sincronizando inventario..." });
-            }}
-          >
-            <RefreshCw className="h-5 w-5" />
-          </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 rounded-xl sm:rounded-2xl border-border/50 bg-card/60 hover:bg-muted shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['products'] });
+                toast({ title: "Actualizando...", description: "Sincronizando inventario..." });
+              }}
+              title="Sincronizar Inventario"
+            >
+              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
