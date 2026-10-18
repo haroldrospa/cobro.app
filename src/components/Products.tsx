@@ -1740,52 +1740,56 @@ const Products: FC = () => {
       </Card>
 
       {/* Lista de productos */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:gap-3">
         {filteredProducts.slice(0, visibleCount).map((product) => (
-          // ProductCard es memoizado — solo re-renderiza si el producto cambia
-          <Card key={product.id} className="group overflow-hidden hover:shadow-md transition-all duration-200 border-border/50">
-            <CardContent className="p-0">
-              <div className="flex flex-col sm:flex-row items-center gap-4 p-4">
-                {/* Imagen */}
-                <div className="h-24 w-24 sm:h-20 sm:w-20 bg-muted/30 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-border/50 group-hover:border-primary/20 transition-colors">
-                  {product.image_url ? (
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement?.classList.add('bg-muted');
-                        const icon = document.createElement('div');
-                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8 text-muted-foreground/30"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
-                        e.currentTarget.parentElement?.appendChild(icon.firstChild!);
-                      }}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-muted-foreground/30">
-                      <ImageIcon className="h-8 w-8" />
-                    </div>
-                  )}
-                </div>
+          <Card key={product.id} className="group overflow-hidden hover:shadow-md transition-all duration-200 border-border/50 rounded-2xl bg-card/60">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                
+                {/* Parte Superior (Móvil) / Izquierda (Desktop): Imagen + Info + Precios en Móvil */}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Imagen compacta */}
+                  <div className="h-14 w-14 sm:h-16 sm:w-16 bg-muted/30 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-border/50 group-hover:border-primary/20 transition-colors">
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.classList.add('bg-muted');
+                          const icon = document.createElement('div');
+                          icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-muted-foreground/30"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                          e.currentTarget.parentElement?.appendChild(icon.firstChild!);
+                        }}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-muted-foreground/30">
+                        <ImageIcon className="h-6 w-6" />
+                      </div>
+                    )}
+                  </div>
 
-                {/* Info Principal */}
-                <div className="flex-1 min-w-0 space-y-2 w-full text-center sm:text-left">
-                  <div className="flex flex-col gap-2">
-                    <h3 className="font-bold text-base sm:text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2" title={product.name}>{product.name}</h3>
-                    <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 items-center">
+                  {/* Info Principal */}
+                  <div className="flex-1 min-w-0 space-y-1 text-left">
+                    <h3 className="font-bold text-sm sm:text-base leading-snug group-hover:text-primary transition-colors line-clamp-1 sm:line-clamp-2" title={product.name}>
+                      {product.name}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {/* Categoría Selector Rápido */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="group/cat inline-flex items-center gap-1.5 bg-muted/60 hover:bg-muted text-foreground text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all border border-border/50 hover:border-border cursor-pointer shadow-xs focus:outline-none"
-                            title="Haz clic para cambiar categoría rápidamente"
+                            className="group/cat inline-flex items-center gap-1 bg-muted/60 hover:bg-muted text-foreground text-[10px] px-2 py-0.5 rounded-md font-medium transition-all border border-border/50 hover:border-border cursor-pointer shadow-xs focus:outline-none"
+                            title="Cambiar categoría"
                           >
-                            <Tag className="h-3 w-3 text-muted-foreground group-hover/cat:text-primary transition-colors shrink-0" />
-                            <span className="truncate max-w-[130px] sm:max-w-[180px]">
+                            <Tag className="h-2.5 w-2.5 text-muted-foreground group-hover/cat:text-primary transition-colors shrink-0" />
+                            <span className="truncate max-w-[100px] sm:max-w-[150px]">
                               {product.category?.name || 'Sin categoría'}
                             </span>
-                            <ChevronDown className="h-3 w-3 opacity-40 group-hover/cat:opacity-100 transition-opacity shrink-0" />
+                            <ChevronDown className="h-2.5 w-2.5 opacity-40 group-hover/cat:opacity-100 transition-opacity shrink-0" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-64 p-2 rounded-2xl bg-card border border-border shadow-2xl z-50">
@@ -1866,188 +1870,180 @@ const Products: FC = () => {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+
+                      {/* Badges de Estado */}
                       {product.track_inventory === false ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 text-[10px] px-2 py-0.5 font-medium">Sin stock</Badge>
+                        <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 text-[9px] px-1.5 py-0.2 font-medium">Sin stock</Badge>
                       ) : ((product.stock || 0) <= (product.min_stock || 0)) && (
-                        <Badge variant="destructive" className="bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20 text-[10px] px-2 py-0.5 font-medium">Stock Bajo</Badge>
+                        <Badge variant="destructive" className="bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20 text-[9px] px-1.5 py-0.2 font-medium">Stock Bajo</Badge>
+                      )}
+
+                      {/* Código de barra */}
+                      {product.barcode && (
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 opacity-70 font-mono">
+                          <Barcode className="h-3 w-3" />
+                          <span className="truncate max-w-[80px] sm:max-w-none">{product.barcode}</span>
+                        </p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                    <p className="text-[11px] sm:text-sm text-muted-foreground flex items-center gap-1.5 opacity-70 font-mono">
-                      <Barcode className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      <span className="truncate">{product.barcode || 'Sin código'}</span>
-                    </p>
-                    {product.barcode && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuickPrint(product, 1)}
-                        disabled={isQuickPrinting === product.id}
-                        className="h-6 px-2 text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/25 rounded-lg gap-1 transition-all shadow-none"
-                        title="Imprimir 1 etiqueta rápida directo en 4BARCODE"
-                      >
-                        {isQuickPrinting === product.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />
-                        ) : (
-                          <Printer className="h-3 w-3 text-emerald-600" />
-                        )}
-                        <span>Imprimir Label</span>
-                      </Button>
+
+                  {/* Precios en móvil (columna derecha de la fila superior) */}
+                  <div className="flex flex-col items-end shrink-0 sm:hidden pl-1">
+                    <span className="text-base font-black text-emerald-500 leading-none">
+                      ${product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    {(product.cost || 0) > 0 && (
+                      <span className="text-[10px] text-muted-foreground font-semibold mt-0.5">
+                        Costo: ${(product.cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
+                    {product.price > (product.cost || 0) && (product.cost || 0) > 0 && (
+                      <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 mt-0.5">
+                        +RD${(product.price - product.cost).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                      </span>
                     )}
                   </div>
                 </div>
 
-                {/* Precios, Stock y Acciones (Grid en móvil, Flex en desktop) */}
-                <div className="flex w-full sm:w-auto shrink-0 flex-col sm:flex-row sm:items-center sm:gap-6 bg-secondary/10 sm:bg-transparent p-4 sm:p-0 rounded-2xl sm:rounded-none border border-border/50 sm:border-0 mt-3 sm:mt-0 shadow-inner sm:shadow-none">
+                {/* Fila Inferior (Móvil) / Derecha (Desktop): Stock y Acciones */}
+                <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-5 pt-2 sm:pt-0 border-t border-border/40 sm:border-0 w-full sm:w-auto">
                   
-                  {/* Fila 1 (Móvil): Precios | Fila/Col (Desktop) */}
-                  <div className="flex justify-between items-center sm:flex-col sm:items-end gap-1 w-full sm:w-auto">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider sm:hidden">Precio</span>
-                      <span className="text-2xl font-black text-primary">${product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Costo</span>
-                        <span className="text-sm font-semibold text-muted-foreground/80">${(product.cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      {/* Ganancia / Margen */}
+                  {/* Precios en Desktop */}
+                  <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0">
+                    <span className="text-lg font-black text-emerald-500 leading-none">
+                      ${product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground font-medium">
+                        Costo: ${(product.cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                       {product.price > (product.cost || 0) && (product.cost || 0) > 0 && (
-                        <div className="flex items-center justify-end">
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            RD${(product.price - (product.cost || 0)).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                            {' '}<span className="opacity-70 text-[9px]">({(((product.price - (product.cost || 0)) / (product.cost || 1)) * 100).toFixed(0)}%)</span>
-                          </span>
-                        </div>
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                          +RD${(product.price - (product.cost || 0)).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        </span>
                       )}
                     </div>
                   </div>
 
                   {/* Separador Desktop */}
-                  <div className="hidden sm:block h-12 w-px bg-border/50 mx-2"></div>
+                  <div className="hidden sm:block h-8 w-px bg-border/50"></div>
 
-                  {/* Fila 2 (Móvil): Stock y Mínimo | Col (Desktop) */}
-                  <div className="flex justify-between items-center sm:flex-col sm:items-start gap-3 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-border/50 sm:border-t-0">
-                    
+                  {/* Stock */}
+                  <div className="flex items-center gap-1.5">
                     {recipeAvailability.has(product.id) ? (() => {
-                        const available = recipeAvailability.get(product.id)!;
-                        return (
-                          <div className="flex flex-col gap-1 w-1/2 sm:w-auto">
-                            <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider hidden sm:block">Inventario</span>
-                            <div className={`flex flex-col items-center justify-center p-2 rounded-xl border ${
-                              available === 0
-                                ? 'bg-destructive/10 text-destructive border-destructive/20'
-                                : available <= 3
-                                ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                                : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                            }`}>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black">{available}</span>
-                                <span className="text-[10px] font-bold opacity-70">disp.</span>
-                              </div>
-                              <span className="text-[9px] font-semibold uppercase opacity-80 mt-0.5 flex items-center gap-1"><ChefHat className="h-3 w-3" /> Por receta</span>
-                            </div>
-                          </div>
-                        );
+                      const available = recipeAvailability.get(product.id)!;
+                      return (
+                        <div className={cn(
+                          "flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-bold",
+                          available === 0
+                            ? 'bg-destructive/10 text-destructive border-destructive/20'
+                            : available <= 3
+                            ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                            : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                        )}>
+                          <span>{available} disp.</span>
+                          <span className="text-[9px] opacity-70 flex items-center gap-0.5"><ChefHat className="h-2.5 w-2.5" /> receta</span>
+                        </div>
+                      );
                     })() : (
-                      <div className="flex flex-col gap-1 w-[55%] sm:w-auto">
-                        <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider hidden sm:block mb-1">Inventario</span>
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => {
                             setStockEditProduct(product);
                             setStockEditValue(product.stock?.toString() || '0');
                           }}
-                          className="group/stock relative flex flex-col items-center justify-center bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary py-2.5 px-2 sm:p-2 rounded-2xl transition-all active:scale-95 overflow-hidden w-full"
+                          className="flex items-center gap-1 bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary px-2.5 py-1 rounded-xl transition-all active:scale-95 cursor-pointer text-xs font-bold"
+                          title="Haz clic para editar stock"
                         >
-                          <div className="flex items-baseline gap-1 relative z-10">
-                            <span className="text-3xl font-black leading-none tracking-tighter">{product.stock ?? 0}</span>
-                            <span className="text-xs font-bold opacity-70">uds</span>
-                          </div>
-                          <div className="text-[10px] font-bold uppercase opacity-80 mt-1.5 flex items-center gap-1.5 text-primary/80 group-hover/stock:text-primary relative z-10">
-                            <Pencil className="h-3 w-3" /> <span className="sm:hidden">Editar Stock</span><span className="hidden sm:inline">Editar</span>
-                          </div>
-                          {/* Hover effect background */}
-                          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/stock:opacity-100 transition-opacity"></div>
+                          <span className="text-sm sm:text-base font-black leading-none">{product.stock ?? 0}</span>
+                          <span className="text-[10px] font-semibold opacity-75">uds</span>
+                          <Pencil className="h-2.5 w-2.5 opacity-60 ml-0.5" />
                         </button>
+                        {product.min_stock !== undefined && (
+                          <span className="text-[10px] text-muted-foreground font-medium hidden xs:inline">
+                            Mín: {product.min_stock}
+                          </span>
+                        )}
                       </div>
                     )}
-                    
-                    <div className="flex flex-col items-end sm:items-start justify-center gap-3 w-[40%] sm:w-auto">
-                      {/* Acciones */}
-                      <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              disabled={isQuickPrinting === product.id}
-                              className="h-11 w-11 sm:h-9 sm:w-9 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 bg-background sm:bg-transparent rounded-xl transition-colors border-border/50 shadow-sm sm:shadow-none"
-                              title="Imprimir etiquetas de este producto"
-                            >
-                              {isQuickPrinting === product.id ? (
-                                <Loader2 className="h-5 w-5 sm:h-4 sm:w-4 animate-spin text-emerald-600" />
-                              ) : (
-                                <Printer className="h-5 w-5 sm:h-4 sm:w-4 text-emerald-600" />
-                              )}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            <div className="px-2 py-1.5 text-xs font-semibold truncate text-muted-foreground">
-                              Label: {product.name}
-                            </div>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleQuickPrint(product, 1)} 
-                              className="cursor-pointer text-xs flex items-center gap-2 font-medium"
-                            >
-                              <Printer className="h-3.5 w-3.5 text-emerald-600" />
-                              <span>⚡ Imprimir 1 etiqueta (4BARCODE)</span>
-                            </DropdownMenuItem>
-                            {(product.stock ?? 0) > 1 && (
-                              <DropdownMenuItem 
-                                onClick={() => handleQuickPrint(product, product.stock!)} 
-                                className="cursor-pointer text-xs flex items-center gap-2 font-medium"
-                              >
-                                <Package className="h-3.5 w-3.5 text-blue-500" />
-                                <span>📦 Imprimir según stock ({product.stock} uds)</span>
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                              onClick={() => handleOpenLabelDesignerForProduct(product)} 
-                              className="cursor-pointer text-xs flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                            >
-                              <Settings2 className="h-3.5 w-3.5 text-amber-500" />
-                              <span>⚙️ Diseñar / Más opciones...</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => handleEdit(product)} 
-                          className="h-11 w-11 sm:h-9 sm:w-9 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 bg-background sm:bg-transparent rounded-xl transition-colors border-border/50 shadow-sm sm:shadow-none"
-                        >
-                          <Edit className="h-5 w-5 sm:h-4 sm:w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleDelete(product)}
-                          disabled={deleteProduct.isPending}
-                          className="h-11 w-11 sm:h-9 sm:w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 bg-background sm:bg-transparent rounded-xl transition-colors border-border/50 shadow-sm sm:shadow-none"
-                        >
-                          <Trash2 className="h-5 w-5 sm:h-4 sm:w-4" />
-                        </Button>
-                      </div>
-                      {!recipeAvailability.has(product.id) && (
-                        <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1 sm:mt-0">Mínimo: {product.min_stock}</span>
-                      )}
-                    </div>
                   </div>
-                </div>
 
+                  {/* Acciones Rápidas (Imprimir, Editar, Eliminar) */}
+                  <div className="flex items-center gap-1">
+                    {/* Imprimir */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={isQuickPrinting === product.id}
+                          className="h-8 w-8 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                          title="Imprimir etiquetas"
+                        >
+                          {isQuickPrinting === product.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                          ) : (
+                            <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <div className="px-2 py-1.5 text-xs font-semibold truncate text-muted-foreground">
+                          Label: {product.name}
+                        </div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleQuickPrint(product, 1)} 
+                          className="cursor-pointer text-xs flex items-center gap-2 font-medium"
+                        >
+                          <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>⚡ Imprimir 1 etiqueta (4BARCODE)</span>
+                        </DropdownMenuItem>
+                        {(product.stock ?? 0) > 1 && (
+                          <DropdownMenuItem 
+                            onClick={() => handleQuickPrint(product, product.stock!)} 
+                            className="cursor-pointer text-xs flex items-center gap-2 font-medium"
+                          >
+                            <Package className="h-3.5 w-3.5 text-blue-500" />
+                            <span>📦 Imprimir según stock ({product.stock} uds)</span>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem 
+                          onClick={() => handleOpenLabelDesignerForProduct(product)} 
+                          className="cursor-pointer text-xs flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                        >
+                          <Settings2 className="h-3.5 w-3.5 text-amber-500" />
+                          <span>⚙️ Diseñar / Más opciones...</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Editar */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(product)}
+                      className="h-8 w-8 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                      title="Editar producto"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+
+                    {/* Eliminar */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(product)}
+                      disabled={deleteProduct.isPending}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      title="Eliminar producto"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+
+                </div>
               </div>
             </CardContent>
           </Card>
