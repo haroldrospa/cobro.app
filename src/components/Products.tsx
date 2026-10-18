@@ -1423,19 +1423,19 @@ const Products: FC = () => {
   }
 
   return (
-    <div className="space-y-12 animate-fade-in pb-20">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in pb-12">
       {/* Centered Premium Header */}
-      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-8 py-6">
-        <div className="space-y-3">
-          <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.15em] leading-normal py-1">
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-3.5 pt-1 pb-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase tracking-[0.12em]">
             Inventario
           </h1>
-          <div className="flex items-center justify-center gap-4 text-primary/80">
-            <div className="h-px w-10 bg-primary/30" />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+          <div className="flex items-center justify-center gap-3 text-primary/80">
+            <div className="h-px w-8 bg-primary/30" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Gestión de Catálogo y Stock
             </p>
-            <div className="h-px w-10 bg-primary/30" />
+            <div className="h-px w-8 bg-primary/30" />
           </div>
         </div>
 
