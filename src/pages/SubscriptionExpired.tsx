@@ -148,7 +148,7 @@ export default function SubscriptionExpired() {
                 <Landmark className="w-4 h-4 text-emerald-400" />
                 <span className="font-bold text-sm text-white">Banreservas</span>
               </div>
-              <span className="text-xs text-slate-400 font-medium">Cuenta Corriente</span>
+              <span className="text-xs text-slate-400 font-medium">Cuenta de Ahorros</span>
             </div>
 
             <div className="flex items-center justify-between">
