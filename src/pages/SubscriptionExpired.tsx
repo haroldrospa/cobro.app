@@ -92,7 +92,7 @@ export default function SubscriptionExpired() {
       <div className="absolute bottom-10 right-1/4 w-[320px] h-[260px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" />
 
       {/* Main Container */}
-      <div className="relative z-10 w-full max-w-xl my-auto flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-lg my-auto flex flex-col items-center">
         {/* Brand Logo Header */}
         <div className="mb-4 sm:mb-5 flex items-center justify-center">
           <img 
@@ -141,36 +141,20 @@ export default function SubscriptionExpired() {
             </div>
           </div>
 
-          {/* SECCIÓN DE MÉTODOS DE PAGO BANCARIOS */}
-          <div className="w-full bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-3.5 sm:p-4 text-left mb-4 shadow-lg shadow-emerald-950/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+          {/* SECCIÓN DE MÉTODOS DE PAGO BANCARIOS (SIMPLIFICADA) */}
+          <div className="w-full bg-slate-950/60 border border-white/10 rounded-2xl p-4 text-left mb-4 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-                  <Landmark className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-xs sm:text-sm text-white leading-tight">
-                    Transferencia Bancaria (RD)
-                  </h3>
-                  <span className="text-[10.5px] text-emerald-400 font-medium">
-                    Banreservas • Activación Inmediata
-                  </span>
-                </div>
+                <Landmark className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-sm text-white">Banreservas</span>
               </div>
-              <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
-                DOP (RD$)
-              </span>
+              <span className="text-xs text-slate-400 font-medium">Cuenta Corriente</span>
             </div>
 
-            {/* No. de Cuenta Principal */}
-            <div className="bg-slate-900/90 border border-white/10 rounded-xl p-2.5 sm:p-3 mb-2 flex items-center justify-between gap-2 hover:border-emerald-500/40 transition-colors">
-              <div className="min-w-0">
-                <span className="text-[9.5px] uppercase font-bold text-slate-400 block tracking-wider">
-                  Número de Cuenta (Banreservas)
-                </span>
-                <span className="font-mono text-base sm:text-lg font-black text-white tracking-wider">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block font-medium">Número de Cuenta</span>
+                <span className="font-mono text-lg font-black text-white tracking-wider">
                   9601938364
                 </span>
               </div>
@@ -179,11 +163,11 @@ export default function SubscriptionExpired() {
                 size="sm"
                 variant="outline"
                 onClick={() => handleCopy("9601938364", "account")}
-                className="h-8 px-3 border-emerald-500/30 hover:bg-emerald-500/15 text-emerald-400 font-bold text-xs rounded-lg shrink-0 gap-1.5 transition-all"
+                className="h-8 px-3 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400 font-semibold text-xs rounded-lg gap-1.5 transition-all"
               >
                 {copiedField === "account" ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <Check className="w-3.5 h-3.5" />
                     <span>¡Copiado!</span>
                   </>
                 ) : (
@@ -195,67 +179,15 @@ export default function SubscriptionExpired() {
               </Button>
             </div>
 
-            {/* Titular y Cédula */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-2">
-              <div className="bg-slate-900/60 border border-white/5 rounded-xl p-2 flex items-center justify-between gap-1.5">
-                <div className="min-w-0">
-                  <span className="text-[9.5px] text-slate-400 block font-medium">Titular</span>
-                  <span className="font-bold text-slate-200 text-xs truncate block">
-                    HAROLD M. ROSADO PACHECO
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => handleCopy("HAROLD MANUEL ROSADO PACHECO", "holder")}
-                  className="h-6 w-6 text-slate-400 hover:text-emerald-400 rounded-md shrink-0"
-                  title="Copiar Titular"
-                >
-                  {copiedField === "holder" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                </Button>
+            <div className="pt-2 border-t border-white/5 flex flex-wrap items-center justify-between text-xs text-slate-300 gap-y-1">
+              <div>
+                <span className="text-slate-500">Titular: </span>
+                <span className="font-semibold text-slate-200">Harold M. Rosado Pacheco</span>
               </div>
-
-              <div className="bg-slate-900/60 border border-white/5 rounded-xl p-2 flex items-center justify-between gap-1.5">
-                <div className="min-w-0">
-                  <span className="text-[9.5px] text-slate-400 block font-medium">Cédula</span>
-                  <span className="font-mono font-bold text-slate-200 text-xs truncate block">
-                    402-1824665-6
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => handleCopy("40218246656", "id")}
-                  className="h-6 w-6 text-slate-400 hover:text-emerald-400 rounded-md shrink-0"
-                  title="Copiar Cédula"
-                >
-                  {copiedField === "id" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                </Button>
+              <div>
+                <span className="text-slate-500">Cédula: </span>
+                <span className="font-mono font-semibold text-slate-200">402-1824665-6</span>
               </div>
-            </div>
-
-            {/* Cuenta ACH Interbancaria */}
-            <div className="bg-slate-900/60 border border-white/5 rounded-xl p-2 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <span className="text-[9.5px] text-slate-400 block font-medium">
-                  Cuenta Estándar (ACH / Otros Bancos)
-                </span>
-                <span className="font-mono font-bold text-slate-300 text-[11px] truncate block">
-                  DO36BRRD00000000009601938364
-                </span>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => handleCopy("DO36BRRD00000000009601938364", "ach")}
-                className="h-6 px-2 text-slate-400 hover:text-emerald-400 font-medium text-[11px] shrink-0 gap-1"
-              >
-                {copiedField === "ach" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedField === "ach" ? "Copiado" : "Copiar"}</span>
-              </Button>
             </div>
           </div>
 
