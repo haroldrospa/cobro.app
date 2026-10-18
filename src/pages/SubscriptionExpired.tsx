@@ -119,26 +119,17 @@ export default function SubscriptionExpired() {
             Suscripción Vencida
           </h1>
 
-          {/* Business Info Banner */}
-          <div className="w-full bg-slate-950/70 border border-white/5 rounded-2xl p-3 sm:p-3.5 mb-4 text-left flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-red-500/10 text-red-400 shrink-0 border border-red-500/20 mt-0.5">
-              <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="font-bold text-sm text-white truncate">
-                  {storeName}
-                </span>
-                {storeData?.store_code && (
-                  <span className="font-mono text-[11px] bg-white/10 text-slate-300 px-2 py-0.5 rounded-md shrink-0">
-                    #{storeData.store_code}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                El período activo ha finalizado. Realiza tu transferencia a las cuentas oficiales a continuación para reactivar tu acceso inmediatamente. Tus datos permanecen 100% seguros y respaldados.
-              </p>
-            </div>
+          {/* Business Info Pill */}
+          <div className="inline-flex items-center gap-2 bg-slate-950/70 border border-white/5 px-3.5 py-1.5 rounded-xl mb-4">
+            <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+            <span className="font-bold text-sm text-white">
+              {storeName}
+            </span>
+            {storeData?.store_code && (
+              <span className="font-mono text-[11px] bg-white/10 text-slate-300 px-2 py-0.5 rounded-md">
+                #{storeData.store_code}
+              </span>
+            )}
           </div>
 
           {/* SECCIÓN DE MÉTODOS DE PAGO BANCARIOS (SIMPLIFICADA) */}
