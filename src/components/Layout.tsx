@@ -27,18 +27,6 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-const PlanBadge = () => {
-  const { data: subscription, isLoading } = useSubscription();
-
-  if (isLoading || !subscription) return null;
-
-  return (
-    <Badge variant="secondary" className="hidden sm:flex items-center gap-1 h-6 bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">
-      <Briefcase className="h-3 w-3" />
-      <span className="text-xs font-medium">{subscription.plan_name}</span>
-    </Badge>
-  );
-};
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
@@ -50,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { settings } = useCompanySettings();
   const { isPlatformAdmin } = usePlatformAdmin();
   const { data: userStore } = useUserStore();
+  const { data: subscription } = useSubscription();
   const companyName = settings?.company_name || userStore?.store_name;
 
   const isFullScreenApp = location.pathname === '/' ||
@@ -422,25 +411,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </div>
                 )}
 
-                {/* User Dropdown / Profile Avatar */}
+                {/* User Dropdown / Profile Avatar — Diseño Minimalista y Simplificado */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1.5 p-0.5 sm:px-2.5 sm:py-1 rounded-full bg-muted/60 hover:bg-muted border border-border/60 transition-all text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <button className="flex items-center gap-2 px-2 py-1 h-8 rounded-full bg-muted/40 hover:bg-muted/70 border border-border/50 transition-all text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                       {/* Avatar Circle */}
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-black text-xs shadow-xs">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0">
                         {(profile.full_name || profile.email || 'U').charAt(0).toUpperCase()}
                       </div>
-                      
-                      {/* Name & RNC - Hidden on mobile to keep header clean and spacious */}
-                      <div className="hidden sm:flex flex-col text-left leading-tight pr-1">
-                        <span className="font-bold text-xs text-foreground max-w-[130px] lg:max-w-[160px] truncate">
-                          {profile.full_name || profile.email}
+
+                      {/* Name — Single Line Minimalist */}
+                      <span className="hidden sm:inline font-semibold text-xs text-foreground max-w-[120px] lg:max-w-[150px] truncate">
+                        {profile.full_name || profile.email}
+                      </span>
+
+                      {/* Plan Tag — Integrado de forma limpia y compacta */}
+                      {subscription?.plan_name && (
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <Briefcase className="h-2.5 w-2.5" />
+                          {subscription.plan_name}
                         </span>
-                        <span className="text-[10px] text-muted-foreground font-medium">
-                          {settings?.rnc || profile.rnc ? `RNC: ${settings?.rnc || profile.rnc}` : `Usuario #${profile.user_number || ''}`}
-                        </span>
-                      </div>
-                      <ChevronDown className="hidden sm:block h-3 w-3 text-muted-foreground opacity-60" />
+                      )}
+
+                      <ChevronDown className="hidden sm:block h-3 w-3 text-muted-foreground/60 shrink-0" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-64 p-2 rounded-2xl shadow-2xl border-border/80">
@@ -459,6 +452,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <div className="mt-1.5 pt-1.5 border-t border-border/30 flex items-center justify-between text-[10px]">
                           <span className="text-muted-foreground">RNC / Cédula:</span>
                           <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{settings?.rnc || profile.rnc}</span>
+                        </div>
+                      )}
+                      {subscription?.plan_name && (
+                        <div className="mt-1 pt-1 border-t border-border/30 flex items-center justify-between text-[10px]">
+                          <span className="text-muted-foreground">Plan activo:</span>
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <Briefcase className="h-3 w-3" />
+                            {subscription.plan_name}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -507,7 +509,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </DropdownMenu>
               </>
             )}
-            <PlanBadge />
             <ClientReportDialog />
           </div>
         </div>
