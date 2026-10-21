@@ -478,9 +478,17 @@ const Auth = () => {
       });
       setAuthView('login');
     } catch (error: any) {
+      let description = error?.message || "Ha ocurrido un error inesperado.";
+      if (typeof description === 'string' && description.includes("For security purposes, you can only request this after")) {
+        const seconds = description.match(/\d+/)?.[0] || "unos";
+        description = `Por motivos de seguridad, debes esperar ${seconds} segundos antes de volver a solicitar un nuevo enlace.`;
+      } else if (typeof description === 'string' && description.toLowerCase().includes("rate limit")) {
+        description = "Has superado el límite de intentos. Por favor espera unos momentos antes de reintentar.";
+      }
+
       toast({
-        title: "Error al enviar correo",
-        description: error.message || "Ha ocurrido un error inesperado.",
+        title: "Espera un momento",
+        description,
         variant: "destructive"
       });
     } finally {
