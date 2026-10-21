@@ -414,10 +414,10 @@ const Auth = () => {
         supabase.functions.invoke('send-welcome-email', {
           body: {
             email: cleanEmail,
-            fullName: fullName,
-            companyName: companyName,
-            phone: `${countryCode.split('_')[0]}${phone}`,
-            rnc: rnc,
+            fullName: fullName.trim(),
+            companyName: companyName.trim(),
+            phone: `${countryCode.split('_')[0]}${phone.trim()}`,
+            rnc: rnc.trim(),
             shopType: selectedBusinessType,
           }
         }).catch((err) => console.warn('Error enviando correo de bienvenida:', err));

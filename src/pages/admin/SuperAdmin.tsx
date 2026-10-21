@@ -395,7 +395,10 @@ const SuperAdmin = () => {
                     email,
                     fullName: store.owner_name,
                     companyName: store.store_name,
-                    storeCode: store.store_code
+                    storeCode: store.store_code,
+                    phone: store.owner_phone || store.phone,
+                    rnc: store.rnc,
+                    shopType: store.shop_type,
                 }
             });
             if (error) throw error;
@@ -1712,6 +1715,9 @@ const SuperAdmin = () => {
                                                                         <span className="font-medium">{store.owner_name || 'Propietario'}</span>
                                                                         <span>•</span>
                                                                         <span className="font-mono bg-muted/60 px-1 rounded">{store.store_code}</span>
+                                                                        {store.rnc && (
+                                                                            <span className="font-mono text-[9px] text-muted-foreground bg-muted/40 px-1 rounded" title={`RNC/Cédula: ${store.rnc}`}>RNC: {store.rnc}</span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>

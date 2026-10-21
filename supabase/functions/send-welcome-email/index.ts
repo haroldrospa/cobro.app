@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { Resend } from "npm:resend@2.0.0"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
 
@@ -20,6 +21,49 @@ interface WelcomeEmailRequest {
   planName?: string;
 }
 
+const formatShopType = (type?: string | null): string => {
+  if (!type) return "Comercio General";
+  const lower = type.toLowerCase().trim();
+  switch (lower) {
+    case "store":
+    case "tienda":
+      return "🛍️ Tienda / Retail";
+    case "restaurant":
+    case "restaurante":
+      return "🍽️ Restaurante / Cafetería";
+    case "supermarket":
+    case "supermercado":
+      return "🛒 Supermercado / Mini Market";
+    case "services":
+    case "servicios":
+      return "💼 Servicios Profesionales";
+    default:
+      return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+};
+
+const formatPhoneDisplay = (phoneStr?: string): string => {
+  if (!phoneStr) return "";
+  const cleaned = phoneStr.replace(/\D/g, "");
+  if (!cleaned) return phoneStr;
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  } else if (cleaned.length === 11 && cleaned.startsWith("1")) {
+    const area = cleaned.slice(1, 4);
+    return `+1 (${area}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+  }
+  return phoneStr;
+};
+
+const getWhatsAppNumber = (phoneStr?: string): string => {
+  if (!phoneStr) return "";
+  let digits = phoneStr.replace(/\D/g, "");
+  if (digits.length === 10) {
+    digits = "1" + digits;
+  }
+  return digits;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders })
@@ -36,8 +80,100 @@ serve(async (req) => {
       })
     }
 
-    const clientName = fullName?.trim() || "Emprendedor"
-    const businessName = companyName?.trim() || "Tu Negocio"
+    let finalFullName = fullName?.trim() || "";
+    let finalCompanyName = companyName?.trim() || "";
+    let finalPhone = phone?.trim() || "";
+    let finalRnc = rnc?.trim() || "";
+    let finalShopType = shopType?.trim() || "";
+    let finalStoreCode = storeCode?.trim() || "";
+
+    // Si falta alguno de los datos clave, consultar en Supabase con service_role
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (supabaseUrl && supabaseServiceKey && email) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: { persistSession: false },
+        });
+
+        // 1. Buscar en perfiles por email
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone, store_id")
+          .eq("email", email)
+          .maybeSingle();
+
+        if (profile) {
+          if (!finalFullName && profile.full_name) finalFullName = profile.full_name;
+          if (!finalPhone && profile.phone) finalPhone = profile.phone;
+
+          const storeId = profile.store_id;
+          if (storeId) {
+            // Obtener tienda
+            const { data: storeData } = await supabase
+              .from("stores")
+              .select("store_name, store_code")
+              .eq("id", storeId)
+              .maybeSingle();
+
+            if (storeData) {
+              if (!finalCompanyName && storeData.store_name) finalCompanyName = storeData.store_name;
+              if (!finalStoreCode && storeData.store_code) finalStoreCode = storeData.store_code;
+            }
+
+            // Obtener configuraciones de empresa (company_settings)
+            const { data: compSettings } = await supabase
+              .from("company_settings")
+              .select("phone, rnc, company_name")
+              .eq("store_id", storeId)
+              .maybeSingle();
+
+            if (compSettings) {
+              if (!finalPhone && compSettings.phone) finalPhone = compSettings.phone;
+              if (!finalRnc && compSettings.rnc) finalRnc = compSettings.rnc;
+              if (!finalCompanyName && compSettings.company_name) finalCompanyName = compSettings.company_name;
+            }
+
+            // Obtener tipo de tienda (store_settings)
+            const { data: stSettings } = await supabase
+              .from("store_settings")
+              .select("shop_type")
+              .eq("store_id", storeId)
+              .maybeSingle();
+
+            if (stSettings && !finalShopType && stSettings.shop_type) {
+              finalShopType = stSettings.shop_type;
+            }
+          }
+        }
+
+        // 2. Si aún falta teléfono, rnc o tipo de tienda, consultar metadatos de auth.users
+        if (!finalPhone || !finalRnc || !finalShopType || !finalFullName) {
+          const { data: usersData } = await supabase.auth.admin.listUsers();
+          const targetUser = usersData?.users?.find(
+            (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+          );
+
+          if (targetUser) {
+            const meta = targetUser.user_metadata || {};
+            if (!finalFullName && meta.full_name) finalFullName = meta.full_name;
+            if (!finalCompanyName && meta.company_name) finalCompanyName = meta.company_name;
+            if (!finalPhone && (meta.phone || targetUser.phone)) finalPhone = meta.phone || targetUser.phone;
+            if (!finalRnc && meta.rnc) finalRnc = meta.rnc;
+            if (!finalShopType && meta.shop_type) finalShopType = meta.shop_type;
+          }
+        }
+      } catch (dbErr) {
+        console.warn("send-welcome-email: fallback DB query notice:", dbErr);
+      }
+    }
+
+    const clientName = finalFullName || "Emprendedor"
+    const businessName = finalCompanyName || "Tu Negocio"
+    const formattedPhone = formatPhoneDisplay(finalPhone)
+    const waNumber = getWhatsAppNumber(finalPhone)
+    const formattedShopType = formatShopType(finalShopType)
     const appUrl = "https://cobroapp.app"
     const logoUrl = "https://cobroapp.app/cobro-logo.png"
 
@@ -237,28 +373,47 @@ serve(async (req) => {
             <div style="background-color: #0f172a; border-radius: 12px; padding: 16px; border: 1px solid #334155; margin: 16px 0;">
               <table width="100%" style="border-collapse: collapse; font-size: 13px;">
                 <tr>
-                  <td style="padding: 6px 0; color: #94a3b8;">Negocio / Empresa:</td>
-                  <td align="right" style="color: #10b981; font-weight: 800;">${businessName}</td>
+                  <td style="padding: 7px 0; color: #94a3b8;">Negocio / Empresa:</td>
+                  <td align="right" style="color: #10b981; font-weight: 800; font-size: 14px;">${businessName}</td>
                 </tr>
+                ${finalStoreCode ? `
                 <tr>
-                  <td style="padding: 6px 0; color: #94a3b8;">Contacto / Titular:</td>
+                  <td style="padding: 6px 0; color: #94a3b8;">Código de Tienda:</td>
+                  <td align="right" style="color: #cbd5e1; font-family: monospace; font-weight: 700;">${finalStoreCode}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 7px 0; color: #94a3b8;">Contacto / Titular:</td>
                   <td align="right" style="color: #ffffff; font-weight: 700;">${clientName}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 0; color: #94a3b8;">Correo Electrónico:</td>
-                  <td align="right" style="color: #38bdf8; font-weight: 700;">${email}</td>
+                  <td style="padding: 7px 0; color: #94a3b8;">Correo Electrónico:</td>
+                  <td align="right" style="font-weight: 700;">
+                    <a href="mailto:${email}" style="color: #38bdf8; text-decoration: none;">${email}</a>
+                  </td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 0; color: #94a3b8;">Teléfono / WhatsApp:</td>
-                  <td align="right" style="color: #38bdf8; font-weight: 700;">${phone || 'No especificado'}</td>
+                  <td style="padding: 7px 0; color: #94a3b8;">Teléfono / WhatsApp:</td>
+                  <td align="right" style="font-weight: 700;">
+                    ${waNumber && waNumber.length >= 7 ? `
+                      <a href="https://wa.me/${waNumber}?text=Hola%20${encodeURIComponent(clientName)}!%20Te%20saluda%20Harold%20de%20Cobro%20App,%20bienvenido%20a%20bordo." target="_blank" style="color: #38bdf8; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                        <span>${formattedPhone || finalPhone}</span>
+                        <span style="background-color: #059669; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-decoration: none; margin-left: 4px;">WhatsApp 💬</span>
+                      </a>
+                    ` : (finalPhone ? `<span style="color: #38bdf8;">${finalPhone}</span>` : '<span style="color: #94a3b8; font-style: italic;">No especificado</span>')}
+                  </td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 0; color: #94a3b8;">RNC o Cédula:</td>
-                  <td align="right" style="color: #ffffff; font-weight: 700;">${rnc || 'No especificado'}</td>
+                  <td style="padding: 7px 0; color: #94a3b8;">RNC o Cédula:</td>
+                  <td align="right" style="color: ${finalRnc ? '#ffffff' : '#94a3b8'}; font-weight: 700;">
+                    ${finalRnc || '<span style="font-style: italic; font-weight: normal;">No especificado</span>'}
+                  </td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 0; color: #94a3b8;">Tipo de Comercio:</td>
-                  <td align="right" style="color: #cbd5e1; font-weight: 600;">${shopType || 'Comercio General'}</td>
+                  <td style="padding: 7px 0; color: #94a3b8;">Tipo de Comercio:</td>
+                  <td align="right" style="color: #a7f3d0; font-weight: 700;">
+                    ${formattedShopType}
+                  </td>
                 </tr>
               </table>
             </div>
