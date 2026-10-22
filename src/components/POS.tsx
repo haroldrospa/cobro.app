@@ -1739,9 +1739,26 @@ const POSContent: React.FC = () => {
       }
 
       const selectedCustomerData = customers.find(c => c.id === data.customerId);
-      const subtotal = data.items.reduce((s, it) => s + (it.price * it.quantity), 0);
-      const tax = data.items.reduce((s, it) => s + ((it.price * it.quantity) * (it.tax || 0)), 0);
-      const totalAmount = subtotal + tax;
+      let subtotal = 0;
+      let tax = 0;
+      let totalAmount = 0;
+
+      data.items.forEach(it => {
+        const itemRate = it.tax || 0;
+        const lineGross = it.price * it.quantity;
+        if (it.cost_includes_tax && itemRate > 0) {
+          const lineSub = lineGross / (1 + itemRate);
+          const lineTax = lineGross - lineSub;
+          subtotal += lineSub;
+          tax += lineTax;
+          totalAmount += lineGross;
+        } else {
+          const lineTax = lineGross * itemRate;
+          subtotal += lineGross;
+          tax += lineTax;
+          totalAmount += lineGross + lineTax;
+        }
+      });
 
       if (isQuote) {
         const quoteNumber = `COT-${Date.now().toString().slice(-6)}`;
@@ -1769,16 +1786,30 @@ const POSContent: React.FC = () => {
 
           if (openOrder?.id) {
             quoteOrderId = openOrder.id;
-            const openOrderItems = data.items.map(it => ({
-              order_id: openOrder.id,
-              product_name: it.name,
-              quantity: it.quantity,
-              unit_price: it.price,
-              subtotal: it.price * it.quantity,
-              tax_amount: (it.price * it.quantity) * (it.tax || 0),
-              tax_percentage: (it.tax || 0) * 100,
-              total: (it.price * it.quantity) * (1 + (it.tax || 0))
-            }));
+            const openOrderItems = data.items.map(it => {
+              const itemRate = it.tax || 0;
+              const lineGross = it.price * it.quantity;
+              let lineSub = lineGross;
+              let lineTax = 0;
+              let lineUnit = it.price;
+              if (it.cost_includes_tax && itemRate > 0) {
+                lineSub = lineGross / (1 + itemRate);
+                lineTax = lineGross - lineSub;
+                lineUnit = it.price / (1 + itemRate);
+              } else {
+                lineTax = lineGross * itemRate;
+              }
+              return {
+                order_id: openOrder.id,
+                product_name: it.name,
+                quantity: it.quantity,
+                unit_price: lineUnit,
+                subtotal: lineSub,
+                tax_amount: lineTax,
+                tax_percentage: itemRate * 100,
+                total: lineSub + lineTax
+              };
+            });
             await supabase.from('open_order_items').insert(openOrderItems);
           }
         } catch (quoteErr) {
@@ -1788,14 +1819,28 @@ const POSContent: React.FC = () => {
         const printSaleData = {
           id: quoteOrderId,
           total: totalAmount,
-          items: data.items.map(it => ({
-            ...it,
-            product_name: it.name,
-            unit_price: it.price,
-            tax_amount: (it.price * it.quantity) * (it.tax || 0),
-            subtotal: it.price * it.quantity,
-            total: (it.price * it.quantity) * (1 + (it.tax || 0))
-          })),
+          items: data.items.map(it => {
+            const itemRate = it.tax || 0;
+            const lineGross = it.price * it.quantity;
+            let lineSub = lineGross;
+            let lineTax = 0;
+            let lineUnit = it.price;
+            if (it.cost_includes_tax && itemRate > 0) {
+              lineSub = lineGross / (1 + itemRate);
+              lineTax = lineGross - lineSub;
+              lineUnit = it.price / (1 + itemRate);
+            } else {
+              lineTax = lineGross * itemRate;
+            }
+            return {
+              ...it,
+              product_name: it.name,
+              unit_price: lineUnit,
+              tax_amount: lineTax,
+              subtotal: lineSub,
+              total: lineSub + lineTax
+            };
+          }),
           paymentMethod: data.paymentMethod,
           customer: selectedCustomerData,
           invoice_number: quoteNumber,

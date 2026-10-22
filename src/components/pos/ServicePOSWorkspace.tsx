@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -27,7 +28,8 @@ import {
   DollarSign,
   Package,
   ArrowLeftRight,
-  Coins
+  Coins,
+  Percent
 } from 'lucide-react';
 import { CartItem } from '@/types/pos';
 import { Customer } from '@/hooks/useCustomers';
@@ -99,6 +101,18 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   });
 
   const activeCurrencySymbol = currency === 'USD' ? 'US$' : 'RD$';
+
+  // Control de Impuesto (ITBIS): Aplicar o Eximir, y si está incluido
+  const [applyTax, setApplyTax] = useState<boolean>(true);
+  const [priceIncludesTax, setPriceIncludesTax] = useState<boolean>(false);
+
+  const handleToggleApplyTax = (enabled: boolean) => {
+    setApplyTax(enabled);
+    setServiceLines(prev => prev.map(line => ({
+      ...line,
+      taxRate: enabled ? defaultTaxRate : 0
+    })));
+  };
 
   const handleCurrencyChange = (newCurrency: 'DOP' | 'USD') => {
     if (newCurrency === currency) return;
@@ -210,24 +224,41 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
     });
   }, [paymentCondition, creditDays]);
 
-  // Cálculos de totales
+  // Cálculos de totales (Soporta sin impuesto, con impuesto adicional y con impuesto incluido)
   const totals = useMemo(() => {
     let subtotal = 0;
     let taxTotal = 0;
 
     serviceLines.forEach(line => {
-      const lineSub = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
-      const lineTax = lineSub * ((Number(line.taxRate) || 0) / 100);
-      subtotal += lineSub;
-      taxTotal += lineTax;
+      const lineQty = Number(line.quantity) || 0;
+      const linePrice = Number(line.unitPrice) || 0;
+      const effectiveTaxRate = applyTax ? (Number(line.taxRate) || 0) : 0;
+      const lineGross = lineQty * linePrice;
+
+      if (applyTax && priceIncludesTax) {
+        // Precio digitado ya incluye el impuesto
+        const lineSub = effectiveTaxRate > 0 ? (lineGross / (1 + effectiveTaxRate / 100)) : lineGross;
+        const lineTax = lineGross - lineSub;
+        subtotal += lineSub;
+        taxTotal += lineTax;
+      } else {
+        // Precio digitado es antes de impuesto
+        const lineTax = lineGross * (effectiveTaxRate / 100);
+        subtotal += lineGross;
+        taxTotal += lineTax;
+      }
     });
+
+    const total = applyTax && priceIncludesTax
+      ? serviceLines.reduce((acc, l) => acc + ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)), 0)
+      : subtotal + taxTotal;
 
     return {
       subtotal,
       taxTotal,
-      total: subtotal + taxTotal
+      total
     };
-  }, [serviceLines]);
+  }, [serviceLines, applyTax, priceIncludesTax]);
 
   const handleAddLine = () => {
     setServiceLines(prev => [
@@ -283,14 +314,17 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   const getCartItemsFromLines = (): CartItem[] => {
     return serviceLines
       .filter(line => line.description.trim() !== '' && line.unitPrice > 0)
-      .map(line => ({
-        id: `srv-${crypto.randomUUID().slice(0, 8)}`,
-        name: line.description.trim(),
-        price: Number(line.unitPrice),
-        quantity: Number(line.quantity) || 1,
-        tax: (Number(line.taxRate) || 0) / 100,
-        cost_includes_tax: false,
-      }));
+      .map(line => {
+        const effectiveTaxRate = applyTax ? (Number(line.taxRate) || 0) : 0;
+        return {
+          id: `srv-${crypto.randomUUID().slice(0, 8)}`,
+          name: line.description.trim(),
+          price: Number(line.unitPrice),
+          quantity: Number(line.quantity) || 1,
+          tax: effectiveTaxRate / 100,
+          cost_includes_tax: applyTax && priceIncludesTax,
+        };
+      });
   };
 
   const validateBeforeEmit = (): CartItem[] | null => {
@@ -649,6 +683,49 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               </div>
             </div>
 
+            {/* Control de Impuesto (ITBIS): Incluir o no incluir */}
+            <div className="p-2 rounded-xl bg-background/80 border border-border/70 space-y-1.5 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5">
+                  <Percent className="h-3.5 w-3.5 text-emerald-400" />
+                  Impuesto (ITBIS)
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full border tracking-wide uppercase transition-colors",
+                    applyTax
+                      ? (priceIncludesTax
+                          ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
+                          : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30")
+                      : "bg-zinc-500/15 text-zinc-400 border-zinc-500/30"
+                  )}>
+                    {applyTax ? (priceIncludesTax ? 'ITBIS Incluido' : '+ 18% ITBIS') : 'Sin ITBIS (0%)'}
+                  </span>
+                  <Switch
+                    checked={applyTax}
+                    onCheckedChange={handleToggleApplyTax}
+                  />
+                </div>
+              </div>
+
+              {applyTax && (
+                <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
+                  <label className="text-[10px] text-muted-foreground cursor-pointer flex items-center gap-1.5 hover:text-foreground transition-colors select-none">
+                    <input
+                      type="checkbox"
+                      checked={priceIncludesTax}
+                      onChange={(e) => setPriceIncludesTax(e.target.checked)}
+                      className="rounded border-border text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer accent-emerald-600"
+                    />
+                    <span className="font-medium">El precio ya incluye el ITBIS</span>
+                  </label>
+                  <span className="text-[9.5px] font-mono text-muted-foreground">
+                    {priceIncludesTax ? 'Total = Precio' : 'Total = Precio + 18%'}
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* Comprobante Fiscal (NCF) */}
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
@@ -778,8 +855,15 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 </span>
               </div>
               <div className="flex items-center justify-between text-muted-foreground">
-                <span>ITBIS (18%):</span>
-                <span className="font-mono text-foreground font-medium">
+                <span>
+                  {applyTax
+                    ? (priceIncludesTax ? 'ITBIS (18% incluido):' : 'ITBIS (18%):')
+                    : 'ITBIS (0% exento):'}
+                </span>
+                <span className={cn(
+                  "font-mono font-medium",
+                  applyTax ? "text-foreground" : "text-muted-foreground line-through"
+                )}>
                   {activeCurrencySymbol} {totals.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
