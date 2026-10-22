@@ -1,20 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
 /**
  * Elemento de la ruta "/". Revisa la sesión con un componente mínimo sin
  * dependencias pesadas y redirige siempre: a /app si hay sesión, a /auth
- * si no la hay. Ya no se monta el Landing de marketing acá — la app nativa
- * (que arranca en /pos, ver capacitor.config.ts) ya iba directo al login
- * sin pasar por acá, y por pedido se unificó el mismo comportamiento para
- * la raíz web. El componente Landing.tsx queda intacto por si se quiere
- * volver a enrutar (ej. en una URL de marketing separada).
+ * si no la hay. Si vienen parámetros de autenticación (code, recovery),
+ * los transfiere a /auth para que no se pierda el flujo de recuperación.
  */
 const RootRoute: React.FC = () => {
     const [checked, setChecked] = useState(false);
     const [hasSession, setHasSession] = useState(false);
+    const location = useLocation();
+
+    // Si viene un código de recuperación o autenticación en la URL raíz, pasarlo directamente a /auth
+    if (
+        location.search.includes('code=') ||
+        location.search.includes('recovery') ||
+        location.search.includes('reset=true') ||
+        location.hash.includes('recovery') ||
+        location.hash.includes('access_token')
+    ) {
+        return <Navigate to={`/auth${location.search}${location.hash}`} replace />;
+    }
 
     useEffect(() => {
         let cancelled = false;

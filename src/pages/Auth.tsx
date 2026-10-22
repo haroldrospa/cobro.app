@@ -75,7 +75,9 @@ const Auth = () => {
   const [authView, setAuthView] = useState<'login' | 'signup' | 'forgot-password' | 'update-password'>(() => {
     const isRecovery = window.location.hash.includes('type=recovery') || 
                        window.location.href.includes('recovery') || 
-                       window.location.search.includes('type=recovery');
+                       window.location.search.includes('type=recovery') ||
+                       window.location.search.includes('reset=true') ||
+                       (window.location.search.includes('code=') && !window.location.href.includes('signup'));
     return isRecovery ? 'update-password' : (isSignup ? 'signup' : 'login');
   });
 
@@ -182,7 +184,9 @@ const Auth = () => {
 
     const isRecovery = window.location.hash.includes('type=recovery') || 
                        window.location.href.includes('recovery') || 
-                       window.location.search.includes('type=recovery');
+                       window.location.search.includes('type=recovery') ||
+                       window.location.search.includes('reset=true') ||
+                       window.location.search.includes('code=');
 
     if (!isRecovery && authView !== 'update-password') {
       getSessionSafe().then((session) => {
@@ -469,7 +473,7 @@ const Auth = () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/auth?reset=true`,
       });
       if (error) throw error;
       toast({
