@@ -754,7 +754,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       tax: taxAmount,
       taxRate: taxRate,
       total: saleData.total,
-      currency: storeSettings?.currency || 'DOP',
+      currency: (saleData as any)?.currency || storeSettings?.currency || 'DOP',
       paymentTerms: storeSettings?.payment_terms?.toString(),
       footerText: storeSettings?.invoice_footer_text,
       showBarcode: isElectronic ? false : (printSettings.showBarcode || false),

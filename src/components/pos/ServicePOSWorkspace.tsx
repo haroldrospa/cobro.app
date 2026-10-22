@@ -25,7 +25,9 @@ import {
   RotateCcw,
   CheckCircle2,
   DollarSign,
-  Package
+  Package,
+  ArrowLeftRight,
+  Coins
 } from 'lucide-react';
 import { CartItem } from '@/types/pos';
 import { Customer } from '@/hooks/useCustomers';
@@ -56,6 +58,8 @@ interface ServicePOSWorkspaceProps {
     paymentMethod: string;
     creditDays?: number;
     notes?: string;
+    currency?: 'DOP' | 'USD';
+    exchangeRate?: number;
   }) => Promise<void>;
   isEmitting?: boolean;
   onLoadToCart: (items: CartItem[], customerId: string, invoiceTypeId: string) => void;
@@ -82,6 +86,74 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+
+  // Moneda de la Factura y Tasa de Cambio
+  const [currency, setCurrency] = useState<'DOP' | 'USD'>(() => {
+    return (storeSettings?.currency === 'USD' ? 'USD' : 'DOP');
+  });
+
+  const [exchangeRate, setExchangeRate] = useState<number>(() => {
+    const saved = localStorage.getItem('cobro_pos_exchange_rate');
+    const parsed = saved ? parseFloat(saved) : 60.0;
+    return isNaN(parsed) || parsed <= 0 ? 60.0 : parsed;
+  });
+
+  const activeCurrencySymbol = currency === 'USD' ? 'US$' : 'RD$';
+
+  const handleCurrencyChange = (newCurrency: 'DOP' | 'USD') => {
+    if (newCurrency === currency) return;
+    const rate = exchangeRate > 0 ? exchangeRate : 60;
+    
+    // Si ya hay líneas con precios mayores a 0, convertimos automáticamente los precios
+    const hasPrices = serviceLines.some(l => (Number(l.unitPrice) || 0) > 0);
+    if (hasPrices) {
+      setServiceLines(prev => prev.map(line => {
+        const p = Number(line.unitPrice) || 0;
+        if (p <= 0) return line;
+        const converted = newCurrency === 'USD'
+          ? Math.round((p / rate) * 100) / 100
+          : Math.round((p * rate) * 100) / 100;
+        return { ...line, unitPrice: converted };
+      }));
+      toast({
+        title: `Moneda cambiada a ${newCurrency}`,
+        description: `Montos convertidos ${currency} ➔ ${newCurrency} con tasa de RD$ ${rate.toFixed(2)}.`,
+      });
+    } else {
+      toast({
+        title: `Moneda cambiada a ${newCurrency}`,
+        description: `Ahora los nuevos conceptos se facturarán en ${newCurrency}.`,
+      });
+    }
+
+    setCurrency(newCurrency);
+  };
+
+  const handleConvertPrices = () => {
+    const rate = exchangeRate > 0 ? exchangeRate : 60;
+    const hasPrices = serviceLines.some(l => (Number(l.unitPrice) || 0) > 0);
+    if (!hasPrices) {
+      toast({
+        title: "Sin montos para convertir",
+        description: "Ingresa montos en los conceptos primero.",
+      });
+      return;
+    }
+
+    setServiceLines(prev => prev.map(line => {
+      const p = Number(line.unitPrice) || 0;
+      if (p <= 0) return line;
+      const converted = currency === 'USD'
+        ? Math.round((p / rate) * 100) / 100
+        : Math.round((p * rate) * 100) / 100;
+      return { ...line, unitPrice: converted };
+    }));
+
+    toast({
+      title: "Montos recalculados",
+      description: `Precios adaptados según la tasa de RD$ ${rate.toFixed(2)}.`,
+    });
+  };
 
   const [selectedInvoiceTypeId, setSelectedInvoiceTypeId] = useState<string>(() => {
     const b01 = invoiceTypes.find(t => t.code === 'B01');
@@ -249,13 +321,23 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
     const validItems = validateBeforeEmit();
     if (!validItems) return;
 
+    let finalNotes = notes.trim();
+    if (currency === 'USD') {
+      const rateNote = `Factura emitida en USD • Tasa de Cambio: 1 USD = RD$ ${exchangeRate.toFixed(2)}`;
+      if (!finalNotes.includes('Tasa de Cambio') && !finalNotes.includes('USD')) {
+        finalNotes = finalNotes ? `${finalNotes} | ${rateNote}` : rateNote;
+      }
+    }
+
     await onDirectEmit({
       customerId: selectedCustomerId,
       invoiceTypeId: selectedInvoiceTypeId,
       items: validItems,
       paymentMethod: paymentCondition === 'credito' ? 'credit' : paymentMethod,
       creditDays: paymentCondition === 'credito' ? creditDays : undefined,
-      notes,
+      notes: finalNotes,
+      currency,
+      exchangeRate,
     });
   };
 
@@ -377,7 +459,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             <div className="shrink-0 border-b border-border/40 bg-muted/30 px-3 py-1.5 grid grid-cols-12 gap-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               <div className="col-span-6">Descripción del Servicio</div>
               <div className="col-span-2 text-center">Cant. / Horas</div>
-              <div className="col-span-2 text-right">Precio ({currencySymbol})</div>
+              <div className="col-span-2 text-right">Precio ({activeCurrencySymbol})</div>
               <div className="col-span-1 text-center">ITBIS</div>
               <div className="col-span-1 text-center"></div>
             </div>
@@ -489,6 +571,84 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
           
           {/* Top Form Controls */}
           <div className="shrink-0 space-y-2">
+            {/* Selector de Moneda & Tasa de Cambio */}
+            <div className="p-2 rounded-xl bg-background/80 border border-border/70 space-y-1.5 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5">
+                  <Coins className="h-3.5 w-3.5 text-emerald-400" />
+                  Moneda de la Factura
+                </label>
+                <span className={cn(
+                  "text-[10px] font-extrabold px-2 py-0.5 rounded-full border tracking-wide uppercase",
+                  currency === 'USD' 
+                    ? "bg-blue-500/15 text-blue-400 border-blue-500/30" 
+                    : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                )}>
+                  {currency === 'USD' ? 'US$ Dólares' : 'RD$ Pesos'}
+                </span>
+              </div>
+
+              {/* Botones de Moneda DOP / USD */}
+              <div className="grid grid-cols-2 p-0.5 bg-muted/40 rounded-lg border border-border/60 gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleCurrencyChange('DOP')}
+                  className={cn(
+                    "py-1 text-xs font-bold rounded transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                    currency === 'DOP'
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>DOP (RD$)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCurrencyChange('USD')}
+                  className={cn(
+                    "py-1 text-xs font-bold rounded transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                    currency === 'USD'
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>USD (US$)</span>
+                </button>
+              </div>
+
+              {/* Tasa y botón para recalcular montos */}
+              <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/40 text-[11px]">
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-muted-foreground text-[10px] font-medium shrink-0">1 USD = RD$</span>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="1"
+                    value={exchangeRate}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setExchangeRate(val);
+                      if (val > 0) localStorage.setItem('cobro_pos_exchange_rate', val.toString());
+                    }}
+                    className="h-6 w-16 px-1.5 text-center font-mono font-bold text-xs bg-background/80 border border-border/70 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    placeholder="60.00"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleConvertPrices}
+                  title="Recalcular precios de los conceptos con la tasa actual"
+                  className="px-2 py-0.5 text-[10px] font-semibold rounded bg-muted/60 hover:bg-muted text-foreground border border-border/60 flex items-center gap-1 transition-all cursor-pointer hover:border-emerald-500/40 shrink-0"
+                >
+                  <ArrowLeftRight className="h-2.5 w-2.5 text-emerald-400" />
+                  <span>Convertir montos</span>
+                </button>
+              </div>
+            </div>
+
             {/* Comprobante Fiscal (NCF) */}
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
@@ -614,19 +774,34 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>Subtotal:</span>
                 <span className="font-mono text-foreground font-medium">
-                  {currencySymbol} {totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {activeCurrencySymbol} {totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>ITBIS (18%):</span>
                 <span className="font-mono text-foreground font-medium">
-                  {currencySymbol} {totals.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {activeCurrencySymbol} {totals.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="pt-1.5 border-t border-border/40 flex items-baseline justify-between">
                 <span className="text-xs font-bold text-foreground uppercase tracking-wide">Total a Cobrar:</span>
-                <span className="text-xl font-bold font-mono text-emerald-400">
-                  {currencySymbol} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className={cn(
+                  "text-xl font-bold font-mono",
+                  currency === 'USD' ? "text-blue-400" : "text-emerald-400"
+                )}>
+                  {activeCurrencySymbol} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              {/* Conversión aproximada reflejada */}
+              <div className="pt-1.5 border-t border-border/30 flex items-center justify-between text-[10.5px] text-muted-foreground">
+                <span>Equivalente:</span>
+                <span className="font-mono font-bold text-foreground/90">
+                  {currency === 'USD'
+                    ? `RD$ ${(totals.total * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `US$ ${(exchangeRate > 0 ? totals.total / exchangeRate : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  }
+                  <span className="text-[9.5px] text-muted-foreground font-normal ml-1">(@ {exchangeRate.toFixed(2)})</span>
                 </span>
               </div>
             </div>

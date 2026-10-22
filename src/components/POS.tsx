@@ -1721,6 +1721,8 @@ const POSContent: React.FC = () => {
     paymentMethod: string;
     creditDays?: number;
     notes?: string;
+    currency?: 'DOP' | 'USD';
+    exchangeRate?: number;
   }) => {
     try {
       setIsEmittingServiceInvoice(true);
@@ -1799,6 +1801,7 @@ const POSContent: React.FC = () => {
           invoice_number: quoteNumber,
           invoiceType: 'COT',
           is_quote: true,
+          currency: data.currency || (storeSettings?.currency === 'USD' ? 'USD' : 'DOP'),
           notes: data.notes || '',
           profile: {
             full_name: profile?.full_name || 'Cajero'
@@ -1868,6 +1871,7 @@ const POSContent: React.FC = () => {
         customer: selectedCustomerData,
         invoice_number: result?.invoice_number || (result as any)?.encf || '',
         invoiceType: code,
+        currency: data.currency || (storeSettings?.currency === 'USD' ? 'USD' : 'DOP'),
         is_electronic: (result as any)?.is_electronic,
         encf: (result as any)?.encf,
         codigo_seguridad: (result as any)?.codigo_seguridad,
