@@ -411,13 +411,13 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[850px] max-h-[88vh] overflow-y-auto overflow-x-hidden rounded-3xl border border-border/60 p-0 bg-background">
+        <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[850px] max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-2xl sm:rounded-3xl border border-border/60 p-0 bg-background shadow-2xl">
           <DialogHeader className="sr-only">
             <DialogTitle>{supplier.name}</DialogTitle>
             <DialogDescription>Ficha completa del proveedor, productos asociados y deudas</DialogDescription>
           </DialogHeader>
           {/* Header Banner */}
-          <div className="p-5 sm:p-6 bg-muted/20 border-b border-border/40 rounded-t-3xl">
+          <div className="p-4 sm:p-6 pr-12 sm:pr-14 bg-muted/20 border-b border-border/40 rounded-t-2xl sm:rounded-t-3xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-muted/60 text-foreground border border-border/50 flex items-center justify-center text-sm font-bold shrink-0">
@@ -464,11 +464,11 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5"
+                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 justify-center"
                   onClick={() => {
                     onOpenChange(false);
                     onOpenEdit(supplier);
@@ -479,7 +479,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 </Button>
                 <Button
                   size="sm"
-                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 justify-center"
                   onClick={() => onOpenAddDebt(supplier)}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -594,22 +594,24 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
           </div>
 
           {/* Body Tabs */}
-          <div className="p-5 sm:p-6 space-y-4">
+          <div className="p-3 sm:p-6 space-y-4 pb-12 sm:pb-6">
             <Tabs value={currentTab} onValueChange={(val) => setCurrentTab(val as any)} className="w-full">
-              <TabsList className="bg-muted/30 p-1 rounded-xl border border-border/30 h-9 w-fit flex items-center gap-1 mb-4 flex-wrap">
-                <TabsTrigger value="overview" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
-                  Productos y Deudas
-                </TabsTrigger>
-                <TabsTrigger value="products" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
-                  Productos {supplierIngredients.length > 0 ? `e Ingredientes (${supplierProducts.length + supplierIngredients.length})` : `(${supplierProducts.length})`}
-                </TabsTrigger>
-                <TabsTrigger value="debts" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
-                  Solo Deudas ({supplierDebts.length})
-                </TabsTrigger>
-                <TabsTrigger value="expenses" className="rounded-lg px-3.5 h-7 text-xs font-semibold">
-                  Historial de Pagos ({supplierExpenses.length})
-                </TabsTrigger>
-              </TabsList>
+              <div className="w-full overflow-x-auto scrollbar-none pb-1 -mx-0.5 px-0.5">
+                <TabsList className="bg-muted/30 p-1 rounded-xl border border-border/30 h-auto flex flex-nowrap w-max gap-1 mb-3">
+                  <TabsTrigger value="overview" className="rounded-lg px-3 py-1.5 text-xs font-semibold shrink-0">
+                    Productos y Deudas
+                  </TabsTrigger>
+                  <TabsTrigger value="products" className="rounded-lg px-3 py-1.5 text-xs font-semibold shrink-0">
+                    Productos {supplierIngredients.length > 0 ? `(${supplierProducts.length + supplierIngredients.length})` : `(${supplierProducts.length})`}
+                  </TabsTrigger>
+                  <TabsTrigger value="debts" className="rounded-lg px-3 py-1.5 text-xs font-semibold shrink-0">
+                    Solo Deudas ({supplierDebts.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="expenses" className="rounded-lg px-3 py-1.5 text-xs font-semibold shrink-0">
+                    Historial Pagos ({supplierExpenses.length})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* Tab Principal Unificado: Productos y Deudas Juntos */}
               <TabsContent value="overview" className="space-y-4 outline-none">
@@ -640,94 +642,188 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   </div>
 
                   {supplierDebts.length === 0 ? (
-                    <div className="p-3.5 bg-muted/20 rounded-xl border border-border/40 text-xs text-muted-foreground">
+                    <div className="p-3.5 bg-muted/20 rounded-xl border border-border/40 text-xs text-muted-foreground text-center">
                       No hay deudas ni facturas pendientes registradas con este proveedor.
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-border/40 overflow-hidden">
-                      <Table>
-                        <TableHeader className="bg-muted/30">
-                          <TableRow>
-                            <TableHead className="text-xs font-semibold py-2">Concepto / Vencimiento</TableHead>
-                            <TableHead className="text-right text-xs font-semibold py-2">Monto</TableHead>
-                            <TableHead className="text-right text-xs font-semibold py-2">Pagado</TableHead>
-                            <TableHead className="text-right text-xs font-semibold py-2">Pendiente</TableHead>
-                            <TableHead className="text-center text-xs font-semibold py-2">Estado</TableHead>
-                            <TableHead className="text-right text-xs font-semibold py-2">Acciones</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {supplierDebts.map((debt) => {
-                            const rem = Math.max(0, Number(debt.amount) - Number(debt.amount_paid));
-                            const isPaid = debt.status === 'paid' || rem <= 0;
-                            return (
-                              <TableRow key={debt.id} className="hover:bg-muted/20">
-                                <TableCell className="py-2 text-xs">
-                                  <span className="font-semibold text-foreground block">{debt.description}</span>
-                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5 font-mono">
-                                    <span>{debt.category}</span>
+                    <>
+                      {/* Vista Móvil: Tarjetas Minimalistas (sm:hidden) */}
+                      <div className="sm:hidden space-y-2">
+                        {supplierDebts.map((debt) => {
+                          const rem = Math.max(0, Number(debt.amount) - Number(debt.amount_paid));
+                          const isPaid = debt.status === 'paid' || rem <= 0;
+                          return (
+                            <div key={debt.id} className="p-3 rounded-xl bg-card border border-border/50 shadow-2xs space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <span className="font-bold text-xs text-foreground block truncate">
+                                    {debt.description || 'Factura / Deuda'}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono mt-0.5">
+                                    {debt.category && <span>{debt.category}</span>}
                                     {debt.due_date && (
                                       <>
                                         <span>•</span>
-                                        <span>Vence: {debt.due_date}</span>
+                                        <span className="text-amber-500 font-semibold">Vence: {debt.due_date}</span>
                                       </>
                                     )}
                                   </div>
-                                </TableCell>
-                                <TableCell className="py-2 text-right text-xs font-mono font-medium text-foreground">
-                                  ${Number(debt.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                </TableCell>
-                                <TableCell className="py-2 text-right text-xs font-mono text-muted-foreground">
-                                  ${Number(debt.amount_paid).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                </TableCell>
-                                <TableCell className="py-2 text-right text-xs font-mono font-semibold text-foreground">
-                                  ${rem.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                </TableCell>
-                                <TableCell className="py-2 text-center">
-                                  {isPaid ? (
-                                    <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[9px] font-medium">
-                                      Pagado
-                                    </Badge>
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md shrink-0 ${
+                                    isPaid
+                                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                      : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                  }`}
+                                >
+                                  {isPaid ? 'Pagado' : 'Pendiente'}
+                                </Badge>
+                              </div>
+
+                              {/* Montos */}
+                              <div className="grid grid-cols-3 gap-1 py-1.5 px-2 rounded-lg bg-muted/30 border border-border/30 text-center text-xs">
+                                <div>
+                                  <span className="text-[9px] uppercase font-bold text-muted-foreground block">Monto</span>
+                                  <span className="font-mono font-bold text-foreground text-[11px]">
+                                    RD$ {Number(debt.amount).toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] uppercase font-bold text-muted-foreground block">Abonado</span>
+                                  <span className="font-mono font-medium text-emerald-500 text-[11px]">
+                                    RD$ {Number(debt.amount_paid).toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] uppercase font-bold text-muted-foreground block">Pendiente</span>
+                                  <span className={`font-mono font-bold text-[11px] ${rem > 0 ? 'text-rose-500' : 'text-muted-foreground'}`}>
+                                    RD$ {rem.toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Acciones */}
+                              <div className="flex items-center justify-between pt-1">
+                                {!isPaid ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => onOpenPayDebt(debt)}
+                                    className="h-7 px-3 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white gap-1"
+                                  >
+                                    <DollarSign className="h-3 w-3" /> Abonar / Pagar
+                                  </Button>
+                                ) : (
+                                  <span className="text-[11px] text-emerald-500 font-semibold flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" /> Deuda Saldada
+                                  </span>
+                                )}
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  disabled={deletingDebtId === debt.id}
+                                  className="h-7 w-7 text-muted-foreground hover:text-rose-500"
+                                  onClick={() => handleDeleteDebtClick(debt.id, debt.description)}
+                                  title="Eliminar Deuda"
+                                >
+                                  {deletingDebtId === debt.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                   ) : (
-                                    <Badge variant="outline" className="bg-muted/40 text-foreground border-border/40 text-[9px] font-medium">
-                                      Pendiente
-                                    </Badge>
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   )}
-                                </TableCell>
-                                <TableCell className="py-2 text-right">
-                                  <div className="flex items-center justify-end gap-1">
-                                    {!isPaid && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-6 px-2.5 text-[10px] font-medium rounded-md hover:bg-muted/40 text-foreground"
-                                        onClick={() => onOpenPayDebt(debt)}
-                                      >
-                                        Pagar
-                                      </Button>
-                                    )}
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      disabled={deletingDebtId === debt.id}
-                                      className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
-                                      onClick={() => handleDeleteDebtClick(debt.id, debt.description)}
-                                      title="Eliminar Factura / Deuda"
-                                    >
-                                      {deletingDebtId === debt.id ? (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                                      ) : (
-                                        <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Vista Desktop: Tabla Tradicional (hidden sm:block) */}
+                      <div className="hidden sm:block rounded-xl border border-border/40 overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-muted/30">
+                            <TableRow>
+                              <TableHead className="text-xs font-semibold py-2">Concepto / Vencimiento</TableHead>
+                              <TableHead className="text-right text-xs font-semibold py-2">Monto</TableHead>
+                              <TableHead className="text-right text-xs font-semibold py-2">Pagado</TableHead>
+                              <TableHead className="text-right text-xs font-semibold py-2">Pendiente</TableHead>
+                              <TableHead className="text-center text-xs font-semibold py-2">Estado</TableHead>
+                              <TableHead className="text-right text-xs font-semibold py-2">Acciones</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {supplierDebts.map((debt) => {
+                              const rem = Math.max(0, Number(debt.amount) - Number(debt.amount_paid));
+                              const isPaid = debt.status === 'paid' || rem <= 0;
+                              return (
+                                <TableRow key={debt.id} className="hover:bg-muted/20">
+                                  <TableCell className="py-2 text-xs">
+                                    <span className="font-semibold text-foreground block">{debt.description}</span>
+                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5 font-mono">
+                                      <span>{debt.category}</span>
+                                      {debt.due_date && (
+                                        <>
+                                          <span>•</span>
+                                          <span>Vence: {debt.due_date}</span>
+                                        </>
                                       )}
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-2 text-right text-xs font-mono font-medium text-foreground">
+                                    ${Number(debt.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                  </TableCell>
+                                  <TableCell className="py-2 text-right text-xs font-mono text-muted-foreground">
+                                    ${Number(debt.amount_paid).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                  </TableCell>
+                                  <TableCell className="py-2 text-right text-xs font-mono font-semibold text-foreground">
+                                    ${rem.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                  </TableCell>
+                                  <TableCell className="py-2 text-center">
+                                    {isPaid ? (
+                                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[9px] font-medium">
+                                        Pagado
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="bg-muted/40 text-foreground border-border/40 text-[9px] font-medium">
+                                        Pendiente
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-2 text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                      {!isPaid && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-6 px-2.5 text-[10px] font-medium rounded-md hover:bg-muted/40 text-foreground"
+                                          onClick={() => onOpenPayDebt(debt)}
+                                        >
+                                          Pagar
+                                        </Button>
+                                      )}
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        disabled={deletingDebtId === debt.id}
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+                                        onClick={() => handleDeleteDebtClick(debt.id, debt.description)}
+                                        title="Eliminar Factura / Deuda"
+                                      >
+                                        {deletingDebtId === debt.id ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                        ) : (
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </>
                   )}
                 </div>
 

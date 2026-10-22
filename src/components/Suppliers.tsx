@@ -37,6 +37,7 @@ import { useSupplierDebts, SupplierDebt } from '@/hooks/useSupplierDebts';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useProductsOffline } from '@/hooks/useProductsOffline';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { SupplierDialog } from '@/components/suppliers/SupplierDialog';
 import { SupplierDebtDialog } from '@/components/suppliers/SupplierDebtDialog';
 import { SupplierPayDialog } from '@/components/suppliers/SupplierPayDialog';
@@ -69,7 +70,9 @@ export const Suppliers: React.FC = () => {
   // State: Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [debtFilter, setDebtFilter] = useState<'all' | 'with_debt' | 'no_debt'>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const effectiveViewMode = isMobile ? 'grid' : viewMode;
 
   // State: Dialogs
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
@@ -279,7 +282,7 @@ export const Suppliers: React.FC = () => {
   const isLoading = loadingSuppliers || loadingDebts;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-24 max-w-7xl mx-auto px-3 sm:px-5">
+    <div className="space-y-6 animate-fade-in pb-32 sm:pb-16 max-w-7xl mx-auto px-3 sm:px-5">
       {/* Centered Premium Header (Estilo Inventario) */}
       <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-6 sm:gap-8 py-4 sm:py-6">
         <div className="space-y-3">
@@ -542,7 +545,7 @@ export const Suppliers: React.FC = () => {
             </Button>
           )}
         </div>
-      ) : viewMode === 'grid' ? (
+      ) : effectiveViewMode === 'grid' ? (
         /* ================= VISTA DE TARJETAS (MÓVIL & DEFAULT) ================= */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
           {filteredSuppliers.map((supplier) => {
