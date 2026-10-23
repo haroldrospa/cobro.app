@@ -1389,6 +1389,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       </TableBody>
                     </Table>
                   </div>
+                </>
                 )}
               </TabsContent>
 
@@ -1510,6 +1511,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       </TableBody>
                     </Table>
                   </div>
+                </>
                 )}
               </TabsContent>
 
@@ -1649,13 +1651,6 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                             <TableHead className="text-center text-xs font-bold">Stock</TableHead>
                           </TableRow>
                         </TableHeader>
-                          <TableHead className="text-xs font-bold">Categoría</TableHead>
-                          <TableHead className="text-right text-xs font-bold">Costo</TableHead>
-                          <TableHead className="text-right text-xs font-bold">Precio Venta</TableHead>
-                          <TableHead className="text-center text-xs font-bold">Margen</TableHead>
-                          <TableHead className="text-center text-xs font-bold">Stock</TableHead>
-                        </TableRow>
-                      </TableHeader>
                       <TableBody>
                         {filteredSupplierProducts.map((prod) => {
                           const cost = Number(prod.cost || 0);
@@ -1729,6 +1724,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                       </TableBody>
                     </Table>
                   </div>
+                </>
                 )}
               </TabsContent>
             </Tabs>
