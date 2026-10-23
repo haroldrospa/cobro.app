@@ -420,14 +420,26 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
           <div className="p-3.5 sm:p-5 pr-11 sm:pr-14 bg-muted/20 border-b border-border/40 rounded-t-2xl sm:rounded-t-3xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-sm font-bold shrink-0">
+                <div className="h-10 w-10 rounded-xl bg-muted/60 text-foreground border border-border/50 flex items-center justify-center text-sm font-bold shrink-0">
                   {supplier.name?.charAt(0).toUpperCase() || 'P'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight truncate max-w-[170px] xs:max-w-[240px] sm:max-w-none">
                       {supplier.name}
                     </h2>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground shrink-0"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onOpenEdit(supplier);
+                      }}
+                      title="Editar proveedor"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
                     {isTransfer ? (
                       <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 text-[10px] font-medium shrink-0">
                         Transferencia
@@ -465,23 +477,24 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
+              {/* Action Buttons: hidden on mobile to keep header clean & minimal, subtle on desktop */}
+              <div className="hidden sm:flex sm:items-center gap-2 shrink-0">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 justify-center w-full"
+                  className="h-8 px-3 text-xs font-medium rounded-lg gap-1.5"
                   onClick={() => {
                     onOpenChange(false);
                     onOpenEdit(supplier);
                   }}
                 >
-                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   Editar
                 </Button>
                 <Button
                   size="sm"
-                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white justify-center w-full"
+                  variant="outline"
+                  className="h-8 px-3 text-xs font-medium rounded-lg gap-1.5"
                   onClick={() => onOpenAddDebt(supplier)}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1521,7 +1534,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                      <div className="h-9 w-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center">
                         <Package className="h-5 w-5" />
                       </div>
                       <div>
@@ -1532,7 +1545,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                   </div>
                   <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                      <div className="h-9 w-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center">
                         <DollarSign className="h-5 w-5" />
                       </div>
                       <div>
