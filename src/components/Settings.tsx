@@ -2112,57 +2112,57 @@ const Settings = () => {
   // Desktop layout (existing)
   return (
     <div className="min-h-screen animate-fade-in pb-20 bg-background/50">
-      {/* Centered Premium Header */}
-      <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-8 py-12">
-        <div className="space-y-3">
-          <h1 className="text-4xl font-black tracking-tighter uppercase tracking-[0.15em] leading-normal py-1">
-            Configuracion
-          </h1>
-          <div className="flex items-center justify-center gap-4 text-primary/80">
-            <div className="h-px w-10 bg-primary/30" />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em]">
-              Centro de Control del Sistema
+      {/* Header Compacto y Adaptable */}
+      <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pt-4 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-foreground">
+                Configuración
+              </h1>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                Centro de Control
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Personaliza el sistema, diseño de facturas, módulos e impresoras de tu negocio
             </p>
-            <div className="h-px w-10 bg-primary/30" />
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto w-full px-4">
-        <Tabs defaultValue="invoices" className="flex flex-col gap-8 space-y-0">
+      <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6">
+        <Tabs defaultValue="invoices" className="flex flex-col gap-5 space-y-0">
           
-          <div className="w-full pb-6 border-b border-border/40">
-            <TabsList className="flex flex-wrap w-full h-auto items-center justify-center gap-2 bg-transparent p-0">
-              
-              <TabsTrigger value="store" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Mi Tienda</TabsTrigger>
-              <TabsTrigger value="company" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Empresa</TabsTrigger>
-              
-              <TabsTrigger value="billing-method" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Método de Factura</TabsTrigger>
-              <TabsTrigger value="invoices" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Preferencias</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Métodos de Pago</TabsTrigger>
-              
-              <TabsTrigger value="print" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Impresión</TabsTrigger>
-              <TabsTrigger value="notifications" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Comunicaciones</TabsTrigger>
-              {(shopType === 'restaurant' || storeSettings?.use_kitchen === true) && (
-                <TabsTrigger value="cocina" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Cocina KDS</TabsTrigger>
-              )}
-
-              <TabsTrigger value="ai" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4" />
-                Inteligencia Artificial
-              </TabsTrigger>
-              {shopType !== 'services' && (
-                <TabsTrigger value="pedidosya" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-md flex items-center gap-1.5">
-                  🛵 PedidosYa
+          <div className="w-full pb-3 border-b border-border/40">
+            <div className="w-full overflow-x-auto no-scrollbar scroll-smooth py-1">
+              <TabsList className="inline-flex w-max min-w-full xl:min-w-0 items-center justify-start xl:justify-center gap-1.5 bg-muted/20 p-1.5 rounded-xl border border-border/30 h-auto">
+                <TabsTrigger value="store" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Mi Tienda</TabsTrigger>
+                <TabsTrigger value="company" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Empresa</TabsTrigger>
+                <TabsTrigger value="billing-method" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Método de Factura</TabsTrigger>
+                <TabsTrigger value="invoices" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Preferencias</TabsTrigger>
+                <TabsTrigger value="payments" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Métodos de Pago</TabsTrigger>
+                <TabsTrigger value="print" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Impresión</TabsTrigger>
+                <TabsTrigger value="notifications" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Comunicaciones</TabsTrigger>
+                {(shopType === 'restaurant' || storeSettings?.use_kitchen === true) && (
+                  <TabsTrigger value="cocina" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Cocina KDS</TabsTrigger>
+                )}
+                <TabsTrigger value="ai" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Inteligencia Artificial
                 </TabsTrigger>
-              )}
-              <TabsTrigger value="system" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Apariencia</TabsTrigger>
-              <TabsTrigger value="advanced" className="rounded-full px-5 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">Avanzado</TabsTrigger>
-              
-            </TabsList>
+                {shopType !== 'services' && (
+                  <TabsTrigger value="pedidosya" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm flex items-center gap-1.5">
+                    🛵 PedidosYa
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="system" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Apariencia</TabsTrigger>
+                <TabsTrigger value="advanced" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Avanzado</TabsTrigger>
+              </TabsList>
+            </div>
           </div>
 
-          <div className="flex-1 w-full max-w-6xl min-w-0 mx-auto">
+          <div className="flex-1 w-full min-w-0 mx-auto">
             {/* Store Settings - Mi Tienda */}
             <TabsContent value="store" className="space-y-6 mt-0">
           {/* ── Módulos activos ── */}
@@ -2538,9 +2538,9 @@ const Settings = () => {
               <p className="text-muted-foreground mt-1">Personaliza el diseño, formato y comportamiento de tus recibos impresos y digitales.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Columna Izquierda: Formulario (7 columnas) */}
-              <div className="lg:col-span-7 space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8 items-start">
+              {/* Columna Izquierda: Formulario (7 columnas en pantallas grandes) */}
+              <div className="xl:col-span-7 space-y-6">
                 
                 {/* Sección 1: Diseño Visual */}
                 <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-md p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
@@ -2775,7 +2775,7 @@ const Settings = () => {
                 </div>
 
                 {/* Botón de Guardar */}
-                <div className="sticky bottom-6 z-10 pt-2 pb-4">
+                <div className="sticky bottom-4 z-10 pt-2 pb-2 bg-gradient-to-t from-background via-background/95 to-transparent backdrop-blur-xs">
                   <Button 
                     onClick={() => handleSaveSettings('facturas')} 
                     disabled={loading || isUpdatingStoreSettings}
@@ -2788,9 +2788,9 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Columna Derecha: Vista Previa (5 columnas) */}
-              <div className="lg:col-span-5 relative">
-                <div className="sticky top-6 rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-[#0a0a0a] flex flex-col h-[calc(100vh-140px)] min-h-[650px] ring-1 ring-white/10">
+              {/* Columna Derecha: Vista Previa (5 columnas en pantallas grandes) */}
+              <div className="xl:col-span-5 relative">
+                <div className="sticky top-4 rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-[#0a0a0a] flex flex-col h-[calc(100vh-100px)] max-h-[780px] min-h-[440px] ring-1 ring-white/10">
                   
                   {/* Header de la vista previa estilo macOS */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#111]">
