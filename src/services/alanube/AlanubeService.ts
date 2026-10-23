@@ -294,7 +294,7 @@ export class AlanubeService {
 
           // Mostrar al usuario el motivo del rechazo fiscal (DGII) en un Toast descriptivo
           const errorMsg = response.errores.map(e => `${e.codigo ? `[${e.codigo}] ` : ''}${e.mensaje}`).join('\n');
-          if (!silent) {
+          if (true) { /* Mostrar error para visibilidad */
             import('@/hooks/use-toast').then(({ toast }) => {
               toast({
                 title: "Error de Validación Fiscal (DGII)",
@@ -353,7 +353,7 @@ export class AlanubeService {
         const errorMessage = error?.message || 'Error de conexión con Alanube';
         console.error('[Alanube] Connection/Infrastructure Error:', error);
         
-        if (!silent) {
+        if (true) { /* Mostrar error para visibilidad */
           import('@/hooks/use-toast').then(({ toast }) => {
             toast({
               title: "Error de Conexión Fiscal",
@@ -369,7 +369,7 @@ export class AlanubeService {
     } catch (err: any) {
       console.error('[Alanube] Error general emitiendo factura:', err);
       const generalMessage = err?.message || 'Error general en el módulo e-NCF';
-      if (!silent) {
+      if (true) { /* Mostrar error para visibilidad */
         import('@/hooks/use-toast').then(({ toast }) => {
           toast({
             title: "Error General de Facturación Electrónica",
