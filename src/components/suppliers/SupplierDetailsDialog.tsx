@@ -411,52 +411,54 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[850px] max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-2xl sm:rounded-3xl border border-border/60 p-0 bg-background shadow-2xl">
+        <DialogContent className="w-[calc(100%-1rem)] sm:w-full sm:max-w-4xl max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-2xl sm:rounded-3xl border border-border/60 p-0 bg-background shadow-2xl flex flex-col gap-0">
           <DialogHeader className="sr-only">
             <DialogTitle>{supplier.name}</DialogTitle>
             <DialogDescription>Ficha completa del proveedor, productos asociados y deudas</DialogDescription>
           </DialogHeader>
-          {/* Header Banner */}
-          <div className="p-4 sm:p-6 pr-12 sm:pr-14 bg-muted/20 border-b border-border/40 rounded-t-2xl sm:rounded-t-3xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-muted/60 text-foreground border border-border/50 flex items-center justify-center text-sm font-bold shrink-0">
+                    {/* Header Banner */}
+          <div className="p-3.5 sm:p-5 pr-11 sm:pr-14 bg-muted/20 border-b border-border/40 rounded-t-2xl sm:rounded-t-3xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-sm font-bold shrink-0">
                   {supplier.name?.charAt(0).toUpperCase() || 'P'}
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg font-bold text-foreground tracking-tight">{supplier.name}</h2>
+                    <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight truncate max-w-[170px] xs:max-w-[240px] sm:max-w-none">
+                      {supplier.name}
+                    </h2>
                     {isTransfer ? (
-                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[10px] font-medium">
+                      <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 text-[10px] font-medium shrink-0">
                         Transferencia
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-[10px] font-medium">
+                      <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/50 text-[10px] font-medium shrink-0">
                         Efectivo
                       </Badge>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2.5 flex-wrap">
+                  <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                     <span>
-                      RNC / Cédula: <strong className="font-mono text-foreground font-medium">{supplier.rnc || 'N/A'}</strong>
+                      RNC: <strong className="font-mono text-foreground font-medium">{supplier.rnc || 'N/A'}</strong>
                     </span>
                     {supplier.created_at && isValid(new Date(supplier.created_at)) && (
                       <>
                         <span>•</span>
                         <span>
-                          Registrado: <strong className="text-foreground font-medium">{format(new Date(supplier.created_at), 'dd/MM/yyyy')}</strong>
+                          Desde: <strong className="text-foreground font-medium">{format(new Date(supplier.created_at), 'dd/MM/yyyy')}</strong>
                         </span>
                       </>
                     )}
                     <span>•</span>
                     <span>
-                      Deuda Pendiente:{' '}
+                      Deuda:{' '}
                       {hasDebt ? (
-                        <strong className="text-foreground font-bold">
-                          RD$ {outstandingDebt.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                        <strong className="text-rose-500 font-bold font-mono">
+                          RD$ {outstandingDebt.toLocaleString('es-DO', { minimumFractionDigits: 0 })}
                         </strong>
                       ) : (
-                        <span className="text-muted-foreground">Al Día</span>
+                        <span className="text-emerald-500 font-semibold">Al Día</span>
                       )}
                     </span>
                   </div>
@@ -464,11 +466,11 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
+              <div className="grid grid-cols-2 gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 justify-center"
+                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 justify-center w-full"
                   onClick={() => {
                     onOpenChange(false);
                     onOpenEdit(supplier);
@@ -479,7 +481,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                 </Button>
                 <Button
                   size="sm"
-                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 justify-center"
+                  className="h-8 px-3 text-xs font-semibold rounded-lg gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white justify-center w-full"
                   onClick={() => onOpenAddDebt(supplier)}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -488,109 +490,89 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               </div>
             </div>
 
-            {/* Quick Contact & Bank Bar */}
-            <div className="mt-4 pt-3 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-              {/* Phone Empresa */}
-              <div className="flex items-center gap-2 bg-background/50 p-2.5 rounded-xl border border-border/40">
-                <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Tel. Empresa</span>
-                  <span className="font-semibold truncate font-mono block text-xs text-foreground">
-                    {supplier.phone || 'No especificado'}
-                  </span>
-                </div>
-                {supplier.phone && (
-                  <div className="flex gap-1">
-                    <a
-                      href={`tel:${getCleanPhone(supplier.phone)}`}
-                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
-                      title="Llamar a Empresa"
-                    >
-                      <Phone className="h-3.5 w-3.5" />
-                    </a>
-                    <a
-                      href={`https://wa.me/${getCleanPhone(supplier.phone)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
-                      title="WhatsApp Empresa"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Contact & Contact Phone */}
-              <div className="flex items-center gap-2 bg-background/50 p-2.5 rounded-xl border border-border/40">
-                <MessageCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">
-                    Contacto: {supplier.contact || 'No registrado'}
-                  </span>
-                  <span className="font-semibold truncate font-mono block text-xs text-foreground">
-                    {supplier.contact_phone || (supplier.contact ? 'Sin teléfono directo' : 'No especificado')}
-                  </span>
-                </div>
-                {supplier.contact_phone && (
-                  <div className="flex gap-1">
-                    <a
-                      href={`tel:${getCleanPhone(supplier.contact_phone)}`}
-                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
-                      title="Llamar al Contacto"
-                    >
-                      <Phone className="h-3.5 w-3.5" />
-                    </a>
-                    <a
-                      href={`https://wa.me/${getCleanPhone(supplier.contact_phone)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
-                      title="WhatsApp al Contacto"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Bank Account */}
-              <div className="flex items-center justify-between gap-2.5 bg-background/50 p-2.5 rounded-xl border border-border/40">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Cuenta Bancaria</span>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                      {supplier.bank_name && (
-                        <span className="font-semibold text-xs text-foreground">
-                          {supplier.bank_name}
-                          <span className="text-muted-foreground mx-1">•</span>
-                        </span>
-                      )}
-                      <span className="font-mono font-bold text-xs text-foreground tracking-wider select-all break-all">
-                        {supplier.bank_account_number || 'Sin cuenta'}
-                      </span>
-                      {supplier.bank_account_type && (
-                        <span className="text-[10px] text-muted-foreground uppercase font-medium">
-                          ({supplier.bank_account_type})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            {/* Quick Contact & Bank Bar (Only display items with actual data) */}
+            {(supplier.bank_account_number || supplier.phone || supplier.contact_phone || supplier.contact) && (
+              <div className="mt-3 pt-2.5 border-t border-border/30 flex flex-col sm:flex-row gap-2 text-xs">
+                {/* Bank Account */}
                 {supplier.bank_account_number && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-[10px] font-semibold rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 gap-1 shrink-0"
-                    onClick={handleCopyAccount}
-                  >
-                    {copiedAccount ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                    {copiedAccount ? 'Copiado' : 'Copiar'}
-                  </Button>
+                  <div className="flex-1 flex items-center justify-between gap-2 bg-background/60 p-2 sm:p-2.5 rounded-xl border border-border/40">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <Landmark className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] uppercase font-bold text-muted-foreground block leading-tight">
+                          Cuenta {supplier.bank_name || 'Bancaria'} {supplier.bank_account_type ? `(${supplier.bank_account_type})` : ''}
+                        </span>
+                        <span className="font-mono font-bold text-xs text-foreground tracking-wider block truncate">
+                          {supplier.bank_account_number}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2.5 text-[10px] font-semibold rounded-lg shrink-0 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      onClick={handleCopyAccount}
+                    >
+                      {copiedAccount ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                      <span>{copiedAccount ? 'Copiado' : 'Copiar'}</span>
+                    </Button>
+                  </div>
+                )}
+
+                {/* Direct Phone / Contact Actions */}
+                {(supplier.phone || supplier.contact_phone) && (
+                  <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
+                    {supplier.phone && (
+                      <div className="flex items-center gap-1 bg-background/60 p-1.5 rounded-xl border border-border/40">
+                        <a
+                          href={`tel:${getCleanPhone(supplier.phone)}`}
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-muted/60 hover:bg-muted text-foreground transition-colors"
+                          title="Llamar teléfono empresa"
+                        >
+                          <Phone className="h-3 w-3 text-muted-foreground" />
+                          <span>Llamar</span>
+                        </a>
+                        <a
+                          href={`https://wa.me/${getCleanPhone(supplier.phone)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                          title="WhatsApp empresa"
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          <span>WhatsApp</span>
+                        </a>
+                      </div>
+                    )}
+                    {supplier.contact_phone && supplier.contact_phone !== supplier.phone && (
+                      <div className="flex items-center gap-1 bg-background/60 p-1.5 rounded-xl border border-border/40">
+                        <span className="text-[10px] text-muted-foreground font-medium px-1 truncate max-w-[80px]">
+                          {supplier.contact || 'Contacto'}:
+                        </span>
+                        <a
+                          href={`https://wa.me/${getCleanPhone(supplier.contact_phone)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          title={`WhatsApp a ${supplier.contact || 'Contacto'}`}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
+                        <a
+                          href={`tel:${getCleanPhone(supplier.contact_phone)}`}
+                          className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                          title={`Llamar a ${supplier.contact || 'Contacto'}`}
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Body Tabs */}
@@ -599,7 +581,7 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
               <div className="w-full overflow-x-auto scrollbar-none pb-1 -mx-0.5 px-0.5">
                 <TabsList className="bg-muted/30 p-1 rounded-xl border border-border/30 h-auto flex flex-nowrap w-max gap-1 mb-3">
                   <TabsTrigger value="overview" className="rounded-lg px-3 py-1.5 text-xs font-semibold shrink-0">
-                    Productos y Deudas
+                    Resumen
                   </TabsTrigger>
                   <TabsTrigger value="products" className="rounded-lg px-3 py-1.5 text-xs font-semibold shrink-0">
                     Productos {supplierIngredients.length > 0 ? `(${supplierProducts.length + supplierIngredients.length})` : `(${supplierProducts.length})`}
@@ -1224,8 +1206,99 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                     </Button>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-border/40 overflow-hidden bg-card">
-                    <Table>
+                  <>
+                    {/* Vista Móvil: Tarjetas Minimalistas (sm:hidden) */}
+                    <div className="sm:hidden space-y-2">
+                      {supplierDebts.map((debt) => {
+                        const rem = Math.max(0, Number(debt.amount) - Number(debt.amount_paid));
+                        const isPaid = debt.status === 'paid' || rem <= 0;
+                        return (
+                          <div key={debt.id} className="p-3 rounded-xl bg-card border border-border/50 shadow-2xs space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="font-bold text-xs text-foreground block truncate">
+                                  {debt.description || 'Factura / Deuda'}
+                                </span>
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono mt-0.5">
+                                  {debt.category && <span>{debt.category}</span>}
+                                  {debt.due_date && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-amber-500 font-semibold">Vence: {debt.due_date}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md shrink-0 ${
+                                  isPaid
+                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                    : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                }`}
+                              >
+                                {isPaid ? 'Pagado' : 'Pendiente'}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-1 py-1.5 px-2 rounded-lg bg-muted/30 border border-border/30 text-center text-xs">
+                              <div>
+                                <span className="text-[9px] uppercase font-bold text-muted-foreground block">Monto</span>
+                                <span className="font-mono font-bold text-foreground text-[11px]">
+                                  RD$ {Number(debt.amount).toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] uppercase font-bold text-muted-foreground block">Abonado</span>
+                                <span className="font-mono font-medium text-emerald-500 text-[11px]">
+                                  RD$ {Number(debt.amount_paid).toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] uppercase font-bold text-muted-foreground block">Pendiente</span>
+                                <span className={`font-mono font-bold text-[11px] ${rem > 0 ? 'text-rose-500' : 'text-muted-foreground'}`}>
+                                  RD$ {rem.toLocaleString('es-DO', { minimumFractionDigits: 0 })}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                              {!isPaid ? (
+                                <Button
+                                  size="sm"
+                                  onClick={() => onOpenPayDebt(debt)}
+                                  className="h-7 px-3 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white gap-1"
+                                >
+                                  <DollarSign className="h-3 w-3" /> Abonar / Pagar
+                                </Button>
+                              ) : (
+                                <span className="text-[11px] text-emerald-500 font-semibold flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3" /> Deuda Saldada
+                                </span>
+                              )}
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                disabled={deletingDebtId === debt.id}
+                                className="h-7 w-7 text-muted-foreground hover:text-rose-500"
+                                onClick={() => handleDeleteDebtClick(debt.id, debt.description)}
+                                title="Eliminar Deuda"
+                              >
+                                {deletingDebtId === debt.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Vista Desktop: Tabla Tradicional (hidden sm:block) */}
+                    <div className="hidden sm:block rounded-2xl border border-border/40 overflow-hidden bg-card">
+                      <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow>
                           <TableHead className="text-xs font-bold">Concepto / Fecha</TableHead>
@@ -1339,8 +1412,49 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-border/40 overflow-hidden bg-card">
-                    <Table>
+                  <>
+                    {/* Vista Móvil: Tarjetas Minimalistas (sm:hidden) */}
+                    <div className="sm:hidden space-y-2">
+                      {supplierExpenses.map((expense) => {
+                        const dateObj = expense.date ? new Date(expense.date) : new Date(expense.created_at);
+                        const dateLabel = isValid(dateObj) ? format(dateObj, 'dd/MM/yyyy', { locale: es }) : '-';
+                        return (
+                          <div key={expense.id} className="p-3 rounded-xl bg-card border border-border/50 shadow-2xs space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="font-bold text-xs text-foreground block truncate">{expense.description}</span>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5 font-mono">
+                                  <span>{dateLabel}</span>
+                                  {expense.invoice_number && <span>• NCF: {expense.invoice_number}</span>}
+                                </div>
+                              </div>
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-muted text-muted-foreground shrink-0">
+                                {expense.category}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between pt-1 border-t border-border/30">
+                              <span className="font-mono font-bold text-xs text-foreground">
+                                RD$ {Number(expense.amount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                              </span>
+                              {expense.image_url ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 px-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 gap-1 rounded-md"
+                                  onClick={() => setSelectedReceiptUrl(expense.image_url!)}
+                                >
+                                  <Eye className="h-3 w-3" /> Ver
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Vista Desktop: Tabla Tradicional (hidden sm:block) */}
+                    <div className="hidden sm:block rounded-2xl border border-border/40 overflow-hidden bg-card">
+                      <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow>
                           <TableHead className="text-xs font-bold">Fecha</TableHead>
@@ -1456,11 +1570,85 @@ export const SupplierDetailsDialog: React.FC<SupplierDetailsDialogProps> = ({
                     <p className="text-xs font-semibold text-muted-foreground">No se encontraron productos con "{productSearch}"</p>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-border/40 overflow-hidden bg-card">
-                    <Table>
-                      <TableHeader className="bg-muted/30">
-                        <TableRow>
-                          <TableHead className="text-xs font-bold">Producto</TableHead>
+                  <>
+                    {/* Vista Móvil: Tarjetas Minimalistas (sm:hidden) */}
+                    <div className="sm:hidden space-y-2">
+                      {filteredSupplierProducts.map((prod) => {
+                        const cost = Number(prod.cost || 0);
+                        const price = Number(prod.price || 0);
+                        const margin = cost > 0 ? (((price - cost) / cost) * 100).toFixed(0) : null;
+                        const isLowStock = prod.stock <= (prod.min_stock || 0);
+                        return (
+                          <div key={prod.id} className="p-3 rounded-xl bg-card border border-border/50 shadow-2xs space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {prod.image_url ? (
+                                  <img
+                                    src={prod.image_url}
+                                    alt={prod.name}
+                                    className="h-9 w-9 rounded-lg object-cover border border-border/50 shrink-0"
+                                  />
+                                ) : (
+                                  <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                    <Package className="h-4 w-4" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <span className="font-bold text-xs text-foreground block truncate">{prod.name}</span>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono">
+                                    <span>{prod.category?.name || 'General'}</span>
+                                    {(prod.barcode || prod.internal_code) && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{prod.barcode || prod.internal_code}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-bold shrink-0 ${
+                                  isLowStock
+                                    ? 'border-red-500/30 text-red-500 bg-red-500/10'
+                                    : 'border-border/60 text-foreground bg-muted/40'
+                                }`}
+                              >
+                                {prod.stock} uds
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between pt-1 border-t border-border/30 text-xs">
+                              <div className="flex items-center gap-2 font-mono">
+                                <span className="text-muted-foreground text-[11px]">Costo: RD$ {cost.toFixed(2)}</span>
+                                <span className="font-bold text-foreground">Venta: RD$ {price.toFixed(2)}</span>
+                              </div>
+                              {margin !== null && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] font-bold border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                                >
+                                  +{margin}%
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Vista Desktop: Tabla Tradicional (hidden sm:block) */}
+                    <div className="hidden sm:block rounded-2xl border border-border/40 overflow-hidden bg-card">
+                      <Table>
+                        <TableHeader className="bg-muted/30">
+                          <TableRow>
+                            <TableHead className="text-xs font-bold">Producto</TableHead>
+                            <TableHead className="text-xs font-bold">Categoría</TableHead>
+                            <TableHead className="text-right text-xs font-bold">Costo</TableHead>
+                            <TableHead className="text-right text-xs font-bold">Precio Venta</TableHead>
+                            <TableHead className="text-center text-xs font-bold">Margen</TableHead>
+                            <TableHead className="text-center text-xs font-bold">Stock</TableHead>
+                          </TableRow>
+                        </TableHeader>
                           <TableHead className="text-xs font-bold">Categoría</TableHead>
                           <TableHead className="text-right text-xs font-bold">Costo</TableHead>
                           <TableHead className="text-right text-xs font-bold">Precio Venta</TableHead>
