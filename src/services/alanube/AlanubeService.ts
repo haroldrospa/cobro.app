@@ -4,10 +4,73 @@ import { mapInternalToAlanubeType } from './mapping';
 import { AlanubeConfig, AlanubeDocument, AlanubeDocumentItem } from './types';
 
 export class AlanubeService {
+  private static configCache = new Map<string, { config: AlanubeConfig; timestamp: number }>();
+  private static inFlightEmissions = new Map<string, Promise<boolean>>();
+
+  private static notifySignatureUpdate(detail: {
+    saleId: string;
+    estado_fiscal: 'ACEPTADO' | 'RECHAZADO' | 'ERROR_CONEXION';
+    encf?: string;
+    codigo_seguridad?: string;
+    fecha_firma?: string;
+    qrcode_url?: string;
+    alanube_id?: string;
+  }) {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('alanube-signature-update', { detail }));
+    }
+  }
+
+  private static parseSignatureDates(rawDate?: string): { isoDate: string; dgiiFormatted: string } {
+    const now = new Date();
+    const formatDgii = (d: Date) => {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    };
+
+    if (rawDate && typeof rawDate === 'string') {
+      // Caso 1: Formato DGII DD-MM-YYYY HH:MM:SS o DD-MM-YYYY
+      const dmyMatch = rawDate.trim().match(/^(\d{2})-(\d{2})-(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?/);
+      if (dmyMatch) {
+        const [, dd, mm, yyyy, hh = '00', min = '00', ss = '00'] = dmyMatch;
+        const parsed = new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}Z`);
+        const isoDate = !isNaN(parsed.getTime()) ? parsed.toISOString() : now.toISOString();
+        return {
+          isoDate,
+          dgiiFormatted: `${dd}-${mm}-${yyyy} ${hh}:${min}:${ss}`
+        };
+      }
+
+      // Caso 2: Formato ISO 8601 (YYYY-MM-DD...)
+      const parsedIso = new Date(rawDate);
+      if (!isNaN(parsedIso.getTime())) {
+        return {
+          isoDate: parsedIso.toISOString(),
+          dgiiFormatted: formatDgii(parsedIso)
+        };
+      }
+    }
+
+    return {
+      isoDate: now.toISOString(),
+      dgiiFormatted: formatDgii(now)
+    };
+  }
+
   /**
-   * Obtiene la configuración de Alanube para una tienda específica
+   * Obtiene la configuración de Alanube para una tienda específica (con caché en memoria de 2 min)
    */
   static async getConfig(storeId: string): Promise<AlanubeConfig | null> {
+    const cached = this.configCache.get(storeId);
+    if (cached && Date.now() - cached.timestamp < 120000) {
+      return cached.config;
+    }
+
     const { data, error } = await supabase
       .from('alanube_config')
       .select('*')
@@ -33,7 +96,7 @@ export class AlanubeService {
     const razonSocial = localRazonSocial || (data.razon_social && data.razon_social !== 'Romar Group' ? data.razon_social : 'Harold Rosado Pacheco');
     const environment = (localEnv as any) || (data.environment === 'SANDBOX' ? 'PRODUCTION' : data.environment);
 
-    return {
+    const resolvedConfig: AlanubeConfig = {
       api_token: data.api_token,
       environment: environment as 'SANDBOX' | 'PRODUCTION',
       base_url: environment === 'PRODUCTION' ? 'https://api.alanube.co' : data.base_url,
@@ -41,15 +104,33 @@ export class AlanubeService {
       razon_social: razonSocial,
       company_id: (data as any).company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z'
     };
+
+    this.configCache.set(storeId, { config: resolvedConfig, timestamp: Date.now() });
+    return resolvedConfig;
   }
 
   /**
-   * Procesa la emisión electrónica de una factura existente
+   * Procesa la emisión electrónica de una factura existente (deduplicando llamadas concurrentes)
    */
   static async emitirFacturaElectronica(saleId: string, silent: boolean = false): Promise<boolean> {
+    const existingPromise = this.inFlightEmissions.get(saleId);
+    if (existingPromise) {
+      return existingPromise;
+    }
+
+    const emissionPromise = this._executeEmision(saleId, silent).finally(() => {
+      this.inFlightEmissions.delete(saleId);
+    });
+
+    this.inFlightEmissions.set(saleId, emissionPromise);
+    return emissionPromise;
+  }
+
+  private static async _executeEmision(saleId: string, silent: boolean = false): Promise<boolean> {
     try {
-      // 1. Obtener la factura, sus items y el cliente
-      const { data: sale, error: saleError } = await supabase
+      // 1. Obtener la factura, sus items y el cliente (con fallback si invoice_types no tiene FK directa)
+      let sale: any = null;
+      const { data: saleWithType, error: saleError } = await supabase
         .from('sales')
         .select(`
           *,
@@ -58,30 +139,49 @@ export class AlanubeService {
           invoice_type:invoice_types(*)
         `)
         .eq('id', saleId)
-        .single();
+        .maybeSingle();
 
-      if (saleError || !sale) {
-        throw new Error('Factura no encontrada');
+      if (saleWithType) {
+        sale = saleWithType;
+      } else {
+        const { data: saleBasic, error: basicErr } = await supabase
+          .from('sales')
+          .select(`
+            *,
+            sale_items (*, product:products(name)),
+            customer:customers(*)
+          `)
+          .eq('id', saleId)
+          .single();
+        if (basicErr || !saleBasic) {
+          throw new Error('Factura no encontrada');
+        }
+        sale = saleBasic;
       }
 
       if (!sale.store_id) {
         throw new Error('Factura no tiene tienda asociada');
       }
 
-      // 2. Obtener la configuración
+      // Si ya fue aceptada previamente y tiene QR, notificar de inmediato sin reenviar
+      if (sale.estado_fiscal === 'ACEPTADO' && sale.qrcode_url) {
+        this.notifySignatureUpdate({
+          saleId,
+          estado_fiscal: 'ACEPTADO',
+          encf: sale.encf || sale.invoice_number,
+          codigo_seguridad: sale.codigo_seguridad,
+          fecha_firma: sale.fecha_firma,
+          qrcode_url: sale.qrcode_url,
+          alanube_id: sale.alanube_id
+        });
+        return true;
+      }
+
+      // 2. Obtener la configuración (desde caché en memoria si está disponible)
       const config = await this.getConfig(sale.store_id);
       if (!config) {
         throw new Error('Configuración de Alanube no encontrada o inactiva');
       }
-
-      // 3. Marcar localmente como PENDIENTE
-      await supabase
-        .from('sales')
-        .update({
-          is_electronic: true,
-          estado_fiscal: 'PENDIENTE'
-        })
-        .eq('id', saleId);
 
       // 4. Construir el payload estricto según OpenAPI 3.0.3 de Alanube DOM v1
       // Nota: invoice_type_id a veces es un string simple o el id de la relacion
@@ -230,6 +330,11 @@ export class AlanubeService {
         const response = await client.submitDocument(document, alanubeType);
 
         if (response.errores && response.errores.length > 0) {
+          this.notifySignatureUpdate({
+            saleId,
+            estado_fiscal: 'RECHAZADO'
+          });
+
           // Caso Error de Validación Fiscal
           await supabase
             .from('sales')
@@ -259,37 +364,57 @@ export class AlanubeService {
         // Caso Exitoso
         const emisorRnc = config.rnc_emisor.replace(/[^0-9]/g, '');
         const receptorRnc = sale.customer?.rnc ? sale.customer.rnc.replace(/[^0-9]/g, '') : '';
-        const rawDate = response.fecha_firma || new Date().toISOString();
-        let formattedDate = rawDate;
-        try {
-          const d = new Date(rawDate);
-          const day = String(d.getDate()).padStart(2, '0');
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const year = d.getFullYear();
-          const hours = String(d.getHours()).padStart(2, '0');
-          const minutes = String(d.getMinutes()).padStart(2, '0');
-          const seconds = String(d.getSeconds()).padStart(2, '0');
-          formattedDate = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
-        } catch (_) {}
+        const { isoDate, dgiiFormatted } = this.parseSignatureDates(response.fecha_firma);
+        const finalEncf = response.encf || normalizedEncf;
+        const finalSecCode = response.codigo_seguridad || '';
 
         // Construct standard DGII verification URL if missing
-        const qrUrl = response.qrcode_url || response.qrCodeUrl || `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${response.encf}&MontoTotal=${sale.total}&CodigoSeguridad=${response.codigo_seguridad}&FechaFirma=${encodeURIComponent(formattedDate)}`;
+        const qrUrl = response.qrcode_url || (response as any).qrCodeUrl || `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${finalEncf}&MontoTotal=${totalAmount}&CodigoSeguridad=${finalSecCode}&FechaFirma=${encodeURIComponent(dgiiFormatted)}`;
 
-        await supabase
+        // Notificar de inmediato a la UI en memoria (0ms de espera para PrintOptionsDialog)
+        this.notifySignatureUpdate({
+          saleId,
+          estado_fiscal: 'ACEPTADO',
+          encf: finalEncf,
+          codigo_seguridad: finalSecCode,
+          fecha_firma: isoDate,
+          qrcode_url: qrUrl,
+          alanube_id: response.alanube_id
+        });
+
+        const { error: updateErr } = await supabase
           .from('sales')
           .update({
+            is_electronic: true,
             estado_fiscal: 'ACEPTADO',
-            encf: response.encf,
-            codigo_seguridad: response.codigo_seguridad,
-            fecha_firma: response.fecha_firma || new Date().toISOString(),
+            encf: finalEncf,
+            codigo_seguridad: finalSecCode || null,
+            fecha_firma: isoDate,
             qrcode_url: qrUrl,
-            alanube_id: response.alanube_id
+            alanube_id: response.alanube_id || null
           })
           .eq('id', saleId);
+
+        if (updateErr) {
+          console.warn('[Alanube] Fallback update on sales due to column/format issue:', updateErr);
+          await supabase
+            .from('sales')
+            .update({
+              estado_fiscal: 'ACEPTADO',
+              qrcode_url: qrUrl,
+              codigo_seguridad: finalSecCode || null
+            })
+            .eq('id', saleId);
+        }
 
         return true;
 
       } catch (error: any) {
+        this.notifySignatureUpdate({
+          saleId,
+          estado_fiscal: 'ERROR_CONEXION'
+        });
+
         // Caso Error de Infraestructura
         await supabase
           .from('sales')

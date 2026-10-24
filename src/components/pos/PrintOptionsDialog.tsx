@@ -115,11 +115,36 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
     fetchLatestSale();
 
+    const handleDirectSignature = (event: any) => {
+      const detail = event?.detail;
+      if (!detail || detail.saleId !== propSaleData.id) return;
+      console.log("⚡ Direct Alanube signature update in memory:", detail.estado_fiscal, !!detail.qrcode_url);
+      setLiveSaleData((prev: any) => ({
+        ...prev,
+        estado_fiscal: detail.estado_fiscal,
+        ...(detail.encf ? { encf: detail.encf } : {}),
+        ...(detail.codigo_seguridad ? { codigo_seguridad: detail.codigo_seguridad } : {}),
+        ...(detail.fecha_firma ? { fecha_firma: detail.fecha_firma } : {}),
+        ...(detail.qrcode_url ? { qrcode_url: detail.qrcode_url } : {}),
+        items: prev?.items || propSaleData.items,
+      }));
+      if ((detail.qrcode_url || detail.estado_fiscal === 'RECHAZADO' || detail.estado_fiscal === 'ERROR_CONEXION') && pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+    window.addEventListener('alanube-signature-update', handleDirectSignature);
+
     // Start a 1.5 second safety polling interval if this is an electronic invoice without a QR code yet
     const invoiceNum = propSaleData.encf || propSaleData.invoice_number || propSaleData.invoiceNumber || '';
     const isElec = invoiceNum.startsWith('E') || propSaleData.is_electronic || !!propSaleData.encf;
     const isAlreadyFinished = !!propSaleData.qrcode_url || propSaleData.estado_fiscal === 'RECHAZADO' || propSaleData.estado_fiscal === 'ERROR_CONEXION';
     if (isElec && !isAlreadyFinished) {
+      import('@/services/alanube/AlanubeService')
+        .then(({ AlanubeService }) => {
+          AlanubeService.emitirFacturaElectronica(propSaleData.id, true);
+        })
+        .catch(err => console.warn("Error starting Alanube emission from dialog:", err));
       console.log("⏱️ e-NCF signature is pending. Starting polling safety loop...");
       let pollCount = 0;
       pollInterval = setInterval(async () => {
@@ -165,6 +190,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       .subscribe();
 
     return () => {
+      window.removeEventListener('alanube-signature-update', handleDirectSignature);
       supabase.removeChannel(channel);
       if (pollInterval) {
         clearInterval(pollInterval);

@@ -97,11 +97,9 @@ export class AlanubeClient {
       clearTimeout(timeoutId);
 
       // Leemos la respuesta
-      const data = await response.json();
+      let data = await response.json();
 
-      if (this.config.environment === 'SANDBOX') {
-        console.log('[ALANUBE SANDBOX] Response Payload:', JSON.stringify(data, null, 2));
-      }
+      console.log('[ALANUBE] Response Status:', response.status, 'Payload:', data);
 
       if (!response.ok) {
         // HTTP 422, 400, 404, etc. (Errores de Validación)
@@ -141,6 +139,36 @@ export class AlanubeClient {
         };
       }
 
+      // Si Alanube encoló o está firmando el documento (status REGISTERED / TO_SEND / WAITING_RESPONSE)
+      // y aún no devuelve documentStampUrl ni securityCode, consultamos rápidamente el estado por ID
+      if (data?.id && !data.documentStampUrl && !data.securityCode && data.legalStatus !== 'REJECTED') {
+        const checkUrl = `${url}/${encodeURIComponent(data.id)}${companyId ? `/idCompany/${encodeURIComponent(companyId)}` : ''}`;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          await new Promise(r => setTimeout(r, 600));
+          try {
+            const checkRes = await fetch(checkUrl, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              console.log(`[ALANUBE] Check attempt ${attempt + 1}:`, checkData);
+              if (checkData) {
+                data = { ...data, ...checkData };
+                if (data.documentStampUrl || data.securityCode || data.legalStatus === 'REJECTED') {
+                  break;
+                }
+              }
+            }
+          } catch (pollErr) {
+            console.warn('[ALANUBE] Error checking document status:', pollErr);
+          }
+        }
+      }
+
       // Verificar si la DGII rechazó el documento síncronamente dentro de un HTTP 200/201
       if (data.legalStatus === 'REJECTED') {
         const govErrors = data.governmentResponse?.value;
@@ -160,12 +188,21 @@ export class AlanubeClient {
         };
       }
 
+      const stampUrl: string | undefined = data.documentStampUrl || data.qrcode_url || data.qrCodeUrl;
+      let extractedSecCode: string | undefined = data.securityCode || data.codigo_seguridad || data.codigoSeguridad;
+      if (!extractedSecCode && stampUrl) {
+        const match = stampUrl.match(/[?&]CodigoSeguridad=([^&]+)/i);
+        if (match && match[1]) {
+          extractedSecCode = decodeURIComponent(match[1]);
+        }
+      }
+
       // Caso Exitoso (200/201) — mapear propiedades oficiales de Alanube DOM v1
       return {
         encf: data.documentNumber || data.encf || document.idDoc?.encf,
-        codigo_seguridad: data.securityCode || data.codigo_seguridad || data.codigoSeguridad,
+        codigo_seguridad: extractedSecCode,
         fecha_firma: data.signatureDate || data.stampDate || data.fecha_firma || data.fechaFirma,
-        qrcode_url: data.documentStampUrl || data.qrcode_url || data.qrCodeUrl,
+        qrcode_url: stampUrl,
         alanube_id: data.id || data.transaccion_id
       };
 
