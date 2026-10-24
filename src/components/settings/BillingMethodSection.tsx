@@ -27,7 +27,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
     base_url: 'https://sandbox.alanube.co',
     rnc_emisor: '',
     razon_social: '',
-    company_id: '01M0TYPKJGJVM53K56D7X9P7Z',
+    company_id: '01M0TYPKJ0JGVM53K56D7X9P7Z',
     certificado_digital: '',
     certificado_password: ''
   });
@@ -35,13 +35,19 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   useEffect(() => {
     if (config) {
       setBillingMode(config.is_active ? 'e-ncf' : 'ncf');
+      let effectiveCompanyId = config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : '') || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+      if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+        effectiveCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+        if (typeof window !== 'undefined') localStorage.setItem('alanube_company_id', '01M0TYPKJ0JGVM53K56D7X9P7Z');
+      }
+
       setFormData({
         environment: config.environment || 'SANDBOX',
         api_token: config.api_token || '',
         base_url: config.base_url || (config.environment === 'PRODUCTION' ? 'https://api.alanube.co' : 'https://sandbox.alanube.co'),
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
-        company_id: config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : '') || '01M0TYPKJGJVM53K56D7X9P7Z',
+        company_id: effectiveCompanyId,
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
       });
@@ -293,12 +299,12 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                   <Input
                     id="company_id"
                     className="pl-9"
-                    placeholder="01M0TYPKJGJVM53K56D7X9P7Z"
+                    placeholder="01M0TYPKJ0JGVM53K56D7X9P7Z"
                     value={formData.company_id}
                     onChange={(e) => setFormData({ ...formData, company_id: e.target.value })}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID) de tu empresa en el portal de Alanube (ej: 01M0TYPKJGJVM53K56D7X9P7Z). Necesario para enrutar los e-CF de cuentas Reseller.</p>
+                <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID de 26 caracteres) de tu empresa en el portal de Alanube (ej: 01M0TYPKJ0JGVM53K56D7X9P7Z). Necesario para enrutar los e-CF de cuentas Reseller.</p>
               </div>
 
               <div className="space-y-2 md:col-span-2">

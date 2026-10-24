@@ -19,7 +19,10 @@ export class AlanubeService {
       return null;
     }
 
-    const localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
+    let localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
+    if (localCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+      localCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    }
 
     return {
       api_token: data.api_token,
@@ -27,7 +30,7 @@ export class AlanubeService {
       base_url: data.base_url,
       rnc_emisor: data.rnc_emisor,
       razon_social: data.razon_social,
-      company_id: (data as any).company_id || localCompanyId || '01M0TYPKJGJVM53K56D7X9P7Z'
+      company_id: (data as any).company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z'
     };
   }
 

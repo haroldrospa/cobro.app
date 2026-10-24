@@ -28,7 +28,11 @@ export class AlanubeClient {
     else if (tipoDocumento === '45') path = 'governmental-invoices';
     else if (tipoDocumento === '46') path = 'export-supports';
 
-    const companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJGJVM53K56D7X9P7Z';
+    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    // Auto-corregir ID de 25 caracteres faltante del 0 central si viene de versión anterior
+    if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    }
 
     if (isBrowser && isWebDeployment) {
       // Usar los proxies seguros configurados en Vite/Vercel para evitar problemas de CORS de manera transparente
@@ -160,7 +164,11 @@ export class AlanubeClient {
     const isWebDeployment = isBrowser && !window.location.protocol.startsWith('file:') && !window.location.protocol.startsWith('app:');
     const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
     
-    const companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJGJVM53K56D7X9P7Z';
+    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    // Auto-corregir ID de 25 caracteres faltante del 0 central si viene de versión anterior
+    if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    }
     const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '') || '40218246656';
     
     const baseApi = isBrowser && isWebDeployment 
@@ -182,60 +190,61 @@ export class AlanubeClient {
       headers['x-company-id'] = companyId;
     }
 
-    // En la API oficial de Alanube República Dominicana (dom/v1), la consulta de compañía activa se realiza en:
-    // GET /dom/v1/check-directory/idCompany/{idCompany}?rnc={rnc}
-    const url = `${baseApi}/check-directory/idCompany/${companyId}?rnc=${cleanRnc}`;
+    // Probar primero el endpoint de estado DGII de la compañía y luego el directorio
+    const urlsToTry = [
+      `${baseApi}/check-dgii-status/idCompany/${companyId}`,
+      `${baseApi}/check-directory/idCompany/${companyId}?rnc=${cleanRnc}`
+    ];
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+    let lastError = '';
+    let lastData: any = null;
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-        signal: controller.signal
-      });
+    for (const url of urlsToTry) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      clearTimeout(timeoutId);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers,
+          signal: controller.signal
+        });
 
-      const resData = await response.json().catch(() => null);
+        clearTimeout(timeoutId);
 
-      if (response.ok) {
-        return {
-          success: true,
-          message: `¡Conexión Exitosa! Empresa (${cleanRnc}) activa y habilitada para facturación electrónica en Alanube / DGII.`,
-          data: resData
-        };
+        const resData = await response.json().catch(() => null);
+        lastData = resData;
+
+        if (response.ok) {
+          return {
+            success: true,
+            message: `¡Conexión Exitosa! Empresa (${cleanRnc}) activa y autorizada para facturación electrónica en Alanube / DGII.`,
+            data: resData
+          };
+        }
+
+        if (response.status === 401) {
+          return {
+            success: false,
+            message: 'Token de autenticación inválido o expirado. Verifica que hayas copiado el token correspondiente a este entorno.',
+            data: resData
+          };
+        }
+
+        lastError = resData?.message || resData?.mensaje || `Error HTTP ${response.status}`;
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          return { success: false, message: 'Tiempo de espera agotado al conectar con Alanube.' };
+        }
+        lastError = err?.message || 'Error de red al conectar con Alanube';
       }
-
-      if (response.status === 401) {
-        return {
-          success: false,
-          message: 'Token de autenticación inválido o expirado. Verifica que hayas copiado el token correspondiente a este entorno.',
-          data: resData
-        };
-      }
-
-      if (response.status === 404) {
-        const envName = this.config.environment === 'PRODUCTION' ? 'Producción' : 'Pruebas (Sandbox)';
-        return {
-          success: false,
-          message: `Empresa no encontrada en ${envName}. Si tu cuenta o certificado en Alanube está en el portal de ${this.config.environment === 'PRODUCTION' ? 'Sandbox' : 'Producción'}, cambia el selector de Entorno.`,
-          data: resData
-        };
-      }
-
-      const errorMsg = resData?.message || resData?.mensaje || `Error HTTP ${response.status}`;
-      return {
-        success: false,
-        message: errorMsg,
-        data: resData
-      };
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return { success: false, message: 'Tiempo de espera agotado al conectar con Alanube.' };
-      }
-      return { success: false, message: err?.message || 'Error de red al conectar con Alanube' };
     }
+
+    const envName = this.config.environment === 'PRODUCTION' ? 'Producción' : 'Pruebas (Sandbox)';
+    return {
+      success: false,
+      message: lastError || `Empresa no encontrada en ${envName}. Si tu cuenta o certificado en Alanube está en el portal de ${this.config.environment === 'PRODUCTION' ? 'Sandbox' : 'Producción'}, cambia el selector de Entorno.`,
+      data: lastData
+    };
   }
 }

@@ -24,11 +24,15 @@ export const useAlanubeConfig = () => {
       return null;
     }
 
-    const localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
+    let localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
+    if (localCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+      localCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+      if (typeof window !== 'undefined') localStorage.setItem('alanube_company_id', localCompanyId);
+    }
 
     return {
       ...(data as any),
-      company_id: (data as any)?.company_id || localCompanyId || '01M0TYPKJGJVM53K56D7X9P7Z'
+      company_id: (data as any)?.company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z'
     } as AlanubeConfig & { is_active: boolean };
   };
 
@@ -45,8 +49,12 @@ export const useAlanubeConfig = () => {
     try {
       // Manejar company_id de manera segura con localStorage por compatibilidad con cualquier esquema
       const { company_id, ...supabasePayload } = newConfig;
+      let effectiveId = company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+      if (effectiveId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+        effectiveId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+      }
       if (company_id !== undefined && typeof window !== 'undefined') {
-        localStorage.setItem('alanube_company_id', company_id || '01M0TYPKJGJVM53K56D7X9P7Z');
+        localStorage.setItem('alanube_company_id', effectiveId);
       }
 
       const existingConfig = await fetchConfig();
