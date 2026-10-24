@@ -111,6 +111,21 @@ export class AlanubeService {
   }
 
   /**
+   * Obtiene el conteo de comprobantes emitidos en Alanube / DGII por tipo (B01..B16)
+   */
+  static async getEmittedCounts(storeId: string): Promise<Record<string, number>> {
+    try {
+      const config = await this.getConfig(storeId);
+      if (!config || !config.api_token) return {};
+      const client = new AlanubeClient(config);
+      return await client.getEmittedDocumentsSummary();
+    } catch (err) {
+      console.warn('[Alanube] Error obteniendo conteo de emitidos:', err);
+      return {};
+    }
+  }
+
+  /**
    * Procesa la emisión electrónica de una factura existente (deduplicando llamadas concurrentes)
    */
   static async emitirFacturaElectronica(saleId: string, silent: boolean = false): Promise<boolean> {

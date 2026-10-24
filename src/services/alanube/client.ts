@@ -310,4 +310,72 @@ export class AlanubeClient {
       data: lastData
     };
   }
+
+  /**
+   * Consulta a Alanube el total de documentos emitidos por tipo de comprobante para sincronizar secuencias DGII
+   */
+  async getEmittedDocumentsSummary(): Promise<Record<string, number>> {
+    const isBrowser = typeof window !== 'undefined';
+    const isWebDeployment = isBrowser && !window.location.protocol.startsWith('file:') && !window.location.protocol.startsWith('app:');
+    const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
+
+    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    }
+
+    const baseApi = isBrowser && isWebDeployment
+      ? `${window.location.origin}${proxyPrefix}/dom/v1`
+      : `${this.config.base_url.trim().replace(/\/+$/, '')}/dom/v1`;
+
+    let token = this.config.api_token.trim();
+    if (token.toLowerCase().startsWith('bearer ')) {
+      token = token.substring(7).trim();
+    }
+
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+
+    const result: Record<string, number> = {
+      B01: 0,
+      B02: 0,
+      B03: 0,
+      B04: 0,
+      B11: 0,
+      B14: 0,
+      B15: 0,
+      B16: 0
+    };
+
+    const urls = [
+      `${baseApi}/companies/${companyId}/emitted-documents`,
+      `${baseApi}/reports/companies/${companyId}/documents/total?legalStatus=REJECTED,ACCEPTED,ACCEPTED_WITH_OBSERVATIONS&dateFrom=2024-01-01`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { method: 'GET', headers });
+        if (!res.ok) continue;
+        const raw = await res.json();
+        const stats = raw?.data || raw;
+        if (stats && typeof stats === 'object') {
+          result.B01 = Math.max(result.B01, Number(stats.fiscalInvoices) || 0);
+          result.B02 = Math.max(result.B02, Number(stats.invoices) || 0);
+          result.B03 = Math.max(result.B03, Number(stats.debitNotes) || 0);
+          result.B04 = Math.max(result.B04, Number(stats.creditNotes) || 0);
+          result.B11 = Math.max(result.B11, Number(stats.purchases) || 0);
+          result.B14 = Math.max(result.B14, Number(stats.specialRegimes) || 0);
+          result.B15 = Math.max(result.B15, Number(stats.gubernamentals) || 0);
+          result.B16 = Math.max(result.B16, Number(stats.exportSupports) || 0);
+          break;
+        }
+      } catch (err) {
+        console.warn('[Alanube] Error consultando emitted-documents:', err);
+      }
+    }
+
+    return result;
+  }
 }

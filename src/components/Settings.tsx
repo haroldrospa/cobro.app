@@ -94,7 +94,42 @@ const Settings = () => {
   // Hooks for invoice sequences
   const { data: invoiceSequences, isLoading: sequencesLoading } = useInvoiceSequences();
   const { data: invoiceTypes } = useInvoiceTypes();
-  const { data: maxInvoiceNumbers } = useMaxInvoiceNumbers();
+  const { data: maxInvoiceNumbers, refetch: refetchMaxNumbers, isFetching: isFetchingMaxNumbers } = useMaxInvoiceNumbers();
+  const [isRepairingSequences, setIsRepairingSequences] = useState(false);
+  const [dgiiAuthorizedLimits, setDgiiAuthorizedLimits] = useState<Record<string, number>>(() => {
+    const defaults: Record<string, number> = {
+      B01: 1000,
+      B02: 10000,
+      B03: 500,
+      B04: 500,
+      B11: 500,
+      B14: 500,
+      B15: 500,
+      B16: 500,
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem('dgii_authorized_limits') || '{}');
+      return { ...defaults, ...saved };
+    } catch {
+      return defaults;
+    }
+  });
+
+  const handleUpdateDgiiLimit = (invoiceTypeId: string, newLimit: number) => {
+    setDgiiAuthorizedLimits(prev => {
+      const next = { ...prev, [invoiceTypeId]: newLimit };
+      try {
+        localStorage.setItem('dgii_authorized_limits', JSON.stringify(next));
+      } catch (e) {
+        console.error('Error guardando dgii_authorized_limits:', e);
+      }
+      return next;
+    });
+    toast({
+      title: "Límite DGII actualizado",
+      description: `Se actualizó la cantidad autorizada a ${newLimit.toLocaleString()} comprobantes.`,
+    });
+  };
   const updateSequenceMutation = useUpdateInvoiceSequence();
 
   // User profile and store hooks
@@ -635,6 +670,66 @@ const Settings = () => {
       });
     }
   };
+
+  const handleRepairAllSequences = async (silent = false) => {
+    if (!invoiceSequences || isRepairingSequences) return;
+    setIsRepairingSequences(true);
+    try {
+      const refreshed = await refetchMaxNumbers();
+      const latestMax = refreshed.data || maxInvoiceNumbers || {};
+      let repairedCount = 0;
+      const repairedDetails: string[] = [];
+
+      for (const seq of invoiceSequences) {
+        const usedInDgii = latestMax[seq.invoice_type_id] || 0;
+        if (usedInDgii > seq.current_number) {
+          await updateSequenceMutation.mutateAsync({
+            id: seq.id,
+            current_number: usedInDgii,
+            invoice_type_id: seq.invoice_type_id,
+          });
+          repairedCount++;
+          const label = localBillingMode === 'e-ncf'
+            ? (seq.invoice_type_id === 'B01' ? 'E31' : seq.invoice_type_id === 'B02' ? 'E32' : seq.invoice_type_id)
+            : seq.invoice_type_id;
+          repairedDetails.push(`${label} → #${usedInDgii + 1}`);
+        }
+      }
+
+      if (repairedCount > 0) {
+        toast({
+          title: "Reparación Automática Completada (DGII)",
+          description: `Se sincronizaron ${repairedCount} secuencia(s) según los comprobantes emitidos: ${repairedDetails.join(', ')}`,
+        });
+      } else if (!silent) {
+        toast({
+          title: "Secuencias al día con la DGII",
+          description: "Todas las secuencias coinciden con el último comprobante emitido en DGII / Alanube.",
+        });
+      }
+    } catch (error: any) {
+      if (!silent) {
+        toast({
+          title: "Error al reparar secuencias",
+          description: error?.message || "No se pudo sincronizar con DGII.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsRepairingSequences(false);
+    }
+  };
+
+  // Auto-reparar secuencias automáticamente si se detecta que el contador local está por debajo de DGII/Alanube
+  useEffect(() => {
+    if (!invoiceSequences || !maxInvoiceNumbers || isRepairingSequences) return;
+    const hasOutOfSync = invoiceSequences.some(
+      seq => (maxInvoiceNumbers[seq.invoice_type_id] || 0) > seq.current_number
+    );
+    if (hasOutOfSync) {
+      handleRepairAllSequences(true);
+    }
+  }, [invoiceSequences, maxInvoiceNumbers]);
 
   const handleSavePrintSettings = async () => {
     await handleSaveSettings('impresion');
@@ -2449,7 +2544,31 @@ const Settings = () => {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center text-lg">
                 <Hash className="mr-2 h-5 w-5 text-primary" />
-                Secuencias de Facturas
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full">
+                    <div>
+                      <div className="flex items-center">
+                        <span>Secuencias de Facturas</span>
+                      </div>
+                      <p className="text-xs font-normal text-muted-foreground mt-1">
+                        Sincronización automática con comprobantes emitidos y secuencias disponibles autorizadas por la DGII.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRepairAllSequences(false)}
+                      disabled={isRepairingSequences || isFetchingMaxNumbers || sequencesLoading}
+                      className="gap-2 border-primary/40 text-primary hover:bg-primary/10 shrink-0"
+                    >
+                      {isRepairingSequences || isFetchingMaxNumbers ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      Reparación Automática DGII
+                    </Button>
+                  </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -2518,6 +2637,9 @@ const Settings = () => {
                               invoiceTypeId={sequence.invoice_type_id}
                               currentNumber={sequence.current_number}
                               onUpdate={handleUpdateSequence}
+                              maxUsedNumber={maxInvoiceNumbers?.[sequence.invoice_type_id] || 0}
+                              authorizedLimit={dgiiAuthorizedLimits[sequence.invoice_type_id] || 1000}
+                              onLimitChange={handleUpdateDgiiLimit}
                               isElectronic={isElectronic}
                             />
                           </div>

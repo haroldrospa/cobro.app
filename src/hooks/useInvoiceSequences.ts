@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { offlineDB, OfflineStore } from '@/lib/offlineDB';
+import { AlanubeService } from '@/services/alanube/AlanubeService';
 
 export interface InvoiceSequence {
   id: string;
@@ -26,7 +28,7 @@ export const useInvoiceSequences = () => {
   });
 };
 
-// Hook para obtener el número máximo usado para cada tipo de factura
+// Hook para obtener el número máximo usado para cada tipo de factura (BD + Alanube/DGII en vivo)
 export const useMaxInvoiceNumbers = () => {
   return useQuery({
     queryKey: ['max-invoice-numbers'],
@@ -42,35 +44,60 @@ export const useMaxInvoiceNumbers = () => {
 
       if (!profile?.store_id) return {};
 
-      const invoiceTypes = ['B01', 'B02', 'B03', 'B04', 'B14', 'B15', 'B16'];
+      const invoiceTypes = ['B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16'];
       const maxNumbers: Record<string, number> = {};
 
-      await Promise.all(invoiceTypes.map(async (typeId) => {
-        const { data, error } = await supabase
-          .from('sales')
-          .select('invoice_number')
-          .eq('store_id', profile.store_id)
-          .eq('invoice_type_id', typeId)
-          .not('invoice_number', 'like', '%OFFLINE%')
-          .order('invoice_number', { ascending: false })
-          .limit(1);
+      const extractSeqNum = (str?: string | null): number => {
+        if (!str) return 0;
+        const m = str.match(/(?:-|E\d{2})(\d{1,10})$/);
+        if (m) return parseInt(m[1], 10) || 0;
+        const tail = str.match(/(\d{1,10})$/);
+        if (tail) {
+          const raw = tail[1];
+          return parseInt(raw.length > 10 ? raw.slice(-10) : raw, 10) || 0;
+        }
+        return 0;
+      };
 
-        if (!error && data && data.length > 0) {
-          const match = (data[0].invoice_number || '').match(/(?:-|E\d{2})(\d{1,10})$/);
-          if (match) {
-            maxNumbers[typeId] = parseInt(match[1], 10);
+      const [, alanubeCounts] = await Promise.all([
+        Promise.all(invoiceTypes.map(async (typeId) => {
+          const { data, error } = await supabase
+            .from('sales')
+            .select('invoice_number, encf')
+            .eq('store_id', profile.store_id)
+            .eq('invoice_type_id', typeId)
+            .not('invoice_number', 'like', '%OFFLINE%')
+            .order('created_at', { ascending: false })
+            .limit(15);
+
+          if (!error && data && data.length > 0) {
+            let highest = 0;
+            for (const row of data) {
+              highest = Math.max(highest, extractSeqNum(row.invoice_number), extractSeqNum((row as any).encf));
+            }
+            if (highest > 0) {
+              maxNumbers[typeId] = highest;
+            }
+          }
+        })),
+        AlanubeService.getEmittedCounts(profile.store_id)
+      ]);
+
+      if (alanubeCounts && typeof alanubeCounts === 'object') {
+        for (const typeId of invoiceTypes) {
+          const remoteCount = Number(alanubeCounts[typeId]) || 0;
+          if (remoteCount > (maxNumbers[typeId] || 0)) {
+            maxNumbers[typeId] = remoteCount;
           }
         }
-      }));
+      }
 
       return maxNumbers;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 10,
   });
 };
-
-import { offlineDB, OfflineStore } from '@/lib/offlineDB';
 
 export const useUpdateInvoiceSequence = () => {
   const queryClient = useQueryClient();
