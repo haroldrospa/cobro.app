@@ -166,6 +166,45 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [showWhatsAppInput, setShowWhatsAppInput] = useState(false);
+  const [allowEmergencyPrint, setAllowEmergencyPrint] = useState(false);
+  const [isRetryingSign, setIsRetryingSign] = useState(false);
+  const [signTimedOut, setSignTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAllowEmergencyPrint(false);
+      setSignTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setSignTimedOut(true);
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [isOpen, propSaleData?.id]);
+
+  const handleRetrySign = async () => {
+    const saleId = saleData?.id || propSaleData?.id;
+    if (!saleId) return;
+    setIsRetryingSign(true);
+    try {
+      const { AlanubeService } = await import('@/services/alanube/AlanubeService');
+      const ok = await AlanubeService.emitirFacturaElectronica(saleId, false);
+      if (ok) {
+        toast({
+          title: "Firma completada",
+          description: "Comprobante e-CF generado con éxito con la DGII.",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error al firmar con Alanube",
+        description: err?.message || "No se pudo completar la firma electrónica.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRetryingSign(false);
+    }
+  };
   const { toast } = useToast();
   const { printSettings, companyInfo: dbCompanyInfo } = usePrintSettings();
   const { settings: storeSettings } = useStoreSettings();
