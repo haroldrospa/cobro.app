@@ -120,6 +120,24 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     }
   }, [isOpen, userStore?.id, refetchOpenOrders]);
 
+  // Safety cleanup: prevent Radix Dialog/AlertDialog from leaving body pointer-events locked
+  React.useEffect(() => {
+    if (!isOpen || !orderToDelete) {
+      const timer = setTimeout(() => {
+        if (document.body.style.pointerEvents === 'none' && !isOpen) {
+          document.body.style.pointerEvents = '';
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, orderToDelete, confirmDeleteAll, confirmMerge, editingNameOrder]);
+
+  React.useEffect(() => {
+    return () => {
+      document.body.style.pointerEvents = '';
+    };
+  }, []);
+
   // Filter out the currently loaded order
   const filteredOrders = orders.filter((order: any) => String(order.id) !== String(currentLoadedOrderId));
 
@@ -161,6 +179,16 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
 
   // ─── Delete mutation ───
   const deleteOrderMutation = useMutation({
+    onMutate: async (orderId: string) => {
+      setOrderToDelete(null);
+      setSelectedOrderId(prev => (prev === orderId ? null : prev));
+      await queryClient.cancelQueries({ queryKey: ['pos-open-orders', userStore?.id] });
+      const previousOrders = queryClient.getQueryData(['pos-open-orders', userStore?.id]);
+      queryClient.setQueryData(['pos-open-orders', userStore?.id], (old: any[] | undefined) =>
+        (old || []).filter((o: any) => o.id !== orderId)
+      );
+      return { previousOrders };
+    },
     mutationFn: async (orderId: string) => {
       const { error: itemsError } = await supabase
         .from('open_order_items')
@@ -176,6 +204,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-open-orders-tables'] });
       toast({ title: "Pedido eliminado", description: "El pedido ha sido eliminado correctamente" });
       setOrderToDelete(null);
       setSelectedOrderId(null);
@@ -803,7 +832,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full h-[88vh] sm:h-[82vh] flex flex-col p-0 overflow-hidden rounded-2xl border-border/60 shadow-2xl">
+        <DialogContent className="relative max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full h-[88vh] sm:h-[82vh] flex flex-col p-0 overflow-hidden rounded-2xl border-border/60 shadow-2xl">
           {/* Top Header & Tab Switcher */}
           <DialogHeader className="px-5 py-3.5 border-b border-border/40 bg-card/60">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1109,6 +1138,217 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
             )}
           </div>
 
+          {/* Inline Overlays (inside DialogContent to prevent Radix multi-modal focus-trap deadlock) */}
+          {orderToDelete && (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+              onClick={() => setOrderToDelete(null)}
+            >
+              <div
+                className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <Trash2 className="h-5 w-5 text-destructive" />
+                    ¿Eliminar pedido?
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Esta acción no se puede deshacer. El pedido será eliminado permanentemente.
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOrderToDelete(null)}
+                    className="rounded-xl"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleteOrderMutation.isPending}
+                    onClick={() => {
+                      const idToRemove = orderToDelete;
+                      if (idToRemove) {
+                        deleteOrderMutation.mutate(idToRemove);
+                      }
+                    }}
+                    className="rounded-xl font-bold"
+                  >
+                    {deleteOrderMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {confirmDeleteAll && (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+              onClick={() => setConfirmDeleteAll(false)}
+            >
+              <div
+                className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-bold text-destructive flex items-center gap-2">
+                    <Trash2 className="h-5 w-5" />
+                    ¿Eliminar todos los pedidos guardados?
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Esta acción no se puede deshacer. Se eliminarán permanentemente <strong>{filteredOrders.length} pedido(s)</strong> guardado(s).
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmDeleteAll(false)}
+                    className="rounded-xl"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleteAllMutation.isPending}
+                    onClick={() => deleteAllMutation.mutate()}
+                    className="rounded-xl font-bold"
+                  >
+                    {deleteAllMutation.isPending ? 'Eliminando...' : 'Sí, eliminar todos'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {confirmMerge && (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+              onClick={() => setConfirmMerge(false)}
+            >
+              <div
+                className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="space-y-2">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <Merge className="h-5 w-5 text-orange-500" />
+                    ¿Unir cuentas?
+                  </h3>
+                  <div className="space-y-2.5 text-xs text-muted-foreground">
+                    <p>Se moverán todos los ítems de las siguientes cuentas a <strong className="text-foreground">{targetOrder?.customer_name}</strong>:</p>
+                    <ul className="space-y-1 max-h-40 overflow-y-auto">
+                      {sourceOrders.map((o: any) => (
+                        <li key={o.id} className="flex justify-between bg-muted/50 rounded px-3 py-1.5">
+                          <span className="font-medium text-foreground">{o.customer_name}</span>
+                          <span>{o.open_order_items?.length || 0} ítems — ${(o.total || 0).toFixed(2)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-destructive font-medium">Las cuentas fusionadas serán eliminadas. Esta acción no se puede deshacer.</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmMerge(false)}
+                    className="rounded-xl"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={mergeOrdersMutation.isPending}
+                    onClick={() => mergeTarget && mergeOrdersMutation.mutate({ targetId: mergeTarget, sourceIds: mergeSources })}
+                    className="rounded-xl font-bold bg-orange-500 text-white hover:bg-orange-600"
+                  >
+                    {mergeOrdersMutation.isPending ? 'Uniendo...' : 'Unir Cuentas'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {editingNameOrder && (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+              onClick={() => setEditingNameOrder(null)}
+            >
+              <div
+                className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <User className="h-5 w-5 text-amber-500" />
+                    Asignar nombre a {editingNameOrder.tableName || editingNameOrder.orderNumber}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Introduce el nombre de la persona o comensal para identificar esta cuenta.
+                  </p>
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    updateCustomerNameMutation.mutate({
+                      orderId: editingNameOrder.orderId,
+                      tableName: editingNameOrder.tableName,
+                      personName: editingNameOrder.personName,
+                    });
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold">Nombre de la persona</Label>
+                    <Input
+                      placeholder="Ej: Harold, Juan, Familia Gómez..."
+                      value={editingNameOrder.personName || ''}
+                      onChange={(e) => setEditingNameOrder(prev => prev ? { ...prev, personName: e.target.value } : null)}
+                      className="h-10 rounded-xl bg-background border-border text-sm"
+                      autoFocus
+                    />
+                    {editingNameOrder.tableName && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Se mostrará como: <strong className="text-foreground">{formatTableCustomerName(editingNameOrder.tableName, editingNameOrder.personName)}</strong>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingNameOrder(null)}
+                      className="rounded-xl"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={updateCustomerNameMutation.isPending}
+                      className="rounded-xl font-bold bg-amber-600 hover:bg-amber-500 text-white"
+                    >
+                      {updateCustomerNameMutation.isPending ? 'Guardando...' : 'Guardar Nombre'}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* Minimalist Bottom Footer */}
           {!mergeMode && (
             <div className="px-5 py-3.5 border-t border-border/40 bg-card/80 flex items-center justify-between gap-3">
@@ -1165,7 +1405,8 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
       </Dialog>
 
       {/* ─── Delete confirmation ─── */}
-      <AlertDialog open={!!orderToDelete} onOpenChange={() => setOrderToDelete(null)}>
+      <AlertDialog open={false} onOpenChange={() => setOrderToDelete(null)}>
+        {orderToDelete && null}
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar pedido?</AlertDialogTitle>
@@ -1186,7 +1427,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
       </AlertDialog>
 
       {/* ─── Merge confirmation ─── */}
-      <AlertDialog open={confirmMerge} onOpenChange={setConfirmMerge}>
+      <AlertDialog open={false} onOpenChange={setConfirmMerge}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -1220,7 +1461,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
         </AlertDialogContent>
       </AlertDialog>
       {/* ─── Delete ALL confirmation ─── */}
-      <AlertDialog open={confirmDeleteAll} onOpenChange={setConfirmDeleteAll}>
+      <AlertDialog open={false} onOpenChange={setConfirmDeleteAll}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive flex items-center gap-2">
@@ -1245,7 +1486,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
       </AlertDialog>
 
       {/* ─── Dialog para editar / poner nombre a la mesa ─── */}
-      <Dialog open={!!editingNameOrder} onOpenChange={(open) => !open && setEditingNameOrder(null)}>
+      <Dialog open={false} onOpenChange={(open) => !open && setEditingNameOrder(null)}>
         <DialogContent className="max-w-[95vw] sm:max-w-md bg-background border-border rounded-2xl shadow-xl">
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
