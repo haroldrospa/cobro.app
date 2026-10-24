@@ -95,6 +95,7 @@ export const generateCleanInvoiceHTML = (
   const pMethod = (invoiceData.paymentMethod?.trim() || 'EFECTIVO').toUpperCase();
   const rawInvoiceNum = invoiceData.invoiceNumber || '000000';
   const isQuotation = Boolean(invoiceData.isQuotation || rawInvoiceNum.startsWith('COT') || invoiceData.invoicePrefix === 'COT');
+  const isInternalInvoice = !isQuotation && (rawInvoiceNum.startsWith('FAC') || invoiceData.invoicePrefix === 'FAC');
   const displayNCF = isQuotation
     ? rawInvoiceNum
     : (invoiceData.isElectronic
@@ -253,7 +254,7 @@ export const generateCleanInvoiceHTML = (
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; text-align: right; width: 100%; max-width: 260px;">
             <div style="display: inline-block; background: ${isQuotation ? '#fef3c7' : (invoiceData.isElectronic ? '#e0f2fe' : '#e2e8f0')}; color: ${isQuotation ? '#92400e' : (invoiceData.isElectronic ? '#0369a1' : '#334155')}; padding: 2px 8px; border-radius: 4px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px;">
-              ${isQuotation ? 'Cotización / Presupuesto' : (invoiceData.isElectronic ? 'e-CF Electrónico' : 'Comprobante Fiscal')}
+              ${isQuotation ? 'Cotización / Presupuesto' : (isInternalInvoice ? 'Factura Interna' : (invoiceData.isElectronic ? 'e-CF Electrónico' : 'Comprobante Fiscal'))}
             </div>
             <div class="tabular-numbers" style="font-size: 17px; font-weight: 800; letter-spacing: 1px; color: #0f172a; margin-bottom: 4px; line-height: 1.2;">
               ${displayNCF}
@@ -520,7 +521,7 @@ export const generateCleanInvoiceHTML = (
     <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 5px 6px; margin-bottom: 6px;">
       <div style="background-color: #ffffff; color: #000000; border: 2px solid #000000; border-radius: 4px; padding: 3px 4px; text-align: center; margin-bottom: 5px;">
         <div style="font-size: ${is58mm ? '10px' : '8.5px'}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000000;">
-          ${isQuotation ? 'COTIZACIÓN / PRESUPUESTO' : (invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'COMPROBANTE DE VENTA (NCF)')}
+          ${isQuotation ? 'COTIZACIÓN / PRESUPUESTO' : (isInternalInvoice ? 'FACTURA INTERNA' : (invoiceData.isElectronic ? 'COMPROBANTE ELECTRÓNICO (e-NCF)' : 'COMPROBANTE DE VENTA (NCF)'))}
         </div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: ${is58mm ? '15px' : '15px'}; font-weight: 900; letter-spacing: 1px; color: #000000; margin-top: 1px; word-break: break-all;">
           ${displayNCF}

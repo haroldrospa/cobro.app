@@ -504,6 +504,15 @@ const POSContent: React.FC = () => {
   const { config: alanubeConfig } = useAlanubeConfig();
   const isElectronicActive = alanubeConfig?.is_active || false;
 
+  // Cuando la facturación electrónica está activa, seleccionar "Factura Interna" (FAC) por defecto
+  useEffect(() => {
+    if (isElectronicActive) {
+      setSelectedInvoiceType('FAC');
+    } else {
+      setSelectedInvoiceType(prev => (prev === 'FAC' || !prev ? 'B02' : prev));
+    }
+  }, [isElectronicActive]);
+
   useEffect(() => {
     if (storeSettings?.payment_terms != null && Number(storeSettings.payment_terms) > 0) {
       setCreditDays(Number(storeSettings.payment_terms));
@@ -536,7 +545,7 @@ const POSContent: React.FC = () => {
   const requiresCustomer = React.useMemo(() => {
     if (!mappedInvoiceTypeCode) return false;
     const code = mappedInvoiceTypeCode;
-    if (['B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    if (['FAC', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
     return true;
   }, [mappedInvoiceTypeCode]);
 
@@ -928,8 +937,8 @@ const POSContent: React.FC = () => {
         id: saleId, // Pasar el ID generado para asegurar idempotencia
         customer_id: selectedCustomer || undefined,
         invoice_type_id: selectedInvoiceType,
-        invoice_type_code: selectedInvoiceTypeData?.code,
-        is_electronic: isElectronicActive,
+        invoice_type_code: selectedInvoiceType === 'FAC' ? 'FAC' : selectedInvoiceTypeData?.code,
+        is_electronic: isElectronicActive && selectedInvoiceType !== 'FAC',
         store_id: store?.id || undefined,
         subtotal: parseFloat(currentTotals.subtotal) + surchargeAmount + (includePreviousDebt ? previousDebtAmount : 0),
         discount_total: parseFloat(currentTotals.discount),
@@ -974,7 +983,8 @@ const POSContent: React.FC = () => {
           total: calculateItemTotal(item)
         })),
         customer: selectedCustomerData,
-        invoiceType: selectedInvoiceTypeData?.code || selectedInvoiceTypeData?.name || 'B01',
+        invoiceType: selectedInvoiceType === 'FAC' ? 'FAC' : (selectedInvoiceTypeData?.code || selectedInvoiceTypeData?.name || 'B01'),
+        is_electronic: isElectronicActive && selectedInvoiceType !== 'FAC',
         totals: {
           ...currentTotals,
           total: (finalTotal || 0).toFixed(2)
@@ -1000,6 +1010,7 @@ const POSContent: React.FC = () => {
       // Reset state for next sale
       setCart([]);
       setSelectedCustomer('');
+      setSelectedInvoiceType(isElectronicActive ? 'FAC' : 'B02');
       setAmountReceived('');
       setPaymentMethod('cash');
       setGlobalDiscount({ value: 0, type: 'percentage' });
@@ -1447,6 +1458,7 @@ const POSContent: React.FC = () => {
           // Reset state
           setCart([]);
           setSelectedCustomer('');
+      setSelectedInvoiceType(isElectronicActive ? 'FAC' : 'B02');
           setAmountReceived('');
           setPaymentMethod('cash');
           setGlobalDiscount({ value: 0, type: 'percentage' });
@@ -1684,6 +1696,7 @@ const POSContent: React.FC = () => {
       // Reset state
       setCart([]);
       setSelectedCustomer('');
+      setSelectedInvoiceType(isElectronicActive ? 'FAC' : 'B02');
       setAmountReceived('');
       setPaymentMethod('cash');
       setGlobalDiscount({ value: 0, type: 'percentage' });
@@ -1866,7 +1879,7 @@ const POSContent: React.FC = () => {
       }
 
       const targetInvoiceType = invoiceTypes.find(t => t.id === data.invoiceTypeId);
-      const code = targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02';
+      const code = data.invoiceTypeId === 'FAC' ? 'FAC' : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02');
 
       let dueDate = null;
       let paymentStatus = 'paid';

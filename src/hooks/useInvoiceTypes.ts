@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { offlineDB, OfflineStore } from '@/lib/offlineDB';
@@ -11,6 +10,8 @@ export interface InvoiceType {
   code: string;
 }
 
+let internalTypeEnsured = false;
+
 export const useInvoiceTypes = () => {
   const isOnline = useOnlineStatus();
 
@@ -20,12 +21,11 @@ export const useInvoiceTypes = () => {
     queryFn: async () => {
       try {
         if (!isOnline) {
-          // Load from IndexedDB when offline
           console.log('📄 Cargando tipos de factura desde IndexedDB (modo offline)');
           const localTypes = await offlineDB.getAll<InvoiceType>(OfflineStore.INVOICE_TYPES);
           if (localTypes.length > 0) return localTypes;
-          // Return minimal fallback data if IndexedDB is empty
           return [
+            { id: 'FAC', code: 'FAC', name: 'Factura Interna' },
             { id: 'B01', code: 'B01', name: 'Crédito Fiscal' },
             { id: 'B02', code: 'B02', name: 'Consumidor Final' },
             { id: 'B04', code: 'B04', name: 'Nota de Débito' },
@@ -41,20 +41,37 @@ export const useInvoiceTypes = () => {
 
         if (error) throw error;
 
-        const types = data as InvoiceType[];
+        const types = (data || []) as InvoiceType[];
 
-        // Save all types to IndexedDB for offline use
+        // Asegurar que exista el tipo 'FAC' (Factura Interna) en la tabla invoice_types para integridad de FK en sales
+        if (!types.some(t => t.id === 'FAC' || t.code === 'FAC') && !internalTypeEnsured) {
+          internalTypeEnsured = true;
+          const internalType: InvoiceType = {
+            id: 'FAC',
+            code: 'FAC',
+            name: 'Factura Interna',
+            description: 'Factura interna del sistema (sin valor fiscal)',
+          };
+          supabase
+            .from('invoice_types')
+            .upsert(internalType as any, { onConflict: 'id' })
+            .then(({ error: upsertErr }) => {
+              if (upsertErr) console.warn('Aviso al registrar tipo FAC en invoice_types:', upsertErr);
+            });
+          types.unshift(internalType);
+        }
+
         for (const type of types) {
           await offlineDB.put(OfflineStore.INVOICE_TYPES, type);
         }
 
         return types;
       } catch (error) {
-        // Fallback to IndexedDB
         console.log('📄 Error en Supabase, cargando tipos de factura desde IndexedDB:', error);
         const localTypes = await offlineDB.getAll<InvoiceType>(OfflineStore.INVOICE_TYPES);
         if (localTypes.length > 0) return localTypes;
         return [
+          { id: 'FAC', code: 'FAC', name: 'Factura Interna' },
           { id: 'B01', code: 'B01', name: 'Crédito Fiscal' },
           { id: 'B02', code: 'B02', name: 'Consumidor Final' },
           { id: 'B04', code: 'B04', name: 'Nota de Débito' },

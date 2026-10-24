@@ -137,7 +137,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
     // Start a 1.5 second safety polling interval if this is an electronic invoice without a QR code yet
     const invoiceNum = propSaleData.encf || propSaleData.invoice_number || propSaleData.invoiceNumber || '';
-    const isElec = invoiceNum.startsWith('E') || propSaleData.is_electronic || !!propSaleData.encf;
+    const isInternal = propSaleData.invoiceType === 'FAC' || invoiceNum.startsWith('FAC');
+    const isElec = !isInternal && (invoiceNum.startsWith('E') || propSaleData.is_electronic || !!propSaleData.encf);
     const isAlreadyFinished = !!propSaleData.qrcode_url || propSaleData.estado_fiscal === 'RECHAZADO' || propSaleData.estado_fiscal === 'ERROR_CONEXION';
     if (isElec && !isAlreadyFinished) {
       import('@/services/alanube/AlanubeService')
@@ -262,7 +263,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     }));
 
     const invNum = rawSaleData.encf || rawSaleData.invoice_number || rawSaleData.invoiceNumber || '000001';
-    const isElec = invNum.startsWith('E') || rawSaleData.is_electronic || !!rawSaleData.encf;
+    const isInternal = rawSaleData.invoiceType === 'FAC' || rawSaleData.invoice_type_id === 'FAC' || invNum.startsWith('FAC');
+    const isElec = !isInternal && (invNum.startsWith('E') || rawSaleData.is_electronic || !!rawSaleData.encf);
     
     let qrUrl = rawSaleData.qrcode_url;
     if (isElec && rawSaleData.estado_fiscal === 'ACEPTADO' && !qrUrl) {
@@ -471,7 +473,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   }, [isOpen, saleData?.id, saleData?.paymentMethod, customerPhoneToSend]);
 
   const isQuote = saleData?.invoiceType === 'COT' || (saleData as any)?.is_quote || invoiceNumber.startsWith('COT');
-  const isElectronic = !isQuote && (invoiceNumber.startsWith('E') || Boolean(saleData?.is_electronic) || !!saleData?.encf);
+  const isInternalInvoice = saleData?.invoiceType === 'FAC' || (saleData as any)?.invoice_type_id === 'FAC' || invoiceNumber.startsWith('FAC');
+  const isElectronic = !isQuote && !isInternalInvoice && (invoiceNumber.startsWith('E') || Boolean(saleData?.is_electronic) || !!saleData?.encf);
   const isBlockedBySign = Boolean(
     isElectronic &&
     !saleData?.qrcode_url &&

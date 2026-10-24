@@ -112,7 +112,8 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   const { data: customerBalance } = useCustomerBalance(selectedCustomer);
 
   const mappedInvoiceTypes = React.useMemo(() => {
-    return invoiceTypes.map(type => {
+    const baseTypes = invoiceTypes.filter(t => t.id !== 'FAC' && t.code !== 'FAC');
+    const mapped = baseTypes.map(type => {
       if (isElectronic) {
         let electronicCode = type.code;
         let electronicName = type.name;
@@ -136,13 +137,14 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
       }
       return type;
     });
+    return isElectronic ? [{ id: 'FAC', code: 'FAC', name: 'Factura Interna' }, ...mapped] : mapped;
   }, [invoiceTypes, isElectronic]);
 
   const selectedType = mappedInvoiceTypes.find(t => t.id === selectedInvoiceType);
   const requiresCustomer = React.useMemo(() => {
     if (!selectedType?.code) return false;
     const code = selectedType.code;
-    if (['B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    if (['FAC', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
     return true;
   }, [selectedType]);
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);

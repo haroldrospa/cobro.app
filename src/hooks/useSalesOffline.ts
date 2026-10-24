@@ -393,7 +393,11 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             console.log('✅ Facturación rápida via RPC completada con éxito:', rpcResult.invoice_number);
 
             // Emisión de Alanube en segundo plano (asíncrona)
-            if (rpcResult.is_electronic_active || rpcResult.is_electronic || saleData.is_electronic || (typeof rpcResult.invoice_number === "string" && rpcResult.invoice_number.startsWith("E"))) {
+            const isInternalInvoice = saleData.invoice_type_id === 'FAC' || saleData.invoice_type_code === 'FAC';
+            if (isInternalInvoice) {
+                rpcResult.is_electronic = false;
+                rpcResult.is_electronic_active = false;
+            } else if (rpcResult.is_electronic_active || rpcResult.is_electronic || saleData.is_electronic || (typeof rpcResult.invoice_number === "string" && rpcResult.invoice_number.startsWith("E"))) {
                 console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
                 import('@/services/alanube/AlanubeService')
                     .then(({ AlanubeService }) => {
@@ -427,7 +431,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         }
     }
 
-    let isElectronicActive = saleData.is_electronic;
+    let isElectronicActive = (saleData.invoice_type_id === 'FAC' || saleData.invoice_type_code === 'FAC') ? false : saleData.is_electronic;
     if (isElectronicActive === undefined) {
         const { data: alanubeConfig } = await supabase
             .from('alanube_config')

@@ -202,6 +202,9 @@ export class AlanubeService {
       // 4. Construir el payload estricto según OpenAPI 3.0.3 de Alanube DOM v1
       // Nota: invoice_type_id a veces es un string simple o el id de la relacion
       const internalCode = sale.invoice_type?.code || sale.invoice_type_id || 'B02';
+      if (internalCode === 'FAC' || (sale.invoice_number || '').startsWith('FAC')) {
+        return true;
+      }
       const alanubeType = mapInternalToAlanubeType(internalCode as string);
 
       // Normalizar e-NCF a 13 caracteres exactos (Ej: E320000000001)
