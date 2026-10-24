@@ -99,9 +99,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             items: data.sale_items || data.items || prev?.items || propSaleData.items,
           }));
 
-          // If the electronic QR code has loaded successfully, we can clear the polling!
-          if (data.qrcode_url) {
-            console.log("🎯 e-NCF signature and QR code loaded successfully! Stopping polling.");
+          // If the electronic QR code has loaded successfully or if finished/rejected, we stop polling!
+          if (data.qrcode_url || data.estado_fiscal === 'RECHAZADO' || data.estado_fiscal === 'ERROR_CONEXION') {
+            console.log("🎯 e-NCF signature status finalized (" + data.estado_fiscal + "). Stopping polling.");
             if (pollInterval) {
               clearInterval(pollInterval);
               pollInterval = null;
@@ -118,9 +118,21 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     // Start a 1.5 second safety polling interval if this is an electronic invoice without a QR code yet
     const invoiceNum = propSaleData.encf || propSaleData.invoice_number || propSaleData.invoiceNumber || '';
     const isElec = invoiceNum.startsWith('E') || propSaleData.is_electronic || !!propSaleData.encf;
-    if (isElec && !propSaleData.qrcode_url) {
+    const isAlreadyFinished = !!propSaleData.qrcode_url || propSaleData.estado_fiscal === 'RECHAZADO' || propSaleData.estado_fiscal === 'ERROR_CONEXION';
+    if (isElec && !isAlreadyFinished) {
       console.log("⏱️ e-NCF signature is pending. Starting polling safety loop...");
-      pollInterval = setInterval(fetchLatestSale, 1500);
+      let pollCount = 0;
+      pollInterval = setInterval(async () => {
+        pollCount++;
+        if (pollCount > 8) { // Máximo 8 reintentos (12s) para no saturar Supabase
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          return;
+        }
+        await fetchLatestSale();
+      }, 1500);
     }
 
     // Subscribe to changes in real-time as a second layer of reactivity
@@ -142,8 +154,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               ...payload.new,
               items: prev?.items || propSaleData.items || propSaleData.sale_items,
             }));
-            if (payload.new.qrcode_url && pollInterval) {
-              console.log("🎯 Real-time event loaded QR code. Stopping polling.");
+            if ((payload.new.qrcode_url || payload.new.estado_fiscal === 'RECHAZADO' || payload.new.estado_fiscal === 'ERROR_CONEXION') && pollInterval) {
+              console.log("🎯 Real-time event finished status. Stopping polling.");
               clearInterval(pollInterval);
               pollInterval = null;
             }

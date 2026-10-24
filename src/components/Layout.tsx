@@ -294,6 +294,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
+
   if (isFullScreenApp) {
     const isPOS = location.pathname === '/pos' || location.pathname === '/' || location.pathname === '/app';
     return (
@@ -314,14 +322,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const showOfflineBanner = !isOnline;
   const showSyncBanner = false; // Desactivado por solicitud del usuario para evitar carteles de sincronización
   const shouldAddMargin = showOfflineBanner || showSyncBanner;
-
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo(0, 0);
-    }
-  }, [location.pathname]);
 
   return (
     <div className="fixed inset-0 h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col bg-background">
