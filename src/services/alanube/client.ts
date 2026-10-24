@@ -161,6 +161,7 @@ export class AlanubeClient {
     const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
     
     const companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJGJVM53K56D7X9P7Z';
+    const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '') || '40218246656';
     
     const baseApi = isBrowser && isWebDeployment 
       ? `${window.location.origin}${proxyPrefix}/dom/v1`
@@ -181,66 +182,60 @@ export class AlanubeClient {
       headers['x-company-id'] = companyId;
     }
 
-    // Probar endpoints válidos de la empresa en Alanube
-    const endpointsToTry = [
-      `${baseApi}/company`,
-      companyId ? `${baseApi}/company/${companyId}` : null
-    ].filter(Boolean) as string[];
+    // En la API oficial de Alanube República Dominicana (dom/v1), la consulta de compañía activa se realiza en:
+    // GET /dom/v1/check-directory/idCompany/{idCompany}?rnc={rnc}
+    const url = `${baseApi}/check-directory/idCompany/${companyId}?rnc=${cleanRnc}`;
 
-    let lastError = 'No se pudo conectar con Alanube';
-    let lastData: any = null;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    for (const url of endpointsToTry) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        signal: controller.signal
+      });
 
-        const response = await fetch(url, {
-          method: 'GET',
-          headers,
-          signal: controller.signal
-        });
+      clearTimeout(timeoutId);
 
-        clearTimeout(timeoutId);
+      const resData = await response.json().catch(() => null);
 
-        const resData = await response.json().catch(() => null);
-        lastData = resData;
-
-        if (response.ok && resData) {
-          const compName = resData.name || resData.companyName || resData.razonSocial || this.config.razon_social || 'Empresa';
-          const rnc = resData.identification || resData.rnc || this.config.rnc_emisor || '';
-          return {
-            success: true,
-            message: `¡Conexión Exitosa! Empresa activa en Alanube: ${compName} ${rnc ? `(RNC: ${rnc})` : ''}`,
-            data: resData
-          };
-        }
-
-        if (response.status === 401) {
-          return {
-            success: false,
-            message: 'Token de autenticación no válido o expirado para este entorno.',
-            data: resData
-          };
-        }
-
-        if (resData?.message || resData?.mensaje) {
-          lastError = resData.message || resData.mensaje;
-        } else {
-          lastError = `Error HTTP ${response.status}`;
-        }
-      } catch (err: any) {
-        if (err.name === 'AbortError') {
-          return { success: false, message: 'Tiempo de espera agotado al conectar con Alanube.' };
-        }
-        lastError = err?.message || 'Error de red al conectar con Alanube';
+      if (response.ok) {
+        return {
+          success: true,
+          message: `¡Conexión Exitosa! Empresa (${cleanRnc}) activa y habilitada para facturación electrónica en Alanube / DGII.`,
+          data: resData
+        };
       }
-    }
 
-    return {
-      success: false,
-      message: lastError,
-      data: lastData
-    };
+      if (response.status === 401) {
+        return {
+          success: false,
+          message: 'Token de autenticación inválido o expirado. Verifica que hayas copiado el token correspondiente a este entorno.',
+          data: resData
+        };
+      }
+
+      if (response.status === 404) {
+        const envName = this.config.environment === 'PRODUCTION' ? 'Producción' : 'Pruebas (Sandbox)';
+        return {
+          success: false,
+          message: `Empresa no encontrada en ${envName}. Si tu cuenta o certificado en Alanube está en el portal de ${this.config.environment === 'PRODUCTION' ? 'Sandbox' : 'Producción'}, cambia el selector de Entorno.`,
+          data: resData
+        };
+      }
+
+      const errorMsg = resData?.message || resData?.mensaje || `Error HTTP ${response.status}`;
+      return {
+        success: false,
+        message: errorMsg,
+        data: resData
+      };
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        return { success: false, message: 'Tiempo de espera agotado al conectar con Alanube.' };
+      }
+      return { success: false, message: err?.message || 'Error de red al conectar con Alanube' };
+    }
   }
 }
