@@ -350,8 +350,8 @@ export class AlanubeClient {
     };
 
     const urls = [
-      `${baseApi}/companies/${companyId}/emitted-documents`,
-      `${baseApi}/reports/companies/${companyId}/documents/total?legalStatus=REJECTED,ACCEPTED,ACCEPTED_WITH_OBSERVATIONS&dateFrom=2024-01-01`
+      `${baseApi}/companies/${companyId}/accepted-documents`,
+      `${baseApi}/reports/companies/${companyId}/documents/total?legalStatus=ACCEPTED,ACCEPTED_WITH_OBSERVATIONS&dateFrom=2024-01-01`
     ];
 
     for (const url of urls) {

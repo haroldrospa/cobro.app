@@ -94,7 +94,7 @@ const Settings = () => {
   // Hooks for invoice sequences
   const { data: invoiceSequences, isLoading: sequencesLoading } = useInvoiceSequences();
   const { data: invoiceTypes } = useInvoiceTypes();
-  const { data: maxInvoiceNumbers, refetch: refetchMaxNumbers, isFetching: isFetchingMaxNumbers } = useMaxInvoiceNumbers();
+  const { data: maxInvoiceNumbers, statsMap: dgiiStatsMap, refetch: refetchMaxNumbers, isFetching: isFetchingMaxNumbers } = useMaxInvoiceNumbers();
   const [isRepairingSequences, setIsRepairingSequences] = useState(false);
   const [dgiiAuthorizedLimits, setDgiiAuthorizedLimits] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {
@@ -720,16 +720,18 @@ const Settings = () => {
     }
   };
 
-  // Auto-reparar secuencias automáticamente si se detecta que el contador local está por debajo de DGII/Alanube
+  // Auto-reparar únicamente si el próximo número configurado choca con un e-NCF ya aceptado en DGII
   useEffect(() => {
-    if (!invoiceSequences || !maxInvoiceNumbers || isRepairingSequences) return;
-    const hasOutOfSync = invoiceSequences.some(
-      seq => (maxInvoiceNumbers[seq.invoice_type_id] || 0) > seq.current_number
-    );
-    if (hasOutOfSync) {
+    if (!invoiceSequences || !dgiiStatsMap || isRepairingSequences) return;
+    const hasCollision = invoiceSequences.some(seq => {
+      const nextNum = seq.current_number + 1;
+      const acceptedList = dgiiStatsMap[seq.invoice_type_id]?.acceptedSeqNumbers || [];
+      return acceptedList.includes(nextNum);
+    });
+    if (hasCollision) {
       handleRepairAllSequences(true);
     }
-  }, [invoiceSequences, maxInvoiceNumbers]);
+  }, [invoiceSequences, dgiiStatsMap]);
 
   const handleSavePrintSettings = async () => {
     await handleSaveSettings('impresion');
@@ -2637,7 +2639,10 @@ const Settings = () => {
                               invoiceTypeId={sequence.invoice_type_id}
                               currentNumber={sequence.current_number}
                               onUpdate={handleUpdateSequence}
-                              maxUsedNumber={maxInvoiceNumbers?.[sequence.invoice_type_id] || 0}
+                              emittedCount={dgiiStatsMap?.[sequence.invoice_type_id]?.emittedCount || 0}
+                              maxUsedNumber={dgiiStatsMap?.[sequence.invoice_type_id]?.lastAcceptedSeq || maxInvoiceNumbers?.[sequence.invoice_type_id] || 0}
+                              lastAcceptedEncf={dgiiStatsMap?.[sequence.invoice_type_id]?.lastAcceptedEncf || null}
+                              acceptedSeqNumbers={dgiiStatsMap?.[sequence.invoice_type_id]?.acceptedSeqNumbers || []}
                               authorizedLimit={dgiiAuthorizedLimits[sequence.invoice_type_id] || 1000}
                               onLimitChange={handleUpdateDgiiLimit}
                               isElectronic={isElectronic}

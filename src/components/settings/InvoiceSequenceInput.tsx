@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle2, AlertTriangle, Wrench, ShieldCheck } from 'lucide-react';
+import { Loader2, CheckCircle2, Wrench, ShieldCheck, FileCheck2 } from 'lucide-react';
 
 interface InvoiceSequenceInputProps {
     id: string;
     invoiceTypeId: string;
-    currentNumber: number; // Último número usado en BD (el próximo a emitir es currentNumber + 1)
-    maxUsedNumber?: number; // Máximo número ya emitido en DGII / Alanube / Ventas
+    currentNumber: number; // Último número en el contador (el próximo a emitir es currentNumber + 1)
+    emittedCount?: number; // Cantidad REAL de comprobantes aceptados en DGII (ej. 2)
+    maxUsedNumber?: number; // Secuencia del último comprobante aceptado en DGII (ej. 6)
+    lastAcceptedEncf?: string | null; // Código del último e-NCF aceptado (ej. E320000000006)
+    acceptedSeqNumbers?: number[]; // Números de secuencia ya aceptados en DGII (ej. [3, 6])
     authorizedLimit?: number; // Límite autorizado por la DGII para este tipo de comprobante
     onLimitChange?: (invoiceTypeId: string, newLimit: number) => void;
     onUpdate: (id: string, newNumber: number, invoiceTypeId: string) => Promise<void>;
@@ -18,13 +21,16 @@ export const InvoiceSequenceInput = ({
     id,
     invoiceTypeId,
     currentNumber,
+    emittedCount = 0,
     maxUsedNumber = 0,
+    lastAcceptedEncf = null,
+    acceptedSeqNumbers = [],
     authorizedLimit = 10000,
     onLimitChange,
     onUpdate,
     isElectronic = false
 }: InvoiceSequenceInputProps) => {
-    // El campo editable muestra la "Secuencia que va (Próxima a emitir)" = currentNumber + 1
+    // El campo editable muestra "Por cuál comprobante voy (Próximo a emitir)" = currentNumber + 1
     const initialNextNumber = currentNumber + 1;
     const [value, setValue] = useState(String(initialNextNumber));
     const [limitValue, setLimitValue] = useState(String(authorizedLimit));
@@ -44,19 +50,21 @@ export const InvoiceSequenceInput = ({
     }, [authorizedLimit]);
 
     const handleSave = async () => {
-        const numericValue = parseInt(value, 10);
+        let numericValue = parseInt(value, 10);
 
         if (isNaN(numericValue) || numericValue < 1) {
             setValue(String(currentNumber + 1));
             return;
         }
 
-        // Si intenta poner un número que ya fue consumido en DGII/Alanube, ajustarlo al próximo libre real
-        const minAllowedNext = Math.max(1, maxUsedNumber + 1);
-        const safeNextNumber = numericValue < minAllowedNext ? minAllowedNext : numericValue;
-        const valueToSave = safeNextNumber - 1;
+        // Si el número elegido ya fue aceptado en DGII (ej. el 3 o el 6), avanzar al siguiente libre
+        const usedSet = new Set(acceptedSeqNumbers);
+        while (usedSet.has(numericValue)) {
+            numericValue++;
+        }
 
-        setValue(String(safeNextNumber));
+        const valueToSave = numericValue - 1;
+        setValue(String(numericValue));
 
         if (valueToSave === currentNumber) return;
 
@@ -71,8 +79,8 @@ export const InvoiceSequenceInput = ({
         }
     };
 
-    const handleQuickRepair = async () => {
-        if (maxUsedNumber <= currentNumber) return;
+    const handleQuickSyncToNextAfterLast = async () => {
+        if (maxUsedNumber <= 0) return;
         setIsUpdating(true);
         try {
             await onUpdate(id, maxUsedNumber, invoiceTypeId);
@@ -117,31 +125,43 @@ export const InvoiceSequenceInput = ({
     const separator = isElectronic ? '' : '-';
     const padding = isElectronic ? 10 : 8;
 
-    const effectiveUsedCount = Math.max(currentNumber, maxUsedNumber);
     const nextSequenceNumber = parseInt(value, 10) || (currentNumber + 1);
     const formattedNextEncf = `${displayTypeId}${separator}${String(nextSequenceNumber).padStart(padding, '0')}`;
-    const formattedLastUsedEncf = effectiveUsedCount > 0
-        ? `${displayTypeId}${separator}${String(effectiveUsedCount).padStart(padding, '0')}`
-        : 'Ninguno';
-    const isOutOfSync = maxUsedNumber > currentNumber;
-    const availableCount = Math.max(0, authorizedLimit - effectiveUsedCount);
+    const formattedLastAccepted = lastAcceptedEncf || (maxUsedNumber > 0
+        ? `${displayTypeId}${separator}${String(maxUsedNumber).padStart(padding, '0')}`
+        : null);
+
+    // ¿El próximo número configurado choca con uno ya emitido en DGII?
+    const isCollidingWithAccepted = acceptedSeqNumbers.includes(nextSequenceNumber);
+    // Restar únicamente los comprobantes REALMENTE emitidos/aceptados en DGII
+    const availableCount = Math.max(0, authorizedLimit - emittedCount);
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 w-full sm:w-auto">
-            {/* Panel de estado DGII: Emitidos, Disponibles y Sincronización */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-end gap-3 w-full lg:w-auto">
+            {/* Indicadores claros: Cuántos tengo emitidos + Último comprobante + Disponibles */}
             <div className="flex flex-wrap items-center gap-2 text-xs">
-                <div className="px-2.5 py-1 rounded-md bg-muted/60 border border-border/60 text-muted-foreground flex items-center gap-1.5">
-                    <span>Emitidos DGII:</span>
-                    <span className="font-semibold text-foreground font-mono">{effectiveUsedCount.toLocaleString()}</span>
-                    {effectiveUsedCount > 0 && (
-                        <span className="text-[11px] opacity-75 font-mono hidden md:inline">
-                            (Últ: {formattedLastUsedEncf})
+                {/* 1. Cuántos tengo emitidos realmente en la DGII */}
+                <div
+                    className="px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/25 text-foreground flex items-center gap-1.5"
+                    title={
+                        acceptedSeqNumbers.length > 0
+                            ? `Secuencias aceptadas en DGII: ${acceptedSeqNumbers.sort((a, b) => a - b).map(n => `#${n}`).join(', ')}`
+                            : 'Aún no hay comprobantes aceptados en DGII para este tipo'
+                    }
+                >
+                    <FileCheck2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Emitidos en DGII:</span>
+                    <span className="font-bold text-primary font-mono text-sm">{emittedCount.toLocaleString()}</span>
+                    {formattedLastAccepted && (
+                        <span className="text-[11px] text-muted-foreground font-mono hidden sm:inline">
+                            • Último: <strong className="text-foreground">{formattedLastAccepted}</strong>
                         </span>
                     )}
                 </div>
 
+                {/* 2. Cuántos quedan disponibles del lote autorizado */}
                 <div
-                    className={`px-2.5 py-1 rounded-md border flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    className={`px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 cursor-pointer transition-colors ${
                         availableCount > 50
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                             : availableCount > 0
@@ -149,12 +169,12 @@ export const InvoiceSequenceInput = ({
                             : 'bg-destructive/10 border-destructive/30 text-destructive'
                     }`}
                     onClick={() => !isEditingLimit && setIsEditingLimit(true)}
-                    title="Haz clic para ajustar la cantidad total de secuencias autorizadas por la DGII"
+                    title="Haz clic para ajustar el total de secuencias autorizadas por la DGII"
                 >
                     <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-                    <span>Disponibles DGII:</span>
+                    <span>Disponibles:</span>
                     <span className="font-bold font-mono">{availableCount.toLocaleString()}</span>
-                    <span className="opacity-70">/</span>
+                    <span className="opacity-70">de</span>
                     {isEditingLimit ? (
                         <input
                             type="number"
@@ -167,37 +187,37 @@ export const InvoiceSequenceInput = ({
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span className="underline decoration-dotted opacity-85 font-mono" title="Editar límite autorizado DGII">
+                        <span className="underline decoration-dotted opacity-90 font-mono" title="Editar límite autorizado DGII">
                             {authorizedLimit.toLocaleString()}
                         </span>
                     )}
                 </div>
 
-                {isOutOfSync ? (
+                {isCollidingWithAccepted ? (
                     <Button
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={handleQuickRepair}
+                        onClick={handleQuickSyncToNextAfterLast}
                         disabled={isUpdating}
                         className="h-7 px-2.5 text-xs bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25 gap-1"
                     >
                         <Wrench className="h-3 w-3" />
-                        Reparar a #{maxUsedNumber + 1}
+                        Saltar a #{maxUsedNumber + 1}
                     </Button>
                 ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         <CheckCircle2 className="h-3 w-3" />
-                        Al día
+                        Lista
                     </span>
                 )}
             </div>
 
-            {/* Control de Próxima Secuencia */}
-            <div className="flex items-center gap-2 justify-end">
+            {/* 3. Por cuál comprobante voy (Próximo a emitir) */}
+            <div className="flex items-center gap-2 justify-end bg-muted/30 px-3 py-1.5 rounded-lg border border-border/60">
                 <div className="flex flex-col items-end">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                        Va por (Próxima)
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                        Voy por el comprobante (Próximo)
                     </span>
                     <div className="flex items-center gap-2 mt-0.5">
                         <div className="relative">
@@ -207,18 +227,16 @@ export const InvoiceSequenceInput = ({
                                 onChange={(e) => setValue(e.target.value)}
                                 onBlur={handleSave}
                                 onKeyDown={handleKeyDown}
-                                className={`w-24 h-8 text-center font-mono font-semibold ${isUpdating ? 'pr-7' : ''} ${
-                                    isOutOfSync ? 'border-amber-500/60 text-amber-400' : ''
-                                }`}
+                                className={`w-20 h-8 text-center font-mono font-bold ${isUpdating ? 'pr-6' : ''}`}
                                 disabled={isUpdating}
                             />
                             {isUpdating && (
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
                                     <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />
                                 </div>
                             )}
                         </div>
-                        <span className="text-sm text-primary font-mono font-semibold whitespace-nowrap">
+                        <span className="text-sm text-primary font-mono font-bold whitespace-nowrap">
                             → {formattedNextEncf}
                         </span>
                     </div>
