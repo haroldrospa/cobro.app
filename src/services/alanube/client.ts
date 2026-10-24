@@ -10,22 +10,26 @@ export class AlanubeClient {
   /**
    * Envía un documento a la API de Alanube para generar el e-NCF.
    * @param document El documento a enviar
+   * @param tipoDocumentoParam Código de tipo de comprobante (31, 32, 34, etc.)
    * @returns La respuesta de Alanube incluyendo el e-NCF o errores
    */
-  async submitDocument(document: AlanubeDocument): Promise<AlanubeResponse> {
+  async submitDocument(document: any, tipoDocumentoParam?: string): Promise<AlanubeResponse> {
     let url = '';
     const isBrowser = typeof window !== 'undefined';
     const isWebDeployment = isBrowser && !window.location.protocol.startsWith('file:') && !window.location.protocol.startsWith('app:');
 
     // Determinar el endpoint exacto según el tipo de comprobante de la DGII
-    const tipoDocumento = document.encabezado?.tipoDocumento || '32';
-    let path = 'invoices'; // Consumo por defecto
+    const encfPrefix = document?.idDoc?.encf?.startsWith('E') ? document.idDoc.encf.substring(1, 3) : undefined;
+    const tipoDocumento = tipoDocumentoParam || document?.encabezado?.tipoDocumento || encfPrefix || '32';
+    let path = 'invoices'; // Consumo (32) por defecto
     if (tipoDocumento === '31') path = 'fiscal-invoices';
     else if (tipoDocumento === '32') path = 'invoices';
+    else if (tipoDocumento === '33') path = 'debit-notes';
     else if (tipoDocumento === '34') path = 'credit-notes';
     else if (tipoDocumento === '41') path = 'purchases';
+    else if (tipoDocumento === '43') path = 'minor-expenses';
     else if (tipoDocumento === '44') path = 'special-regimes';
-    else if (tipoDocumento === '45') path = 'governmental-invoices';
+    else if (tipoDocumento === '45') path = 'gubernamentals';
     else if (tipoDocumento === '46') path = 'export-supports';
 
     let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJ0JGVM53K56D7X9P7Z';
@@ -47,18 +51,17 @@ export class AlanubeClient {
       url = `${baseUrl}/dom/v1/${path}`;
     }
 
-    // Agregar idCompany en query param si está disponible (esencial para cuentas Reseller)
-    if (companyId) {
-      const sep = url.includes('?') ? '&' : '?';
-      url = `${url}${sep}idCompany=${encodeURIComponent(companyId)}`;
+    // Limpiar propiedades no permitidas por el esquema OpenAPI estricto (additionalProperties: false)
+    delete document.encabezado;
+    delete document.idCompany;
+    if (document.sender) {
+      delete document.sender.idCompany;
     }
 
-    // Inyectar idCompany en el payload si está disponible
+    // En Alanube DOM v1, para emitir con una compañía específica (o cuenta Reseller),
+    // se envía el objeto raíz `company: { id: "<ULID>" }`
     if (companyId) {
-      (document as any).idCompany = companyId;
-      if (document.sender) {
-        (document.sender as any).idCompany = companyId;
-      }
+      document.company = { id: companyId };
     }
 
     // Implementar logs estrictos para debugging
@@ -74,21 +77,15 @@ export class AlanubeClient {
     }
 
     try {
-      // Timeout controller para expirar a los 10 segundos
+      // Timeout controller para expirar a los 15 segundos
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const requestHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
       };
-
-      if (companyId) {
-        requestHeaders['idCompany'] = companyId;
-        requestHeaders['id-company'] = companyId;
-        requestHeaders['x-company-id'] = companyId;
-      }
 
       const response = await fetch(url, {
         method: 'POST',
@@ -107,10 +104,20 @@ export class AlanubeClient {
       }
 
       if (!response.ok) {
-        // HTTP 422, 400, etc. (Errores de Validación)
+        // HTTP 422, 400, 404, etc. (Errores de Validación)
+        if (data && Array.isArray(data.errors) && data.errors.length > 0) {
+          return {
+            errores: data.errors.map((e: any) => ({
+              codigo: String(e.code || response.status),
+              mensaje: e.message || e.mensaje || JSON.stringify(e)
+            }))
+          };
+        }
+
         let errorMessage = '';
         if (data) {
-          if (data.mensaje) errorMessage = data.mensaje;
+          if (Array.isArray(data.message)) errorMessage = data.message.join('; ');
+          else if (data.mensaje) errorMessage = data.mensaje;
           else if (data.message) errorMessage = data.message;
           else if (data.error) {
             errorMessage = typeof data.error === 'string' ? data.error : (data.error.message || data.error.mensaje || JSON.stringify(data.error));
@@ -134,12 +141,31 @@ export class AlanubeClient {
         };
       }
 
-      // Caso Exitoso (200/201)
+      // Verificar si la DGII rechazó el documento síncronamente dentro de un HTTP 200/201
+      if (data.legalStatus === 'REJECTED') {
+        const govErrors = data.governmentResponse?.value;
+        if (Array.isArray(govErrors) && govErrors.length > 0) {
+          return {
+            errores: govErrors.map((g: any) => ({
+              codigo: String(g.codigo || 'DGII'),
+              mensaje: g.valor || JSON.stringify(g)
+            }))
+          };
+        }
+        return {
+          errores: [{
+            codigo: 'DGII_REJECTED',
+            mensaje: 'El comprobante fue rechazado por la DGII.'
+          }]
+        };
+      }
+
+      // Caso Exitoso (200/201) — mapear propiedades oficiales de Alanube DOM v1
       return {
-        encf: data.encf,
-        codigo_seguridad: data.codigo_seguridad || data.codigoSeguridad,
-        fecha_firma: data.fecha_firma || data.fechaFirma,
-        qrcode_url: data.qrcode_url || data.qrCodeUrl,
+        encf: data.documentNumber || data.encf || document.idDoc?.encf,
+        codigo_seguridad: data.securityCode || data.codigo_seguridad || data.codigoSeguridad,
+        fecha_firma: data.signatureDate || data.stampDate || data.fecha_firma || data.fechaFirma,
+        qrcode_url: data.documentStampUrl || data.qrcode_url || data.qrCodeUrl,
         alanube_id: data.id || data.transaccion_id
       };
 

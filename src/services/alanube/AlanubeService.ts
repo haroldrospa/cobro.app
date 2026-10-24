@@ -83,209 +83,142 @@ export class AlanubeService {
         })
         .eq('id', saleId);
 
-      // 4. Construir el payload de Alanube
+      // 4. Construir el payload estricto según OpenAPI 3.0.3 de Alanube DOM v1
       // Nota: invoice_type_id a veces es un string simple o el id de la relacion
-      const internalCode = sale.invoice_type?.code || sale.invoice_type_id || 'B01';
+      const internalCode = sale.invoice_type?.code || sale.invoice_type_id || 'B02';
       const alanubeType = mapInternalToAlanubeType(internalCode as string);
 
-      // Desglose de impuestos por tasa (Ej: 18%, 16%, etc.)
-      let itbis18 = 0;
-      let itbis16 = 0;
-      let montoGravadoTotal = 0;
-      let montoExentoTotal = 0;
+      // Normalizar e-NCF a 13 caracteres exactos (Ej: E320000000001)
+      const rawNumMatch = (sale.invoice_number || '').match(/(\d+)$/);
+      const seqDigits = rawNumMatch ? rawNumMatch[1] : '1';
+      const normalizedEncf = `E${alanubeType}${seqDigits.padStart(10, '0').slice(-10)}`;
 
-      // Mapear formas de pago a códigos autorizados por la DGII
+      // Desglose de impuestos por tasa (18%, 16%, Exento)
+      let i1AmountTaxed = 0;
+      let i2AmountTaxed = 0;
+      let exemptAmount = 0;
+
+      // Mapear formas de pago a códigos autorizados por la DGII:
+      // 1: Efectivo, 2: Cheque/Transferencia/Depósito, 3: Tarjeta de Débito/Crédito, 4: Venta a Crédito
       const mapPaymentMethod = (method: string): number => {
         switch (method) {
           case 'cash': return 1;
-          case 'card': return 4;
-          case 'transfer': return 3;
+          case 'transfer': return 2;
+          case 'card': return 3;
+          case 'credit': return 4;
           default: return 1;
         }
       };
 
       const itemDetails: any[] = (sale.sale_items as any[]).map((item, index) => {
-        // Indicador Facturación: 1 (Gravado), 2 (Exento), etc. Simplificado: Si tiene tax es 1, si no 2.
-        const taxAmount = item.tax_amount || 0;
-        const subtotal = item.subtotal || 0;
-        const total = item.total || 0;
-        const quantity = item.quantity || 1;
-        const unitPrice = item.unit_price || 0;
-        const discountAmount = item.discount_amount || 0;
-        
-        const indicador = taxAmount > 0 ? 1 : 2;
-        
-        if (indicador === 1) {
-          montoGravadoTotal += subtotal;
-          const roundedTaxPercentage = Math.round(item.tax_percentage || 0);
-          if (roundedTaxPercentage === 18) {
-            itbis18 += taxAmount;
-          } else if (roundedTaxPercentage === 16) {
-            itbis16 += taxAmount;
-          }
+        const quantity = Number(item.quantity) || 1;
+        const taxAmount = Number(item.tax_amount) || 0;
+        const roundedTaxPercentage = Math.round(Number(item.tax_percentage) || 0);
+
+        // Monto neto de la línea sin ITBIS (taxAmountIndicator = 0)
+        const lineTotalWithTax = Number(item.total) || 0;
+        const netLineAmount = Math.max(0, lineTotalWithTax - taxAmount);
+        const unitPriceNet = Number((netLineAmount / quantity).toFixed(4));
+        const itemAmount = Number((unitPriceNet * quantity).toFixed(2));
+
+        // Indicador de facturación DGII: 1 = ITBIS 18%, 2 = ITBIS 16%, 4 = Exento (E)
+        let billingIndicator = 4;
+        if (taxAmount > 0 && roundedTaxPercentage > 0) {
+          billingIndicator = roundedTaxPercentage === 16 ? 2 : 1;
+        }
+
+        if (billingIndicator === 1) {
+          i1AmountTaxed = Number((i1AmountTaxed + itemAmount).toFixed(2));
+        } else if (billingIndicator === 2) {
+          i2AmountTaxed = Number((i2AmountTaxed + itemAmount).toFixed(2));
         } else {
-          montoExentoTotal += subtotal;
+          exemptAmount = Number((exemptAmount + itemAmount).toFixed(2));
         }
 
         return {
-          // Standard Alanube DR v1 properties (DGII compliance)
           lineNumber: index + 1,
-          itemName: item.product?.name || 'Producto General',
-          goodServiceIndicator: 1, // 1 = Bien, 2 = Servicio (por defecto Bienes en POS)
-          quantityItem: quantity,
-          unitPriceItem: unitPrice,
-          itemAmount: total,
-          billingIndicator: indicador,
-          
-          // Auxiliary/Spanish property aliases for absolute safety
-          lineItemNumber: index + 1,
-          indicadorFacturacion: indicador,
-          nombreItem: item.product?.name || 'Producto General',
-          cantidad: quantity,
-          precioUnitario: unitPrice,
-          descuentoMonto: discountAmount,
-          montoItem: total,
-          description: item.product?.name || 'Producto General',
-          name: item.product?.name || 'Producto General',
-          quantity: quantity,
-          unitPrice: unitPrice,
-          price: unitPrice,
-          discountAmountItem: discountAmount,
-          amount: total,
-          total: total,
-          taxAmount: taxAmount,
-          itbisItem: taxAmount
+          billingIndicator,
+          itemName: (item.product?.name || 'Producto General').slice(0, 80),
+          goodServiceIndicator: 1, // 1 = Bien, 2 = Servicio
+          quantityItem: Number(quantity.toFixed(2)),
+          unitPriceItem: unitPriceNet,
+          itemAmount
         };
       });
 
-      const document: any = {
-        // 1. Root level compliance fields (Alanube DR v1 & DGII compliance)
-        idDoc: {
-          encf: sale.invoice_number || `E320000000001`,
-          incomeType: 1,
-          paymentType: sale.payment_method === 'credit' ? 2 : 1,
-          paymentDeadline: sale.payment_method === 'credit' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined,
-          sequenceDueDate: '2028-12-31',
-          fechaVencimientoSecuencia: '2028-12-31',
-          paymentFormsTable: [
-            {
-              paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
-              paymentAmount: sale.total
-            }
-          ]
-        },
-        sender: {
-          rnc: config.rnc_emisor.replace(/[^0-9]/g, ''),
-          name: config.razon_social,
-          companyName: config.razon_social,
-          stampDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-          address: 'Santo Domingo',
-          province: '010000',
-          municipality: '010100'
-        },
-        buyer: sale.customer?.rnc ? {
-          rnc: sale.customer.rnc.replace(/[^0-9]/g, ''),
-          name: sale.customer.name || 'Cliente General',
-          companyName: sale.customer.name || 'Cliente General'
-        } : undefined,
-        totals: {
-          totalAmount: sale.total,
-          itbisAmount: sale.tax_total,
-          taxAmount: sale.tax_total,
-          netAmount: montoGravadoTotal,
-          exemptAmount: montoExentoTotal,
-          
-          // Auxiliary/Spanish property aliases inside totals for safety
-          montoTotal: sale.total,
-          total: sale.total,
-          montoGravadoTotal: montoGravadoTotal,
-          montoExentoTotal: montoExentoTotal,
-          itbisTotal: sale.tax_total,
-          ...(itbis18 > 0 && { itbis18 }),
-          ...(itbis16 > 0 && { itbis16 })
-        },
-        itemDetails: itemDetails,
+      const totalTaxedAmount = Number((i1AmountTaxed + i2AmountTaxed).toFixed(2));
+      const itbis1Total = Number((i1AmountTaxed * 0.18).toFixed(2));
+      const itbis2Total = Number((i2AmountTaxed * 0.16).toFixed(2));
+      const itbisTotal = Number((itbis1Total + itbis2Total).toFixed(2));
+      const totalAmount = Number((totalTaxedAmount + exemptAmount + itbisTotal).toFixed(2));
 
-        // 2. Backward compatibility fields (in case older/alternative parser runs)
-        encabezado: {
-          rncEmisor: config.rnc_emisor.replace(/[^0-9]/g, ''),
-          razonSocialEmisor: config.razon_social,
-          tipoDocumento: alanubeType,
-          indicadorMontoGravado: montoGravadoTotal > 0 ? 1 : 0, // 1 si hay ITBIS
-          fechaEmision: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-          fechaVencimientoSecuencia: '2028-12-31'
-        },
-        header: {
-          rncEmisor: config.rnc_emisor.replace(/[^0-9]/g, ''),
-          razonSocialEmisor: config.razon_social,
-          tipoDocumento: alanubeType,
-          indicadorMontoGravado: montoGravadoTotal > 0 ? 1 : 0,
-          fechaEmision: new Date().toISOString().split('T')[0],
-          fechaVencimientoSecuencia: '2028-12-31'
-        },
-        totales: {
-          montoTotal: sale.total,
-          montoGravadoTotal: montoGravadoTotal,
-          montoExentoTotal: montoExentoTotal,
-          itbisTotal: sale.tax_total,
-          ...(itbis18 > 0 && { itbis18 }),
-          ...(itbis16 > 0 && { itbis16 })
-        },
-        totals_compat: {
-          montoTotal: sale.total,
-          total: sale.total,
-          montoGravadoTotal: montoGravadoTotal,
-          netAmount: montoGravadoTotal,
-          montoExentoTotal: montoExentoTotal,
-          itbisTotal: sale.tax_total,
-          taxAmount: sale.tax_total,
-          ...(itbis18 > 0 && { itbis18 }),
-          ...(itbis16 > 0 && { itbis16 })
-        },
-        detalles: itemDetails,
+      const totals: Record<string, any> = {
+        totalAmount
+      };
+      if (totalTaxedAmount > 0) {
+        totals.totalTaxedAmount = totalTaxedAmount;
+        totals.itbisTotal = itbisTotal;
+      }
+      if (i1AmountTaxed > 0) {
+        totals.i1AmountTaxed = i1AmountTaxed;
+        totals.itbisS1 = 18;
+        totals.itbis1Total = itbis1Total;
+      }
+      if (i2AmountTaxed > 0) {
+        totals.i2AmountTaxed = i2AmountTaxed;
+        totals.itbisS2 = 16;
+        totals.itbis2Total = itbis2Total;
+      }
+      if (exemptAmount > 0) {
+        totals.exemptAmount = exemptAmount;
+      }
+
+      const effectivePaymentMethod = sale.payment_method === 'split'
+        ? (sale.split_method || 'cash')
+        : (sale.payment_method || 'cash');
+
+      const idDoc: Record<string, any> = {
+        encf: normalizedEncf,
+        incomeType: 1,
+        paymentType: sale.payment_method === 'credit' ? 2 : 1,
+        ...(totalTaxedAmount > 0 ? { taxAmountIndicator: 0 } : {}),
+        ...(alanubeType !== '32' ? { sequenceDueDate: '2028-12-31' } : {}),
+        ...(sale.payment_method === 'credit' ? {
+          paymentDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        } : {}),
         paymentFormsTable: [
           {
-            paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
-            paymentAmount: sale.total
+            paymentMethod: mapPaymentMethod(effectivePaymentMethod),
+            paymentAmount: totalAmount
           }
-        ],
-        payment: {
-          paymentType: sale.payment_method === 'credit' ? 2 : 1,
-          paymentFormsTable: [
-            {
-              paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
-              paymentAmount: sale.total
-            }
-          ]
+        ]
+      };
+
+      const document: any = {
+        company: {
+          id: config.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z'
         },
-        payments: {
-          paymentType: sale.payment_method === 'credit' ? 2 : 1,
-          paymentFormsTable: [
-            {
-              paymentMethod: mapPaymentMethod(sale.payment_method === 'split' ? (sale.split_method || 'cash') : (sale.payment_method || 'cash')),
-              paymentAmount: sale.total
-            }
-          ]
-        }
+        idDoc,
+        sender: {
+          rnc: config.rnc_emisor.replace(/[^0-9]/g, ''),
+          companyName: config.razon_social,
+          address: 'Santo Domingo',
+          province: '010000',
+          municipality: '010100',
+          stampDate: new Date().toISOString().split('T')[0] // YYYY-MM-DD
+        },
+        totals,
+        itemDetails
       };
 
       // Manejo de RNC de Comprador
       if (sale.customer?.rnc) {
         const cleanRNC = sale.customer.rnc.replace(/[^0-9]/g, '');
-        document.encabezado.rncComprador = cleanRNC;
-        if (document.header) document.header.rncComprador = cleanRNC;
-        document.receiver = {
-          rnc: cleanRNC,
-          name: sale.customer.name || 'Cliente General',
-          companyName: sale.customer.name || 'Cliente General'
-        };
-        document.buyer = {
-          rnc: cleanRNC,
-          name: sale.customer.name || 'Cliente General',
-          companyName: sale.customer.name || 'Cliente General'
-        };
-        if (document.idDoc) {
-          document.idDoc.rncComprador = cleanRNC;
+        if (cleanRNC) {
+          document.buyer = {
+            rnc: cleanRNC,
+            companyName: (sale.customer.name || 'Cliente General').slice(0, 150)
+          };
         }
       } else if (alanubeType === '31') {
         throw new Error('El RNC del comprador es obligatorio para e-Crédito Fiscal');
@@ -294,7 +227,7 @@ export class AlanubeService {
       // 5. Enviar a Alanube
       const client = new AlanubeClient(config);
       try {
-        const response = await client.submitDocument(document);
+        const response = await client.submitDocument(document, alanubeType);
 
         if (response.errores && response.errores.length > 0) {
           // Caso Error de Validación Fiscal
