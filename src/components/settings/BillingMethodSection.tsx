@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Save, Server, Link, Key, Hash, FileText, Printer } from 'lucide-react';
+import { Globe, Save, Server, Link, Key, Hash, FileText, Printer, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { AlanubeClient } from '@/services/alanube/client';
 
 export default function BillingMethodSection({ onModeChange }: { onModeChange?: (mode: 'ncf' | 'e-ncf') => void }) {
   const { config, isLoading, isUpdating, updateConfig } = useAlanubeConfig();
@@ -17,12 +18,16 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   const { settings: storeSettings } = useStoreSettings();
 
   const [billingMode, setBillingMode] = useState<'ncf' | 'e-ncf'>('ncf');
+  const [isTesting, setIsTesting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{ success: boolean; message: string } | null>(null);
+
   const [formData, setFormData] = useState({
     environment: 'SANDBOX' as 'SANDBOX' | 'PRODUCTION',
     api_token: '',
     base_url: 'https://sandbox.alanube.co',
     rnc_emisor: '',
     razon_social: '',
+    company_id: '01M0TYPKJGJVM53K56D7X9P7Z',
     certificado_digital: '',
     certificado_password: ''
   });
@@ -36,6 +41,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         base_url: config.base_url || (config.environment === 'PRODUCTION' ? 'https://api.alanube.co' : 'https://sandbox.alanube.co'),
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
+        company_id: config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : '') || '01M0TYPKJGJVM53K56D7X9P7Z',
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
       });
@@ -47,6 +53,56 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
       onModeChange(billingMode);
     }
   }, [billingMode, onModeChange]);
+
+  const handleTestConnection = async () => {
+    if (!formData.api_token) {
+      toast({
+        title: 'Falta Token',
+        description: 'Ingresa tu Token de Alanube antes de probar la conexión.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    setConnectionStatus(null);
+
+    try {
+      const client = new AlanubeClient({
+        api_token: formData.api_token,
+        environment: formData.environment,
+        base_url: formData.base_url,
+        rnc_emisor: formData.rnc_emisor,
+        razon_social: formData.razon_social,
+        company_id: formData.company_id
+      });
+
+      const result = await client.testConnection();
+      setConnectionStatus(result);
+
+      if (result.success) {
+        toast({
+          title: 'Conexión Exitosa',
+          description: result.message
+        });
+      } else {
+        toast({
+          title: 'Respuesta de Alanube',
+          description: result.message,
+          variant: 'destructive'
+        });
+      }
+    } catch (err: any) {
+      setConnectionStatus({ success: false, message: err?.message || 'Error al conectar' });
+      toast({
+        title: 'Error de Conexión',
+        description: err?.message || 'No se pudo conectar con Alanube.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -207,11 +263,26 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                   <Input
                     id="razon_social"
                     className="pl-9"
-                    placeholder="Mi Empresa SRL"
+                    placeholder="Mi Empresa SRL o Harold Rosado Pacheco"
                     value={formData.razon_social}
                     onChange={(e) => setFormData({ ...formData, razon_social: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="company_id">ID de Compañía en Alanube (Portal Reseller)</Label>
+                <div className="relative">
+                  <Server className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="company_id"
+                    className="pl-9"
+                    placeholder="01M0TYPKJGJVM53K56D7X9P7Z"
+                    value={formData.company_id}
+                    onChange={(e) => setFormData({ ...formData, company_id: e.target.value })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID) de tu empresa en el portal de Alanube (ej: 01M0TYPKJGJVM53K56D7X9P7Z). Necesario para enrutar los e-CF de cuentas Reseller.</p>
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -244,6 +315,17 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                   />
                 </div>
               </div>
+
+              {connectionStatus && (
+                <div className={`md:col-span-2 p-3 rounded-lg border flex items-center gap-2 text-sm ${connectionStatus.success ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
+                  {connectionStatus.success ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                  )}
+                  <span>{connectionStatus.message}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -253,6 +335,19 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
             <Save className="mr-2 h-4 w-4" />
             {isUpdating ? 'Guardando...' : 'Guardar Método de Facturación'}
           </Button>
+
+          {billingMode === 'e-ncf' && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleTestConnection} 
+              disabled={isTesting || !formData.api_token}
+              className="w-full sm:w-auto"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isTesting ? 'animate-spin' : ''}`} />
+              {isTesting ? 'Verificando con Alanube...' : 'Probar Conexión con Alanube'}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

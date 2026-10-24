@@ -4,6 +4,7 @@ export interface AlanubeConfig {
   base_url: string;
   rnc_emisor: string;
   razon_social: string;
+  company_id?: string | null;
   certificado_digital?: string | null;
   certificado_password?: string | null;
 }

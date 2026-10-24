@@ -19,12 +19,15 @@ export class AlanubeService {
       return null;
     }
 
+    const localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
+
     return {
       api_token: data.api_token,
       environment: data.environment as 'SANDBOX' | 'PRODUCTION',
       base_url: data.base_url,
       rnc_emisor: data.rnc_emisor,
-      razon_social: data.razon_social
+      razon_social: data.razon_social,
+      company_id: (data as any).company_id || localCompanyId || '01M0TYPKJGJVM53K56D7X9P7Z'
     };
   }
 

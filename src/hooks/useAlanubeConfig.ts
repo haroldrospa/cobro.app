@@ -24,7 +24,12 @@ export const useAlanubeConfig = () => {
       return null;
     }
 
-    return data as AlanubeConfig & { is_active: boolean };
+    const localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
+
+    return {
+      ...(data as any),
+      company_id: (data as any)?.company_id || localCompanyId || '01M0TYPKJGJVM53K56D7X9P7Z'
+    } as AlanubeConfig & { is_active: boolean };
   };
 
   const { data: config, isLoading, refetch } = useQuery({
@@ -38,12 +43,18 @@ export const useAlanubeConfig = () => {
     setIsUpdating(true);
 
     try {
+      // Manejar company_id de manera segura con localStorage por compatibilidad con cualquier esquema
+      const { company_id, ...supabasePayload } = newConfig;
+      if (company_id !== undefined && typeof window !== 'undefined') {
+        localStorage.setItem('alanube_company_id', company_id || '01M0TYPKJGJVM53K56D7X9P7Z');
+      }
+
       const existingConfig = await fetchConfig();
       if (existingConfig) {
         // Update
         const { error } = await supabase
           .from('alanube_config')
-          .update(newConfig)
+          .update(supabasePayload)
           .eq('store_id', storeId);
         
         if (error) throw error;
@@ -53,14 +64,14 @@ export const useAlanubeConfig = () => {
           .from('alanube_config')
           .insert({
             store_id: storeId,
-            api_token: newConfig.api_token || '',
-            environment: newConfig.environment || 'SANDBOX',
-            base_url: newConfig.base_url || 'https://api.alanube.co',
-            rnc_emisor: newConfig.rnc_emisor || '',
-            razon_social: newConfig.razon_social || '',
-            certificado_digital: newConfig.certificado_digital || null,
-            certificado_password: newConfig.certificado_password || null,
-            is_active: newConfig.is_active !== undefined ? newConfig.is_active : true
+            api_token: supabasePayload.api_token || '',
+            environment: supabasePayload.environment || 'SANDBOX',
+            base_url: supabasePayload.base_url || 'https://api.alanube.co',
+            rnc_emisor: supabasePayload.rnc_emisor || '',
+            razon_social: supabasePayload.razon_social || '',
+            certificado_digital: supabasePayload.certificado_digital || null,
+            certificado_password: supabasePayload.certificado_password || null,
+            is_active: supabasePayload.is_active !== undefined ? supabasePayload.is_active : true
           });
         
         if (error) throw error;
