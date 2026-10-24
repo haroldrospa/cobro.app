@@ -81,6 +81,22 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
       setConnectionStatus(result);
 
       if (result.success) {
+        if (result.data) {
+          const updateFields: any = {};
+          if (result.data.name && result.data.name !== formData.razon_social) {
+            updateFields.razon_social = result.data.name;
+          }
+          if (result.data.identification && result.data.identification !== formData.rnc_emisor) {
+            updateFields.rnc_emisor = result.data.identification;
+          }
+          if (result.data.id && result.data.id !== formData.company_id) {
+            updateFields.company_id = result.data.id;
+          }
+          if (Object.keys(updateFields).length > 0) {
+            setFormData(prev => ({ ...prev, ...updateFields }));
+          }
+        }
+
         toast({
           title: 'Conexión Exitosa',
           description: result.message

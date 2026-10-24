@@ -161,45 +161,86 @@ export class AlanubeClient {
     const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
     
     const companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJGJVM53K56D7X9P7Z';
-    const path = `check-directory/idCompany/${companyId}`;
     
-    let url = isBrowser && isWebDeployment 
-      ? `${window.location.origin}${proxyPrefix}/dom/v1/${path}`
-      : `${this.config.base_url.trim().replace(/\/+$/, '')}/dom/v1/${path}`;
+    const baseApi = isBrowser && isWebDeployment 
+      ? `${window.location.origin}${proxyPrefix}/dom/v1`
+      : `${this.config.base_url.trim().replace(/\/+$/, '')}/dom/v1`;
 
     let token = this.config.api_token.trim();
     if (token.toLowerCase().startsWith('bearer ')) {
       token = token.substring(7).trim();
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          ...(companyId ? { 'idCompany': companyId, 'id-company': companyId } : {})
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      const resData = await response.json();
-      if (response.ok) {
-        return { success: true, message: 'Empresa verificada y activa en Alanube', data: resData };
-      } else {
-        const errorMsg = resData?.message || resData?.mensaje || `Error HTTP ${response.status}`;
-        return { success: false, message: errorMsg, data: resData };
-      }
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return { success: false, message: 'Tiempo de espera agotado al conectar con Alanube.' };
-      }
-      return { success: false, message: err?.message || 'Error de conexión con Alanube' };
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+    if (companyId) {
+      headers['idCompany'] = companyId;
+      headers['id-company'] = companyId;
+      headers['x-company-id'] = companyId;
     }
+
+    // Probar endpoints válidos de la empresa en Alanube
+    const endpointsToTry = [
+      `${baseApi}/company`,
+      companyId ? `${baseApi}/company/${companyId}` : null
+    ].filter(Boolean) as string[];
+
+    let lastError = 'No se pudo conectar con Alanube';
+    let lastData: any = null;
+
+    for (const url of endpointsToTry) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers,
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        const resData = await response.json().catch(() => null);
+        lastData = resData;
+
+        if (response.ok && resData) {
+          const compName = resData.name || resData.companyName || resData.razonSocial || this.config.razon_social || 'Empresa';
+          const rnc = resData.identification || resData.rnc || this.config.rnc_emisor || '';
+          return {
+            success: true,
+            message: `¡Conexión Exitosa! Empresa activa en Alanube: ${compName} ${rnc ? `(RNC: ${rnc})` : ''}`,
+            data: resData
+          };
+        }
+
+        if (response.status === 401) {
+          return {
+            success: false,
+            message: 'Token de autenticación no válido o expirado para este entorno.',
+            data: resData
+          };
+        }
+
+        if (resData?.message || resData?.mensaje) {
+          lastError = resData.message || resData.mensaje;
+        } else {
+          lastError = `Error HTTP ${response.status}`;
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          return { success: false, message: 'Tiempo de espera agotado al conectar con Alanube.' };
+        }
+        lastError = err?.message || 'Error de red al conectar con Alanube';
+      }
+    }
+
+    return {
+      success: false,
+      message: lastError,
+      data: lastData
+    };
   }
 }
