@@ -426,7 +426,14 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   }, [isOpen, saleData?.id, saleData?.paymentMethod, customerPhoneToSend]);
 
   const isQuote = saleData?.invoiceType === 'COT' || (saleData as any)?.is_quote || invoiceNumber.startsWith('COT');
-  const isElectronic = !isQuote && (invoiceNumber.startsWith('E') || saleData.is_electronic || !!saleData.encf);
+  const isElectronic = !isQuote && (invoiceNumber.startsWith('E') || Boolean(saleData?.is_electronic) || !!saleData?.encf);
+  const isBlockedBySign = Boolean(
+    isElectronic &&
+    !saleData?.qrcode_url &&
+    !allowEmergencyPrint &&
+    saleData?.estado_fiscal !== 'RECHAZADO' &&
+    saleData?.estado_fiscal !== 'ERROR_CONEXION'
+  );
   const displayInvoiceType = isQuote
     ? 'COT'
     : (isElectronic 
@@ -1586,7 +1593,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                     )}
                   </div>
                   <span className="ml-2 font-semibold text-sm">
-                    {isElectronic && !saleData.qrcode_url
+                    {isBlockedBySign
                       ? 'Firmando con DGII...'
                       : printStatus === 'printing'
                         ? 'Imprimiendo...'
@@ -1630,7 +1637,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                   } : () => setShowEmailInput(!showEmailInput)}
                   className="w-full justify-start h-auto py-2 px-3 hover:bg-transparent"
                   variant="ghost"
-                  disabled={isElectronic && !saleData.qrcode_url}
+                  disabled={isBlockedBySign}
                 >
                   <div className="p-1.5 rounded-md bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors shrink-0">
                     <Mail className="h-4 w-4 text-purple-500" />
