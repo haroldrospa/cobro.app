@@ -1067,7 +1067,7 @@ const Reports = () => {
     if (returnBlob) {
       return doc.output('blob');
     } else {
-      doc.save(`Factura-${sale.invoice_number || 'ref'}.pdf`);
+      doc.save(`${(sale as any).encf || sale.invoice_number || 'ref'}.pdf`);
       toast({ title: 'PDF Descargado', description: 'La factura se ha guardado correctamente.' });
     }
   };

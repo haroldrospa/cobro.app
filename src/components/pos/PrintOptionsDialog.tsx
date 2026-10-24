@@ -292,6 +292,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   }, [rawSaleData, dbCompanyInfo]);
 
   const invoiceNumber = saleData?.encf || saleData?.invoice_number || saleData?.invoiceNumber || '000001';
+
+  // Sincronizar el título del documento con el número de factura para que "Guardar como PDF" use el número de factura
+  useEffect(() => {
+    if (isOpen && invoiceNumber) {
+      document.title = invoiceNumber;
+    }
+  }, [isOpen, invoiceNumber]);
   const isServicesMode = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
   const effectivePaperSize = isServicesMode
     ? (printSettings.paperSize === 'A4' ? 'A4' : 'carta')
@@ -586,7 +593,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>Factura - ${companyInfo.name}</title>
+          <title>${invoiceNumber}</title>
           <style>
             * {
               box-sizing: border-box;
@@ -923,7 +930,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       }
 
       // Use handlePrint which properly hides all content except .printable-content
-      await handlePrint(format);
+      await handlePrint(format, invoiceNumber);
 
       // Clean up after print
       setTimeout(() => {

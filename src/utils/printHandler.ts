@@ -10,17 +10,22 @@ export type PrintFormat = '80mm' | '58mm' | '58mm' | 'A4';
  * @param format - Formato de papel deseado
  * @returns Promise que se resuelve cuando se completa la impresión
  */
-export const handlePrint = async (format: PrintFormat): Promise<void> => {
+export const handlePrint = async (format: PrintFormat, customTitle?: string): Promise<void> => {
   // Determinar la clase CSS a aplicar
   const printClass = `print-${format.toLowerCase()}`;
 
   // Obtener el body
   const body = document.body;
 
-  // Guardar clases originales
+  // Guardar clases y título originales
   const originalClasses = body.className;
+  const originalTitle = document.title;
 
   try {
+    if (customTitle) {
+      document.title = customTitle;
+    }
+
     // Aplicar la clase de impresión
     body.classList.add(printClass);
 
@@ -53,6 +58,13 @@ export const handlePrint = async (format: PrintFormat): Promise<void> => {
   } finally {
     // Restaurar las clases originales
     body.className = originalClasses;
+    if (customTitle) {
+      const restoreTitle = () => {
+        document.title = originalTitle;
+        window.removeEventListener('afterprint', restoreTitle);
+      };
+      window.addEventListener('afterprint', restoreTitle);
+    }
   }
 };
 
