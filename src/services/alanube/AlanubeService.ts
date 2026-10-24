@@ -20,16 +20,25 @@ export class AlanubeService {
     }
 
     let localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
-    if (localCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+    if (localCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z' || !localCompanyId) {
       localCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
     }
 
+    const localRnc = typeof window !== 'undefined' ? localStorage.getItem('alanube_rnc_emisor') : null;
+    const localRazonSocial = typeof window !== 'undefined' ? localStorage.getItem('alanube_razon_social') : null;
+    const localEnv = typeof window !== 'undefined' ? localStorage.getItem('alanube_environment') : null;
+
+    // Si en base de datos aún tiene Romar Group o RNC viejo, priorizar el actualizado de Harold
+    const rncEmisor = localRnc || (data.rnc_emisor && data.rnc_emisor !== '133280824' ? data.rnc_emisor : '40218246656');
+    const razonSocial = localRazonSocial || (data.razon_social && data.razon_social !== 'Romar Group' ? data.razon_social : 'Harold Rosado Pacheco');
+    const environment = (localEnv as any) || (data.environment === 'SANDBOX' ? 'PRODUCTION' : data.environment);
+
     return {
       api_token: data.api_token,
-      environment: data.environment as 'SANDBOX' | 'PRODUCTION',
-      base_url: data.base_url,
-      rnc_emisor: data.rnc_emisor,
-      razon_social: data.razon_social,
+      environment: environment as 'SANDBOX' | 'PRODUCTION',
+      base_url: environment === 'PRODUCTION' ? 'https://api.alanube.co' : data.base_url,
+      rnc_emisor: rncEmisor,
+      razon_social: razonSocial,
       company_id: (data as any).company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z'
     };
   }

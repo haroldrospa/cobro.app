@@ -139,14 +139,27 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         }
       }
 
+      let cleanedCompanyId = (formData.company_id || '').trim();
+      if (cleanedCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z' || !cleanedCompanyId) {
+        cleanedCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+      }
+
       await updateConfig({
         ...formData,
+        company_id: cleanedCompanyId,
         is_active: billingMode === 'e-ncf'
       });
 
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('alanube_company_id', cleanedCompanyId);
+        localStorage.setItem('alanube_rnc_emisor', formData.rnc_emisor.trim());
+        localStorage.setItem('alanube_razon_social', formData.razon_social.trim());
+        localStorage.setItem('alanube_environment', formData.environment);
+      }
+
       toast({
         title: 'Configuración guardada',
-        description: `Método de facturación actualizado a ${billingMode === 'e-ncf' ? 'Electrónica (e-CF)' : 'Fiscal Tradicional (NCF)'}.`
+        description: `Método de facturación actualizado y guardado correctamente.`
       });
     } catch (error) {
       toast({
