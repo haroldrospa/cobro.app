@@ -11,6 +11,7 @@ export class AlanubeService {
     saleId: string;
     estado_fiscal: 'ACEPTADO' | 'RECHAZADO' | 'ERROR_CONEXION';
     encf?: string;
+    invoice_number?: string;
     codigo_seguridad?: string;
     fecha_firma?: string;
     qrcode_url?: string;
@@ -189,9 +190,12 @@ export class AlanubeService {
       const alanubeType = mapInternalToAlanubeType(internalCode as string);
 
       // Normalizar e-NCF a 13 caracteres exactos (Ej: E320000000001)
-      const rawNumMatch = (sale.invoice_number || '').match(/(\d+)$/);
-      const seqDigits = rawNumMatch ? rawNumMatch[1] : '1';
-      const normalizedEncf = `E${alanubeType}${seqDigits.padStart(10, '0').slice(-10)}`;
+      const rawNumMatch = (sale.invoice_number || '').match(/(\d{1,10})$/);
+      const rawSeqStr = rawNumMatch ? rawNumMatch[1] : '1';
+      // Si viene con el prefijo de tipo (ej. E320000000003 -> 320000000003), extraer solo los últimos 10 dígitos de secuencia
+      const seqDigits = rawSeqStr.length > 10 ? rawSeqStr.slice(-10) : rawSeqStr;
+      let currentSeqNum = parseInt(seqDigits, 10) || 1;
+      let normalizedEncf = `E${alanubeType}${String(currentSeqNum).padStart(10, '0').slice(-10)}`;
 
       // Desglose de impuestos por tasa (18%, 16%, Exento)
       let i1AmountTaxed = 0;
@@ -324,10 +328,28 @@ export class AlanubeService {
         throw new Error('El RNC del comprador es obligatorio para e-Crédito Fiscal');
       }
 
-      // 5. Enviar a Alanube
+      // 5. Enviar a Alanube (con auto-recuperación de colisión de secuencia AP3001)
       const client = new AlanubeClient(config);
       try {
-        const response = await client.submitDocument(document, alanubeType);
+        let response = await client.submitDocument(document, alanubeType);
+        let seqWasIncremented = false;
+        let retryAttempts = 0;
+
+        // Si el e-NCF ya fue usado en Alanube (AP3001), avanzar automáticamente al siguiente disponible
+        while (
+          response.errores &&
+          response.errores.length > 0 &&
+          response.errores.some(e => e.codigo === 'AP3001' || (e.mensaje && e.mensaje.includes('ENCF document was used'))) &&
+          retryAttempts < 25
+        ) {
+          retryAttempts++;
+          currentSeqNum++;
+          seqWasIncremented = true;
+          normalizedEncf = `E${alanubeType}${String(currentSeqNum).padStart(10, '0').slice(-10)}`;
+          document.idDoc.encf = normalizedEncf;
+          console.log(`🔄 [Alanube] e-NCF previo ya utilizado en Alanube. Avanzando automáticamente a ${normalizedEncf} (intento #${retryAttempts})...`);
+          response = await client.submitDocument(document, alanubeType);
+        }
 
         if (response.errores && response.errores.length > 0) {
           this.notifySignatureUpdate({
@@ -368,6 +390,31 @@ export class AlanubeService {
         const finalEncf = response.encf || normalizedEncf;
         const finalSecCode = response.codigo_seguridad || '';
 
+        // Si se auto-incrementó la secuencia por AP3001, sincronizar invoice_sequences y offlineDB
+        if (seqWasIncremented) {
+          try {
+            await supabase
+              .from('invoice_sequences')
+              .update({
+                current_number: currentSeqNum,
+                updated_at: new Date().toISOString()
+              })
+              .eq('store_id', sale.store_id)
+              .eq('invoice_type_id', internalCode);
+
+            const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
+            const settings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'invoice_sequences') || { key: 'invoice_sequences' };
+            settings[internalCode] = {
+              current: currentSeqNum,
+              prefix: `${internalCode}-`
+            };
+            await offlineDB.put(OfflineStore.SETTINGS, settings);
+            console.log(`✅ [Alanube] Secuencia ${internalCode} sincronizada automáticamente a #${currentSeqNum}`);
+          } catch (seqErr) {
+            console.warn('[Alanube] No se pudo sincronizar secuencia tras auto-incremento:', seqErr);
+          }
+        }
+
         // Construct standard DGII verification URL if missing
         const qrUrl = response.qrcode_url || (response as any).qrCodeUrl || `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${finalEncf}&MontoTotal=${totalAmount}&CodigoSeguridad=${finalSecCode}&FechaFirma=${encodeURIComponent(dgiiFormatted)}`;
 
@@ -376,6 +423,7 @@ export class AlanubeService {
           saleId,
           estado_fiscal: 'ACEPTADO',
           encf: finalEncf,
+          invoice_number: finalEncf,
           codigo_seguridad: finalSecCode,
           fecha_firma: isoDate,
           qrcode_url: qrUrl,
@@ -387,6 +435,7 @@ export class AlanubeService {
           .update({
             is_electronic: true,
             estado_fiscal: 'ACEPTADO',
+            invoice_number: finalEncf,
             encf: finalEncf,
             codigo_seguridad: finalSecCode || null,
             fecha_firma: isoDate,
@@ -401,6 +450,7 @@ export class AlanubeService {
             .from('sales')
             .update({
               estado_fiscal: 'ACEPTADO',
+              invoice_number: finalEncf,
               qrcode_url: qrUrl,
               codigo_seguridad: finalSecCode || null
             })

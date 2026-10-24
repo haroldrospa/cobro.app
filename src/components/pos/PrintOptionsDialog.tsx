@@ -122,7 +122,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       setLiveSaleData((prev: any) => ({
         ...prev,
         estado_fiscal: detail.estado_fiscal,
-        ...(detail.encf ? { encf: detail.encf } : {}),
+        ...(detail.encf ? { encf: detail.encf, invoice_number: detail.encf, invoiceNumber: detail.encf } : {}),
         ...(detail.codigo_seguridad ? { codigo_seguridad: detail.codigo_seguridad } : {}),
         ...(detail.fecha_firma ? { fecha_firma: detail.fecha_firma } : {}),
         ...(detail.qrcode_url ? { qrcode_url: detail.qrcode_url } : {}),

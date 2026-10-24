@@ -56,7 +56,7 @@ export const useMaxInvoiceNumbers = () => {
           .limit(1);
 
         if (!error && data && data.length > 0) {
-          const match = data[0].invoice_number.match(/-(\d{1,9})$/);
+          const match = (data[0].invoice_number || '').match(/(?:-|E\d{2})(\d{1,10})$/);
           if (match) {
             maxNumbers[typeId] = parseInt(match[1], 10);
           }
