@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,7 @@ import {
 import { CartItem } from '@/types/pos';
 import { Customer } from '@/hooks/useCustomers';
 import { useToast } from '@/hooks/use-toast';
+import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { cn } from '@/lib/utils';
 
 export interface ServiceLineItem {
@@ -64,6 +65,7 @@ interface GenerateServiceInvoiceDialogProps {
   isEmitting?: boolean;
   currencySymbol?: string;
   defaultTaxRate?: number;
+  isElectronic?: boolean;
 }
 
 export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialogProps> = ({
@@ -76,17 +78,84 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
   isEmitting = false,
   currencySymbol = 'RD$',
   defaultTaxRate = 18,
+  isElectronic,
 }) => {
   const { toast } = useToast();
+  const { config: alanubeConfig } = useAlanubeConfig();
+  const effectiveIsElectronic = isElectronic ?? (Boolean(alanubeConfig?.is_active) || (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf'));
+
+  const mappedInvoiceTypes = useMemo(() => {
+    const rawTypes = invoiceTypes.filter(t => t.id !== 'FAC' && t.code !== 'FAC');
+    if (!effectiveIsElectronic) return rawTypes;
+
+    const eMap: Record<string, { code: string; name: string }> = {
+      'B01': { code: 'E31', name: 'Crédito Fiscal Electrónico' },
+      'B02': { code: 'E32', name: 'Consumidor Final Electrónico' },
+      'B11': { code: 'E41', name: 'Compras Electrónico' },
+      'B13': { code: 'E43', name: 'Gastos Menores Electrónico' },
+      'B14': { code: 'E44', name: 'Regímenes Especiales Electrónico' },
+      'B15': { code: 'E45', name: 'Gubernamental Electrónico' },
+      'B16': { code: 'E46', name: 'Exportaciones Electrónico' },
+      'B17': { code: 'E47', name: 'Pagos al Exterior Electrónico' },
+      'E31': { code: 'E31', name: 'Crédito Fiscal Electrónico' },
+      'E32': { code: 'E32', name: 'Consumidor Final Electrónico' },
+      'E41': { code: 'E41', name: 'Compras Electrónico' },
+      'E43': { code: 'E43', name: 'Gastos Menores Electrónico' },
+      'E44': { code: 'E44', name: 'Regímenes Especiales Electrónico' },
+      'E45': { code: 'E45', name: 'Gubernamental Electrónico' },
+      'E46': { code: 'E46', name: 'Exportaciones Electrónico' },
+      'E47': { code: 'E47', name: 'Pagos al Exterior Electrónico' },
+    };
+
+    const allowedECodes = ['E31', 'E32', 'E41', 'E43', 'E44', 'E45', 'E46', 'E47'];
+    const result: any[] = [];
+    const seenCodes = new Set<string>();
+
+    for (const t of rawTypes) {
+      const mapped = eMap[t.code];
+      if (mapped && !seenCodes.has(mapped.code)) {
+        seenCodes.add(mapped.code);
+        result.push({ ...t, id: mapped.code, code: mapped.code, name: mapped.name });
+      }
+    }
+
+    for (const code of allowedECodes) {
+      if (!seenCodes.has(code)) {
+        seenCodes.add(code);
+        result.push({ id: code, code, name: eMap[code].name });
+      }
+    }
+
+    return result.sort((a, b) => a.code.localeCompare(b.code));
+  }, [invoiceTypes, effectiveIsElectronic]);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [selectedInvoiceTypeId, setSelectedInvoiceTypeId] = useState<string>(() => {
+    if (effectiveIsElectronic) return 'FAC';
     const b01 = invoiceTypes.find(t => t.code === 'B01');
     const b02 = invoiceTypes.find(t => t.code === 'B02');
     return b01?.id || b02?.id || invoiceTypes[0]?.id || '';
   });
 
   const [paymentCondition, setPaymentCondition] = useState<'contado' | 'credito'>('contado');
+
+  useEffect(() => {
+    if (effectiveIsElectronic) {
+      setSelectedInvoiceTypeId(prev => {
+        if (prev === 'FAC' || prev === 'COT' || prev.startsWith('E')) return prev;
+        return 'FAC';
+      });
+    } else {
+      setSelectedInvoiceTypeId(prev => {
+        if (prev === 'FAC' || prev.startsWith('E')) {
+          const b01 = invoiceTypes.find(t => t.code === 'B01');
+          const b02 = invoiceTypes.find(t => t.code === 'B02');
+          return b01?.id || b02?.id || invoiceTypes[0]?.id || '';
+        }
+        return prev;
+      });
+    }
+  }, [effectiveIsElectronic, invoiceTypes]);
   const [paymentMethod, setPaymentMethod] = useState<string>('transfer');
   const [creditDays, setCreditDays] = useState<number>(30);
   const [notes, setNotes] = useState<string>('');
@@ -109,7 +178,10 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
     if (selectedInvoiceTypeId === 'COT') {
       return { id: 'COT', code: 'COT', name: 'Cotización' };
     }
-    return invoiceTypes.find(t => t.id === selectedInvoiceTypeId);
+    if (selectedInvoiceTypeId === 'FAC') {
+      return { id: 'FAC', code: 'FAC', name: 'Factura Interna' };
+    }
+    return mappedInvoiceTypes.find(t => t.id === selectedInvoiceTypeId) || invoiceTypes.find(t => t.id === selectedInvoiceTypeId);
   }, [invoiceTypes, selectedInvoiceTypeId]);
 
   // Manejo de líneas
@@ -312,7 +384,7 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-foreground">
                 <Building className="h-3.5 w-3.5 text-emerald-500" />
-                Tipo de Comprobante (NCF)
+                {effectiveIsElectronic ? 'Tipo de Comprobante (e-NCF)' : 'Tipo de Comprobante (NCF)'}
               </Label>
               <Select
                 value={selectedInvoiceTypeId}
@@ -322,11 +394,17 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
                   <SelectValue placeholder="Seleccione tipo de comprobante" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60 rounded-xl">
+                  {effectiveIsElectronic && (
+                    <SelectItem value="FAC">
+                      <span className="font-bold text-sky-500 mr-2">FAC</span>
+                      <span>Factura Interna</span>
+                    </SelectItem>
+                  )}
                   <SelectItem value="COT">
                     <span className="font-bold text-amber-500 mr-2">COT</span>
                     <span>Cotización</span>
                   </SelectItem>
-                  {invoiceTypes.map((type) => (
+                  {mappedInvoiceTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       <span className="font-bold text-emerald-500 mr-2">{type.code}</span>
                       <span>{type.name}</span>

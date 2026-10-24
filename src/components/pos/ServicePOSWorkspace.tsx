@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +36,7 @@ import { Customer } from '@/hooks/useCustomers';
 import { Product } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { cn } from '@/lib/utils';
 import AddCustomerDialog from './AddCustomerDialog';
 
@@ -68,6 +69,7 @@ interface ServicePOSWorkspaceProps {
   onSwitchToCatalog?: () => void;
   currencySymbol?: string;
   defaultTaxRate?: number;
+  isElectronic?: boolean;
 }
 
 export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
@@ -82,9 +84,57 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   onSwitchToCatalog,
   currencySymbol = 'RD$',
   defaultTaxRate = 18,
+  isElectronic,
 }) => {
   const { toast } = useToast();
   const { settings: storeSettings } = useStoreSettings();
+  const { config: alanubeConfig } = useAlanubeConfig();
+  const effectiveIsElectronic = isElectronic ?? (Boolean(alanubeConfig?.is_active) || (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf'));
+
+  const mappedInvoiceTypes = useMemo(() => {
+    const rawTypes = invoiceTypes.filter(t => t.id !== 'FAC' && t.code !== 'FAC');
+    if (!effectiveIsElectronic) return rawTypes;
+
+    const eMap: Record<string, { code: string; name: string }> = {
+      'B01': { code: 'E31', name: 'Crédito Fiscal Electrónico' },
+      'B02': { code: 'E32', name: 'Consumidor Final Electrónico' },
+      'B11': { code: 'E41', name: 'Compras Electrónico' },
+      'B13': { code: 'E43', name: 'Gastos Menores Electrónico' },
+      'B14': { code: 'E44', name: 'Regímenes Especiales Electrónico' },
+      'B15': { code: 'E45', name: 'Gubernamental Electrónico' },
+      'B16': { code: 'E46', name: 'Exportaciones Electrónico' },
+      'B17': { code: 'E47', name: 'Pagos al Exterior Electrónico' },
+      'E31': { code: 'E31', name: 'Crédito Fiscal Electrónico' },
+      'E32': { code: 'E32', name: 'Consumidor Final Electrónico' },
+      'E41': { code: 'E41', name: 'Compras Electrónico' },
+      'E43': { code: 'E43', name: 'Gastos Menores Electrónico' },
+      'E44': { code: 'E44', name: 'Regímenes Especiales Electrónico' },
+      'E45': { code: 'E45', name: 'Gubernamental Electrónico' },
+      'E46': { code: 'E46', name: 'Exportaciones Electrónico' },
+      'E47': { code: 'E47', name: 'Pagos al Exterior Electrónico' },
+    };
+
+    const allowedECodes = ['E31', 'E32', 'E41', 'E43', 'E44', 'E45', 'E46', 'E47'];
+    const result: any[] = [];
+    const seenCodes = new Set<string>();
+
+    for (const t of rawTypes) {
+      const mapped = eMap[t.code];
+      if (mapped && !seenCodes.has(mapped.code)) {
+        seenCodes.add(mapped.code);
+        result.push({ ...t, id: mapped.code, code: mapped.code, name: mapped.name });
+      }
+    }
+
+    for (const code of allowedECodes) {
+      if (!seenCodes.has(code)) {
+        seenCodes.add(code);
+        result.push({ id: code, code, name: eMap[code].name });
+      }
+    }
+
+    return result.sort((a, b) => a.code.localeCompare(b.code));
+  }, [invoiceTypes, effectiveIsElectronic]);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
@@ -170,9 +220,30 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   };
 
   const [selectedInvoiceTypeId, setSelectedInvoiceTypeId] = useState<string>(() => {
+    if (effectiveIsElectronic) return 'FAC';
     const b01 = invoiceTypes.find(t => t.code === 'B01');
     const b02 = invoiceTypes.find(t => t.code === 'B02');
     return b01?.id || b02?.id || invoiceTypes[0]?.id || '';
+  });
+
+  useEffect(() => {
+    if (effectiveIsElectronic) {
+      setSelectedInvoiceTypeId(prev => {
+        if (prev === 'FAC' || prev === 'COT' || prev.startsWith('E')) return prev;
+        return 'FAC';
+      });
+    } else {
+      setSelectedInvoiceTypeId(prev => {
+        if (prev === 'FAC' || prev.startsWith('E')) {
+          const b01 = invoiceTypes.find(t => t.code === 'B01');
+          const b02 = invoiceTypes.find(t => t.code === 'B02');
+          return b01?.id || b02?.id || invoiceTypes[0]?.id || '';
+        }
+        return prev;
+      });
+    }
+  }, [effectiveIsElectronic, invoiceTypes]);
+  (() => {
   });
 
   const [paymentCondition, setPaymentCondition] = useState<'contado' | 'credito'>('contado');
@@ -198,8 +269,12 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
     if (selectedInvoiceTypeId === 'COT') {
       return { id: 'COT', code: 'COT', name: 'Cotización' };
     }
-    return invoiceTypes.find(t => t.id === selectedInvoiceTypeId);
-  }, [invoiceTypes, selectedInvoiceTypeId]);
+    if (selectedInvoiceTypeId === 'FAC') {
+      return { id: 'FAC', code: 'FAC', name: 'Factura Interna' };
+    }
+    return mappedInvoiceTypes.find(t => t.id === selectedInvoiceTypeId) || invoiceTypes.find(t => t.id === selectedInvoiceTypeId);
+  }, [mappedInvoiceTypes, invoiceTypes, selectedInvoiceTypeId]);
+
 
   const isQuote = selectedInvoiceTypeId === 'COT';
 
@@ -460,7 +535,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                   <SelectTrigger className="h-8 rounded-lg bg-background/60 border-border/50 text-xs font-medium flex-1">
                     <SelectValue placeholder="Cliente (Consumidor Final)..." />
                   </SelectTrigger>
-                  <SelectContent className="max-h-56">
+                    <SelectContent className="max-h-56">
                     <SelectItem value="none">
                       <span className="text-muted-foreground italic">Consumidor Final (Ocasional)</span>
                     </SelectItem>
@@ -730,18 +805,24 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <Building className="h-3 w-3 text-emerald-400" />
-                Comprobante (NCF)
+                {effectiveIsElectronic ? 'Comprobante (e-NCF)' : 'Comprobante (NCF)'}
               </label>
               <Select value={selectedInvoiceTypeId} onValueChange={setSelectedInvoiceTypeId}>
                 <SelectTrigger className="h-8 rounded-lg bg-background/60 border-border/50 text-xs font-medium">
                   <SelectValue placeholder="Seleccionar NCF" />
                 </SelectTrigger>
-                <SelectContent className="max-h-56">
+                  <SelectContent className="max-h-56">
+                  {effectiveIsElectronic && (
+                    <SelectItem value="FAC">
+                      <span className="font-bold text-sky-400 font-mono mr-1.5">FAC</span>
+                      <span>Factura Interna</span>
+                    </SelectItem>
+                  )}
                   <SelectItem value="COT">
                     <span className="font-bold text-amber-400 font-mono mr-1.5">COT</span>
                     <span>Cotización</span>
                   </SelectItem>
-                  {invoiceTypes.map(t => (
+                  {mappedInvoiceTypes.map(t => (
                     <SelectItem key={t.id} value={t.id}>
                       <span className="font-bold text-emerald-400 font-mono mr-1.5">{t.code}</span>
                       <span>{t.name}</span>

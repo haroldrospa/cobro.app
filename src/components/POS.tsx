@@ -502,7 +502,7 @@ const POSContent: React.FC = () => {
     ...rawStoreSettings
   } as any;
   const { config: alanubeConfig } = useAlanubeConfig();
-  const isElectronicActive = alanubeConfig?.is_active || false;
+  const isElectronicActive = Boolean(alanubeConfig?.is_active) || (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf');
 
   // Cuando la facturación electrónica está activa, seleccionar "Factura Interna" (FAC) por defecto
   useEffect(() => {
@@ -1878,8 +1878,9 @@ const POSContent: React.FC = () => {
         return;
       }
 
-      const targetInvoiceType = invoiceTypes.find(t => t.id === data.invoiceTypeId);
-      const code = data.invoiceTypeId === 'FAC' ? 'FAC' : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02');
+
+      const targetInvoiceType = invoiceTypes.find(t => t.id === data.invoiceTypeId || t.code === data.invoiceTypeId);
+      const code = data.invoiceTypeId === 'FAC' ? 'FAC' : (data.invoiceTypeId.startsWith('E') ? data.invoiceTypeId : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02'));
 
       let dueDate = null;
       let paymentStatus = 'paid';
@@ -1903,7 +1904,9 @@ const POSContent: React.FC = () => {
         status: 'completed',
         payment_status: paymentStatus,
         due_date: dueDate,
+        invoice_type_id: code === 'FAC' ? 'FAC' : data.invoiceTypeId,
         invoice_type_code: code,
+        is_electronic: isElectronicActive && code !== 'FAC' && code !== 'COT',
         customer_name: selectedCustomerData?.name || 'Cliente Ocasional',
         customer_phone: selectedCustomerData?.phone || '',
         customer_rnc: selectedCustomerData?.rnc || '',
@@ -2375,6 +2378,7 @@ const POSContent: React.FC = () => {
                 menuButton={menuButton}
                 actionButton={actionButtons}
                 onDirectEmit={handleDirectEmitServiceInvoice}
+                isElectronic={isElectronicActive}
                 isEmitting={isEmittingServiceInvoice}
                 onLoadToCart={handleLoadServicesToCart}
                 onSwitchToCatalog={() => setServicesViewMode('catalog')}
@@ -2738,6 +2742,7 @@ const POSContent: React.FC = () => {
             invoiceTypes={invoiceTypes}
             onLoadToCart={handleLoadServicesToCart}
             onDirectEmit={handleDirectEmitServiceInvoice}
+            isElectronic={isElectronicActive}
             isEmitting={isEmittingServiceInvoice}
             currencySymbol={storeSettings?.currency === 'USD' ? 'US$' : 'RD$'}
             defaultTaxRate={storeSettings?.default_tax_rate || 18}
@@ -2770,6 +2775,7 @@ const POSContent: React.FC = () => {
                 menuButton={menuButton}
                 actionButton={actionButtons}
                 onDirectEmit={handleDirectEmitServiceInvoice}
+                isElectronic={isElectronicActive}
                 isEmitting={isEmittingServiceInvoice}
                 onLoadToCart={handleLoadServicesToCart}
                 onSwitchToCatalog={() => setServicesViewMode('catalog')}
@@ -3376,6 +3382,7 @@ const POSContent: React.FC = () => {
             invoiceTypes={invoiceTypes}
             onLoadToCart={handleLoadServicesToCart}
             onDirectEmit={handleDirectEmitServiceInvoice}
+            isElectronic={isElectronicActive}
             isEmitting={isEmittingServiceInvoice}
             currencySymbol={storeSettings?.currency === 'USD' ? 'US$' : 'RD$'}
             defaultTaxRate={storeSettings?.default_tax_rate || 18}

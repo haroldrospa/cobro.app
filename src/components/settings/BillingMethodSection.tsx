@@ -17,7 +17,18 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   const { toast } = useToast();
   const { settings: storeSettings } = useStoreSettings();
 
-  const [billingMode, setBillingMode] = useState<'ncf' | 'e-ncf'>('ncf');
+  const [billingMode, setBillingMode] = useState<'ncf' | 'e-ncf'>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf') return 'e-ncf';
+    return 'ncf';
+  });
+
+  const handleModeSelect = (mode: 'ncf' | 'e-ncf') => {
+    setBillingMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('alanube_billing_mode', mode);
+    }
+    updateConfig({ is_active: mode === 'e-ncf' }).catch(() => {});
+  };
   const [isTesting, setIsTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -185,12 +196,12 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
       <CardContent className="space-y-6">
         <RadioGroup 
           value={billingMode} 
-          onValueChange={(val) => setBillingMode(val as 'ncf' | 'e-ncf')}
+          onValueChange={(val) => handleModeSelect(val as 'ncf' | 'e-ncf')}
           className="grid grid-cols-1 md:grid-cols-2 gap-3"
         >
           <div 
             className={`relative flex items-center cursor-pointer rounded-xl border p-4 transition-all ${billingMode === 'ncf' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:bg-muted/40'}`}
-            onClick={() => setBillingMode('ncf')}
+            onClick={() => handleModeSelect('ncf')}
           >
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-3">
@@ -206,7 +217,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
 
           <div 
             className={`relative flex items-center cursor-pointer rounded-xl border p-4 transition-all ${billingMode === 'e-ncf' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:bg-muted/40'}`}
-            onClick={() => setBillingMode('e-ncf')}
+            onClick={() => handleModeSelect('e-ncf')}
           >
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-3">
