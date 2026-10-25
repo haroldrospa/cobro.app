@@ -61,7 +61,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   onSaveOrder,
 }) => {
   const { companyInfo } = usePrintSettings();
-  const { isRestaurant, isStore, isSupermarket, orderTypeLabels } = useBusinessType();
+  const { isRestaurant, isStore, isSupermarket, isServices, orderTypeLabels } = useBusinessType();
   const companyLogo = companyInfo.logo || null;
   const logoCartSize = companyInfo.logoCartSize;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -118,7 +118,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
         </div>
 
         {/* Active order or table badge */}
-        {effectiveTable ? (
+        {effectiveTable && !isServices ? (
           <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 animate-in fade-in slide-in-from-top-1">
             <div className="flex items-center gap-2 min-w-0">
               <div className="p-1 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
@@ -147,7 +147,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
                   Guardar
                 </Button>
               )}
-              {onOpenTableSelector && (
+              {onOpenTableSelector && !isServices && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -205,7 +205,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
             )}
 
             {/* Botón de Asignación de Mesa */}
-            {onOpenTableSelector && (
+            {onOpenTableSelector && !isServices && (
               <Button
                 type="button"
                 variant="outline"

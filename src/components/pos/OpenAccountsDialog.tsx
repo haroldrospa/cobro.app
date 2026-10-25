@@ -17,6 +17,7 @@ import { CartItem } from '@/types/pos';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUserStore } from '@/hooks/useUserStore';
+import { useBusinessType } from '@/hooks/useBusinessType';
 import { generatePreCheckPDF } from '@/utils/invoicePdfGenerator';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { cn } from '@/lib/utils';
@@ -59,6 +60,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { data: userStore } = useUserStore();
+  const { isServices } = useBusinessType();
   const { companyInfo, printSettings } = usePrintSettings();
 
   // ─── Merge mode state ───
@@ -871,6 +873,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                     }}
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                      isServices && "hidden",
                       activeMainTab === 'tables'
                         ? "bg-background text-foreground shadow-xs border border-border/60"
                         : "text-muted-foreground hover:text-foreground"

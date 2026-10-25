@@ -2280,7 +2280,7 @@ const POSContent: React.FC = () => {
       onToggleFullscreen={memoHandleToggleFullscreen}
       onGenerateServiceInvoice={() => setShowServiceInvoiceDialog(true)}
       selectedTable={displayTableLabel || effectiveSelectedTable}
-      onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+      onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
       onClearTable={handleClearTable}
     />
   ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable]);
@@ -2459,7 +2459,7 @@ const POSContent: React.FC = () => {
               onOrderTypeChange={setPosOrderType}
               onSaveOrder={memoHandleSaveOrder}
               selectedTable={displayTableLabel || effectiveSelectedTable}
-              onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+              onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
               onClearTable={handleClearTable}
               hasExistingOrder={hasExistingOrder}
               isSavingOrder={isSavingOrder}
@@ -2491,7 +2491,7 @@ const POSContent: React.FC = () => {
           onCheckout={handleCheckout}
           isWaiter={isWaiter}
           selectedTable={displayTableLabel || effectiveSelectedTable}
-          onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+          onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
           onSaveOrder={memoHandleSaveOrder}
           hasExistingOrder={hasExistingOrder}
           isSavingOrder={isSavingOrder}
@@ -2878,7 +2878,7 @@ const POSContent: React.FC = () => {
                     onOrderTypeChange={setPosOrderType}
                     cartTotal={parseFloat(totals.total) || 0}
                     selectedTable={displayTableLabel || effectiveSelectedTable}
-                    onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+                    onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
                     onClearTable={handleClearTable}
                     onSaveOrder={memoHandleSaveOrder}
                   />
@@ -3018,7 +3018,7 @@ const POSContent: React.FC = () => {
                     onOrderTypeChange={setPosOrderType}
                     cartTotal={parseFloat(totals.total) || 0}
                     selectedTable={displayTableLabel || effectiveSelectedTable}
-                    onOpenTableSelector={() => setShowTableSelectorDialog(true)}
+                    onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
                     onClearTable={handleClearTable}
                     onSaveOrder={memoHandleSaveOrder}
                   />
