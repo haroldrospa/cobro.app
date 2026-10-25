@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Search, Filter, User, CreditCard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
+import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 
 interface InvoiceSearchProps {
   searchTerm: string;
@@ -57,6 +57,8 @@ const InvoiceSearch: React.FC<InvoiceSearchProps> = ({
 }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = React.useState(false);
   const [tempSearchTerm, setTempSearchTerm] = React.useState(searchTerm);
+  const { config: alanubeConfig } = useAlanubeConfig();
+  const isElectronic = Boolean(alanubeConfig?.is_active) || (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf');
 
   // Sincronizar cuando cambia externamente
   React.useEffect(() => {
@@ -78,7 +80,7 @@ const InvoiceSearch: React.FC<InvoiceSearchProps> = ({
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
           <Input
-            placeholder="Buscar por NCF, referencia o nombre..."
+            placeholder={isElectronic ? "Buscar por e-NCF, factura interna o cliente..." : "Buscar por NCF, referencia o nombre..."}
             value={tempSearchTerm}
             onChange={(e) => {
               const val = e.target.value;
@@ -135,10 +137,27 @@ const InvoiceSearch: React.FC<InvoiceSearchProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los Tipos</SelectItem>
-                  <SelectItem value="B01">B01 - Crédito Fiscal</SelectItem>
-                  <SelectItem value="B02">B02 - Consumo Final</SelectItem>
-                  <SelectItem value="B14">B14 - Regímenes Especiales</SelectItem>
-                  <SelectItem value="B15">B15 - Gubernamental</SelectItem>
+                  {isElectronic ? (
+                    <>
+                      <SelectItem value="FAC">FAC - Factura Interna</SelectItem>
+                      <SelectItem value="E31">E31 - Crédito Fiscal Electrónico</SelectItem>
+                      <SelectItem value="E32">E32 - Consumidor Final Electrónico</SelectItem>
+                      <SelectItem value="E41">E41 - Compras Electrónico</SelectItem>
+                      <SelectItem value="E43">E43 - Gastos Menores Electrónico</SelectItem>
+                      <SelectItem value="E44">E44 - Regímenes Especiales Electrónico</SelectItem>
+                      <SelectItem value="E45">E45 - Gubernamental Electrónico</SelectItem>
+                      <SelectItem value="E46">E46 - Exportaciones Electrónico</SelectItem>
+                      <SelectItem value="E47">E47 - Pagos al Exterior Electrónico</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="FAC">FAC - Factura Interna</SelectItem>
+                      <SelectItem value="B01">B01 - Crédito Fiscal</SelectItem>
+                      <SelectItem value="B02">B02 - Consumo Final</SelectItem>
+                      <SelectItem value="B14">B14 - Regímenes Especiales</SelectItem>
+                      <SelectItem value="B15">B15 - Gubernamental</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

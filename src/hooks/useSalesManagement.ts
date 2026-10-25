@@ -137,6 +137,8 @@ export const useSales = (
         isInvoiceSearch = Boolean(term && (
           /^[bBeE][0-9-]+/i.test(term) ||
           term.toUpperCase().startsWith('INV') ||
+          term.toUpperCase().startsWith('FAC') ||
+          term.toUpperCase().startsWith('COT') ||
           /^[bBeE]?[0-9]{2,}/i.test(cleanTerm)
         ));
 
@@ -205,6 +207,8 @@ export const useSales = (
         const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(filters.invoiceTypeId);
         if (isUUID) {
           query = query.eq('invoice_type_id', filters.invoiceTypeId);
+        } else if (/^(FAC|COT|E\d{2}|B\d{2})$/i.test(filters.invoiceTypeId.trim())) {
+          query = query.ilike('invoice_number', `${filters.invoiceTypeId.trim().toUpperCase()}%`);
         } else {
           const { data: invType } = await supabase
             .from('invoice_types')

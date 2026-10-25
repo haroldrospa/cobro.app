@@ -17,7 +17,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import InvoiceSearch from './invoices/InvoiceSearch';
-import InvoiceTable from './invoices/InvoiceTable';
+import InvoiceTable, { getSaleTypeCode, getSaleTypeName } from './invoices/InvoiceTable';
 import InvoiceDetailsDialog from './invoices/InvoiceDetailsDialog';
 import EditInvoiceDialog from './invoices/EditInvoiceDialog';
 import {
@@ -190,8 +190,8 @@ const Invoices: React.FC = () => {
     const data = sales.map(s => ({
       Fecha: format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
       NCF: s.invoice_number || 'S/N',
-      Tipo_Comprobante: s.invoice_type?.name || s.invoice_type?.code || 'Factura',
-      Codigo_Tipo: s.invoice_type?.code || 'N/A',
+      Tipo_Comprobante: getSaleTypeName(getSaleTypeCode(s), s.invoice_type?.name) || 'Factura',
+      Codigo_Tipo: getSaleTypeCode(s),
       Cliente: s.customer?.name || 'Consumidor Final',
       RNC_Cedula: s.customer?.rnc || 'N/A',
       Facturado_Por: s.profile?.full_name || 'Sistema',

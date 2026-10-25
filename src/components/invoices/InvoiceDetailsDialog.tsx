@@ -22,6 +22,7 @@ import { useSaleDetails } from '@/hooks/useSalesManagement';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import PrintOptionsDialog from '../pos/PrintOptionsDialog';
+import { getSaleTypeCode, getSaleTypeName } from './InvoiceTable';
 
 interface InvoiceDetailsDialogProps {
   isOpen: boolean;
@@ -100,7 +101,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
       customer: sale.customer,
       invoice_number: sale.invoice_number,
       invoiceNumber: sale.invoice_number,
-      invoiceType: sale.invoice_type?.code || 'B02',
+      invoiceType: getSaleTypeCode(sale),
       profile: sale.profile ? { full_name: sale.profile.full_name || 'Sistema' } : undefined,
       created_at: sale.created_at,
       due_date: sale.due_date,
@@ -182,8 +183,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
                       {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                     </Button>
                     <Badge variant="outline" className="h-5 px-2 text-[10px] font-bold border-primary/30 text-primary bg-primary/5">
-                      {sale.invoice_type?.code || 'B02'}
-                      {sale.invoice_type?.name ? ` • ${sale.invoice_type.name}` : ''}
+                      {getSaleTypeCode(sale)}
+                      {getSaleTypeName(getSaleTypeCode(sale), sale.invoice_type?.name) ? ` • ${getSaleTypeName(getSaleTypeCode(sale), sale.invoice_type?.name)}` : ''}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">

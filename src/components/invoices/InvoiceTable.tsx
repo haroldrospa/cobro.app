@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Eye, Edit, Trash2, CheckCircle, Clock, XCircle, FileText } from 'lucide-react';
+import { Eye, Edit, Trash2, CheckCircle, Clock, XCircle, FileText, Printer } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +8,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sale } from '@/hooks/useSalesManagement';
 import PrintOptionsDialog from '../pos/PrintOptionsDialog';
 import InvoicePreviewDialog from './InvoicePreviewDialog';
-import { Printer } from 'lucide-react';
+
+export const getSaleTypeCode = (sale: Partial<Sale> | null | undefined): string => {
+  if (!sale) return 'N/A';
+  const num = (sale.encf || sale.invoice_number || '').trim().toUpperCase();
+  if (num.startsWith('FAC')) return 'FAC';
+  if (num.startsWith('COT')) return 'COT';
+  if (/^E\d{2}/.test(num)) return num.slice(0, 3);
+  if (/^B\d{2}/.test(num)) return num.slice(0, 3);
+  return sale.invoice_type?.code || 'FAC';
+};
+
+export const getSaleTypeName = (code: string, fallbackName?: string): string => {
+  const map: Record<string, string> = {
+    FAC: 'Factura Interna',
+    COT: 'Cotización',
+    E31: 'Crédito Fiscal Electrónico',
+    E32: 'Consumidor Final Electrónico',
+    E33: 'Nota de Débito Electrónica',
+    E34: 'Nota de Crédito Electrónica',
+    E41: 'Compras Electrónico',
+    E43: 'Gastos Menores Electrónico',
+    E44: 'Regímenes Especiales Electrónico',
+    E45: 'Gubernamental Electrónico',
+    E46: 'Exportaciones Electrónico',
+    E47: 'Pagos al Exterior Electrónico',
+    B01: 'Crédito Fiscal',
+    B02: 'Consumo Final',
+    B04: 'Nota de Crédito',
+    B14: 'Regímenes Especiales',
+    B15: 'Gubernamental',
+  };
+  return map[code.toUpperCase()] || fallbackName || '';
+};
 
 interface InvoiceTableProps {
   sales: Sale[];
@@ -50,6 +81,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
   };
 
   const handlePrint = (sale: Sale) => {
+    const resolvedType = getSaleTypeCode(sale);
     // Map Sale to the format expected by PrintOptionsDialog
     const saleData = {
       total: sale.total,
@@ -66,14 +98,12 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
       customer: sale.customer,
       invoice_number: sale.invoice_number,
       invoiceNumber: sale.invoice_number,
-      invoiceType: sale.invoice_type?.code,
+      invoiceType: resolvedType,
       profile: sale.profile,
       qrcode_url: sale.qrcode_url,
-      is_electronic: sale.is_electronic,
-      encf: sale.encf,
+      is_electronic: sale.is_electronic || resolvedType.startsWith('E'),
+      encf: sale.encf || (resolvedType.startsWith('E') ? sale.invoice_number : undefined),
       estado_fiscal: sale.estado_fiscal,
-      // We don't have customerDebt readily available here without fetching, 
-      // but it's optional in the dialog or handled if present.
     };
     setSelectedSaleForPrint(saleData);
     setPrintDialogOpen(true);
@@ -151,129 +181,143 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedSales.map((sale) => (
-                <TableRow 
-                  key={sale.id} 
-                  className="hover:bg-muted/30 transition-colors cursor-pointer" 
-                  onClick={(e) => {
-                    if ((e.target as HTMLElement).closest('button')) return;
-                    onViewDetails(sale);
-                  }}
-                >
-                  <TableCell className="font-bold text-primary">{sale.invoice_number}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{sale.customer?.name || 'Cliente General'}</span>
-                      {sale.customer?.rnc && (
-                        <span className="text-xs text-muted-foreground">RNC: {sale.customer.rnc}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-medium">{sale.profile?.full_name || 'Sistema'}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-[10px]">
-                      {sale.invoice_type?.code || 'N/A'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center text-xs">{formatDate(sale.created_at)}</TableCell>
-                  <TableCell className="font-bold text-right text-base">${sale.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={
-                      sale.payment_method === 'cash' ? 'default' :
-                        sale.payment_method === 'credit' ? 'secondary' : 'outline'
-                    } className="text-[10px]">
-                      {sale.payment_method === 'cash' ? 'Efectivo' :
-                        sale.payment_method === 'credit' ? 'Crédito' :
-                          sale.payment_method === 'card' ? 'Tarjeta' :
-                            sale.payment_method}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">{getStatusBadge(sale)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="sm" onClick={() => handlePreview(sale)} title="Vista previa" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onViewDetails(sale)} title="Ver detalles completos" className="h-8 w-8 p-0 hover:bg-muted hover:text-foreground">
-                        <FileText className="h-4 w-4 opacity-60" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onEditSale(sale)} title="Editar" className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handlePrint(sale)} title="Opciones de impresión" className="h-8 w-8 p-0 hover:bg-emerald-500/10 hover:text-emerald-600">
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDeleteSale(sale.id)} title="Eliminar" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {paginatedSales.map((sale) => {
+                const typeCode = getSaleTypeCode(sale);
+                return (
+                  <TableRow 
+                    key={sale.id} 
+                    className="hover:bg-muted/30 transition-colors cursor-pointer" 
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('button')) return;
+                      onViewDetails(sale);
+                    }}
+                  >
+                    <TableCell className="font-bold text-primary">{sale.invoice_number}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{sale.customer?.name || 'Cliente General'}</span>
+                        {sale.customer?.rnc && (
+                          <span className="text-xs text-muted-foreground">RNC: {sale.customer.rnc}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">{sale.profile?.full_name || 'Sistema'}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-[10px]"
+                        title={getSaleTypeName(typeCode, sale.invoice_type?.name)}
+                      >
+                        {typeCode}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-xs">{formatDate(sale.created_at)}</TableCell>
+                    <TableCell className="font-bold text-right text-base">${sale.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={
+                        sale.payment_method === 'cash' ? 'default' :
+                          sale.payment_method === 'credit' ? 'secondary' : 'outline'
+                      } className="text-[10px]">
+                        {sale.payment_method === 'cash' ? 'Efectivo' :
+                          sale.payment_method === 'credit' ? 'Crédito' :
+                            sale.payment_method === 'card' ? 'Tarjeta' :
+                              sale.payment_method === 'transfer' ? 'Transferencia' :
+                                sale.payment_method === 'split' ? 'Mixto' :
+                                  sale.payment_method}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">{getStatusBadge(sale)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="sm" onClick={() => handlePreview(sale)} title="Vista previa" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onViewDetails(sale)} title="Ver detalles completos" className="h-8 w-8 p-0 hover:bg-muted hover:text-foreground">
+                          <FileText className="h-4 w-4 opacity-60" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onEditSale(sale)} title="Editar" className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handlePrint(sale)} title="Opciones de impresión" className="h-8 w-8 p-0 hover:bg-emerald-500/10 hover:text-emerald-600">
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onDeleteSale(sale.id)} title="Eliminar" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
 
         {/* Mobile View (Cards) */}
         <div className="md:hidden divide-y divide-border">
-          {paginatedSales.map((sale) => (
-            <div 
-              key={sale.id} 
-              className="p-4 space-y-4 hover:bg-muted/20 transition-colors cursor-pointer" 
-              onClick={(e) => {
-                if ((e.target as HTMLElement).closest('button')) return;
-                onViewDetails(sale);
-              }}
-            >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-lg text-primary">{sale.invoice_number}</span>
-                    <Badge variant="outline" className="text-[10px] h-5">{sale.invoice_type?.code || 'NCF'}</Badge>
+          {paginatedSales.map((sale) => {
+            const typeCode = getSaleTypeCode(sale);
+            return (
+              <div 
+                key={sale.id} 
+                className="p-4 space-y-4 hover:bg-muted/20 transition-colors cursor-pointer" 
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest('button')) return;
+                  onViewDetails(sale);
+                }}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-lg text-primary">{sale.invoice_number}</span>
+                      <Badge variant="outline" className="text-[10px] h-5">{typeCode}</Badge>
+                    </div>
+                    <p className="font-bold text-base leading-tight">{sale.customer?.name || 'Cliente General'}</p>
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      {formatDate(sale.created_at)}
+                    </p>
                   </div>
-                  <p className="font-bold text-base leading-tight">{sale.customer?.name || 'Cliente General'}</p>
-                  <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" />
-                    {formatDate(sale.created_at)}
-                  </p>
-                </div>
-                <div className="text-right space-y-1">
-                  <p className="text-xl font-black text-foreground">${sale.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                  <div className="flex flex-col items-end gap-1.5">
-                    {getStatusBadge(sale)}
-                    <Badge variant="secondary" className="text-[9px] uppercase tracking-wider font-bold h-5">
-                      {sale.payment_method === 'cash' ? 'Efectivo' :
-                       sale.payment_method === 'credit' ? 'Crédito' :
-                       sale.payment_method === 'card' ? 'Tarjeta' : sale.payment_method}
-                    </Badge>
+                  <div className="text-right space-y-1">
+                    <p className="text-xl font-black text-foreground">${sale.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {getStatusBadge(sale)}
+                      <Badge variant="secondary" className="text-[9px] uppercase tracking-wider font-bold h-5">
+                        {sale.payment_method === 'cash' ? 'Efectivo' :
+                         sale.payment_method === 'credit' ? 'Crédito' :
+                         sale.payment_method === 'card' ? 'Tarjeta' :
+                         sale.payment_method === 'transfer' ? 'Transferencia' :
+                         sale.payment_method === 'split' ? 'Mixto' : sale.payment_method}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-border/40">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                  Por: <span className="text-foreground">{sale.profile?.full_name?.split(' ')[0] || 'Sistema'}</span>
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => handlePreview(sale)} className="h-10 px-4 rounded-xl shadow-sm font-bold gap-2">
-                    <Eye className="h-4 w-4" />
-                    Vista Previa
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => handlePrint(sale)} className="h-10 w-10 rounded-xl shadow-sm hover:text-emerald-600 hover:bg-emerald-50">
-                    <Printer className="h-5 w-5" />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => onEditSale(sale)} className="h-10 w-10 rounded-xl shadow-sm hover:text-blue-600 hover:bg-blue-50">
-                    <Edit className="h-5 w-5" />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => onDeleteSale(sale.id)} className="h-10 w-10 rounded-xl shadow-sm text-destructive hover:bg-destructive/10">
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
+                <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                    Por: <span className="text-foreground">{sale.profile?.full_name?.split(' ')[0] || 'Sistema'}</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => handlePreview(sale)} className="h-10 px-4 rounded-xl shadow-sm font-bold gap-2">
+                      <Eye className="h-4 w-4" />
+                      Vista Previa
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => handlePrint(sale)} className="h-10 w-10 rounded-xl shadow-sm hover:text-emerald-600 hover:bg-emerald-50">
+                      <Printer className="h-5 w-5" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => onEditSale(sale)} className="h-10 w-10 rounded-xl shadow-sm hover:text-blue-600 hover:bg-blue-50">
+                      <Edit className="h-5 w-5" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => onDeleteSale(sale.id)} className="h-10 w-10 rounded-xl shadow-sm text-destructive hover:bg-destructive/10">
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Pagination Controls */}
