@@ -248,7 +248,9 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
 
   const [paymentCondition, setPaymentCondition] = useState<'contado' | 'credito'>('contado');
   const [paymentMethod, setPaymentMethod] = useState<string>('transfer');
-  const [creditDays, setCreditDays] = useState<number>(30);
+  const [creditDays, setCreditDays] = useState<number>(() => {
+    return parseInt(localStorage.getItem('cobro_quote_validity_days') || '30', 10) || 30;
+  });
   const [notes, setNotes] = useState<string>('');
 
   const [serviceLines, setServiceLines] = useState<ServiceLineItem[]>([
@@ -287,6 +289,9 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   }, []);
 
   const dueDateStr = useMemo(() => {
+    if (isQuote) {
+      return `Válida por ${creditDays || 30} días`;
+    }
     if (paymentCondition === 'contado') {
       return 'Al Contado (Inmediato)';
     }
@@ -297,7 +302,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       month: 'long',
       day: 'numeric'
     });
-  }, [paymentCondition, creditDays]);
+  }, [isQuote, paymentCondition, creditDays]);
 
   // Cálculos de totales (Soporta sin impuesto, con impuesto adicional y con impuesto incluido)
   const totals = useMemo(() => {
@@ -443,7 +448,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       invoiceTypeId: selectedInvoiceTypeId,
       items: validItems,
       paymentMethod: paymentCondition === 'credito' ? 'credit' : paymentMethod,
-      creditDays: paymentCondition === 'credito' ? creditDays : undefined,
+      creditDays: isQuote ? (creditDays || 30) : (paymentCondition === 'credito' ? creditDays : undefined),
       notes: finalNotes,
       currency,
       exchangeRate,
@@ -832,7 +837,60 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               </Select>
             </div>
 
-            {/* Condición de Pago: Contado / Crédito */}
+            {/* Condición de Pago o Vigencia de Cotización */}
+            {isQuote ? (
+              <div className="space-y-1.5 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Vigencia de la Cotización
+                  </label>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold font-mono">
+                    {creditDays || 30} días
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {[15, 30, 45, 60].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        setCreditDays(d);
+                        localStorage.setItem('cobro_quote_validity_days', String(d));
+                      }}
+                      className={cn(
+                        "py-1 text-[11px] font-bold rounded transition-all cursor-pointer border",
+                        creditDays === d
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-background/80 text-muted-foreground border-border/60 hover:text-foreground"
+                      )}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-muted-foreground">Personalizado:</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={creditDays || ''}
+                    onChange={(e) => {
+                      const v = Math.max(1, Math.min(365, parseInt(e.target.value, 10) || 1));
+                      setCreditDays(v);
+                      localStorage.setItem('cobro_quote_validity_days', String(v));
+                    }}
+                    className="h-7 text-xs w-20 text-center font-bold bg-background/80"
+                  />
+                  <span className="text-[10px] text-muted-foreground">días</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Se guardará en Cuentas por {creditDays || 30} días para cargarla al POS y facturarla luego.
+                </p>
+              </div>
+            ) : (
+              <>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
@@ -908,6 +966,9 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                   </SelectContent>
                 </Select>
               </div>
+            )}
+
+              </>
             )}
 
             {/* Notes / Bank Info */}

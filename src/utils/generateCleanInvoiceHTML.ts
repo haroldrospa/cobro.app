@@ -326,7 +326,7 @@ export const generateCleanInvoiceHTML = (
             <div style="font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; margin-top: 4px; line-height: 1.4;">
               <div><strong style="color: #334155;">Tipo:</strong> ${customerTypeLabel}</div>
               <div><strong style="color: #334155;">Fecha:</strong> ${formattedDateStr} ${formattedTimeStr}</div>
-              <div><strong style="color: #334155;">Pago:</strong> ${pMethod} ${isCreditSale && invoiceData.paymentTerms ? `(${invoiceData.paymentTerms} días)` : ''}</div>
+              ${isQuotation ? `<div><strong style="color: #334155;">Validez:</strong> ${invoiceData.paymentTerms || 30} días</div>` : `<div><strong style="color: #334155;">Pago:</strong> ${pMethod} ${isCreditSale && invoiceData.paymentTerms ? `(${invoiceData.paymentTerms} días)` : ''}</div>`}
             </div>
           </div>
         </div>

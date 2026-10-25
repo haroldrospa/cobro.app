@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardList, ShoppingCart, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search, Settings2, Pencil } from 'lucide-react';
+import { ClipboardList, ShoppingCart, FileText, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search, Settings2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,16 @@ import { useTableConfig } from '@/hooks/useTableConfig';
 import { TableConfigDialog } from './TableConfigDialog';
 import { TableSection } from '@/types/tableConfig';
 export { extractTableFromNotes };
+export const getQuoteValidityInfo = (order: any) => {
+  const match = (order.notes || '').match(/\[VALIDA_DIAS:\s*(\d+)\]/i);
+  const totalDays = match ? parseInt(match[1], 10) : 30;
+  const createdMs = new Date(order.created_at).getTime();
+  const elapsedDays = Math.max(0, Math.floor((Date.now() - createdMs) / (1000 * 60 * 60 * 24)));
+  const remainingDays = Math.max(0, totalDays - elapsedDays);
+  const isExpired = elapsedDays > totalDays;
+  return { totalDays, elapsedDays, remainingDays, isExpired };
+};
+
 
 // Al guardar un pedido (SaveOrderDialog) se le agrega al final de las notas
 // una etiqueta técnica entre corchetes (ej. "[COMPRA AQUÍ]") para que otras
@@ -38,12 +48,13 @@ const displayNotes = (notes?: string | null) => (notes || '')
   .replace(/\[PARA LLEVAR\]/g, '')
   .replace(/\[COMPRA AQUÍ\]/g, '')
   .replace(/\[DELIVERY\]/g, '')
+  .replace(/\[VALIDA_DIAS:[^\]]+\]/gi, '')
   .trim();
 
 interface OpenAccountsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoadToCart?: (items: CartItem[], orderId: string, customerName: string, orderNumber: string, source: 'pos' | 'web', notes?: string) => void;
+  onLoadToCart?: (items: CartItem[], orderId: string, customerName: string, orderNumber: string, source: 'pos' | 'web', notes?: string, customerId?: string) => void;
   currentLoadedOrderId?: string | null;
   onSelectTable?: (tableName: string) => void;
 }
@@ -70,6 +81,34 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   const [confirmMerge, setConfirmMerge] = useState(false);
 
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [accountFilter, setAccountFilter] = useState<'all' | 'orders' | 'quotes'>('all');
+  const [editingQuoteValidity, setEditingQuoteValidity] = useState<{
+    orderId: string;
+    orderNumber: string;
+    validityDays: number;
+  } | null>(null);
+
+  const updateQuoteValidityMutation = useMutation({
+    mutationFn: async ({ orderId, newDays }: { orderId: string; newDays: number }) => {
+      const target = (orders as any[]).find((o: any) => o.id === orderId);
+      let baseNotes = (target?.notes || '').replace(/\[VALIDA_DIAS:\s*\d+\]/gi, '').trim();
+      const updatedNotes = `${baseNotes} [VALIDA_DIAS: ${newDays}]`.trim();
+      const { error } = await supabase
+        .from('open_orders')
+        .update({ notes: updatedNotes, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+      toast({ title: "Vigencia actualizada", description: "Los días de vigencia de la cotización fueron actualizados." });
+      setEditingQuoteValidity(null);
+    },
+    onError: (err: any) => {
+      toast({ variant: "destructive", title: "Error", description: err?.message || "No se pudo actualizar la vigencia" });
+    }
+  });
+
   const [editingNameOrder, setEditingNameOrder] = useState<{
     orderId: string;
     orderNumber: string;
@@ -381,7 +420,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
       };
     });
     if (onLoadToCart) {
-      onLoadToCart(cartItems, orderToLoad.id, orderToLoad.customer_name, orderToLoad.order_number, 'pos', orderToLoad.notes);
+      onLoadToCart(cartItems, orderToLoad.id, orderToLoad.customer_name, orderToLoad.order_number, 'pos', orderToLoad.notes, orderToLoad.customer_id);
     }
     setSelectedOrderId(null);
     onClose();
@@ -539,6 +578,9 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     const itemCount = order.open_order_items?.length || 0;
     const notesText = displayNotes(order.notes);
     const tableName = extractTableFromNotes(order.notes);
+    const isQuote = order.order_status === 'quote' || order.order_number?.startsWith('COT');
+    const validityInfo = isQuote ? getQuoteValidityInfo(order) : null;
+
 
     return (
       <div
@@ -573,6 +615,39 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-secondary/80 text-foreground border border-border/40">
                 {order.order_number}
               </span>
+              {isQuote && validityInfo && (
+                <div className="flex items-center gap-1">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] px-2 py-0.5 font-bold flex items-center gap-1 shadow-xs",
+                      validityInfo.isExpired
+                        ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                        : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                    )}
+                  >
+                    <Clock className="h-3 w-3" />
+                    {validityInfo.isExpired
+                      ? `Cotización Vencida (${validityInfo.elapsedDays}d / ${validityInfo.totalDays}d)`
+                      : `Cotización • ${validityInfo.remainingDays}d restantes (de ${validityInfo.totalDays}d)`}
+                  </Badge>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingQuoteValidity({
+                        orderId: order.id,
+                        orderNumber: order.order_number,
+                        validityDays: validityInfo.totalDays,
+                      });
+                    }}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-amber-500 transition-colors cursor-pointer"
+                    title="Editar días de vigencia de la cotización"
+                  >
+                    <Pencil className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              )}
 
               {tableName && (
                 <span className="text-xs font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-xs">
@@ -649,15 +724,28 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
 
               <Button
                 size="sm"
-                variant={isSelected ? "default" : "secondary"}
-                className="h-8 px-3 text-xs font-medium gap-1.5 rounded-lg ml-1 shadow-none hidden sm:inline-flex"
+                variant={isQuote ? "default" : (isSelected ? "default" : "secondary")}
+                className={cn(
+                  "h-8 px-3 text-xs font-semibold gap-1.5 rounded-lg ml-1 shadow-none hidden sm:inline-flex",
+                  isQuote && "bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                )}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleLoadToCart(order);
                 }}
+                title={isQuote ? "Cargar cotización al POS para facturarla" : "Cargar pedido al carrito"}
               >
-                <ShoppingCart className="h-3.5 w-3.5" />
-                Cargar
+                {isQuote ? (
+                  <>
+                    <FileText className="h-3.5 w-3.5" />
+                    Facturar
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    Cargar
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -831,6 +919,21 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
     return list;
   }, [selectedZone, allTablesList, allSections, tableSearchQuery, tableToOrderMap]);
 
+  
+  const quoteOrders = React.useMemo(() => {
+    return filteredOrders.filter((o: any) => o.order_status === 'quote' || o.order_number?.startsWith('COT'));
+  }, [filteredOrders]);
+
+  const regularOrders = React.useMemo(() => {
+    return filteredOrders.filter((o: any) => !(o.order_status === 'quote' || o.order_number?.startsWith('COT')));
+  }, [filteredOrders]);
+
+  const displayedOrders = React.useMemo(() => {
+    if (accountFilter === 'quotes') return quoteOrders;
+    if (accountFilter === 'orders') return regularOrders;
+    return filteredOrders;
+  }, [accountFilter, filteredOrders, quoteOrders, regularOrders]);
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -992,7 +1095,56 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               ) : (
                 <ScrollArea className="flex-1 -mr-2 pr-3">
                   <div className="space-y-2.5 pb-2">
-                    {filteredOrders.map((order: any) => renderOrderRow(order))}
+                    
+                  <div className="flex items-center gap-1.5 pb-2 mb-1 border-b border-border/30">
+                    <button
+                      type="button"
+                      onClick={() => setAccountFilter('all')}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border",
+                        accountFilter === 'all'
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                          : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Todas ({filteredOrders.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAccountFilter('orders')}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border",
+                        accountFilter === 'orders'
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                          : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Cuentas ({regularOrders.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAccountFilter('quotes')}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5",
+                        accountFilter === 'quotes'
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      <FileText className="h-3 w-3" />
+                      <span>Cotizaciones</span>
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        {quoteOrders.length}
+                      </span>
+                    </button>
+                  </div>
+                  {displayedOrders.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-muted-foreground">
+                      No hay elementos en este filtro
+                    </div>
+                  ) : (
+                    displayedOrders.map((order: any) => renderOrderRow(order))
+                  )}
                   </div>
                 </ScrollArea>
               )
@@ -1404,6 +1556,93 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               </div>
             </div>
           )}
+        
+          {editingQuoteValidity && (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+              onClick={() => setEditingQuoteValidity(null)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-500" />
+                    Vigencia de Cotización {editingQuoteValidity.orderNumber}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Define cuántos días será válida esta cotización antes de vencer:
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[15, 30, 45, 60].map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setEditingQuoteValidity(prev => prev ? { ...prev, validityDays: d } : null)}
+                        className={cn(
+                          "py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer",
+                          editingQuoteValidity.validityDays === d
+                            ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                            : "bg-background border-border/60 hover:bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {d} días
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs text-muted-foreground font-medium">Personalizado:</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={editingQuoteValidity.validityDays}
+                      onChange={(e) => {
+                        const val = Math.max(1, Math.min(365, parseInt(e.target.value, 10) || 1));
+                        setEditingQuoteValidity(prev => prev ? { ...prev, validityDays: val } : null);
+                      }}
+                      className="h-8 text-xs w-24 text-center font-bold bg-background"
+                    />
+                    <span className="text-xs text-muted-foreground">días</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingQuoteValidity(null)}
+                    className="rounded-xl h-8 text-xs"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={updateQuoteValidityMutation.isPending}
+                    onClick={() => {
+                      if (editingQuoteValidity) {
+                        updateQuoteValidityMutation.mutate({
+                          orderId: editingQuoteValidity.orderId,
+                          newDays: editingQuoteValidity.validityDays,
+                        });
+                      }
+                    }}
+                    className="rounded-xl h-8 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  >
+                    {updateQuoteValidityMutation.isPending ? 'Guardando...' : 'Guardar Vigencia'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
         </DialogContent>
       </Dialog>
 

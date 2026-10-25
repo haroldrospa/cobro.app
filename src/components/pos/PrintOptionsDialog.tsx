@@ -400,7 +400,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         `• *Cotización:* #${invoiceNumber}\n` +
         `• *Monto Total:* $${formattedInvoiceTotal}\n\n` +
         `*Detalle de Servicios:*\n${itemsList}\n` +
-        `*Nota:* Esta cotización tiene una validez de 30 días a partir de su emisión.\n\n` +
+        `*Nota:* Esta cotización tiene una validez de ${saleData?.paymentTerms || 30} días a partir de su emisión.\n\n` +
         `Para cualquier consulta o aprobación, estamos a su entera disposición.\n\n` +
         `¡Gracias por su preferencia!\n\n` +
         `_(Mensaje enviado vía Cobroapp)_`

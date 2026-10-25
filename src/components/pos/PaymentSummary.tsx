@@ -120,6 +120,18 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const [dragOverBlock, setDragOverBlock] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const { isServices } = useBusinessType();
+  const [quoteValidityDays, setQuoteValidityDays] = useState<number>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('cobro_quote_validity_days') : null;
+    const parsed = saved ? parseInt(saved, 10) : 30;
+    return !isNaN(parsed) && parsed > 0 ? parsed : 30;
+  });
+  const handleQuoteValidityChange = (days: number) => {
+    const valid = Math.max(1, Math.min(365, days || 30));
+    setQuoteValidityDays(valid);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cobro_quote_validity_days', String(valid));
+    }
+  };
 
   const filteredCustomers = React.useMemo(() => {
     if (!customerSearch) return customers.slice(0, 30);
@@ -455,6 +467,43 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {selectedType?.code === 'COT' && (
+                    <div className="pt-1.5 border-t border-primary/15 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Guardar por (días):
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {[15, 30, 60].map(d => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => handleQuoteValidityChange(d)}
+                              className={cn(
+                                "px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors",
+                                quoteValidityDays === d
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-muted-foreground border-border hover:text-foreground"
+                              )}
+                            >
+                              {d}d
+                            </button>
+                          ))}
+                          <Input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={quoteValidityDays}
+                            onChange={(e) => handleQuoteValidityChange(parseInt(e.target.value, 10) || 30)}
+                            className="h-6 w-14 px-1.5 text-center text-xs font-mono font-bold bg-background"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[9.5px] text-muted-foreground leading-tight">
+                        Se guardará en <strong>Cuentas</strong> por {quoteValidityDays} días para cargarla al POS y facturarla luego.
+                      </p>
+                    </div>
+                  )}
                   {selectedCustomerData && (
                     <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 bg-background/50 p-1.5 rounded border border-border/50">
                       <span className="font-semibold text-foreground">{selectedCustomerData.name}</span>

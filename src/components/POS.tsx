@@ -830,12 +830,13 @@ const POSContent: React.FC = () => {
     if (cart.length === 0) return;
 
     if (selectedInvoiceType === 'COT') {
+      const quoteDays = parseInt(localStorage.getItem('cobro_quote_validity_days') || '30', 10) || 30;
       handleDirectEmitServiceInvoice({
         customerId: selectedCustomer,
         invoiceTypeId: 'COT',
         items: cartWithOffers,
         paymentMethod: 'cash',
-        creditDays: 30,
+        creditDays: quoteDays,
         notes: currentOrderInfo?.notes || '',
         currency: storeSettings?.currency === 'USD' ? 'USD' : 'DOP',
       });
@@ -843,7 +844,6 @@ const POSContent: React.FC = () => {
       setGlobalDiscount({ value: 0, type: 'percentage' });
       return;
     }
-
     // Mesero/a: Solo toma comandas y las asigna a mesas. Bloqueado de cobro/facturación.
     if (isWaiter) {
       if (selectedTable) {
@@ -1791,8 +1791,71 @@ const POSContent: React.FC = () => {
       });
 
       if (isQuote) {
-        const quoteNumber = `COT-${Date.now().toString().slice(-6)}`;
+        const effectiveStoreId = storeId || store.id;
+        const validityDays = data.creditDays || parseInt(localStorage.getItem('cobro_quote_validity_days') || '30', 10) || 30;
+
+        let nextQuoteNum = 1;
+        try {
+          const { data: seqRow } = await supabase
+            .from('invoice_sequences')
+            .select('id, current_number')
+            .eq('invoice_type_id', 'COT')
+            .maybeSingle();
+
+          const { data: existingQuotes } = await supabase
+            .from('open_orders')
+            .select('order_number')
+            .eq('store_id', effectiveStoreId)
+            .ilike('order_number', 'COT%')
+            .limit(100);
+
+          let maxFound = 0;
+          if (seqRow?.current_number && seqRow.current_number < 100000) {
+            maxFound = Math.max(maxFound, Number(seqRow.current_number));
+          }
+
+          if (existingQuotes && existingQuotes.length > 0) {
+            existingQuotes.forEach(q => {
+              const m = q.order_number?.match(/COT-?(\d+)/i);
+              if (m) {
+                const num = parseInt(m[1], 10);
+                if (num > 0 && num < 100000 && num > maxFound) {
+                  maxFound = num;
+                }
+              }
+            });
+          }
+
+          const localSeq = parseInt(localStorage.getItem(`cobro_quote_seq_${effectiveStoreId}`) || '0', 10);
+          if (localSeq > 0 && localSeq < 100000 && localSeq > maxFound) {
+            maxFound = localSeq;
+          }
+
+          nextQuoteNum = maxFound + 1;
+          localStorage.setItem(`cobro_quote_seq_${effectiveStoreId}`, String(nextQuoteNum));
+
+          if (seqRow?.id) {
+            await supabase
+              .from('invoice_sequences')
+              .update({ current_number: nextQuoteNum, updated_at: new Date().toISOString() })
+              .eq('id', seqRow.id);
+          } else {
+            await supabase
+              .from('invoice_sequences')
+              .insert({ store_id: effectiveStoreId, invoice_type_id: 'COT', current_number: nextQuoteNum });
+          }
+        } catch (seqErr) {
+          console.warn('Error al calcular o guardar secuencia de cotización:', seqErr);
+          const localSeq = parseInt(localStorage.getItem(`cobro_quote_seq_${effectiveStoreId}`) || '0', 10);
+          nextQuoteNum = localSeq + 1;
+          localStorage.setItem(`cobro_quote_seq_${effectiveStoreId}`, String(nextQuoteNum));
+        }
+
+        const quoteNumber = `COT-${String(nextQuoteNum).padStart(8, '0')}`;
         let quoteOrderId = crypto.randomUUID();
+
+        const baseQuoteNotes = (data.notes || '').replace(/\[VALIDA_DIAS:\s*\d+\]/gi, '').trim();
+        const quoteNotesWithValidity = `${baseQuoteNotes} [VALIDA_DIAS: ${validityDays}]`.trim();
 
         try {
           const { data: openOrder } = await supabase.from('open_orders').insert({
@@ -1807,8 +1870,8 @@ const POSContent: React.FC = () => {
             tax_total: tax,
             total: totalAmount,
             discount_total: 0,
-            notes: data.notes || '',
-            store_id: storeId || store.id,
+            notes: quoteNotesWithValidity,
+            store_id: effectiveStoreId,
             profile_id: profile?.id || null,
             payment_method: data.paymentMethod,
             payment_status: 'pending',
@@ -1841,6 +1904,12 @@ const POSContent: React.FC = () => {
               };
             });
             await supabase.from('open_order_items').insert(openOrderItems);
+          }
+
+          // Inmediatamente refrescar pedidos guardados para que aparezca en Cuentas
+          queryClient.invalidateQueries({ queryKey: ['pos-open-orders'] });
+          if (effectiveStoreId) {
+            queryClient.invalidateQueries({ queryKey: ['pos-open-orders', effectiveStoreId] });
           }
         } catch (quoteErr) {
           console.warn('No se pudo guardar la cotización en open_orders, continuando con impresión:', quoteErr);
@@ -1877,7 +1946,9 @@ const POSContent: React.FC = () => {
           invoiceType: 'COT',
           is_quote: true,
           currency: data.currency || (storeSettings?.currency === 'USD' ? 'USD' : 'DOP'),
-          notes: data.notes || '',
+          notes: quoteNotesWithValidity,
+          paymentTerms: validityDays,
+          dueDate: new Date(Date.now() + validityDays * 86400000).toISOString(),
           profile: {
             full_name: profile?.full_name || 'Cajero'
           },
@@ -1890,7 +1961,7 @@ const POSContent: React.FC = () => {
 
         toast({
           title: "Cotización generada",
-          description: `Cotización ${quoteNumber} generada correctamente en formato Carta.`,
+          description: `Cotización ${quoteNumber} generada correctamente (Vigencia: ${validityDays} días).`,
         });
         return;
       }
