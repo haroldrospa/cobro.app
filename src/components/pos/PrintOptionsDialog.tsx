@@ -532,6 +532,28 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     return code;
   })();
 
+  const translatePaymentMethod = (method?: string) => {
+    const raw = (method || '').trim().toLowerCase();
+    const map: Record<string, string> = {
+      cash: 'Efectivo',
+      efectivo: 'Efectivo',
+      card: 'Tarjeta',
+      tarjeta: 'Tarjeta',
+      transfer: 'Transferencia',
+      transferencia: 'Transferencia',
+      credit: 'Crédito',
+      credito: 'Crédito',
+      crédito: 'Crédito',
+      check: 'Cheque',
+      cheque: 'Cheque',
+      split: 'Pago Mixto',
+      mixto: 'Pago Mixto',
+      pending: 'Pendiente',
+      pendiente: 'Pendiente',
+    };
+    return map[raw] || method || 'Efectivo';
+  };
+
   const signatureDate = saleData.fecha_firma || new Date().toISOString();
 
   const generateBarcode = (text: string): string => {
@@ -741,7 +763,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               <div style="font-size: 11px; margin-top: 6px; color: #333; border-top: 1px dashed #ccc; padding-top: 4px;">
                 <strong>FECHA:</strong> ${new Date().toLocaleDateString('es-DO')} | <strong>HORA:</strong> ${new Date().toLocaleTimeString('es-DO')}
               </div>
-              <div style="font-size: 11px; color: #333;"><strong>PAGO:</strong> ${saleData.paymentMethod?.toUpperCase() || 'CONTADO'}</div>
+              <div style="font-size: 11px; color: #333;"><strong>PAGO:</strong> ${translatePaymentMethod(saleData.paymentMethod).toUpperCase()}</div>
               ${saleData.profile?.full_name ? `<div style="font-size: 11px; color: #333; margin-top: 4px;"><strong>LE ATENDIÓ:</strong> ${saleData.profile.full_name.toUpperCase()}</div>` : ''}
             </div>
             
@@ -750,7 +772,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                 <div><strong>CLIENTE:</strong> ${saleData.customer.name}</div>
                 ${saleData.customer.rnc ? `<div><strong>RNC/CÉDULA:</strong> ${saleData.customer.rnc}</div>` : ''}
               ` : ''}
-              <div><strong>MÉTODO DE PAGO:</strong> ${saleData.paymentMethod.toUpperCase()}</div>
+              <div><strong>MÉTODO DE PAGO:</strong> ${translatePaymentMethod(saleData.paymentMethod).toUpperCase()}</div>
               ${saleData.customerDebt ? `
                 <div style="margin-top: 8px; padding: 5px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 3px;">
                   ${saleData.previousDebt && saleData.previousDebt > 0 ? `
@@ -871,7 +893,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       customerPhone: saleData.customer?.phone,
       customerAddress: saleData.customer?.address,
       cashierName: (saleData as any).cashier_name || (saleData as any).profile?.full_name || (saleData as any).user?.full_name,
-      paymentMethod: (saleData as any).paymentMethod || (saleData as any).payment_method || 'Efectivo',
+      paymentMethod: translatePaymentMethod((saleData as any).paymentMethod || (saleData as any).payment_method || 'Efectivo'),
       amountPaid: (saleData as any).cashReceived || (saleData as any).cash_received || (saleData as any).amountPaid || saleData.total,
       change: (saleData as any).change || 0,
       isElectronic: isElectronic,
@@ -970,7 +992,29 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       format: (effectivePaperSize === 'carta' || isServicesMode) ? 'letter' : 'a4'
     });
 
-    const signatureDate = saleData.fecha_firma || new Date().toISOString();
+    const translatePaymentMethod = (method?: string) => {
+    const raw = (method || '').trim().toLowerCase();
+    const map: Record<string, string> = {
+      cash: 'Efectivo',
+      efectivo: 'Efectivo',
+      card: 'Tarjeta',
+      tarjeta: 'Tarjeta',
+      transfer: 'Transferencia',
+      transferencia: 'Transferencia',
+      credit: 'Crédito',
+      credito: 'Crédito',
+      crédito: 'Crédito',
+      check: 'Cheque',
+      cheque: 'Cheque',
+      split: 'Pago Mixto',
+      mixto: 'Pago Mixto',
+      pending: 'Pendiente',
+      pendiente: 'Pendiente',
+    };
+    return map[raw] || method || 'Efectivo';
+  };
+
+  const signatureDate = saleData.fecha_firma || new Date().toISOString();
 
     // --- 1. Top Header Area (Company Identity) ---
     if (companyInfo.logo) {
@@ -1038,7 +1082,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     doc.setFontSize(10);
     doc.setTextColor(113, 128, 150);
     doc.text(`FECHA: ${new Date().toLocaleDateString('es-DO')} ${new Date().toLocaleTimeString('es-DO')} `, 130, 75);
-    doc.text(`PAGO: ${saleData.paymentMethod?.toUpperCase() || 'CONTADO'} `, 130, 81);
+    doc.text(`PAGO: ${translatePaymentMethod(saleData.paymentMethod).toUpperCase()} `, 130, 81);
 
     // --- 3. Customer Section ---
     doc.setFont("helvetica", "bold");

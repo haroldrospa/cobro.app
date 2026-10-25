@@ -160,7 +160,9 @@ export const generateProfessionalPDF = async (companyInfo: CompanyInfo, saleData
     doc.setFontSize(10);
     doc.setTextColor(113, 128, 150);
     doc.text(`FECHA: ${new Date().toLocaleDateString('es-DO')} ${new Date().toLocaleTimeString('es-DO')}`, 130, 75);
-    doc.text(`PAGO: ${saleData.paymentMethod?.toUpperCase() || 'CONTADO'}`, 130, 81);
+    const pMethodMap: Record<string, string> = { cash: 'EFECTIVO', card: 'TARJETA', transfer: 'TRANSFERENCIA', credit: 'CRÉDITO', check: 'CHEQUE', split: 'PAGO MIXTO' };
+    const pMethodLabel = pMethodMap[(saleData.paymentMethod || '').toLowerCase()] || saleData.paymentMethod?.toUpperCase() || 'CONTADO';
+    doc.text(`PAGO: ${pMethodLabel}`, 130, 81);
 
     // Add employee name if available
     // @ts-ignore - profile property might not be in the strict interface yet but passed at runtime

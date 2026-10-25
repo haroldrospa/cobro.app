@@ -92,7 +92,28 @@ export const generateCleanInvoiceHTML = (
     hour12: true,
   });
 
-  const pMethod = (invoiceData.paymentMethod?.trim() || 'EFECTIVO').toUpperCase();
+  const pMethod = (() => {
+    const raw = (invoiceData.paymentMethod || '').trim().toLowerCase();
+    const map: Record<string, string> = {
+      cash: 'Efectivo',
+      efectivo: 'Efectivo',
+      card: 'Tarjeta',
+      tarjeta: 'Tarjeta',
+      transfer: 'Transferencia',
+      transferencia: 'Transferencia',
+      credit: 'Crédito',
+      credito: 'Crédito',
+      crédito: 'Crédito',
+      check: 'Cheque',
+      cheque: 'Cheque',
+      split: 'Pago Mixto',
+      mixto: 'Pago Mixto',
+      pending: 'Pendiente',
+      pendiente: 'Pendiente',
+      contado: 'Al Contado',
+    };
+    return map[raw] || invoiceData.paymentMethod?.trim() || 'Efectivo';
+  })();
   const rawInvoiceNum = invoiceData.invoiceNumber || '000000';
   const isQuotation = Boolean(invoiceData.isQuotation || rawInvoiceNum.startsWith('COT') || invoiceData.invoicePrefix === 'COT');
   const isInternalInvoice = !isQuotation && (rawInvoiceNum.startsWith('FAC') || invoiceData.invoicePrefix === 'FAC');
