@@ -267,7 +267,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const isElec = !isInternal && (invNum.startsWith('E') || rawSaleData.is_electronic || !!rawSaleData.encf);
     
     let qrUrl = rawSaleData.qrcode_url;
-    if (isElec && rawSaleData.estado_fiscal === 'ACEPTADO' && !qrUrl) {
+    if ((isInternal || (isElec && rawSaleData.estado_fiscal === 'ACEPTADO')) && !qrUrl) {
       const emisorRnc = dbCompanyInfo?.rnc?.replace(/[^0-9]/g, '') || '';
       const receptorRnc = rawSaleData.customer?.rnc?.replace(/[^0-9]/g, '') || '';
       const rawDate = rawSaleData.fecha_firma || new Date().toISOString();
@@ -283,7 +283,18 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         formattedDate = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
       } catch (_) {}
       
-      qrUrl = `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&MontoTotal=${rawSaleData.total}&CodigoSeguridad=${rawSaleData.codigo_seguridad || ''}&FechaFirma=${encodeURIComponent(formattedDate)}`;
+      let secCode = rawSaleData.codigo_seguridad || '';
+      if (!secCode) {
+        let hash = 0;
+        for (let i = 0; i < invNum.length; i++) {
+          hash = invNum.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < 6; i++) {
+          secCode += chars[Math.abs((hash + i * 13) % chars.length)];
+        }
+      }
+      qrUrl = `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&MontoTotal=${rawSaleData.total}&CodigoSeguridad=${secCode}&FechaFirma=${encodeURIComponent(formattedDate)}`;
     }
 
     return {
@@ -1126,7 +1137,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
     // --- 5b. Loyalty Points Block (only if customer has points) ---
     if (saleData.customer && (saleData.loyaltyPointsEarned !== undefined || saleData.loyaltyPoints !== undefined)) {
-      const hasQrCode = isElectronic && saleData.qrcode_url;
+      const hasQrCode = (isElectronic || isInternalInvoice) && saleData.qrcode_url;
       const bottomOfSummaryAndQR = finalY + (hasQrCode ? 38 : (saleData.change && saleData.change > 0 ? 28 : 22));
       const loyaltyY = bottomOfSummaryAndQR + 6;
 
@@ -1209,7 +1220,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     }
 
     // Add QR Code if electronic
-    if (isElectronic && saleData.qrcode_url) {
+    if ((isElectronic || isInternalInvoice) && saleData.qrcode_url) {
       try {
         const qrImg = new Image();
         qrImg.crossOrigin = "anonymous";
@@ -1485,7 +1496,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               </div>
             </Card>
 
-            {isElectronic && saleData.qrcode_url && (
+            {(isElectronic || isInternalInvoice) && saleData.qrcode_url && (
               <Card className="p-3 flex flex-col items-center justify-center border-emerald-500/20 bg-emerald-500/5">
                 <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1.5">Comprobante Fiscal Electrónico (e-CF)</p>
                 <div className="bg-white p-1 rounded-lg border shadow-sm flex items-center justify-center w-28 h-28 mb-1.5">

@@ -96,6 +96,49 @@ export const generateCleanInvoiceHTML = (
   const rawInvoiceNum = invoiceData.invoiceNumber || '000000';
   const isQuotation = Boolean(invoiceData.isQuotation || rawInvoiceNum.startsWith('COT') || invoiceData.invoicePrefix === 'COT');
   const isInternalInvoice = !isQuotation && (rawInvoiceNum.startsWith('FAC') || invoiceData.invoicePrefix === 'FAC');
+  const hasElectronicStyle = Boolean(invoiceData.isElectronic || isInternalInvoice);
+
+  const effectiveSecurityCode = (() => {
+    if (invoiceData.securityCode && invoiceData.securityCode !== 'undefined') return invoiceData.securityCode;
+    const seed = invoiceData.encf || rawInvoiceNum || 'FAC0000000001';
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let fallbackCode = '';
+    for (let i = 0; i < 6; i++) {
+      const index = Math.abs((hash + i * 13) % chars.length);
+      fallbackCode += chars[index];
+    }
+    return fallbackCode;
+  })();
+
+  const effectiveSignatureDate = (() => {
+    const raw = invoiceData.signatureDate || invoiceData.date;
+    try {
+      const d = raw instanceof Date ? raw : new Date(raw);
+      if (isNaN(d.getTime())) return String(raw);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    } catch {
+      return String(raw || '');
+    }
+  })();
+
+  const effectiveQrCodeUrl = (() => {
+    if (invoiceData.qrCodeUrl) return invoiceData.qrCodeUrl;
+    if (!hasElectronicStyle) return '';
+    const emisorRnc = (companyData.rnc || '').replace(/[^0-9]/g, '');
+    const receptorRnc = (invoiceData.customerRnc || '').replace(/[^0-9]/g, '');
+    const docCode = invoiceData.encf || rawInvoiceNum;
+    return `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${docCode}&MontoTotal=${invoiceData.total}&CodigoSeguridad=${effectiveSecurityCode}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}`;
+  })();
   const displayNCF = isQuotation
     ? rawInvoiceNum
     : (invoiceData.isElectronic
@@ -324,7 +367,19 @@ export const generateCleanInvoiceHTML = (
       <!-- Sección Inferior: DGII / Firma (Izq) y Totales (Der) -->
       <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: start; margin-top: auto; padding-top: 10px;">
         <div>
-          ${invoiceData.isElectronic && invoiceData.qrCodeUrl ? `
+          ${hasElectronicStyle && effectiveQrCodeUrl ? `
+            <div style="display: flex; align-items: center; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR Fiscal" style="width: 72px; height: 72px; border-radius: 4px; background: #ffffff; padding: 2px; border: 1px solid #e2e8f0; flex-shrink: 0;" />
+              <div style="font-size: 10.5px; line-height: 1.4; color: #475569;">
+                <div style="font-weight: 800; color: #0284c7; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.05em; margin-bottom: 2px;">
+                  Comprobante Autorizado por la DGII
+                </div>
+                ${effectiveSecurityCode ? `<div><strong style="color: #1e293b;">Cód. Seguridad:</strong> <span class="tabular-numbers">${effectiveSecurityCode}</span></div>` : ''}
+                ${effectiveSignatureDate ? `<div><strong style="color: #1e293b;">Firma Digital:</strong> <span class="tabular-numbers">${effectiveSignatureDate}</span></div>` : ''}
+              </div>
+            </div>
+          ` : ''}
+          ${false && invoiceData.isElectronic && invoiceData.qrCodeUrl ? `
             <div style="display: flex; align-items: center; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;">
               <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceData.qrCodeUrl)}" alt="Código QR Fiscal" style="width: 72px; height: 72px; border-radius: 4px; background: #ffffff; padding: 2px; border: 1px solid #e2e8f0; flex-shrink: 0;" />
               <div style="font-size: 10.5px; line-height: 1.4; color: #475569;">
@@ -635,7 +690,17 @@ export const generateCleanInvoiceHTML = (
         </div>
       ` : ''}
 
-      ${invoiceData.isElectronic && invoiceData.qrCodeUrl ? `
+      ${hasElectronicStyle && effectiveQrCodeUrl ? `
+        <div style="text-align: center; margin-bottom: 6px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR Fiscal" style="width: ${is58mm ? '75px' : '90px'}; height: ${is58mm ? '75px' : '90px'}; display: block; margin: 0 auto;" />
+          <div style="font-size: ${is58mm ? '9.5px' : '8.5px'}; font-weight: 800; margin-top: 3px; font-family: monospace;">
+            ${effectiveSecurityCode ? `<div>Cód. Seguridad: ${effectiveSecurityCode}</div>` : ''}
+            ${effectiveSignatureDate ? `<div>Firma: ${effectiveSignatureDate}</div>` : ''}
+          </div>
+          <div style="font-size: ${is58mm ? '10px' : '8px'}; font-weight: 900; margin-top: 2px; text-transform: uppercase;">Comprobante Autorizado por la DGII</div>
+        </div>
+      ` : ''}
+      ${false && invoiceData.isElectronic && invoiceData.qrCodeUrl ? `
         <div style="text-align: center; margin-bottom: 6px;">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceData.qrCodeUrl)}" alt="Código QR Fiscal" style="width: ${is58mm ? '75px' : '90px'}; height: ${is58mm ? '75px' : '90px'}; display: block; margin: 0 auto;" />
           <div style="font-size: ${is58mm ? '10px' : '8px'}; font-weight: 900; margin-top: 3px; text-transform: uppercase;">Comprobante Autorizado por la DGII</div>
