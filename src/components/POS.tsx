@@ -521,6 +521,8 @@ const POSContent: React.FC = () => {
 
   const selectedInvoiceTypeData = invoiceTypes.find(t => t.id === selectedInvoiceType);
   const mappedInvoiceTypeCode = React.useMemo(() => {
+    if (selectedInvoiceType === 'COT') return 'COT';
+    if (selectedInvoiceType === 'FAC') return 'FAC';
     if (!selectedInvoiceTypeData?.code) return selectedInvoiceTypeData?.code;
     if (!isElectronicActive) return selectedInvoiceTypeData.code;
     
@@ -540,12 +542,12 @@ const POSContent: React.FC = () => {
       return 'E' + code.substring(1);
     }
     return code;
-  }, [selectedInvoiceTypeData, isElectronicActive]);
+  }, [selectedInvoiceType, selectedInvoiceTypeData, isElectronicActive]);
 
   const requiresCustomer = React.useMemo(() => {
     if (!mappedInvoiceTypeCode) return false;
     const code = mappedInvoiceTypeCode;
-    if (['FAC', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    if (['FAC', 'COT', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
     return true;
   }, [mappedInvoiceTypeCode]);
 
@@ -827,6 +829,21 @@ const POSContent: React.FC = () => {
   const handleCheckout = useCallback(() => {
     if (cart.length === 0) return;
 
+    if (selectedInvoiceType === 'COT') {
+      handleDirectEmitServiceInvoice({
+        customerId: selectedCustomer,
+        invoiceTypeId: 'COT',
+        items: cartWithOffers,
+        paymentMethod: 'cash',
+        creditDays: 30,
+        notes: currentOrderInfo?.notes || '',
+        currency: storeSettings?.currency === 'USD' ? 'USD' : 'DOP',
+      });
+      setCart([]);
+      setGlobalDiscount({ value: 0, type: 'percentage' });
+      return;
+    }
+
     // Mesero/a: Solo toma comandas y las asigna a mesas. Bloqueado de cobro/facturación.
     if (isWaiter) {
       if (selectedTable) {
@@ -866,7 +883,7 @@ const POSContent: React.FC = () => {
     }
 
     setShowPaymentDialog(true);
-  }, [cart.length, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, toast]);
+  }, [cart.length, selectedInvoiceType, selectedCustomer, cartWithOffers, storeSettings?.currency, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, toast]);
 
   const processPayment = async (includePreviousDebt: boolean = false, splitMethodParam?: string) => {
     if (isProcessingRef.current || createSale.isPending) return;

@@ -220,7 +220,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const { toast } = useToast();
 
   const mappedInvoiceTypes = React.useMemo(() => {
-    const baseTypes = invoiceTypes.filter(t => t.id !== 'FAC' && t.code !== 'FAC');
+    const baseTypes = invoiceTypes.filter(t => t.id !== 'FAC' && t.code !== 'FAC' && t.id !== 'COT' && t.code !== 'COT');
     const mapped = baseTypes.map(type => {
       if (isElectronic) {
         let electronicCode = type.code;
@@ -245,14 +245,15 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
       }
       return type;
     });
-    return isElectronic ? [{ id: 'FAC', code: 'FAC', name: 'Factura Interna' }, ...mapped] : mapped;
+    const cotType = { id: 'COT', code: 'COT', name: 'Cotización' };
+    return isElectronic ? [{ id: 'FAC', code: 'FAC', name: 'Factura Interna' }, cotType, ...mapped] : [cotType, ...mapped];
   }, [invoiceTypes, isElectronic]);
 
   const selectedType = mappedInvoiceTypes.find(type => type.id === selectedInvoiceType);
   const requiresCustomer = React.useMemo(() => {
     if (!selectedType?.code) return false;
     const code = selectedType.code;
-    if (['FAC', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    if (['FAC', 'COT', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
     return true;
   }, [selectedType]);
 
@@ -343,11 +344,11 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                 </SelectContent>
               </Select>
 
-              {requiresCustomer && (
+              {(requiresCustomer || selectedType?.code === 'COT') && (
                 <div className="mt-2 space-y-1.5 border border-primary/20 bg-primary/5 rounded-lg p-2 animate-in fade-in slide-in-from-top-1 duration-200">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] uppercase font-bold tracking-wider text-primary">
-                      Cliente Requerido (Crédito Fiscal)
+                      {selectedType?.code === 'COT' ? 'Cliente (Opcional para Cotización)' : 'Cliente Requerido (Crédito Fiscal)'}
                     </label>
                     <Button
                       variant="ghost"
@@ -733,7 +734,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               Límite de facturas alcanzado
             </div>
           )}
-          {!sessionActive ? (
+          {!sessionActive && selectedType?.code !== 'COT' ? (
             <Button
               onClick={onOpenRegister || onCheckout}
               className="w-full h-9 md:h-10 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all"
@@ -807,13 +808,13 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               ) : isServices ? (
                 <>
                   <FileText className="mr-1.5 h-3.5 w-3.5" />
-                  Emitir Factura (Carta)
+                  {selectedType?.code === 'COT' ? 'Emitir Cotización (Carta)' : 'Emitir Factura (Carta)'}
                   {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F10</span>}
                 </>
               ) : (
                 <>
                   <CreditCard className="mr-1.5 h-3.5 w-3.5" />
-                  Procesar
+                  {selectedType?.code === 'COT' ? 'Emitir Cotización' : 'Procesar'}
                   {!isMobile && <span className="ml-2 text-[10px] opacity-70 font-normal border border-current rounded px-1">F10</span>}
                 </>
               )}
@@ -829,7 +830,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
             <div className="text-[10px] text-muted-foreground">Total a Pagar</div>
             <div className="text-base font-bold leading-none">${totals.total}</div>
           </div>
-          {!sessionActive ? (
+          {!sessionActive && selectedType?.code !== 'COT' ? (
             <Button
               onClick={onOpenRegister || onCheckout}
               className="h-9 px-4 text-xs font-semibold flex-1 max-w-[150px] bg-emerald-600 hover:bg-emerald-500 text-white"
