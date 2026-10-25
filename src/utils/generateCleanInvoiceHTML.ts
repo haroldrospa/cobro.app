@@ -451,12 +451,30 @@ export const generateCleanInvoiceHTML = (
     </div>
 
     <!-- Pie de Página Institucional -->
+    <div style="position: relative; z-index: 1; border-top: 1px solid #e2e8f0; margin-top: 18px; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <div>
+        <div style="font-size: 11px; font-weight: 700; color: #334155; letter-spacing: 0.01em;">¡Gracias por su preferencia!</div>
+        <div style="font-size: 9.5px; color: #94a3b8; margin-top: 1px;">Documento generado con tecnología de gestión y facturación inteligente.</div>
+      </div>
+      <a href="https://cobroapp.app" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 10px;">
+        <span style="font-size: 10px; color: #475569; font-weight: 500;">
+          Emitido con <strong style="color: #0f172a; font-weight: 900; letter-spacing: 0.03em;">COBRO<span style="color: #059669;">APP</span></strong>
+          <span style="color: #cbd5e1; margin: 0 4px;">•</span>
+          <span>¿Tienes un negocio? Factura fácil en</span>
+        </span>
+        <span style="background: #0f172a; color: #ffffff; font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.02em; white-space: nowrap;">
+          cobroapp.app ↗
+        </span>
+      </a>
+    </div>
+    <div style="display: none;">
     <div style="position: relative; z-index: 1; border-top: 1px solid #e2e8f0; margin-top: 18px; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8;">
       <div style="font-weight: 600; color: #64748b; letter-spacing: 0.02em;">¡Gracias por su preferencia!</div>
       <div style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
         <span>Emitido con</span>
         <strong style="color: #0f172a; letter-spacing: 0.05em;">COBROAPP</strong>
         <span>• cobroapp.app</span>
+    </div>
       </div>
     </div>
 
@@ -718,7 +736,10 @@ export const generateCleanInvoiceHTML = (
       ` : ''}
 
       <div style="margin-top: 10px; padding-top: 8px; border-top: 2px dashed #000000; display: flex; justify-content: center; align-items: center; gap: 6px;">
-        <span style="font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px;">COBROAPP</span>
+        <div style="text-align: center; line-height: 1.3;">
+          <div style="font-size: 11.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px;">Emitido con COBROAPP</div>
+          <div style="font-size: 9px; font-weight: 700; margin-top: 1px;">¿Tienes un negocio? Factura fácil en cobroapp.app</div>
+        </div>
       </div>
     </div>
 
