@@ -49,6 +49,8 @@ export interface ServiceLineItem {
 }
 
 interface ServicePOSWorkspaceProps {
+  onOpenQuotes?: () => void;
+  quoteCount?: number;
   customers: Customer[];
   invoiceTypes: any[];
   products?: Product[];
@@ -73,6 +75,8 @@ interface ServicePOSWorkspaceProps {
 }
 
 export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
+  onOpenQuotes,
+  quoteCount,
   customers = [],
   invoiceTypes = [],
   products = [],
@@ -517,6 +521,44 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             <span className="hidden sm:inline">Limpiar</span>
           </Button>
 
+          {onOpenQuotes && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenQuotes}
+              className="h-7 px-2.5 text-xs font-bold gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs"
+              title="Ver cotizaciones guardadas en el POS"
+            >
+              <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Cotizaciones</span>
+              {Boolean(quoteCount && quoteCount > 0) && (
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-600 text-white ml-0.5">
+                  {quoteCount}
+                </span>
+              )}
+            </Button>
+          )}
+
+          {onOpenQuotes && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenQuotes}
+              className="h-7 px-2.5 text-xs font-bold gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs"
+              title="Ver cotizaciones guardadas en el POS"
+            >
+              <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Cotizaciones</span>
+              {Boolean(quoteCount && quoteCount > 0) && (
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-600 text-white ml-0.5">
+                  {quoteCount}
+                </span>
+              )}
+            </Button>
+          )}
+
           {actionButton}
         </div>
       </header>
@@ -564,6 +606,11 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 <UserPlus className="h-3 w-3" />
                 <span className="hidden sm:inline">Nuevo Cliente</span>
               </Button>
+              {isQuote && (
+                <p className="text-[10px] text-center text-muted-foreground pt-0.5">
+                  Se guardará por {creditDays || 30} días en la pestaña <strong>Cotizaciones</strong> para cargarla y facturarla luego.
+                </p>
+              )}
             </div>
           </div>
 
@@ -1054,7 +1101,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 ) : (
                   <>
                     <FileText className="h-4 w-4" />
-                    <span>{isQuote ? 'Generar Cotización (Carta)' : 'Emitir Factura (Carta)'}</span>
+                    <span>{isQuote ? 'Guardar Cotización en POS' : 'Emitir Factura (Carta)'}</span>
                   </>
                 )}
               </Button>

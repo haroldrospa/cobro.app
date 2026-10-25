@@ -844,7 +844,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               className={cn(
                 "w-full h-9 md:h-10 text-sm font-semibold",
                 isInvoiceLimitReached && "opacity-80",
-                isServices && !isInvoiceLimitReached && "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-700/20"
+                selectedType?.code === "COT" ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20" : (isServices && !isInvoiceLimitReached && "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-700/20")
               )}
               variant={isInvoiceLimitReached ? "destructive" : "default"}
               disabled={isCheckoutDisabled || isInvoiceLimitReached}
@@ -854,10 +854,16 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                   <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
                   Límite Alcanzado
                 </>
+              ) : selectedType?.code === 'COT' ? (
+                <>
+                  <FileText className="mr-1.5 h-3.5 w-3.5" />
+                  Guardar Cotización en POS
+                  {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F10</span>}
+                </>
               ) : isServices ? (
                 <>
                   <FileText className="mr-1.5 h-3.5 w-3.5" />
-                  {selectedType?.code === 'COT' ? 'Emitir Cotización (Carta)' : 'Emitir Factura (Carta)'}
+                  Emitir Factura (Carta)
                   {!isMobile && <span className="ml-2 text-[10px] opacity-80 font-normal border border-current rounded px-1">F10</span>}
                 </>
               ) : (
@@ -925,11 +931,16 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
               onClick={onCheckout}
               className={cn(
                 "h-9 px-4 text-xs font-semibold flex-1 max-w-[150px]",
-                isServices && "bg-emerald-600 hover:bg-emerald-500 text-white"
+                selectedType?.code === "COT" ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20" : (isServices && "bg-emerald-600 hover:bg-emerald-500 text-white")
               )}
               disabled={isCheckoutDisabled}
             >
-              {isServices ? (
+              {selectedType?.code === 'COT' ? (
+                <>
+                  <FileText className="mr-1.5 h-3.5 w-3.5" />
+                  Guardar Cotización
+                </>
+              ) : isServices ? (
                 <>
                   <FileText className="mr-1.5 h-3.5 w-3.5" />
                   Facturar (Carta)

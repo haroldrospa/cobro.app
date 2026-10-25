@@ -57,10 +57,14 @@ interface OpenAccountsDialogProps {
   onLoadToCart?: (items: CartItem[], orderId: string, customerName: string, orderNumber: string, source: 'pos' | 'web', notes?: string, customerId?: string) => void;
   currentLoadedOrderId?: string | null;
   onSelectTable?: (tableName: string) => void;
+  initialTab?: 'orders' | 'quotes' | 'tables';
 }
 
-const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose, onLoadToCart, currentLoadedOrderId, onSelectTable }) => {
-  const [activeMainTab, setActiveMainTab] = useState<'orders' | 'tables'>('orders');
+const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose, onLoadToCart, currentLoadedOrderId, onSelectTable, initialTab }) => {
+  const [activeMainTab, setActiveMainTab] = useState<'orders' | 'quotes' | 'tables'>(initialTab || 'orders');
+  React.useEffect(() => {
+    if (isOpen && initialTab) setActiveMainTab(initialTab);
+  }, [isOpen, initialTab]);
   const [selectedZone, setSelectedZone] = useState<string>('all');
   const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -476,6 +480,23 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   const targetOrder = filteredOrders.find((o: any) => o.id === mergeTarget);
   const sourceOrders = filteredOrders.filter((o: any) => mergeSources.includes(o.id));
   const selectedOrder = filteredOrders.find((o: any) => o.id === selectedOrderId);
+  
+  const quoteOrders = React.useMemo(() => {
+    return filteredOrders.filter((o: any) => o.order_status === 'quote' || o.order_number?.startsWith('COT'));
+  }, [filteredOrders]);
+
+  const regularOrders = React.useMemo(() => {
+    return filteredOrders.filter((o: any) => !(o.order_status === 'quote' || o.order_number?.startsWith('COT')));
+  }, [filteredOrders]);
+
+  const quotesTotalAmount = React.useMemo(() => {
+    return quoteOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  }, [quoteOrders]);
+
+  const regularOrdersTotalAmount = React.useMemo(() => {
+    return regularOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  }, [regularOrders]);
+
   const totalAmount = filteredOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
 
   // ─── Tables State & Computations ───
@@ -950,7 +971,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                       setActiveMainTab('orders');
                     }}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                       activeMainTab === 'orders'
                         ? "bg-background text-foreground shadow-xs border border-border/60"
                         : "text-muted-foreground hover:text-foreground"
@@ -958,12 +979,12 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
                     <span>Cuentas Guardadas</span>
-                    {filteredOrders.length > 0 && (
+                    {regularOrders.length > 0 && (
                       <span className={cn(
                         "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
                         activeMainTab === 'orders' ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
                       )}>
-                        {filteredOrders.length}
+                        {regularOrders.length}
                       </span>
                     )}
                   </button>
@@ -972,27 +993,53 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                     type="button"
                     onClick={() => {
                       if (mergeMode) resetMergeMode();
-                      setActiveMainTab('tables');
+                      setActiveMainTab('quotes');
                     }}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                      isServices && "hidden",
-                      activeMainTab === 'tables'
-                        ? "bg-background text-foreground shadow-xs border border-border/60"
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                      activeMainTab === 'quotes'
+                        ? "bg-amber-600 text-white shadow-xs border border-amber-600"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <Utensils className="h-3.5 w-3.5" />
-                    <span>Mesas</span>
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Cotizaciones</span>
                     <span className={cn(
                       "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
-                      occupiedTablesCount > 0
-                        ? "bg-amber-500 text-white"
-                        : "bg-muted text-muted-foreground"
+                      activeMainTab === 'quotes'
+                        ? "bg-white/20 text-white"
+                        : (quoteOrders.length > 0 ? "bg-amber-500/20 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground")
                     )}>
-                      {occupiedTablesCount}/{allTablesList.length}
+                      {quoteOrders.length}
                     </span>
                   </button>
+
+                  {!isServices && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (mergeMode) resetMergeMode();
+                        setActiveMainTab('tables');
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                        activeMainTab === 'tables'
+                          ? "bg-background text-foreground shadow-xs border border-border/60"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Utensils className="h-3.5 w-3.5" />
+                      <span>Mesas</span>
+                      <span className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
+                        occupiedTablesCount > 0
+                          ? "bg-amber-500 text-white"
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {occupiedTablesCount}/{allTablesList.length}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 {mergeMode && (
@@ -1002,16 +1049,16 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
 
               {/* Actions & Summary Right */}
               <div className="flex items-center gap-2 self-end sm:self-auto sm:pr-8">
-                {activeMainTab === 'orders' && filteredOrders.length > 0 && !mergeMode && (
+                {activeMainTab === 'orders' && regularOrders.length > 0 && !mergeMode && (
                   <>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/60 border border-border/40 text-xs">
-                      <span className="text-muted-foreground font-medium">Total:</span>
+                      <span className="text-muted-foreground font-medium">Total Cuentas:</span>
                       <span className="font-bold text-primary">
-                        ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${regularOrdersTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
 
-                    {filteredOrders.length > 1 && (
+                    {regularOrders.length > 1 && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -1034,6 +1081,15 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </>
+                )}
+
+                {activeMainTab === 'quotes' && quoteOrders.length > 0 && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">Total Cotizado:</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-400">
+                      ${quotesTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 )}
 
                 {activeMainTab === 'tables' && (
@@ -1066,7 +1122,9 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
                   ? mergeTarget
                     ? `Destino: ${targetOrder?.customer_name || '...'} — Selecciona cuentas a fusionar`
                     : 'Toca la cuenta DESTINO (que recibirá los productos)'
-                  : 'Toca para seleccionar o doble clic para cargar directo al POS'
+                  : 'Cuentas en espera. Toca para seleccionar o doble clic para cargar directo al POS'
+              ) : activeMainTab === 'quotes' ? (
+                'Cotizaciones vigentes guardadas en el POS (30 días). Haz clic en "Facturar" para cargar los servicios al POS y cobrar.'
               ) : (
                 'Visualiza el estado de las mesas en tiempo real. Toca una mesa libre para asignarla o una ocupada para ver su cuenta.'
               )}
@@ -1082,74 +1140,44 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
               </div>
             ) : activeMainTab === 'orders' ? (
               /* TAB 1: CUENTAS GUARDADAS */
-              filteredOrders.length === 0 ? (
+              regularOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
                   <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mb-3 text-muted-foreground">
                     <ClipboardList className="h-7 w-7 stroke-[1.5]" />
                   </div>
-                  <h3 className="text-sm font-semibold text-foreground mb-1">No hay pedidos guardados</h3>
-                  <p className="text-xs text-muted-foreground max-w-[260px]">
-                    Cuando pongas cuentas o ventas en espera desde el POS, aparecerán listadas aquí.
+                  <h3 className="text-sm font-semibold text-foreground mb-1">No hay cuentas guardadas</h3>
+                  <p className="text-xs text-muted-foreground max-w-[280px]">
+                    Cuando pongas ventas en espera o comensales desde el POS, aparecerán listadas aquí.
                   </p>
                 </div>
               ) : (
                 <ScrollArea className="flex-1 -mr-2 pr-3">
                   <div className="space-y-2.5 pb-2">
-                    
-                  <div className="flex items-center gap-1.5 pb-2 mb-1 border-b border-border/30">
-                    <button
-                      type="button"
-                      onClick={() => setAccountFilter('all')}
-                      className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border",
-                        accountFilter === 'all'
-                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                          : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
-                      )}
-                    >
-                      Todas ({filteredOrders.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAccountFilter('orders')}
-                      className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border",
-                        accountFilter === 'orders'
-                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                          : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
-                      )}
-                    >
-                      Cuentas ({regularOrders.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAccountFilter('quotes')}
-                      className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5",
-                        accountFilter === 'quotes'
-                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                          : "bg-card border-border/60 hover:bg-muted text-muted-foreground"
-                      )}
-                    >
-                      <FileText className="h-3 w-3" />
-                      <span>Cotizaciones</span>
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                        {quoteOrders.length}
-                      </span>
-                    </button>
+                    {regularOrders.map((order: any) => renderOrderRow(order))}
                   </div>
-                  {displayedOrders.length === 0 ? (
-                    <div className="py-12 text-center text-xs text-muted-foreground">
-                      No hay elementos en este filtro
-                    </div>
-                  ) : (
-                    displayedOrders.map((order: any) => renderOrderRow(order))
-                  )}
+                </ScrollArea>
+              )
+            ) : activeMainTab === 'quotes' ? (
+              /* TAB 2: COTIZACIONES */
+              quoteOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-3">
+                    <FileText className="h-7 w-7 stroke-[1.5]" />
+                  </div>
+                  <h3 className="text-sm font-bold text-foreground mb-1">No hay cotizaciones guardadas</h3>
+                  <p className="text-xs text-muted-foreground max-w-[340px] leading-relaxed">
+                    Para guardar una cotización, selecciona tipo <strong>COT - Cotización</strong> en el POS o Facturador de Servicios y presiona <strong>"Guardar Cotización"</strong>. Se conservará aquí por hasta 30 días para facturarla luego.
+                  </p>
+                </div>
+              ) : (
+                <ScrollArea className="flex-1 -mr-2 pr-3">
+                  <div className="space-y-2.5 pb-2">
+                    {quoteOrders.map((order: any) => renderOrderRow(order))}
                   </div>
                 </ScrollArea>
               )
             ) : (
-              /* TAB 2: MESAS */
+              /* TAB 3: MESAS */
               <div className="flex flex-col flex-1 min-h-0 gap-3.5">
                 {/* Metrics and Filters Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">

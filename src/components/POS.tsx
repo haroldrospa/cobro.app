@@ -208,6 +208,7 @@ const POSContent: React.FC = () => {
   });
   const [showWebSalesDialog, setShowWebSalesDialog] = useState(false);
   const [showOpenAccountsDialog, setShowOpenAccountsDialog] = useState(false);
+  const [openAccountsInitialTab, setOpenAccountsInitialTab] = useState<'orders' | 'quotes' | 'tables'>('orders');
   const [showSaveOrderDialog, setShowSaveOrderDialog] = useState(false);
   const [currentWebOrderId, setCurrentWebOrderId] = useState<string | null>(null);
   const [currentOrderInfo, setCurrentOrderInfo] = useState<{ orderNumber: string; customerName: string; notes?: string } | null>(null);
@@ -2211,7 +2212,32 @@ const POSContent: React.FC = () => {
   const handleShowCashMovements = useCallback(() => setShowCashMovementsDialog(true), []);
   const handleShowCloseDay = useCallback(() => setShowCloseDayDialog(true), []);
   const handleShowDebtSelect = useCallback(() => setShowDebtSelectDialog(true), []);
-  const handleShowOpenAccounts = useCallback(() => setShowOpenAccountsDialog(true), []);
+  const handleShowOpenAccounts = useCallback(() => { setOpenAccountsInitialTab('orders'); setShowOpenAccountsDialog(true); }, []);
+  const { data: posOpenOrdersAll = [] } = useQuery({
+    queryKey: ['pos-open-orders', userStore?.id],
+    queryFn: async () => {
+      if (!userStore?.id) return [];
+      const { data } = await supabase
+        .from('open_orders')
+        .select('id, order_number, order_status')
+        .eq('store_id', userStore.id)
+        .eq('source', 'pos')
+        .eq('payment_status', 'pending');
+      return data || [];
+    },
+    enabled: !!userStore?.id,
+    staleTime: 5000,
+  });
+
+  const liveQuotesCount = useMemo(() => {
+    return (posOpenOrdersAll || []).filter((o: any) => o.order_status === 'quote' || o.order_number?.startsWith('COT')).length;
+  }, [posOpenOrdersAll]);
+
+  const handleShowQuotes = useCallback(() => {
+    setOpenAccountsInitialTab('quotes');
+    setShowOpenAccountsDialog(true);
+  }, []);
+
   const handleShowWebSales = useCallback(() => setShowWebSalesDialog(true), []);
 
   // Load a blocking order from CloseDayDialog into the POS cart
@@ -2460,6 +2486,8 @@ const POSContent: React.FC = () => {
           productSearchComponent={
             isServices && servicesViewMode === 'services' ? (
               <ServicePOSWorkspace
+                onOpenQuotes={handleShowQuotes}
+                quoteCount={liveQuotesCount}
                 customers={customers}
                 invoiceTypes={invoiceTypes}
                 products={products}
@@ -2618,6 +2646,7 @@ const POSContent: React.FC = () => {
           <Suspense fallback={null}>
             <OpenAccountsDialog
               isOpen={showOpenAccountsDialog}
+              initialTab={openAccountsInitialTab}
               onClose={() => setShowOpenAccountsDialog(false)}
               onLoadToCart={handleLoadWebOrder}
               currentLoadedOrderId={cart.length > 0 ? currentWebOrderId : null}
@@ -3592,11 +3621,29 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         onClick={onOpenAccounts}
         size="sm"
         className="h-8 px-2.5 gap-1.5 rounded-lg border-border bg-background hover:bg-accent text-xs font-semibold text-foreground shadow-xs transition-all"
-        title="Ver Cuentas (F8)"
+        title="Ver Cuentas en Espera (F8)"
       >
         <ClipboardList className="h-3.5 w-3.5 text-primary" />
         <span className="hidden lg:inline">Cuentas</span>
       </Button>
+
+      {onOpenQuotes && (
+        <Button
+          variant="outline"
+          onClick={onOpenQuotes}
+          size="sm"
+          className="h-8 px-2.5 gap-1.5 rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-bold text-amber-700 dark:text-amber-400 shadow-xs transition-all cursor-pointer"
+          title="Ver Cotizaciones guardadas en el POS"
+        >
+          <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+          <span className="hidden sm:inline">Cotizaciones</span>
+          {Boolean(quotesCount && quotesCount > 0) && (
+            <span className="bg-amber-600 text-white text-[9px] font-black rounded-full h-4 min-w-4 px-1 flex items-center justify-center ml-0.5">
+              {quotesCount}
+            </span>
+          )}
+        </Button>
+      )}
 
       <Button
         variant="outline"
