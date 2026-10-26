@@ -516,6 +516,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             size="sm"
             onClick={handleReset}
             className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+            title="Limpiar formulario"
           >
             <RotateCcw className="h-3 w-3" />
             <span className="hidden sm:inline">Limpiar</span>
@@ -527,11 +528,12 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               variant="outline"
               size="sm"
               onClick={onOpenQuotes}
-              className="h-7 px-2.5 text-xs font-bold gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs"
+              className="h-7 px-2 sm:px-2.5 text-xs font-bold gap-1 sm:gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs"
               title="Ver cotizaciones guardadas en el POS"
             >
               <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Cotizaciones</span>
+              <span className="hidden sm:inline">Cotizaciones</span>
+              <span className="sm:hidden text-[11px]">Cotiz.</span>
               {Boolean(quoteCount && quoteCount > 0) && (
                 <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-600 text-white ml-0.5">
                   {quoteCount}
@@ -540,84 +542,70 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             </Button>
           )}
 
-          {onOpenQuotes && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onOpenQuotes}
-              className="h-7 px-2.5 text-xs font-bold gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs"
-              title="Ver cotizaciones guardadas en el POS"
-            >
-              <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Cotizaciones</span>
-              {Boolean(quoteCount && quoteCount > 0) && (
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-600 text-white ml-0.5">
-                  {quoteCount}
-                </span>
-              )}
-            </Button>
-          )}
-
-          {actionButton}
+          <div className="hidden sm:flex items-center gap-1.5">
+            {actionButton}
+          </div>
         </div>
       </header>
 
-      {/* Main 2-Column Content (100% Viewport Height, Zero Page Scroll) */}
-      <div className="flex-1 min-h-0 p-2 sm:p-2.5 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-2.5">
+      {/* Main Content: On desktop fixed 2-column, on mobile fluid vertical scrolling */}
+      <div className="flex-1 min-h-0 p-2 sm:p-3 overflow-y-auto lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-3 pb-24 lg:pb-2.5">
         
-        {/* Left Column: Customer, Preset Chips & Service Line Items (8 cols on xl, 7 on lg) */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col min-h-0 h-full gap-2 overflow-hidden">
+        {/* Left Column: Customer & Service Line Items */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col min-h-0 lg:h-full gap-2 shrink-0 lg:shrink lg:overflow-hidden">
           
           {/* Top Bar: Customer Selector & Preset Service Pills */}
           <div className="p-2 sm:p-2.5 rounded-xl bg-card/60 border border-border/50 shrink-0 space-y-2 shadow-xs">
             {/* Customer selector row */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <User className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                <Select
-                  value={selectedCustomerId || 'none'}
-                  onValueChange={val => setSelectedCustomerId(val === 'none' ? '' : val)}
-                >
-                  <SelectTrigger className="h-8 rounded-lg bg-background/60 border-border/50 text-xs font-medium flex-1">
-                    <SelectValue placeholder="Cliente (Consumidor Final)..." />
-                  </SelectTrigger>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <User className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <Select
+                    value={selectedCustomerId || 'none'}
+                    onValueChange={val => setSelectedCustomerId(val === 'none' ? '' : val)}
+                  >
+                    <SelectTrigger className="h-8 rounded-lg bg-background/60 border-border/50 text-xs font-medium flex-1">
+                      <SelectValue placeholder="Cliente (Consumidor Final)..." />
+                    </SelectTrigger>
                     <SelectContent className="max-h-56">
-                    <SelectItem value="none">
-                      <span className="text-muted-foreground italic">Consumidor Final (Ocasional)</span>
-                    </SelectItem>
-                    {customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <span className="font-semibold text-foreground">{c.name}</span>
-                        {c.rnc && <span className="ml-1.5 text-muted-foreground font-mono">({c.rnc})</span>}
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground italic">Consumidor Final (Ocasional)</span>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {customers.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <span className="font-semibold text-foreground">{c.name}</span>
+                          {c.rnc && <span className="ml-1.5 text-muted-foreground font-mono">({c.rnc})</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddCustomerDialog(true)}
+                  className="h-8 px-2 text-xs text-emerald-400 hover:text-emerald-300 border-border/50 hover:bg-emerald-500/10 shrink-0 gap-1"
+                >
+                  <UserPlus className="h-3 w-3" />
+                  <span className="hidden sm:inline">Nuevo Cliente</span>
+                </Button>
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddCustomerDialog(true)}
-                className="h-8 px-2 text-xs text-emerald-400 hover:text-emerald-300 border-border/50 hover:bg-emerald-500/10 shrink-0 gap-1"
-              >
-                <UserPlus className="h-3 w-3" />
-                <span className="hidden sm:inline">Nuevo Cliente</span>
-              </Button>
               {isQuote && (
-                <p className="text-[10px] text-center text-muted-foreground pt-0.5">
+                <p className="text-[10px] text-muted-foreground pt-0.5">
                   Se guardará por {creditDays || 30} días en la pestaña <strong>Cotizaciones</strong> para cargarla y facturarla luego.
                 </p>
               )}
             </div>
           </div>
 
-          {/* Service Items Table Container (Fills rest of height, scroll ONLY inside table) */}
-          <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-border/50 bg-card/40 overflow-hidden shadow-xs">
-            {/* Table Header */}
-            <div className="shrink-0 border-b border-border/40 bg-muted/30 px-3 py-1.5 grid grid-cols-12 gap-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          {/* Service Items Table Container */}
+          <div className="flex flex-col rounded-xl border border-border/50 bg-card/40 overflow-hidden shadow-xs shrink-0 lg:shrink lg:flex-1 lg:min-h-0">
+            {/* Table Header (hidden on mobile, visible on desktop/tablet) */}
+            <div className="hidden sm:grid shrink-0 border-b border-border/40 bg-muted/30 px-3 py-1.5 grid-cols-12 gap-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               <div className="col-span-6">Descripción del Servicio</div>
               <div className="col-span-2 text-center">Cant. / Horas</div>
               <div className="col-span-2 text-right">Precio ({activeCurrencySymbol})</div>
@@ -625,19 +613,80 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               <div className="col-span-1 text-center"></div>
             </div>
 
-            {/* Table Rows (Scrolls internally if > 3 lines) */}
-            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/20 p-1">
+            {/* Table Rows / Cards */}
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/20 p-1 sm:p-1.5 space-y-2 sm:space-y-0">
               {serviceLines.map(line => {
-                const lineSubtotal = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
-                const lineTax = lineSubtotal * ((Number(line.taxRate) || 0) / 100);
-                const lineTotal = lineSubtotal + lineTax;
-
                 return (
                   <div
                     key={line.id}
-                    className="p-1.5 sm:px-2 sm:py-1 hover:bg-muted/10 transition-colors rounded-lg group"
+                    className="p-2 sm:px-2 sm:py-1 hover:bg-muted/10 transition-colors rounded-lg group bg-card/50 sm:bg-transparent border sm:border-0 border-border/50 shadow-2xs sm:shadow-none"
                   >
-                    <div className="grid grid-cols-12 gap-2 items-center">
+                    {/* MOBILE CARD VIEW (< sm) */}
+                    <div className="sm:hidden space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Concepto o servicio (ej. Asesoría)..."
+                          value={line.description}
+                          onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
+                          className="h-8.5 rounded-lg text-xs bg-background/80 border-border/50 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLine(line.id)}
+                          className="h-8.5 w-8.5 flex items-center justify-center rounded-lg text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
+                          title="Eliminar fila"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-4">
+                          <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">Cant./Horas</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="any"
+                            value={line.quantity}
+                            onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
+                            className="h-8 w-full text-center font-mono font-bold rounded-lg text-xs bg-background/80 border-border/50"
+                          />
+                        </div>
+
+                        <div className="col-span-5">
+                          <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">Precio ({activeCurrencySymbol})</label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={line.unitPrice || ''}
+                            onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="h-8 w-full text-right font-mono font-bold text-emerald-400 rounded-lg text-xs bg-background/80 border-border/50"
+                          />
+                        </div>
+
+                        <div className="col-span-3">
+                          <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">ITBIS</label>
+                          <Select
+                            value={line.taxRate.toString()}
+                            onValueChange={val => handleUpdateLine(line.id, 'taxRate', parseFloat(val))}
+                          >
+                            <SelectTrigger className="h-8 w-full text-xs bg-background/80 border-border/50 px-1 text-center font-bold">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="18">18%</SelectItem>
+                              <SelectItem value="16">16%</SelectItem>
+                              <SelectItem value="0">0%</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DESKTOP TABLE ROW (>= sm) */}
+                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center">
                       {/* Description */}
                       <div className="col-span-6">
                         <Input
@@ -727,8 +776,8 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
 
         </div>
 
-        {/* Right Column: Invoicing Config, Notes, Totals & Emit Button (5 cols on xl, 5 on lg) */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col min-h-0 h-full justify-between gap-2 p-3 rounded-xl border border-border/60 bg-card/60 overflow-hidden shadow-xs">
+        {/* Right Column: Invoicing Config, Notes, Totals & Emit Button */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col min-h-0 lg:h-full justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl border border-border/60 bg-card/60 shadow-xs shrink-0 lg:shrink lg:overflow-hidden">
           
           {/* Top Form Controls */}
           <div className="shrink-0 space-y-2">

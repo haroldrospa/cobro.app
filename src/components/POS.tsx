@@ -2482,26 +2482,34 @@ const POSContent: React.FC = () => {
 
 
   if (isMobilePortrait) {
+    if (isServices && servicesViewMode === 'services') {
+      return (
+        <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background overscroll-none">
+          <SubscriptionWarningBanner />
+          <ServicePOSWorkspace
+            onOpenQuotes={handleShowQuotes}
+            quoteCount={liveQuotesCount}
+            customers={customers}
+            invoiceTypes={invoiceTypes}
+            products={products}
+            menuButton={menuButton}
+            actionButton={actionButtons}
+            onDirectEmit={handleDirectEmitServiceInvoice}
+            isElectronic={isElectronicActive}
+            isEmitting={isEmittingServiceInvoice}
+            onLoadToCart={handleLoadServicesToCart}
+            onSwitchToCatalog={() => setServicesViewMode('catalog')}
+            currencySymbol={storeSettings?.currency_symbol || 'RD$'}
+            defaultTaxRate={storeSettings?.default_tax_rate ?? 18}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="h-full flex-1 w-full flex flex-col animate-fade-in overflow-hidden bg-background overscroll-none">
         <MobilePOSLayout
           productSearchComponent={
-            isServices && servicesViewMode === 'services' ? (
-              <ServicePOSWorkspace
-                onOpenQuotes={handleShowQuotes}
-                quoteCount={liveQuotesCount}
-                customers={customers}
-                invoiceTypes={invoiceTypes}
-                products={products}
-                menuButton={menuButton}
-                actionButton={actionButtons}
-                onDirectEmit={handleDirectEmitServiceInvoice}
-                isElectronic={isElectronicActive}
-                isEmitting={isEmittingServiceInvoice}
-                onLoadToCart={handleLoadServicesToCart}
-                onSwitchToCatalog={() => setServicesViewMode('catalog')}
-              />
-            ) : (
               <div className="flex flex-col h-full">
                 {isServices && (
                   <div className="p-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between">
@@ -2540,8 +2548,7 @@ const POSContent: React.FC = () => {
                   userName={profile?.full_name}
                 />
               </div>
-            )
-          }
+            }
           cart={cartWithOffers}
           cartComponent={
             <MobileCartView
