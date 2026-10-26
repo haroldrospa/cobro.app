@@ -129,6 +129,8 @@ export const useWhatsAppReminders = () => {
           } catch (sendError: any) {
             // Si la instancia no existe o no responde (404, Failed to fetch, etc.), pausar para no saturar la consola
             const isUnreachable = sendError?.message?.includes('404') || 
+              sendError?.message?.includes('Railway') ||
+              sendError?.message?.includes('CORS') ||
               sendError?.message?.includes('Failed to fetch') || 
               sendError?.message?.includes('incompleta');
             

@@ -42,15 +42,34 @@ class OfflineDatabase {
         if (!this.db || this.isClosing) {
             this.db = null;
             this.isClosing = false;
-            await this.init();
+            try {
+                await this.init();
+            } catch (err) {
+                console.warn('[OfflineDB] ensureOpen error:', err);
+            }
         }
     }
 
     async init(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            let request: IDBOpenDBRequest;
+            try {
+                if (typeof indexedDB === 'undefined') {
+                    resolve();
+                    return;
+                }
+                request = indexedDB.open(DB_NAME, DB_VERSION);
+            } catch (openEx) {
+                console.warn('[OfflineDB] Excepción al abrir indexedDB (disco lleno o cuota):', openEx);
+                resolve();
+                return;
+            }
 
-            request.onerror = () => reject(request.error);
+            request.onerror = () => {
+                console.warn('[OfflineDB] IndexedDB no disponible (disco lleno o cuota):', request.error?.message || request.error);
+                this.db = null;
+                resolve();
+            };
             request.onsuccess = () => {
                 this.db = request.result;
                 this.isClosing = false;
@@ -155,7 +174,10 @@ class OfflineDatabase {
     async add<T>(storeName: OfflineStore, data: T): Promise<T> {
         await this.ensureOpen();
         // Guard: re-init if the store is missing (stale schema)
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -172,7 +194,10 @@ class OfflineDatabase {
 
     async put<T>(storeName: OfflineStore, data: T): Promise<T> {
         await this.ensureOpen();
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -193,7 +218,10 @@ class OfflineDatabase {
     async putBulk<T>(storeName: OfflineStore, items: T[]): Promise<void> {
         if (!items.length) return;
         await this.ensureOpen();
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -201,7 +229,7 @@ class OfflineDatabase {
                 const store = transaction.objectStore(storeName);
 
                 transaction.oncomplete = () => resolve();
-                transaction.onerror = () => reject(transaction.error);
+                transaction.onerror = () => resolve();
 
                 for (const item of items) {
                     store.put(item);
@@ -218,7 +246,10 @@ class OfflineDatabase {
     async deleteBulk(storeName: OfflineStore, keys: (string | number)[]): Promise<void> {
         if (!keys.length) return;
         await this.ensureOpen();
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -226,7 +257,7 @@ class OfflineDatabase {
                 const store = transaction.objectStore(storeName);
 
                 transaction.oncomplete = () => resolve();
-                transaction.onerror = () => reject(transaction.error);
+                transaction.onerror = () => resolve();
 
                 for (const key of keys) {
                     store.delete(key);
@@ -239,7 +270,10 @@ class OfflineDatabase {
 
     async get<T>(storeName: OfflineStore, key: string | number): Promise<T | null> {
         await this.ensureOpen();
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -256,7 +290,10 @@ class OfflineDatabase {
 
     async getAll<T>(storeName: OfflineStore): Promise<T[]> {
         await this.ensureOpen();
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -273,7 +310,10 @@ class OfflineDatabase {
 
     async delete(storeName: OfflineStore, key: string | number): Promise<void> {
         await this.ensureOpen();
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -290,7 +330,10 @@ class OfflineDatabase {
 
     async clear(storeName: OfflineStore): Promise<void> {
         await this.ensureOpen();
-        if (!this.db!.objectStoreNames.contains(storeName)) await this.init();
+        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+            try { await this.init(); } catch (_) {}
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
+        }
 
         return new Promise((resolve, reject) => {
             try {
@@ -312,6 +355,9 @@ class OfflineDatabase {
         value: any
     ): Promise<T[]> {
         await this.ensureOpen();
+        if (!this.db || !this.db.objectStoreNames.contains(OfflineStore.SYNC_QUEUE)) {
+            return [];
+        }
 
         return new Promise((resolve, reject) => {
             const transaction = this.db!.transaction([storeName], 'readonly');
@@ -339,6 +385,9 @@ class OfflineDatabase {
         // Fallback to getAll and filter manually to avoid "DataError: The parameter is not a valid key"
         // when querying boolean indices on some browsers, and to handle legacy 'false' vs new '0' values.
         await this.ensureOpen();
+        if (!this.db || !this.db.objectStoreNames.contains(OfflineStore.SYNC_QUEUE)) {
+            return [];
+        }
 
         return new Promise((resolve, reject) => {
             try {

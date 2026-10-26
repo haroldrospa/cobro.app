@@ -77,7 +77,7 @@ export const useActiveSession = () => {
                     }
 
                     if (data) {
-                        await offlineDB.put(OfflineStore.CASH_SESSIONS, data);
+                        try { await offlineDB.put(OfflineStore.CASH_SESSIONS, data); } catch (_) {}
                     }
                     return (data as CashSession) ?? null;
                 }

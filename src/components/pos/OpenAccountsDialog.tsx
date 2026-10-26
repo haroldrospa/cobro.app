@@ -948,6 +948,8 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
         <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full h-[88vh] sm:h-[82vh] flex flex-col p-0 overflow-hidden rounded-2xl border-border/60 shadow-2xl">
           {/* Top Header & Tab Switcher */}
           <DialogHeader className="px-5 py-3.5 border-b border-border/40 bg-card/60">
+            <DialogTitle className="sr-only">Cuentas y Pedidos Abiertos</DialogTitle>
+            <DialogDescription className="sr-only">Gestión de comandas, cuentas guardadas y cotizaciones</DialogDescription>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               {/* Navigation Tabs Pill */}
               <div className="flex items-center gap-2">

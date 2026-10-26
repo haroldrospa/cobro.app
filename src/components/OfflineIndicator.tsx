@@ -78,17 +78,28 @@ export const OfflineIndicator: React.FC = () => {
 
         // Inicializar el sistema offline al montar (async, no bloquear render)
         const initOffline = async () => {
-            await offlineDB.init();
+            try {
+                await offlineDB.init();
+            } catch (e) {
+                console.warn('[OfflineIndicator] No se pudo inicializar IndexedDB:', e);
+                return;
+            }
             offlineSyncManager.start();
             // Check pending items after init
-            const pending = await offlineDB.getPendingSyncItems();
+            let pending: any[] = [];
+            try {
+                pending = await offlineDB.getPendingSyncItems();
+            } catch (_) {}
             setPendingCount(pending.filter((i: any) => !i.error).length);
         };
         initOffline();
 
         // Poll for pending items every 30s (was 5s — too aggressive on mobile)
         const updatePendingCount = async () => {
-            const pending = await offlineDB.getPendingSyncItems();
+            let pending: any[] = [];
+            try {
+                pending = await offlineDB.getPendingSyncItems();
+            } catch (_) {}
             setPendingCount(pending.length);
         };
 
@@ -107,7 +118,10 @@ export const OfflineIndicator: React.FC = () => {
         setIsSyncing(true);
         try {
             await offlineSyncManager.sync();
-            const pending = await offlineDB.getPendingSyncItems();
+            let pending: any[] = [];
+            try {
+                pending = await offlineDB.getPendingSyncItems();
+            } catch (_) {}
             setPendingCount(pending.length);
             if (pending.length === 0) {
                 toast({ title: '✅ Sincronizado', description: 'Todos los datos se han sincronizado correctamente.' });

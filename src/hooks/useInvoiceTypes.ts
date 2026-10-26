@@ -62,7 +62,7 @@ export const useInvoiceTypes = () => {
         }
 
         for (const type of types) {
-          await offlineDB.put(OfflineStore.INVOICE_TYPES, type);
+          try { await offlineDB.put(OfflineStore.INVOICE_TYPES, type); } catch (_) {}
         }
 
         return types;
