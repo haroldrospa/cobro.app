@@ -2380,7 +2380,7 @@ const POSContent: React.FC = () => {
       onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
       onClearTable={handleClearTable}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
