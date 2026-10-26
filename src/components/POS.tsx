@@ -2896,6 +2896,8 @@ const POSContent: React.FC = () => {
             /* --- FULL DEDICATED SERVICES WORKSPACE (No empty cart, no duplicated payment summary) --- */
             <div className="flex-1 min-h-0 w-full overflow-hidden rounded-xl border bg-card shadow-sm">
               <ServicePOSWorkspace
+                onOpenQuotes={handleShowQuotes}
+                quoteCount={liveQuotesCount}
                 customers={customers}
                 invoiceTypes={invoiceTypes}
                 products={products}

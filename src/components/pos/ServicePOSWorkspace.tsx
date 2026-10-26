@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -528,7 +529,10 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               variant="outline"
               size="sm"
               onClick={onOpenQuotes}
-              className="h-7 px-2 sm:px-2.5 text-xs font-bold gap-1 sm:gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs"
+              className={cn(
+                "h-7 px-2 text-xs font-bold gap-1 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs",
+                actionButton ? "sm:hidden" : "flex"
+              )}
               title="Ver cotizaciones guardadas en el POS"
             >
               <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
@@ -606,10 +610,10 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
           <div className="flex flex-col rounded-xl border border-border/50 bg-card/40 overflow-hidden shadow-xs shrink-0 lg:shrink lg:flex-1 lg:min-h-0">
             {/* Table Header (hidden on mobile, visible on desktop/tablet) */}
             <div className="hidden sm:grid shrink-0 border-b border-border/40 bg-muted/30 px-3 py-1.5 grid-cols-12 gap-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <div className="col-span-6">Descripción del Servicio</div>
+              <div className="col-span-5">Descripción del Servicio</div>
               <div className="col-span-2 text-center">Cant. / Horas</div>
               <div className="col-span-2 text-right">Precio ({activeCurrencySymbol})</div>
-              <div className="col-span-1 text-center">ITBIS</div>
+              <div className="col-span-2 text-center">ITBIS</div>
               <div className="col-span-1 text-center"></div>
             </div>
 
@@ -688,12 +692,12 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                     {/* DESKTOP TABLE ROW (>= sm) */}
                     <div className="hidden sm:grid grid-cols-12 gap-2 items-center">
                       {/* Description */}
-                      <div className="col-span-6">
+                      <div className="col-span-5">
                         <Input
                           placeholder="Concepto o servicio (ej. Asesoría fiscal)..."
                           value={line.description}
                           onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
-                          className="h-8 rounded-lg text-xs bg-background/60 border-border/40 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500"
+                          className="h-8 rounded-lg text-xs bg-background/60 border-border/40 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium"
                         />
                       </div>
 
@@ -705,7 +709,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                           step="any"
                           value={line.quantity}
                           onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
-                          className="h-8 w-full text-center font-mono rounded-lg text-xs bg-background/60 border-border/40"
+                          className="h-8 w-full text-center font-mono font-bold rounded-lg text-xs bg-background/60 border-border/40"
                         />
                       </div>
 
@@ -718,23 +722,23 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                           value={line.unitPrice || ''}
                           onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                           placeholder="0.00"
-                          className="h-8 w-full text-right font-mono font-semibold text-emerald-400 rounded-lg text-xs bg-background/60 border-border/40"
+                          className="h-8 w-full text-right font-mono font-bold text-emerald-400 rounded-lg text-xs bg-background/60 border-border/40"
                         />
                       </div>
 
                       {/* Tax */}
-                      <div className="col-span-1">
+                      <div className="col-span-2">
                         <Select
                           value={line.taxRate.toString()}
                           onValueChange={val => handleUpdateLine(line.id, 'taxRate', parseFloat(val))}
                         >
-                          <SelectTrigger className="h-8 w-full text-xs bg-background/60 border-border/40 px-1 text-center">
+                          <SelectTrigger className="h-8 w-full text-xs bg-background/60 border-border/40 px-2 text-center font-semibold">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="18">18%</SelectItem>
-                            <SelectItem value="16">16%</SelectItem>
-                            <SelectItem value="0">0%</SelectItem>
+                            <SelectItem value="18">18% ITBIS</SelectItem>
+                            <SelectItem value="16">16% ITBIS</SelectItem>
+                            <SelectItem value="0">0% (Exento)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -779,8 +783,8 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
         {/* Right Column: Invoicing Config, Notes, Totals & Emit Button */}
         <div className="lg:col-span-5 xl:col-span-4 flex flex-col min-h-0 lg:h-full justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl border border-border/60 bg-card/60 shadow-xs shrink-0 lg:shrink lg:overflow-hidden">
           
-          {/* Top Form Controls */}
-          <div className="shrink-0 space-y-2">
+          {/* Top Form Controls: Scrollable internally on laptops so Totals & Action buttons are ALWAYS visible! */}
+          <div className="space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1.5">
             {/* Selector de Moneda & Tasa de Cambio */}
             <div className="p-2 rounded-xl bg-background/80 border border-border/70 space-y-1.5 shadow-2xs">
               <div className="flex items-center justify-between">
@@ -885,16 +889,21 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               </div>
 
               {applyTax && (
-                <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
-                  <label className="text-[10px] text-muted-foreground cursor-pointer flex items-center gap-1.5 hover:text-foreground transition-colors select-none">
-                    <input
-                      type="checkbox"
+                <div className="flex items-center justify-between pt-1.5 border-t border-border/40 text-[11px]">
+                  <div
+                    onClick={() => setPriceIncludesTax(!priceIncludesTax)}
+                    className="flex items-center gap-2 cursor-pointer select-none group"
+                  >
+                    <Checkbox
+                      id="price-includes-tax"
                       checked={priceIncludesTax}
-                      onChange={(e) => setPriceIncludesTax(e.target.checked)}
-                      className="rounded border-border text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer accent-emerald-600"
+                      onCheckedChange={(checked) => setPriceIncludesTax(Boolean(checked))}
+                      className="h-4 w-4 rounded data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 cursor-pointer"
                     />
-                    <span className="font-medium">El precio ya incluye el ITBIS</span>
-                  </label>
+                    <span className="text-[10.5px] font-medium text-foreground/90 group-hover:text-foreground transition-colors cursor-pointer">
+                      El precio ya incluye el ITBIS
+                    </span>
+                  </div>
                   <span className="text-[9.5px] font-mono text-muted-foreground">
                     {priceIncludesTax ? 'Total = Precio' : 'Total = Precio + 18%'}
                   </span>
@@ -1082,8 +1091,8 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             </div>
           </div>
 
-          {/* Bottom Summary & Actions */}
-          <div className="shrink-0 space-y-2 pt-2 border-t border-border/40">
+          {/* Bottom Summary & Actions (Pinned at bottom) */}
+          <div className="shrink-0 space-y-2 pt-2 border-t border-border/40 mt-auto">
             {/* Totals Box */}
             <div className="rounded-xl border border-border/50 bg-muted/20 p-2.5 space-y-1 text-xs">
               <div className="flex items-center justify-between text-muted-foreground">
