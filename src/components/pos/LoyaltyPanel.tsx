@@ -9,6 +9,7 @@ import {
     LoyaltyCustomer
 } from '@/hooks/useLoyaltyPoints';
 import { cn } from '@/lib/utils';
+import { formatDateLocaleSafe } from '@/lib/dateUtils';
 
 interface LoyaltyPanelProps {
     cartTotal: number;
@@ -108,7 +109,7 @@ const LoyaltyPanel: React.FC<LoyaltyPanelProps> = ({
                             ? <><span className="text-foreground font-semibold">{foundCustomer.name.split(' ')[0]}</span> · <span className="text-yellow-600 font-bold">{foundCustomer.loyalty_points} pts</span>
                                 {foundCustomer.loyalty_points_expires_at && (
                                     <span className="text-[10px] text-orange-500 ml-1">
-                                        (vence {new Date(foundCustomer.loyalty_points_expires_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })})
+                                        (vence {formatDateLocaleSafe(foundCustomer.loyalty_points_expires_at, 'es-DO', { day: '2-digit', month: 'short' })})
                                     </span>
                                 )}
                             </>
@@ -183,7 +184,7 @@ const LoyaltyPanel: React.FC<LoyaltyPanelProps> = ({
                                 <div className="bg-orange-500/10 border border-orange-500/20 rounded px-2 py-0.5 flex items-center gap-1">
                                     <span className="text-[10px] text-orange-600">
                                         ⏰ Puntos vencen el{' '}
-                                        <strong>{new Date(foundCustomer.loyalty_points_expires_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })}</strong>
+                                        <strong>{formatDateLocaleSafe(foundCustomer.loyalty_points_expires_at, 'es-DO', { day: '2-digit', month: 'long', year: 'numeric' })}</strong>
                                     </span>
                                 </div>
                             )}

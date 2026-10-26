@@ -8,6 +8,7 @@ import { useSales } from '@/hooks/useSalesManagement';
 import { useCreateSale } from '@/hooks/useSales';
 import { useInvoiceTypes } from '@/hooks/useInvoiceTypes';
 import { useToast } from '@/hooks/use-toast';
+import { formatSafe } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -258,7 +259,7 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">{format(new Date(sale.created_at), 'dd/MM/yyyy')}</TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">{formatSafe(sale.created_at, 'dd/MM/yyyy', { fallback: '--/--/----' })}</TableCell>
                                             <TableCell className="text-right font-black text-xs text-emerald-500">
                                                 RD$ {Number(sale.total).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                                 {sale.total < 0 && <span className="block text-[7px] text-red-500 font-bold uppercase tracking-wider mt-0.5">Reembolso</span>}
@@ -294,7 +295,7 @@ const RefundDialog: React.FC<RefundDialogProps> = ({ isOpen, onClose }) => {
                                     </div>
                                     <div>
                                         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider [@media(max-height:580px)]:text-[8px]">Fecha</p>
-                                        <p className="font-semibold text-foreground truncate">{format(new Date(selectedSale.created_at), 'dd/MM/yy hh:mm a')}</p>
+                                        <p className="font-semibold text-foreground truncate">{formatSafe(selectedSale.created_at, 'dd/MM/yy hh:mm a', { fallback: '--/--/-- --:--' })}</p>
                                     </div>
                                 </div>
                             </div>

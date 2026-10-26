@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed bottom-20 sm:bottom-6 right-0 sm:right-6 left-0 sm:left-auto z-[200] flex max-h-screen w-full sm:w-auto px-4 sm:px-0 flex-col gap-3 outline-none pointer-events-none items-center sm:items-end",
+      "fixed bottom-20 sm:bottom-6 right-0 sm:right-6 left-0 sm:left-auto z-[200] flex max-h-screen w-full sm:w-auto px-3 sm:px-0 flex-col gap-2 outline-none pointer-events-none items-center sm:items-end",
       className
     )}
     {...props}
@@ -25,9 +25,9 @@ ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 // Estilo minimalista y moderno integrado con la paleta de la app (Cobro App)
 const toastVariants = cva(
   [
-    "group pointer-events-auto relative flex w-full sm:w-[360px] items-center gap-3 overflow-hidden",
-    "rounded-2xl border backdrop-blur-xl transition-all duration-300",
-    "p-3.5 sm:p-4",
+    "group pointer-events-auto relative flex w-full max-w-[340px] sm:w-[320px] items-center gap-2.5 overflow-hidden",
+    "rounded-xl border backdrop-blur-xl transition-all duration-300",
+    "px-3 py-2 sm:px-3 sm:py-2.5",
     "data-[swipe=cancel]:translate-x-0",
     "data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]",
     "data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none",
@@ -94,7 +94,7 @@ const ToastClose = React.forwardRef<
     toast-close=""
     {...props}
   >
-    <X className="h-3.5 w-3.5" />
+    <X className="h-3 w-3" />
   </ToastPrimitives.Close>
 ))
 ToastClose.displayName = ToastPrimitives.Close.displayName
@@ -105,7 +105,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-[13.5px] font-semibold tracking-tight text-foreground", className)}
+    className={cn("text-xs font-semibold tracking-tight text-foreground leading-tight", className)}
     {...props}
   />
 ))
@@ -117,7 +117,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-xs text-muted-foreground leading-snug mt-0.5", className)}
+    className={cn("text-[11px] text-muted-foreground leading-tight mt-0.5", className)}
     {...props}
   />
 ))

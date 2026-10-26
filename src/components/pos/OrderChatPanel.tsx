@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatMessages, ChatMessage } from '@/hooks/useChatMessages';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatSafe } from '@/lib/dateUtils';
 
 interface OrderChatPanelProps {
     orderId: string;
@@ -96,7 +97,7 @@ const OrderChatPanel: React.FC<OrderChatPanelProps> = ({
                                     </div>
                                     <p className="text-sm leading-relaxed">{msg.message}</p>
                                     <div className="text-[9px] text-right mt-1 opacity-50">
-                                        {format(new Date(msg.created_at), 'HH:mm', { locale: es })}
+                                        {formatSafe(msg.created_at, 'HH:mm', { locale: es })}
                                     </div>
                                 </div>
                             </div>

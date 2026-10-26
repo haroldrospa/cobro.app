@@ -10,6 +10,7 @@ import { useCashMovements, useCreateCashMovement } from '@/hooks/useCashMovement
 import { useActiveSession } from '@/hooks/useCashSession';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { formatSafe } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -83,7 +84,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                     </DialogTitle>
                                     <DialogDescription className="text-muted-foreground font-medium">
                                         {activeSession
-                                            ? `Sesión iniciada: ${format(new Date(activeSession.opened_at), 'hh:mm a')}`
+                                            ? `Sesión iniciada: ${formatSafe(activeSession.opened_at, 'hh:mm a', { fallback: '--:--' })}`
                                             : 'Registre entradas y salidas manuales'
                                         }
                                     </DialogDescription>
@@ -211,7 +212,7 @@ const CashMovementsDialog: React.FC<CashMovementsDialogProps> = ({ isOpen, onClo
                                                 <TableRow key={mov.id} className="border-border/40 hover:bg-muted/30 transition-colors">
                                                     <TableCell className="py-4">
                                                         <span className="text-muted-foreground text-[10px] font-black tracking-tighter uppercase">
-                                                            {format(new Date(mov.created_at), 'hh:mm a')}
+                                                            {formatSafe(mov.created_at, 'hh:mm a', { fallback: '--:--' })}
                                                         </span>
                                                     </TableCell>
                                                     <TableCell>

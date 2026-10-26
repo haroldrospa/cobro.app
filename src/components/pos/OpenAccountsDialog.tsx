@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatSafe, formatDistanceToNowSafe } from '@/lib/dateUtils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ClipboardList, ShoppingCart, FileText, Check, Trash2, Calendar, User, Package, Printer, Merge, X, ArrowRight, Utensils, Clock, LayoutGrid, Search, Settings2, Pencil } from 'lucide-react';
@@ -701,7 +702,7 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1.5">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3 opacity-70" />
-                {format(new Date(order.created_at), 'dd/MM/yyyy • HH:mm', { locale: es })}
+                {formatSafe(order.created_at, 'dd/MM/yyyy • HH:mm', { fallback: '--/--/----' })}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">

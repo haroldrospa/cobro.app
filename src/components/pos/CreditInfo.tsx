@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
+import { formatDateLocaleSafe } from '@/lib/dateUtils';
 import { useCustomers } from '@/hooks/useCustomers';
 import { AlertCircle, ChevronDown, ChevronUp, Printer } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -269,7 +270,7 @@ const CreditInfo: React.FC<CreditInfoProps> = ({
           className="h-8 text-sm [@media(max-height:580px)]:h-7 [@media(max-height:580px)]:text-xs"
         />
         <p className="text-[10px] text-muted-foreground mt-0.5 [@media(max-height:580px)]:hidden">
-          Vence: {new Date(Date.now() + creditDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
+          Vence: {formatDateLocaleSafe(Date.now() + (Number(creditDays) || 0) * 24 * 60 * 60 * 1000, 'es-DO', undefined, 'Al Contado')}
         </p>
       </div>
     </div>

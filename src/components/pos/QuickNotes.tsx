@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { format, parseISO } from 'date-fns';
+import { formatSafe } from '@/lib/dateUtils';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -619,7 +620,7 @@ const QuickNotesSection: React.FC = () => {
                                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                             <span className="flex items-center gap-1 shrink-0">
                                                 <CalendarIcon className="h-3 w-3 opacity-70" />
-                                                {format(parseISO(note.dueDate), 'dd/MM/yyyy')}
+                                                {formatSafe(note.dueDate, 'dd/MM/yyyy')}
                                             </span>
                                             {note.supplier_name && (
                                                 <>

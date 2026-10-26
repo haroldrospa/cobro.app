@@ -12,6 +12,7 @@ import { useSales } from '@/hooks/useSalesManagement';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
 import { useToast } from '@/hooks/use-toast';
+import { formatSafe } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import CashCountDialog from './CashCountDialog';
@@ -510,14 +511,14 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                 {displayedSession && (
                                     <p className="text-[10px] text-muted-foreground flex items-center gap-1 sm:hidden">
                                         <Clock className="h-2.5 w-2.5 text-green-500 shrink-0" />
-                                        <span>{format(new Date(displayedSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}</span>
+                                        <span>{formatSafe(displayedSession.opened_at, 'dd/MM/yyyy hh:mm a', { fallback: '--/--/----' })}</span>
                                     </p>
                                 )}
                             </div>
                             {displayedSession && (
                                 <Badge variant="outline" className="hidden sm:inline-flex text-[10px] font-semibold text-muted-foreground border-border/40 py-0 h-5 gap-1 shrink-0">
                                     <Clock className="h-2.5 w-2.5 text-green-500" />
-                                    {format(new Date(displayedSession.opened_at), 'dd/MM/yyyy hh:mm a', { locale: es })}
+                                    {formatSafe(displayedSession.opened_at, 'dd/MM/yyyy hh:mm a', { fallback: '--/--/----' })}
                                 </Badge>
                             )}
                         </div>
@@ -744,7 +745,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                             </div>
                                                             <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 text-right">
                                                                 <span className="text-[11px] text-muted-foreground font-mono">
-                                                                    {format(new Date(m.created_at), 'hh:mm a')}
+                                                                    {formatSafe(m.created_at, 'hh:mm a', { fallback: '--:--' })}
                                                                 </span>
                                                                 <span className={cn(
                                                                     "font-mono font-black text-xs sm:text-sm min-w-[80px]",
@@ -794,7 +795,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                         </div>
                                                         <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 text-right">
                                                             <span className="text-[10px] text-muted-foreground font-mono">
-                                                                {format(new Date(s.created_at), 'hh:mm a')}
+                                                                {formatSafe(s.created_at, 'hh:mm a', { fallback: '--:--' })}
                                                             </span>
                                                             <span className="font-mono font-bold text-xs text-foreground min-w-[70px]">
                                                                 RD$ {Number(s.total || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
@@ -1136,8 +1137,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                 <TableRow key={closing.id} className="border-border/30 hover:bg-muted/30 transition-colors">
                                                     <TableCell className="py-2.5">
                                                         <div className="flex flex-col">
-                                                            <span className="text-foreground font-bold text-xs">{closing.closed_at ? format(new Date(closing.closed_at), 'dd MMM, yyyy', { locale: es }) : '-'}</span>
-                                                            <span className="text-muted-foreground text-[9px] uppercase font-semibold">{closing.closed_at ? format(new Date(closing.closed_at), 'hh:mm a', { locale: es }) : '-'}</span>
+                                                            <span className="text-foreground font-bold text-xs">{closing.closed_at ? formatSafe(closing.closed_at, 'dd MMM, yyyy', { fallback: '-' }) : '-'}</span>
+                                                            <span className="text-muted-foreground text-[9px] uppercase font-semibold">{closing.closed_at ? formatSafe(closing.closed_at, 'hh:mm a', { fallback: '-' }) : '-'}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>

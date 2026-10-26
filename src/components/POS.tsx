@@ -918,8 +918,9 @@ const POSContent: React.FC = () => {
     let paymentStatus = 'paid';
     if (paymentMethod === 'credit') {
       const dueDateObj = new Date();
-      dueDateObj.setDate(dueDateObj.getDate() + creditDays);
-      dueDate = dueDateObj.toISOString();
+      const days = Number(creditDays) || 15;
+      dueDateObj.setDate(dueDateObj.getDate() + days);
+      dueDate = isNaN(dueDateObj.getTime()) ? new Date().toISOString() : dueDateObj.toISOString();
       paymentStatus = 'pending';
     }
 
@@ -1034,7 +1035,9 @@ const POSContent: React.FC = () => {
       setPaymentMethod('cash');
       setGlobalDiscount({ value: 0, type: 'percentage' });
       setShowPaymentDialog(false);
-      setShowPrintOptionsDialog(true);
+      setTimeout(() => {
+        setShowPrintOptionsDialog(true);
+      }, 150);
       setCurrentOrderInfo(null);
 
       // Award loyalty points if a loyalty customer was identified
@@ -1950,7 +1953,7 @@ const POSContent: React.FC = () => {
           currency: data.currency || (storeSettings?.currency === 'USD' ? 'USD' : 'DOP'),
           notes: quoteNotesWithValidity,
           paymentTerms: validityDays,
-          dueDate: new Date(Date.now() + validityDays * 86400000).toISOString(),
+          dueDate: new Date(Date.now() + (Number(validityDays) || 30) * 86400000).toISOString(),
           profile: {
             full_name: profile?.full_name || 'Cajero'
           },
@@ -1958,8 +1961,10 @@ const POSContent: React.FC = () => {
         };
 
         setSaleData(printSaleData);
-        setShowPrintOptionsDialog(true);
         setShowServiceInvoiceDialog(false);
+        setTimeout(() => {
+          setShowPrintOptionsDialog(true);
+        }, 150);
 
         toast({
           title: "Cotización generada",
@@ -1976,8 +1981,9 @@ const POSContent: React.FC = () => {
       let paymentStatus = 'paid';
       if (data.paymentMethod === 'credit') {
         const dueDateObj = new Date();
-        dueDateObj.setDate(dueDateObj.getDate() + (data.creditDays || creditDays || 30));
-        dueDate = dueDateObj.toISOString();
+        const days = Number(data.creditDays || creditDays) || 30;
+        dueDateObj.setDate(dueDateObj.getDate() + days);
+        dueDate = isNaN(dueDateObj.getTime()) ? new Date().toISOString() : dueDateObj.toISOString();
         paymentStatus = 'pending';
       }
 
@@ -2036,8 +2042,10 @@ const POSContent: React.FC = () => {
       };
 
       setSaleData(printSaleData);
-      setShowPrintOptionsDialog(true);
       setShowServiceInvoiceDialog(false);
+      setTimeout(() => {
+        setShowPrintOptionsDialog(true);
+      }, 150);
 
       toast({
         title: "Factura de servicios emitida",
@@ -2503,6 +2511,38 @@ const POSContent: React.FC = () => {
             currencySymbol={storeSettings?.currency_symbol || 'RD$'}
             defaultTaxRate={storeSettings?.default_tax_rate ?? 18}
           />
+
+          {saleData && (
+            <Suspense fallback={null}>
+              <PrintOptionsDialog
+                isOpen={showPrintOptionsDialog}
+                onClose={() => setShowPrintOptionsDialog(false)}
+                saleData={saleData}
+              />
+            </Suspense>
+          )}
+
+          {showDailySalesDialog && (
+            <Suspense fallback={null}>
+              <DailySalesDialog
+                isOpen={showDailySalesDialog}
+                onClose={() => setShowDailySalesDialog(false)}
+              />
+            </Suspense>
+          )}
+
+          {showOpenRegisterDialog && (
+            <Suspense fallback={null}>
+              <OpenRegisterDialog
+                isOpen={showOpenRegisterDialog}
+                onClose={() => setShowOpenRegisterDialog(false)}
+                activeSession={activeSession}
+                onSessionUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ['active-cash-session'] });
+                }}
+              />
+            </Suspense>
+          )}
         </div>
       );
     }

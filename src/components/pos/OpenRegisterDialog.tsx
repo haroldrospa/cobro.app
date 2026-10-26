@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserStore } from '@/hooks/useUserStore';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateLocaleSafe, formatTimeLocaleSafe } from '@/lib/dateUtils';
 
 interface OpenRegisterDialogProps {
     isOpen: boolean;
@@ -180,7 +181,9 @@ const ActiveSessionsWarning = () => {
                             <li key={s.id} className="flex items-center justify-between gap-2 text-[9px] sm:text-[10px] bg-background/60 p-1.5 rounded-md border border-red-500/5">
                                 <div className="flex flex-col">
                                     <span className="font-bold text-foreground">{s.opener?.full_name || 'Usuario'}</span>
-                                    <span className="text-[8px] opacity-70">Abierto el {new Date(s.opened_at).toLocaleDateString()} a las {new Date(s.opened_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                    <span className="text-[8px] opacity-70">
+                                      Abierto el {formatDateLocaleSafe(s.opened_at, 'es-DO', undefined, 'Fecha desconocida')} a las {formatTimeLocaleSafe(s.opened_at, 'es-DO', {hour: '2-digit', minute:'2-digit'}, '--:--')}
+                                    </span>
                                 </div>
                                 <Button 
                                     variant="destructive" 

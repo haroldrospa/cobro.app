@@ -109,8 +109,8 @@ export function Toaster() {
             <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/10 to-transparent animate-toast-shimmer" />
 
             {/* Micro badge contenedor con pop elástico y resplandor con color de la app */}
-            <div className={cn("shrink-0 w-8 h-8 rounded-xl border flex items-center justify-center animate-toast-icon", badgeStyle)}>
-              <Icon className="h-4 w-4" />
+            <div className={cn("shrink-0 w-6 h-6 rounded-lg border flex items-center justify-center animate-toast-icon", badgeStyle)}>
+              <Icon className="h-3.5 w-3.5" />
             </div>
 
             {/* Contenido tipográfico nítido y minimalista con tokens de la app */}
@@ -128,7 +128,7 @@ export function Toaster() {
             </div>
 
             {action}
-            <ToastClose className="static opacity-70 hover:opacity-100 shrink-0 text-muted-foreground hover:text-foreground h-6 w-6 p-1 rounded-lg hover:bg-muted/50 transition-all flex items-center justify-center" />
+            <ToastClose className="static opacity-60 hover:opacity-100 shrink-0 text-muted-foreground hover:text-foreground h-5 w-5 p-0.5 rounded-md hover:bg-muted/50 transition-all flex items-center justify-center" />
 
             {/* Barra de progreso minimalista (countdown) en la base con color de la app */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-border/40 overflow-hidden">

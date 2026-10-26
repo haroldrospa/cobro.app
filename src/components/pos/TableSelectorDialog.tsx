@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatDistanceToNowSafe } from '@/lib/dateUtils';
 import { useTableConfig } from '@/hooks/useTableConfig';
 import { TableConfigDialog } from './TableConfigDialog';
 
@@ -260,9 +261,10 @@ export const TableSelectorDialog: React.FC<TableSelectorDialogProps> = ({
                               <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                 <Clock className="h-3 w-3" />
                                 <span>
-                                  {formatDistanceToNow(new Date(occInfo.createdAt), {
+                                  {formatDistanceToNowSafe(occInfo.createdAt, {
                                     addSuffix: true,
                                     locale: es,
+                                    fallback: 'Reciente',
                                   })}
                                 </span>
                               </div>

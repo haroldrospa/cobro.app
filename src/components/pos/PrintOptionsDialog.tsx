@@ -26,6 +26,7 @@ import {
 } from '@/utils/bluetoothPrinter';
 import appLogo from '@/assets/cobro-logo.png';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
+import { formatDateLocaleSafe, formatTimeLocaleSafe, formatDateTimeLocaleSafe } from '@/lib/dateUtils';
 
 interface PrintOptionsDialogProps {
   isOpen: boolean;
@@ -380,7 +381,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     });
 
     const isCredit = saleData?.paymentMethod === 'credit';
-    const formattedDueDate = saleData?.dueDate ? new Date(saleData.dueDate).toLocaleDateString('es-DO') : 'N/A';
+    const formattedDueDate = saleData?.dueDate ? formatDateLocaleSafe(saleData.dueDate, 'es-DO', undefined, 'N/A') : 'N/A';
     const formattedInvoiceTotal = (saleData?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
     const totalDebtValue = saleData?.customerDebt || (isCredit ? (saleData?.total || 0) : 0);
     const formattedTotalDebt = totalDebtValue.toLocaleString('en-US', { minimumFractionDigits: 2 });
@@ -1290,7 +1291,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             textY += 5;
           }
           if (signatureDate) {
-            doc.text(`Fecha Firma Digital: ${new Date(signatureDate).toLocaleString('es-DO')}`, 50, textY);
+            doc.text(`Fecha Firma Digital: ${formatDateTimeLocaleSafe(signatureDate, 'es-DO')}`, 50, textY);
           }
         }
       } catch (qrErr) {
@@ -1501,8 +1502,12 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[480px] p-4">
+      <Dialog open={isOpen && !!saleData} onOpenChange={onClose}>
+        <DialogContent 
+          className="max-w-[95vw] sm:max-w-[480px] p-4"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader className="space-y-1 pb-2">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-full bg-green-500/10">
@@ -1513,18 +1518,18 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                   {isQuote ? '¡Cotización generada exitosamente!' : '¡Venta procesada exitosamente!'}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Total: ${(saleData.total || 0).toFixed(2)}
+                  Total: ${(saleData?.total || 0).toFixed(2)}
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
           {/* Cambio destacado */}
-          {saleData.change !== undefined && saleData.change > 0 && !isQuote && (
+          {saleData?.change !== undefined && saleData.change > 0 && !isQuote && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground mb-1">Cambio a entregar</p>
               <p className="text-4xl font-bold text-green-500">
-                ${(saleData.change || 0).toFixed(2)}
+                ${(saleData?.change || 0).toFixed(2)}
               </p>
             </div>
           )}

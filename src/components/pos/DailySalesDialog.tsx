@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Download, Mail, Printer, DollarSign, Calendar, User, FileText, X, ChevronRight, Hash, ReceiptText, Clock, AlertCircle, Wallet, TrendingUp, Filter, Eye } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useToast } from '@/hooks/use-toast';
+import { formatSafe } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useInvoiceActions } from '@/hooks/useInvoiceActions';
@@ -378,7 +379,7 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                                                                      <span className="text-xs font-bold text-foreground tracking-tight">{sale.invoice_number}</span>
                                                                      <div className="flex items-center gap-1 text-[8px] text-muted-foreground font-bold uppercase">
                                                                          <Clock className="h-2.5 w-2.5" />
-                                                                         {format(new Date(sale.created_at), 'hh:mm a')}
+                                                                         {formatSafe(sale.created_at, 'hh:mm a', { fallback: '--:--' })}
                                                                      </div>
                                                                  </div>
                                                             </TableCell>
@@ -466,7 +467,7 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                                                     <div className="flex justify-between items-start gap-2 mb-2">
                                                         <div className="flex flex-col">
                                                             <span className="text-xs font-black text-foreground tracking-tight">{sale.invoice_number}</span>
-                                                            <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight mt-0.5">{format(new Date(sale.created_at), 'hh:mm a')}</span>
+                                                            <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight mt-0.5">{formatSafe(sale.created_at, 'hh:mm a', { fallback: '--:--' })}</span>
                                                         </div>
                                                         <span className={cn(
                                                             "text-sm font-black tracking-tight",

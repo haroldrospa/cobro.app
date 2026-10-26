@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatSafe } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -471,7 +472,7 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
           <div className="text-xs space-y-1 text-muted-foreground">
             <div className="font-medium text-foreground">{order.customer_name}</div>
             <div className="flex justify-between items-center">
-              <span>{order.customer_phone || format(new Date(order.created_at), 'dd/MM HH:mm', { locale: es })}</span>
+              <span>{order.customer_phone || formatSafe(order.created_at, 'dd/MM HH:mm', { fallback: '--/-- --:--' })}</span>
               <button
                 type="button"
                 className="text-primary text-xs hover:underline flex items-center gap-1"
@@ -604,8 +605,8 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
                     </div>
                   </TableCell>
                   <TableCell className="py-3 text-muted-foreground whitespace-nowrap">
-                    <div className="font-medium text-foreground">{format(new Date(order.created_at), 'dd/MM/yy', { locale: es })}</div>
-                    <div className="text-[11px] text-muted-foreground font-mono">{format(new Date(order.created_at), 'HH:mm', { locale: es })}</div>
+                    <div className="font-medium text-foreground">{formatSafe(order.created_at, 'dd/MM/yy', { fallback: '--/--/--' })}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">{formatSafe(order.created_at, 'HH:mm', { fallback: '--:--' })}</div>
                   </TableCell>
                   <TableCell className="py-3">
                     <div className="font-semibold text-foreground leading-snug">{order.customer_name}</div>
