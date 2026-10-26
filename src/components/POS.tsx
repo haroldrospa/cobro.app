@@ -83,6 +83,7 @@ import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { sendEvolutionWhatsAppMessage } from '@/utils/evolutionApi';
 import { GenerateServiceInvoiceDialog } from './pos/GenerateServiceInvoiceDialog';
 import { ServicePOSWorkspace } from './pos/ServicePOSWorkspace';
+import { SubscriptionWarningBanner } from '@/components/SubscriptionWarningBanner';
 
 class SimpleErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
