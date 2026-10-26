@@ -2364,6 +2364,8 @@ const POSContent: React.FC = () => {
   // Action buttons as a stable React.memo component reference
   const actionButtons = useMemo(() => (
     <POSActionButtons
+      onOpenQuotes={handleShowQuotes}
+      quotesCount={liveQuotesCount}
       profileName={profile?.full_name}
       hasItems={hasCartItems}
       isSavingOrder={isSavingOrder}
@@ -3513,6 +3515,8 @@ const POSContent: React.FC = () => {
 // ── MEMOIZED PURE ACTION BUTTONS COMPONENT ──
 // Separated from POSContent to avoid re-rendering on every searchTerm/cart change
 interface POSActionButtonsProps {
+  onOpenQuotes?: () => void;
+  quotesCount?: number;
   profileName?: string;
   hasItems: boolean;
   isSavingOrder: boolean;
@@ -3531,6 +3535,8 @@ interface POSActionButtonsProps {
 }
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
+  onOpenQuotes,
+  quotesCount,
   profileName,
   hasItems,
   isSavingOrder,

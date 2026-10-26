@@ -941,20 +941,6 @@ const OpenAccountsDialog: React.FC<OpenAccountsDialogProps> = ({ isOpen, onClose
   }, [selectedZone, allTablesList, allSections, tableSearchQuery, tableToOrderMap]);
 
   
-  const quoteOrders = React.useMemo(() => {
-    return filteredOrders.filter((o: any) => o.order_status === 'quote' || o.order_number?.startsWith('COT'));
-  }, [filteredOrders]);
-
-  const regularOrders = React.useMemo(() => {
-    return filteredOrders.filter((o: any) => !(o.order_status === 'quote' || o.order_number?.startsWith('COT')));
-  }, [filteredOrders]);
-
-  const displayedOrders = React.useMemo(() => {
-    if (accountFilter === 'quotes') return quoteOrders;
-    if (accountFilter === 'orders') return regularOrders;
-    return filteredOrders;
-  }, [accountFilter, filteredOrders, quoteOrders, regularOrders]);
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
