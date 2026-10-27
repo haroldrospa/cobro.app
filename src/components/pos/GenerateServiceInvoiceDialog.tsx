@@ -147,10 +147,11 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
       });
     } else {
       setSelectedInvoiceTypeId(prev => {
-        if (prev === 'FAC' || prev.startsWith('E')) {
+        if (prev === 'FAC' || prev === 'COT') return prev;
+        if (prev.startsWith('E')) {
           const b01 = invoiceTypes.find(t => t.code === 'B01');
           const b02 = invoiceTypes.find(t => t.code === 'B02');
-          return b01?.id || b02?.id || invoiceTypes[0]?.id || '';
+          return b01?.id || b02?.id || invoiceTypes[0]?.id || 'FAC';
         }
         return prev;
       });
@@ -394,12 +395,10 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
                   <SelectValue placeholder="Seleccione tipo de comprobante" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60 rounded-xl">
-                  {effectiveIsElectronic && (
-                    <SelectItem value="FAC">
-                      <span className="font-bold text-sky-500 mr-2">FAC</span>
-                      <span>Factura Interna</span>
-                    </SelectItem>
-                  )}
+                  <SelectItem value="FAC">
+                    <span className="font-bold text-sky-500 mr-2">FAC</span>
+                    <span>Factura Interna</span>
+                  </SelectItem>
                   <SelectItem value="COT">
                     <span className="font-bold text-amber-500 mr-2">COT</span>
                     <span>Cotización</span>
