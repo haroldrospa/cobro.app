@@ -91,12 +91,13 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
 
     return generateCleanInvoiceHTML(
       {
-        name: companyInfo?.name || 'Mi Empresa',
-        logo: companyInfo?.logo,
-        logoSize: companyInfo?.logoInvoiceSize || companyInfo?.logoSize || 64,
-        rnc: companyInfo?.rnc,
-        phone: companyInfo?.phone,
-        address: companyInfo?.address,
+        name: companyInfo?.name || (storeSettings as any)?.store_name || 'Mi Empresa',
+        logo: companyInfo?.logo || (storeSettings as any)?.logo_url || (storeSettings as any)?.logo || '',
+        logoSize: Math.max(companyInfo?.logoInvoiceSize || companyInfo?.logoSize || 100, 95),
+        rnc: companyInfo?.rnc || (storeSettings as any)?.rnc || '',
+        phone: companyInfo?.phone || (storeSettings as any)?.phone || '',
+        address: companyInfo?.address || (storeSettings as any)?.address || '',
+        email: companyInfo?.email || (storeSettings as any)?.email || '',
         fontSize: printSettings?.fontSize,
         containerPadding: '8px',
         paperSize: activePaper,

@@ -73,7 +73,7 @@ export const generateCleanInvoiceHTML = (
   const isCarta = paperSizeNorm === 'carta' || paperSizeNorm === 'letter';
   const isFullPage = isA4 || isCarta;
 
-  const logoHeight = companyData.logoSize || (isFullPage ? 80 : 60);
+  const logoHeight = companyData.logoSize ? Math.max(companyData.logoSize, 90) : (isFullPage ? 95 : 60);
   // 58mm sube de 9.5 a 11 — a los ~168 DPI reales de una térmica de 58mm
   // (384 dots de ancho), el tamaño anterior quedaba demasiado chico para
   // sobrevivir la conversión a blanco/negro sin volverse ilegible.
@@ -295,144 +295,153 @@ export const generateCleanInvoiceHTML = (
   <div class="invoice-sheet">
     
     <!-- Acento geométrico moderno superior derecho -->
-    <div style="position: absolute; top: 0; right: 0; width: 175px; height: 100px; pointer-events: none; z-index: 0; overflow: hidden;">
-      <svg width="175" height="100" viewBox="0 0 175 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
-        <polygon points="40,0 175,0 175,100" fill="#27272a" />
-        <polygon points="100,0 175,0 175,55" fill="#3f3f46" opacity="0.65" />
+    <div style="position: absolute; top: 0; right: 0; width: 180px; height: 105px; pointer-events: none; z-index: 0; overflow: hidden;">
+      <svg width="180" height="105" viewBox="0 0 180 105" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <polygon points="45,0 180,0 180,105" fill="#18181b" />
+        <polygon points="105,0 180,0 180,60" fill="#27272a" opacity="0.7" />
       </svg>
     </div>
 
     <!-- CONTENIDO DE LA FACTURA -->
     <div class="invoice-content">
       
-      <!-- Encabezado: Logo / Nombre de Empresa -->
-      <div style="position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-        <div>
+      <!-- Encabezado Superior: Logo Grande / Empresa (Izq) y Título (Der) -->
+      <div style="position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 20px;">
+        <div style="max-width: 58%;">
           ${companyData.logo ? `
-            <img src="${companyData.logo}" alt="Logo" style="max-height: ${Math.min(logoHeight, 60)}px; max-width: 220px; object-fit: contain; margin-bottom: 6px; display: block;" />
+            <img src="${companyData.logo}" alt="Logo" style="max-height: ${logoHeight}px; max-width: 290px; width: auto; object-fit: contain; margin-bottom: 8px; display: block;" />
           ` : `
-            <div style="display: inline-block; background: #27272a; color: #ffffff; padding: 6px 14px; border-radius: 6px; font-weight: 900; font-size: 15px; letter-spacing: 0.05em; margin-bottom: 6px;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; background: #18181b; color: #ffffff; padding: 10px 20px; border-radius: 8px; font-weight: 900; font-size: 18px; letter-spacing: 0.05em; margin-bottom: 8px;">
               ${companyInitials}
             </div>
           `}
-          <div style="font-size: 17px; font-weight: 800; color: #18181b; letter-spacing: -0.02em; line-height: 1.2;">
+          <div style="font-size: 18px; font-weight: 800; color: #18181b; letter-spacing: -0.02em; line-height: 1.2;">
             ${companyData.name}
           </div>
-          <div style="font-size: 11px; color: #71717a; line-height: 1.4; margin-top: 2px;">
+          <div style="font-size: 11px; color: #71717a; line-height: 1.45; margin-top: 3px;">
             ${companyData.rnc ? `<span><strong>RNC:</strong> ${companyData.rnc}</span> ` : ''}
             ${companyData.phone ? `<span>• <strong>Tel:</strong> ${companyData.phone}</span> ` : ''}
+            ${companyData.email ? `<div><strong>Email:</strong> ${companyData.email}</div>` : ''}
             ${companyData.address ? `<div>${companyData.address}</div>` : ''}
           </div>
         </div>
+
+        <div style="text-align: right; margin-top: 4px; max-width: 40%;">
+          <h1 style="font-size: 26px; font-weight: 900; color: #18181b; letter-spacing: -0.03em; margin: 0; line-height: 1.1; text-transform: uppercase;">
+            ${isQuotation ? 'Presupuesto' : (isInternalInvoice ? 'Factura Interna' : (invoiceData.isElectronic ? 'Factura Electrónica' : 'Factura Fiscal'))}
+          </h1>
+          <div style="margin-top: 5px;">
+            <span style="display: inline-block; background: #f4f4f5; color: #52525b; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 6px; letter-spacing: 0.04em; text-transform: uppercase;">
+              ${isQuotation ? 'COTIZACIÓN' : (isInternalInvoice ? 'CONTROL INTERNO' : customerTypeLabel)}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <!-- Título de Documento Estilo Moderno -->
-      <div style="position: relative; z-index: 1; margin-top: 12px; margin-bottom: 12px;">
-        <h1 style="font-size: 26px; font-weight: 900; color: #18181b; letter-spacing: -0.03em; margin: 0; line-height: 1.1;">
-          ${isQuotation ? 'Presupuesto' : (isInternalInvoice ? 'Factura Interna' : (invoiceData.isElectronic ? 'Factura Electrónica' : 'Factura Fiscal'))}
-        </h1>
-      </div>
-
-      <!-- Datos del Cliente y Metadatos del Documento -->
-      <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; margin-bottom: 14px; font-size: 12px; line-height: 1.5;">
+      <!-- Cuadro Minimalista Moderno de Datos (Cliente y Documento) -->
+      <div style="position: relative; z-index: 1; background: #fbfbfc; border: 1px solid #ebecee; border-radius: 10px; padding: 13px 18px; margin-bottom: 14px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; font-size: 12px; line-height: 1.5;">
         <div>
-          <div><strong style="color: #18181b; font-weight: 700;">Cliente:</strong> <span style="color: #27272a; font-weight: 600;">${(invoiceData.customerName || 'Consumidor Final')}</span></div>
-          ${invoiceData.customerRnc ? `<div><strong style="color: #18181b; font-weight: 700;">RNC / Cédula:</strong> <span style="color: #52525b;">${invoiceData.customerRnc}</span></div>` : ''}
-          ${invoiceData.customerPhone ? `<div><strong style="color: #18181b; font-weight: 700;">Teléfono:</strong> <span style="color: #52525b;">${invoiceData.customerPhone}</span></div>` : ''}
-          ${invoiceData.customerAddress ? `<div><strong style="color: #18181b; font-weight: 700;">Dirección:</strong> <span style="color: #52525b;">${invoiceData.customerAddress}</span></div>` : ''}
+          <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em; color: #a1a1aa; text-transform: uppercase; margin-bottom: 2px;">
+            Facturado a
+          </div>
+          <div style="font-size: 14.5px; font-weight: 800; color: #18181b; margin-bottom: 3px;">
+            ${(invoiceData.customerName || 'Consumidor Final')}
+          </div>
+          ${invoiceData.customerRnc ? `<div><span style="color: #71717a;">RNC / Cédula:</span> <strong style="color: #27272a;">${invoiceData.customerRnc}</strong></div>` : ''}
+          ${invoiceData.customerPhone ? `<div><span style="color: #71717a;">Teléfono:</span> <span style="color: #3f3f46;">${invoiceData.customerPhone}</span></div>` : ''}
+          ${invoiceData.customerAddress ? `<div><span style="color: #71717a;">Dirección:</span> <span style="color: #3f3f46;">${invoiceData.customerAddress}</span></div>` : ''}
         </div>
-        <div style="text-align: right;">
-          <div><strong style="color: #18181b; font-weight: 700;">Fecha:</strong> <span style="color: #27272a;">${formattedDateStr}</span></div>
-          <div><strong style="color: #18181b; font-weight: 700;">No. Comprobante:</strong> <span class="tabular-numbers" style="color: #18181b; font-weight: 800; letter-spacing: 0.02em;">${displayNCF}</span></div>
-          <div><strong style="color: #18181b; font-weight: 700;">Pago:</strong> <span style="color: #27272a;">${pMethod}${isCreditSale && invoiceData.paymentTerms ? ` (${invoiceData.paymentTerms} días)` : ''}</span></div>
-          ${!isQuotation && !isInternalInvoice ? `<div><strong style="color: #71717a; font-weight: 600;">Tipo:</strong> <span style="color: #71717a;">${customerTypeLabel}</span></div>` : ''}
-          ${invoiceData.cashierName ? `<div><strong style="color: #71717a; font-weight: 600;">Atendido por:</strong> <span style="color: #71717a;">${invoiceData.cashierName}</span></div>` : ''}
+        <div style="border-left: 1px solid #ebecee; padding-left: 18px; display: flex; flex-direction: column; justify-content: center; gap: 3px;">
+          <div><span style="color: #71717a;">Fecha de Emisión:</span> <strong style="color: #18181b;">${formattedDateStr}</strong></div>
+          <div><span style="color: #71717a;">No. Comprobante:</span> <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 800; color: #18181b; letter-spacing: 0.02em;">${displayNCF}</span></div>
+          <div><span style="color: #71717a;">Condición de Pago:</span> <strong style="color: #18181b;">${pMethod}${isCreditSale && invoiceData.paymentTerms ? ` (${invoiceData.paymentTerms} días)` : ''}</strong></div>
+          ${invoiceData.cashierName ? `<div><span style="color: #a1a1aa;">Atendido por:</span> <span style="color: #71717a;">${invoiceData.cashierName}</span></div>` : ''}
         </div>
       </div>
 
-      <!-- Tabla de Artículos / Servicios -->
-      <table class="items-table">
+      <!-- Tabla de Artículos / Servicios Estilo Minimalista y Moderno -->
+      <table class="items-table" style="width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 4px; margin-bottom: 10px;">
         <thead>
           <tr>
-            <th style="width: ${hasTax ? '50%' : '58%'}; text-align: left;">
+            <th style="background: #18181b !important; color: #ffffff !important; padding: 10px 14px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; border-top-left-radius: 8px; border-bottom-left-radius: 8px; text-align: left; width: ${hasTax ? '48%' : '58%'}; border: none;">
               Servicio / Descripción
             </th>
-            <th style="width: 10%; text-align: center;">
+            <th style="background: #18181b !important; color: #ffffff !important; padding: 10px 14px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; width: 10%; border: none;">
               Cant.
             </th>
-            <th style="width: 16%; text-align: right;">
+            <th style="background: #18181b !important; color: #ffffff !important; padding: 10px 14px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; text-align: right; width: 16%; border: none;">
               Precio
             </th>
             ${hasTax ? `
-              <th style="width: 10%; text-align: right;">
+              <th style="background: #18181b !important; color: #ffffff !important; padding: 10px 14px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; text-align: right; width: 12%; border: none;">
                 ITBIS
               </th>
             ` : ''}
-            <th style="width: 16%; text-align: right;">
+            <th style="background: #18181b !important; color: #ffffff !important; padding: 10px 14px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; border-top-right-radius: 8px; border-bottom-right-radius: 8px; text-align: right; width: 16%; border: none;">
               Total (${invoiceData.currency})
             </th>
           </tr>
         </thead>
         <tbody>
-          ${invoiceData.items && invoiceData.items.length > 0 ? invoiceData.items.map((item) => {
+          ${invoiceData.items && invoiceData.items.length > 0 ? invoiceData.items.map((item, idx) => {
             const itemTax = hasTax ? (item.total - (item.total / (1 + invoiceData.taxRate / 100))) : 0;
             return `
-              <tr>
-                <td>
+              <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fafafa'};">
+                <td style="padding: 11px 14px; border-bottom: 1px solid #f0f0f2; vertical-align: middle;">
                   <div style="font-weight: 700; color: #18181b; font-size: 12.5px;">${item.name}</div>
                   ${item.comment ? `<div style="font-size: 10.5px; color: #71717a; margin-top: 2px; line-height: 1.35;">${item.comment}</div>` : ''}
                 </td>
-                <td style="text-align: center; font-weight: 700; color: #18181b;">
-                  ${item.quantity}
+                <td style="padding: 11px 14px; border-bottom: 1px solid #f0f0f2; text-align: center; font-weight: 700; color: #18181b; vertical-align: middle;">
+                  <span style="display: inline-block; background: #f4f4f5; padding: 2px 7px; border-radius: 4px; font-size: 11px;">${item.quantity}</span>
                 </td>
-                <td class="tabular-numbers" style="text-align: right; color: #3f3f46;">
+                <td class="tabular-numbers" style="padding: 11px 14px; border-bottom: 1px solid #f0f0f2; text-align: right; color: #3f3f46; font-size: 12px; vertical-align: middle;">
                   ${fmt(item.price)}
                 </td>
                 ${hasTax ? `
-                  <td class="tabular-numbers" style="text-align: right; color: #71717a;">
+                  <td class="tabular-numbers" style="padding: 11px 14px; border-bottom: 1px solid #f0f0f2; text-align: right; color: #71717a; font-size: 12px; vertical-align: middle;">
                     ${fmt(itemTax)}
                   </td>
                 ` : ''}
-                <td class="tabular-numbers" style="text-align: right; font-weight: 800; color: #18181b;">
+                <td class="tabular-numbers" style="padding: 11px 14px; border-bottom: 1px solid #f0f0f2; text-align: right; font-weight: 800; color: #18181b; font-size: 12.5px; vertical-align: middle;">
                   ${fmt(item.total)}
                 </td>
               </tr>
             `;
           }).join('') : `
             <tr>
-              <td colspan="${hasTax ? 5 : 4}" style="text-align: center; padding: 20px; color: #a1a1aa; font-style: italic;">Sin conceptos o servicios registrados</td>
+              <td colspan="${hasTax ? 5 : 4}" style="text-align: center; padding: 22px; color: #a1a1aa; font-style: italic;">Sin conceptos o servicios registrados</td>
             </tr>
           `}
         </tbody>
       </table>
-      <div style="border-bottom: 2px solid #27272a; margin-bottom: 12px;"></div>
+      <div style="border-bottom: 1px solid #e4e4e7; margin-bottom: 12px;"></div>
 
       <!-- Sección Inferior: Cuentas Bancarias / QR (Izq) y Totales (Der) -->
-      <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: start; margin-top: 2px;">
+      <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; align-items: start; margin-top: 2px;">
         
         <!-- Columna Izquierda: Cuentas Bancarias y/o QR DGII -->
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 9px;">
           
-          <!-- Cuentas Bancarias para Transferencias (Compacto y Elegante) -->
+          <!-- Cuentas Bancarias para Transferencias (Diseño Minimalista) -->
           ${invoiceData.bankAccounts && invoiceData.bankAccounts.length > 0 ? `
-            <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px; padding: 8px 11px; width: 100%; box-sizing: border-box;">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ebecee; padding-bottom: 3px; margin-bottom: 5px;">
-                <span style="font-size: 9.5px; font-weight: 800; color: #27272a; text-transform: uppercase; letter-spacing: 0.05em;">
+            <div style="background: #fbfbfc; border: 1px solid #ebecee; border-radius: 10px; padding: 10px 13px; width: 100%; box-sizing: border-box;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f2; padding-bottom: 4px; margin-bottom: 5px;">
+                <span style="font-size: 9.5px; font-weight: 800; color: #18181b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
                   🏦 Cuentas para Transferencia
                 </span>
-                <span style="font-size: 8.5px; color: #71717a;">Notificar pago</span>
+                <span style="font-size: 8.5px; color: #a1a1aa; font-weight: 500;">Notificar pago</span>
               </div>
-              <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; flex-direction: column; gap: 5px;">
                 ${invoiceData.bankAccounts.map((acc: any) => `
-                  <div style="font-size: 10.5px; line-height: 1.35; color: #3f3f46; background: #ffffff; border: 1px solid #f4f4f5; border-radius: 4px; padding: 4px 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                      <strong style="color: #18181b; font-size: 10.5px;">${acc.bank_name}${acc.alias ? ` (${acc.alias})` : ''}</strong>
-                      ${acc.account_type ? `<span style="font-size: 9px; color: #71717a; text-transform: capitalize;">${acc.account_type}</span>` : ''}
+                  <div style="font-size: 10.5px; line-height: 1.35; color: #3f3f46; background: #ffffff; border: 1px solid #eef0f2; border-radius: 6px; padding: 5px 9px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <strong style="color: #18181b; font-size: 11px;">${acc.bank_name}${acc.alias ? ` (${acc.alias})` : ''}</strong>
+                      ${acc.account_type ? `<span style="font-size: 9px; color: #52525b; background: #f4f4f5; padding: 1px 5px; border-radius: 4px; text-transform: capitalize; font-weight: 600;">${acc.account_type}</span>` : ''}
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1px;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
                       <div>
-                        <span style="color: #71717a; font-size: 9px;">No:</span>
-                        <span style="font-family: monospace; font-weight: 800; color: #0284c7; font-size: 11.5px; letter-spacing: 0.02em;">${acc.account_number}</span>
+                        <span style="color: #a1a1aa; font-size: 9px; font-weight: 600;">No:</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #0284c7; font-size: 11.5px; letter-spacing: 0.02em;">${acc.account_number}</span>
                       </div>
                       ${acc.holder_name ? `<span style="font-size: 9px; color: #52525b; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${acc.holder_name}</span>` : ''}
                     </div>
@@ -444,48 +453,50 @@ export const generateCleanInvoiceHTML = (
 
           <!-- Si es Fiscal (NO interna): Código QR DGII debajo de las cuentas bancarias -->
           ${hasElectronicStyle && effectiveQrCodeUrl ? `
-            <div style="display: flex; align-items: center; gap: 10px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px; padding: 7px 10px; width: 100%; box-sizing: border-box;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR DGII" style="width: 58px; height: 58px; border-radius: 4px; background: #ffffff; padding: 2px; border: 1px solid #e4e4e7; flex-shrink: 0;" />
+            <div style="display: flex; align-items: center; gap: 12px; background: #fbfbfc; border: 1px solid #ebecee; border-radius: 10px; padding: 8px 12px; width: 100%; box-sizing: border-box;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR DGII" style="width: 58px; height: 58px; border-radius: 6px; background: #ffffff; padding: 2px; border: 1px solid #e4e4e7; flex-shrink: 0;" />
               <div style="font-size: 9.5px; line-height: 1.35; color: #52525b;">
                 <div style="font-weight: 800; color: #0284c7; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.04em; margin-bottom: 2px;">
                   Comprobante Autorizado por la DGII
                 </div>
-                ${effectiveSecurityCode ? `<div><strong style="color: #27272a;">Cód. Seguridad:</strong> <span class="tabular-numbers" style="font-family: monospace;">${effectiveSecurityCode}</span></div>` : ''}
-                ${effectiveSignatureDate ? `<div><strong style="color: #27272a;">Firma Digital:</strong> <span class="tabular-numbers">${effectiveSignatureDate}</span></div>` : ''}
+                ${effectiveSecurityCode ? `<div><strong style="color: #18181b;">Cód. Seguridad:</strong> <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace;">${effectiveSecurityCode}</span></div>` : ''}
+                ${effectiveSignatureDate ? `<div><strong style="color: #18181b;">Firma Digital:</strong> <span class="tabular-numbers">${effectiveSignatureDate}</span></div>` : ''}
               </div>
             </div>
           ` : ''}
 
         </div>
 
-        <!-- Columna Derecha: Totales -->
+        <!-- Columna Derecha: Totales Modernos -->
         <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start;">
           <div style="width: 100%; max-width: 240px;">
             ${hasTax ? `
-              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #52525b; margin-bottom: 4px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #71717a; margin-bottom: 4px; padding: 0 4px;">
                 <span>Subtotal:</span>
-                <span class="tabular-numbers" style="font-weight: 600; color: #27272a;">${invoiceData.currency} ${fmt(invoiceData.subtotal)}</span>
+                <span class="tabular-numbers" style="font-weight: 600; color: #18181b;">${invoiceData.currency} ${fmt(invoiceData.subtotal)}</span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #52525b; margin-bottom: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #71717a; margin-bottom: 8px; padding: 0 4px;">
                 <span>ITBIS (${invoiceData.taxRate}%):</span>
-                <span class="tabular-numbers" style="font-weight: 600; color: #27272a;">${invoiceData.currency} ${fmt(invoiceData.tax)}</span>
+                <span class="tabular-numbers" style="font-weight: 600; color: #18181b;">${invoiceData.currency} ${fmt(invoiceData.tax)}</span>
               </div>
             ` : ''}
-            <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 6px; ${hasTax ? 'border-top: 1.5px solid #27272a;' : ''}">
-              <span style="font-size: 15px; font-weight: 800; color: #18181b;">Total:</span>
-              <span class="tabular-numbers" style="font-size: 22px; font-weight: 900; color: #18181b; letter-spacing: -0.02em;">
+            
+            <div style="background: #18181b; color: #ffffff; border-radius: 8px; padding: 11px 16px; display: flex; justify-content: space-between; align-items: baseline; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
+              <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #a1a1aa;">TOTAL:</span>
+              <span class="tabular-numbers" style="font-size: 21px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;">
                 ${invoiceData.currency} ${fmt(invoiceData.total)}
               </span>
             </div>
+
             ${(invoiceData.amountPaid !== undefined && invoiceData.amountPaid > 0 && (invoiceData.change || 0) > 0) ? `
-              <div style="margin-top: 6px; padding-top: 5px; border-top: 1px dashed #e4e4e7; font-size: 10.5px; color: #71717a;">
+              <div style="margin-top: 8px; padding-top: 5px; border-top: 1px dashed #e4e4e7; font-size: 10.5px; color: #71717a; padding-left: 4px; padding-right: 4px;">
                 <div style="display: flex; justify-content: space-between;">
                   <span>Recibido:</span>
                   <span class="tabular-numbers">${invoiceData.currency} ${fmt(invoiceData.amountPaid)}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-top: 2px;">
-                  <span style="font-weight: 600; color: #27272a;">Devuelta:</span>
-                  <span class="tabular-numbers" style="font-weight: 700; color: #18181b;">${invoiceData.currency} ${fmt(invoiceData.change)}</span>
+                  <span style="font-weight: 600; color: #18181b;">Devuelta:</span>
+                  <span class="tabular-numbers" style="font-weight: 800; color: #18181b;">${invoiceData.currency} ${fmt(invoiceData.change)}</span>
                 </div>
               </div>
             ` : ''}
@@ -494,9 +505,9 @@ export const generateCleanInvoiceHTML = (
 
       </div>
 
-      <!-- Condiciones del Servicio y Firma (Estilo de la Factura de Referencia) -->
-      <div style="margin-top: 28px; padding-top: 10px;">
-        <div style="font-size: 12px; font-weight: 800; color: #18181b; margin-bottom: 6px;">
+      <!-- Condiciones del Servicio y Firma (Estilo Minimalista) -->
+      <div style="margin-top: 24px; padding-top: 8px;">
+        <div style="font-size: 11.5px; font-weight: 800; color: #18181b; margin-bottom: 5px;">
           Condiciones del servicio:
         </div>
         <div style="font-size: 10.5px; color: #71717a; line-height: 1.5; max-width: 88%;">
@@ -505,16 +516,16 @@ export const generateCleanInvoiceHTML = (
             : 'Comprobante emitido para fines de registro y control. En caso de realizar pago mediante transferencia o depósito bancario, favor remitir el comprobante a nuestro canal de contacto para la debida acreditación.')}
         </div>
 
-        <div style="margin-top: 36px; display: flex; align-items: center; gap: 8px;">
+        <div style="margin-top: 32px; display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 11.5px; font-weight: 700; color: #18181b;">Firma:</span>
-          <div style="border-bottom: 1.5px solid #71717a; width: 220px; display: inline-block;"></div>
+          <div style="border-bottom: 1.5px solid #cbd5e1; width: 220px; display: inline-block;"></div>
         </div>
       </div>
 
     </div>
 
     <!-- Pie de página oscuro moderno estilo referencia -->
-    <div style="background: #27272a; color: #f4f4f5; margin-left: -8mm; margin-right: -8mm; margin-bottom: -6mm; margin-top: auto; padding: 12px 18px; display: flex; justify-content: center; align-items: center; gap: 16px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.02em;">
+    <div style="background: #18181b; color: #f4f4f5; margin-left: -8mm; margin-right: -8mm; margin-bottom: -6mm; margin-top: auto; padding: 12px 18px; display: flex; justify-content: center; align-items: center; gap: 16px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.02em;">
       ${companyData.email ? `<span>${companyData.email}</span>` : ''}
       ${companyData.email && companyData.phone ? `<span style="color: #71717a;">|</span>` : ''}
       ${companyData.phone ? `<span>${companyData.phone}</span>` : ''}

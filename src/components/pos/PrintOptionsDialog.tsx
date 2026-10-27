@@ -976,12 +976,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const barcodeDataUrl = printSettings.showBarcode ? generateBarcode(invoiceNumber) : undefined;
 
     const companyData = {
-      name: dbCompanyInfo.name || 'Mi Empresa',
-      logo: dbCompanyInfo.logo,
-      logoSize: dbCompanyInfo.logoInvoiceSize || dbCompanyInfo.logoSize || 64,
-      rnc: dbCompanyInfo.rnc,
-      phone: dbCompanyInfo.phone,
-      address: dbCompanyInfo.address,
+      name: dbCompanyInfo.name || (storeSettings as any)?.store_name || 'Mi Empresa',
+      logo: dbCompanyInfo.logo || (storeSettings as any)?.logo_url || (storeSettings as any)?.logo || '',
+      logoSize: Math.max(dbCompanyInfo.logoInvoiceSize || dbCompanyInfo.logoSize || 100, 95),
+      rnc: dbCompanyInfo.rnc || (storeSettings as any)?.rnc || '',
+      phone: dbCompanyInfo.phone || (storeSettings as any)?.phone || '',
+      address: dbCompanyInfo.address || (storeSettings as any)?.address || '',
+      email: dbCompanyInfo.email || (storeSettings as any)?.email || '',
       pageMargin: printSettings.pageMargin || '0mm',
       containerPadding: printSettings.containerPadding || '4px',
       logoMarginBottom: printSettings.logoMarginBottom || '6px',
