@@ -679,8 +679,32 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
     // Calculate Tax and Subtotal
     const items = saleData.items || [];
-    const taxAmount = items.reduce((sum, item) => sum + (item.tax_amount || 0), 0) || (saleData.total - (saleData.total / 1.18));
-    const subtotalAmount = saleData.total - taxAmount;
+    let taxAmount = 0;
+    if (saleData.tax_total !== undefined && saleData.tax_total !== null) {
+      taxAmount = Number(saleData.tax_total) || 0;
+    } else if ((saleData as any).tax !== undefined && (saleData as any).tax !== null) {
+      taxAmount = Number((saleData as any).tax) || 0;
+    } else if (items.length > 0) {
+      const anyItemHasTaxDefined = items.some(
+        it => it.tax_amount !== undefined || it.tax !== undefined || it.tax_percentage !== undefined
+      );
+      if (anyItemHasTaxDefined) {
+        taxAmount = items.reduce((sum, it) => {
+          if (it.tax_amount !== undefined && it.tax_amount !== null) {
+            return sum + (Number(it.tax_amount) || 0);
+          }
+          const itemTaxRate = Number(it.tax_percentage) ? Number(it.tax_percentage) / 100 : (Number(it.tax) || 0);
+          const itemGross = (Number(it.quantity) || 1) * (Number(it.price ?? it.unit_price) || 0);
+          return sum + (itemGross * itemTaxRate);
+        }, 0);
+      } else {
+        taxAmount = (saleData.total || 0) - ((saleData.total || 0) / 1.18);
+      }
+    }
+    taxAmount = taxAmount > 0.005 ? taxAmount : 0;
+    const subtotalAmount = saleData.subtotal !== undefined && saleData.subtotal !== null && taxAmount === 0
+      ? Number(saleData.subtotal)
+      : (saleData.total - taxAmount);
 
     return `
       <html>
@@ -869,12 +893,14 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             </div>
             
             <div style="text-align: right; font-size: 14px; margin: 15px 0; border-top: 2px solid #000; padding-top: 10px;">
-              <div style="font-size: 12px; margin-bottom: 2px;">
-                <strong>SUBTOTAL:</strong> $${(subtotalAmount || 0).toFixed(2)}
-              </div>
-              <div style="font-size: 12px; margin-bottom: 8px;">
-                <strong>ITBIS:</strong> $${(taxAmount || 0).toFixed(2)}
-              </div>
+              ${taxAmount > 0.005 ? `
+                <div style="font-size: 12px; margin-bottom: 2px;">
+                  <strong>SUBTOTAL:</strong> $${(subtotalAmount || 0).toFixed(2)}
+                </div>
+                <div style="font-size: 12px; margin-bottom: 8px;">
+                  <strong>ITBIS:</strong> $${(taxAmount || 0).toFixed(2)}
+                </div>
+              ` : ''}
               <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px; border-top: 1px solid #ddd; padding-top: 5px;">
                 TOTAL: $${(saleData.total || 0).toFixed(2)}
               </div>
@@ -902,9 +928,49 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   // para no recalcularlos dos veces.
   const buildInvoiceAndCompanyData = () => {
     const items = saleData.items || [];
-    const taxRate = parseFloat(storeSettings?.default_tax_rate?.toString() || '18');
-    const taxAmount = items.reduce((sum, item) => sum + (item.tax_amount || 0), 0) || (saleData.total - (saleData.total / (1 + taxRate / 100)));
-    const subtotalAmount = saleData.total - taxAmount;
+    const defaultTaxRate = parseFloat(storeSettings?.default_tax_rate?.toString() || '18');
+
+    let taxAmount = 0;
+    let taxRate = 0;
+
+    if (saleData.tax_total !== undefined && saleData.tax_total !== null) {
+      taxAmount = Number(saleData.tax_total) || 0;
+    } else if ((saleData as any).tax !== undefined && (saleData as any).tax !== null) {
+      taxAmount = Number((saleData as any).tax) || 0;
+    } else if (items.length > 0) {
+      const anyItemHasTaxDefined = items.some(
+        it => it.tax_amount !== undefined || it.tax !== undefined || it.tax_percentage !== undefined
+      );
+      if (anyItemHasTaxDefined) {
+        taxAmount = items.reduce((sum, it) => {
+          if (it.tax_amount !== undefined && it.tax_amount !== null) {
+            return sum + (Number(it.tax_amount) || 0);
+          }
+          const itemTaxRate = Number(it.tax_percentage) ? Number(it.tax_percentage) / 100 : (Number(it.tax) || 0);
+          const itemGross = (Number(it.quantity) || 1) * (Number(it.price ?? it.unit_price) || 0);
+          return sum + (itemGross * itemTaxRate);
+        }, 0);
+      } else {
+        taxAmount = (saleData.total || 0) - ((saleData.total || 0) / (1 + defaultTaxRate / 100));
+      }
+    }
+
+    if (taxAmount > 0.005) {
+      if ((saleData as any).taxRate !== undefined && Number((saleData as any).taxRate) > 0) {
+        taxRate = Number((saleData as any).taxRate);
+      } else if ((saleData as any).tax_rate !== undefined && Number((saleData as any).tax_rate) > 0) {
+        taxRate = Number((saleData as any).tax_rate);
+      } else {
+        taxRate = defaultTaxRate;
+      }
+    } else {
+      taxAmount = 0;
+      taxRate = 0;
+    }
+
+    const subtotalAmount = saleData.subtotal !== undefined && saleData.subtotal !== null && taxAmount === 0
+      ? Number(saleData.subtotal)
+      : ((saleData.total || 0) - taxAmount);
 
     // Generate barcode if needed
     const barcodeDataUrl = printSettings.showBarcode ? generateBarcode(invoiceNumber) : undefined;

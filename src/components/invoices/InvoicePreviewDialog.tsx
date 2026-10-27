@@ -45,9 +45,42 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
       comment: item.comment || item.description,
     }));
 
-    const taxRate = parseFloat(storeSettings?.default_tax_rate?.toString() || '18');
-    const taxAmount = items.reduce((sum: number, item: any) => sum + ((item.total - item.total / (1 + taxRate / 100))), 0);
-    const subtotalAmount = (saleData.total || 0) - taxAmount;
+    const defaultTaxRate = parseFloat(storeSettings?.default_tax_rate?.toString() || '18');
+    let taxAmount = 0;
+    let effectiveTaxRate = 0;
+
+    if (saleData.tax_total !== undefined && saleData.tax_total !== null) {
+      taxAmount = Number(saleData.tax_total) || 0;
+    } else if ((saleData as any).tax !== undefined && (saleData as any).tax !== null) {
+      taxAmount = Number((saleData as any).tax) || 0;
+    } else if (rawItems.length > 0) {
+      const anyItemHasTaxDefined = rawItems.some(
+        (it: any) => it.tax_amount !== undefined || it.tax !== undefined || it.tax_percentage !== undefined
+      );
+      if (anyItemHasTaxDefined) {
+        taxAmount = rawItems.reduce((sum: number, it: any) => {
+          if (it.tax_amount !== undefined && it.tax_amount !== null) {
+            return sum + (Number(it.tax_amount) || 0);
+          }
+          const itemTaxRate = Number(it.tax_percentage) ? Number(it.tax_percentage) / 100 : (Number(it.tax) || 0);
+          const itemGross = (Number(it.quantity) || 1) * (Number(it.unit_price ?? it.price) || 0);
+          return sum + (itemGross * itemTaxRate);
+        }, 0);
+      } else {
+        taxAmount = (saleData.total || 0) - ((saleData.total || 0) / (1 + defaultTaxRate / 100));
+      }
+    }
+
+    if (taxAmount > 0.005) {
+      effectiveTaxRate = (saleData as any).taxRate || (saleData as any).tax_rate || defaultTaxRate;
+    } else {
+      taxAmount = 0;
+      effectiveTaxRate = 0;
+    }
+
+    const subtotalAmount = saleData.subtotal !== undefined && saleData.subtotal !== null && taxAmount === 0
+      ? Number(saleData.subtotal)
+      : ((saleData.total || 0) - taxAmount);
 
     const invoiceNum = (saleData as any).encf || saleData.invoice_number || '';
     const isElec = invoiceNum.startsWith('E') || (saleData as any).is_electronic || !!(saleData as any).encf;
@@ -75,7 +108,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
         items,
         subtotal: subtotalAmount,
         tax: taxAmount,
-        taxRate,
+        taxRate: effectiveTaxRate,
         total: saleData.total || 0,
         currency: storeSettings?.currency || 'RD$',
         footerText: storeSettings?.invoice_footer_text,

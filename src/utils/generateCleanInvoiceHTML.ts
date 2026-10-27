@@ -127,6 +127,7 @@ export const generateCleanInvoiceHTML = (
   const isQuotation = Boolean(invoiceData.isQuotation || rawInvoiceNum.startsWith('COT') || invoiceData.invoicePrefix === 'COT');
   const isInternalInvoice = !isQuotation && (rawInvoiceNum.startsWith('FAC') || invoiceData.invoicePrefix === 'FAC' || (invoiceData as any).invoiceType === 'FAC');
   const hasElectronicStyle = Boolean(invoiceData.isElectronic && !isInternalInvoice && !isQuotation);
+  const hasTax = Boolean(invoiceData.taxRate > 0 && (invoiceData.tax || 0) > 0.005);
 
   const effectiveSecurityCode = (() => {
     if (invoiceData.securityCode && invoiceData.securityCode !== 'undefined') return invoiceData.securityCode;
@@ -353,7 +354,7 @@ export const generateCleanInvoiceHTML = (
       <table class="items-table">
         <thead>
           <tr>
-            <th style="width: ${invoiceData.taxRate > 0 ? '50%' : '58%'}; text-align: left;">
+            <th style="width: ${hasTax ? '50%' : '58%'}; text-align: left;">
               Servicio / Descripción
             </th>
             <th style="width: 10%; text-align: center;">
@@ -362,7 +363,7 @@ export const generateCleanInvoiceHTML = (
             <th style="width: 16%; text-align: right;">
               Precio
             </th>
-            ${invoiceData.taxRate > 0 ? `
+            ${hasTax ? `
               <th style="width: 10%; text-align: right;">
                 ITBIS
               </th>
@@ -374,7 +375,7 @@ export const generateCleanInvoiceHTML = (
         </thead>
         <tbody>
           ${invoiceData.items && invoiceData.items.length > 0 ? invoiceData.items.map((item) => {
-            const itemTax = (item.total - (item.total / (1 + invoiceData.taxRate / 100)));
+            const itemTax = hasTax ? (item.total - (item.total / (1 + invoiceData.taxRate / 100))) : 0;
             return `
               <tr>
                 <td>
@@ -387,7 +388,7 @@ export const generateCleanInvoiceHTML = (
                 <td class="tabular-numbers" style="text-align: right; color: #3f3f46;">
                   ${fmt(item.price)}
                 </td>
-                ${invoiceData.taxRate > 0 ? `
+                ${hasTax ? `
                   <td class="tabular-numbers" style="text-align: right; color: #71717a;">
                     ${fmt(itemTax)}
                   </td>
@@ -399,7 +400,7 @@ export const generateCleanInvoiceHTML = (
             `;
           }).join('') : `
             <tr>
-              <td colspan="${invoiceData.taxRate > 0 ? 5 : 4}" style="text-align: center; padding: 20px; color: #a1a1aa; font-style: italic;">Sin conceptos o servicios registrados</td>
+              <td colspan="${hasTax ? 5 : 4}" style="text-align: center; padding: 20px; color: #a1a1aa; font-style: italic;">Sin conceptos o servicios registrados</td>
             </tr>
           `}
         </tbody>
@@ -460,7 +461,7 @@ export const generateCleanInvoiceHTML = (
         <!-- Columna Derecha: Totales -->
         <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start;">
           <div style="width: 100%; max-width: 240px;">
-            ${invoiceData.taxRate > 0 ? `
+            ${hasTax ? `
               <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #52525b; margin-bottom: 4px;">
                 <span>Subtotal:</span>
                 <span class="tabular-numbers" style="font-weight: 600; color: #27272a;">${invoiceData.currency} ${fmt(invoiceData.subtotal)}</span>
@@ -470,7 +471,7 @@ export const generateCleanInvoiceHTML = (
                 <span class="tabular-numbers" style="font-weight: 600; color: #27272a;">${invoiceData.currency} ${fmt(invoiceData.tax)}</span>
               </div>
             ` : ''}
-            <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 6px; ${invoiceData.taxRate > 0 ? 'border-top: 1.5px solid #27272a;' : ''}">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 6px; ${hasTax ? 'border-top: 1.5px solid #27272a;' : ''}">
               <span style="font-size: 15px; font-weight: 800; color: #18181b;">Total:</span>
               <span class="tabular-numbers" style="font-size: 22px; font-weight: 900; color: #18181b; letter-spacing: -0.02em;">
                 ${invoiceData.currency} ${fmt(invoiceData.total)}
@@ -699,16 +700,18 @@ export const generateCleanInvoiceHTML = (
 
     <!-- Card 3: Subtotal / ITBIS / TOTAL -->
     <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 5px 6px; margin-bottom: 6px;">
-      <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; font-weight: 800; margin-bottom: 2px;">
-        <span>Subtotal:</span>
-        <span style="font-family: monospace; font-weight: 900;">${invoiceData.currency} ${fmt(invoiceData.subtotal)}</span>
-      </div>
-      <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; font-weight: 800; margin-bottom: 3px;">
-        <span>ITBIS (${invoiceData.taxRate}%):</span>
-        <span style="font-family: monospace; font-weight: 900;">${invoiceData.currency} ${fmt(invoiceData.tax)}</span>
-      </div>
+      ${hasTax ? `
+        <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; font-weight: 800; margin-bottom: 2px;">
+          <span>Subtotal:</span>
+          <span style="font-family: monospace; font-weight: 900;">${invoiceData.currency} ${fmt(invoiceData.subtotal)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; font-weight: 800; margin-bottom: 3px;">
+          <span>ITBIS (${invoiceData.taxRate}%):</span>
+          <span style="font-family: monospace; font-weight: 900;">${invoiceData.currency} ${fmt(invoiceData.tax)}</span>
+        </div>
+      ` : ''}
       
-      <div style="border-top: 2px solid #000000; margin-top: 3px; padding-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="${hasTax ? 'border-top: 2px solid #000000; margin-top: 3px; padding-top: 4px;' : ''} display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 900; font-size: ${sizeBase}px; text-transform: uppercase;">TOTAL A PAGAR:</span>
         <span style="font-family: monospace; font-weight: 900; font-size: ${Math.round(sizeBase * 1.25)}px;">${invoiceData.currency} ${fmt(invoiceData.total)}</span>
       </div>

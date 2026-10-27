@@ -1923,6 +1923,10 @@ const POSContent: React.FC = () => {
         const printSaleData = {
           id: quoteOrderId,
           total: totalAmount,
+          subtotal: subtotal,
+          tax_total: tax,
+          tax: tax,
+          taxRate: tax > 0.005 ? (storeSettings?.default_tax_rate || 18) : 0,
           items: data.items.map(it => {
             const itemRate = it.tax || 0;
             const lineGross = it.price * it.quantity;
@@ -2020,6 +2024,10 @@ const POSContent: React.FC = () => {
       const printSaleData = {
         id: result?.id || salePayload.id,
         total: totalAmount,
+        subtotal: subtotal,
+        tax_total: tax,
+        tax: tax,
+        taxRate: tax > 0.005 ? (storeSettings?.default_tax_rate || 18) : 0,
         items: data.items.map(it => {
           const lineQty = Number(it.quantity) || 1;
           const linePrice = Number(it.price) || 0;
