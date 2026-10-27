@@ -1661,6 +1661,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     <>
       <Dialog open={isOpen && !!saleData} onOpenChange={onClose}>
         <DialogContent 
+          centerVertically
           className="max-w-[95vw] sm:max-w-[480px] p-4"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}

@@ -538,7 +538,7 @@ export const generateCleanInvoiceHTML = (
 
       </div>
 
-      <!-- Condiciones del Servicio y Firma (Estilo Minimalista) -->
+      <!-- Condiciones del Servicio (Estilo Minimalista) -->
       <div style="margin-top: 24px; padding-top: 8px;">
         <div style="font-size: 11.5px; font-weight: 800; color: #18181b; margin-bottom: 5px;">
           Condiciones del servicio:
@@ -547,11 +547,6 @@ export const generateCleanInvoiceHTML = (
           ${invoiceData.footerText ? invoiceData.footerText : (isQuotation
             ? 'Para facilitar el lanzamiento o ejecución de su proyecto, este presupuesto cuenta con validez de 30 días a partir de su emisión. Los tiempos de entrega comenzarán a correr a partir de la confirmación formal del pago inicial.'
             : 'Comprobante emitido para fines de registro y control. En caso de realizar pago mediante transferencia o depósito bancario, favor remitir el comprobante a nuestro canal de contacto para la debida acreditación.')}
-        </div>
-
-        <div style="margin-top: 32px; display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 11.5px; font-weight: 700; color: #18181b;">Firma:</span>
-          <div style="border-bottom: 1.5px solid #cbd5e1; width: 220px; display: inline-block;"></div>
         </div>
       </div>
 

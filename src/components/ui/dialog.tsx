@@ -32,8 +32,9 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { 
     hideCloseButton?: boolean;
     centerOnMobile?: boolean;
+    centerVertically?: boolean;
   }
->((({ className, children, hideCloseButton, centerOnMobile = true, style, ...props }, ref) => (
+>((({ className, children, hideCloseButton, centerOnMobile = true, centerVertically = false, style, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -46,11 +47,13 @@ const DialogContent = React.forwardRef<
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
-        // ── Layout (Centrado horizontal robusto con inset-x-0 mx-auto; anclado arriba en móviles/tablets para no tapar con teclado virtual) ──
-        centerOnMobile ? (
-          "inset-x-0 mx-auto top-2 sm:top-3 md:top-4 landscape:top-2 landscape:translate-y-0 lg:[@media(min-height:820px)_and_(pointer:fine)]:top-1/2 lg:[@media(min-height:820px)_and_(pointer:fine)]:-translate-y-1/2 landscape:lg:top-2 landscape:lg:translate-y-0 w-[calc(100%-1rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] landscape:lg:max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] overflow-y-auto overflow-x-hidden overscroll-contain"
+        // ── Layout (Centrado horizontal robusto con inset-x-0 mx-auto; anclado arriba en móviles/tablets para no tapar con teclado virtual si no es centerVertically) ──
+        centerVertically ? (
+          "inset-x-0 mx-auto top-1/2 -translate-y-1/2 w-[calc(100%-1rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] overflow-y-auto overflow-x-hidden overscroll-contain"
+        ) : centerOnMobile ? (
+          "inset-x-0 mx-auto top-2 sm:top-3 md:top-4 landscape:top-2 landscape:translate-y-0 lg:[@media(min-height:600px)_and_(pointer:fine)]:top-1/2 lg:[@media(min-height:600px)_and_(pointer:fine)]:-translate-y-1/2 landscape:lg:top-2 landscape:lg:translate-y-0 w-[calc(100%-1rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] lg:[@media(min-height:600px)_and_(pointer:fine)]:max-h-[85vh] landscape:lg:max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] overflow-y-auto overflow-x-hidden overscroll-contain"
         ) : (
-          "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4 sm:inset-x-0 sm:mx-auto sm:bottom-auto sm:top-4 landscape:top-2 landscape:translate-y-0 lg:[@media(min-height:820px)_and_(pointer:fine)]:top-1/2 lg:[@media(min-height:820px)_and_(pointer:fine)]:-translate-y-1/2 landscape:lg:top-2 landscape:lg:translate-y-0 sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6 sm:max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] landscape:lg:max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)]"
+          "inset-x-0 bottom-0 top-auto w-full rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4 sm:inset-x-0 sm:mx-auto sm:bottom-auto sm:top-4 landscape:top-2 landscape:translate-y-0 lg:[@media(min-height:600px)_and_(pointer:fine)]:top-1/2 lg:[@media(min-height:600px)_and_(pointer:fine)]:-translate-y-1/2 landscape:lg:top-2 landscape:lg:translate-y-0 sm:w-full sm:max-w-lg sm:rounded-xl sm:p-6 sm:max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] lg:[@media(min-height:600px)_and_(pointer:fine)]:max-h-[85vh] landscape:lg:max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)]"
         ),
         className
       )}
