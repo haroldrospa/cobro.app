@@ -163,6 +163,7 @@ export const generateCleanInvoiceHTML = (
   })();
 
   const effectiveQrCodeUrl = (() => {
+    if (isInternalInvoice || isQuotation) return '';
     if (invoiceData.qrCodeUrl) return invoiceData.qrCodeUrl;
     if (!hasElectronicStyle) return '';
     const emisorRnc = (companyData.rnc || '').replace(/[^0-9]/g, '');
