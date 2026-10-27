@@ -436,29 +436,48 @@ export const generateCleanInvoiceHTML = (
         <!-- Columna Izquierda: Cuentas Bancarias y/o QR DGII -->
         <div style="display: flex; flex-direction: column; gap: 9px;">
           
-          <!-- Cuentas Bancarias para Transferencias (Diseño Minimalista) -->
+          <!-- Cuentas Bancarias para Transferencias (Diseño Moderno y Minimalista) -->
           ${invoiceData.bankAccounts && invoiceData.bankAccounts.length > 0 ? `
-            <div style="background: #fbfbfc; border: 1px solid #ebecee; border-radius: 10px; padding: 10px 13px; width: 100%; box-sizing: border-box;">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f2; padding-bottom: 4px; margin-bottom: 5px;">
-                <span style="font-size: 9.5px; font-weight: 800; color: #18181b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
-                  🏦 Cuentas para Transferencia
+            <div style="background: #fbfbfc; border: 1px solid #ebecee; border-radius: 8px; overflow: hidden; width: 100%; box-sizing: border-box;">
+              <div style="background: #18181b; color: #ffffff; padding: 7px 13px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;">
+                  Cuentas para Transferencia
                 </span>
-                <span style="font-size: 8.5px; color: #a1a1aa; font-weight: 500;">Notificar pago</span>
+                <span style="font-size: 8.5px; color: #a1a1aa; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">
+                  Notificar pago
+                </span>
               </div>
-              <div style="display: flex; flex-direction: column; gap: 5px;">
-                ${invoiceData.bankAccounts.map((acc: any) => `
-                  <div style="font-size: 10.5px; line-height: 1.35; color: #3f3f46; background: #ffffff; border: 1px solid #eef0f2; border-radius: 6px; padding: 5px 9px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+              <div style="padding: 10px 13px; display: flex; flex-direction: column; gap: 8px;">
+                ${invoiceData.bankAccounts.map((acc: any, idx: number) => `
+                  <div style="${idx > 0 ? 'border-top: 1px solid #f0f0f2; padding-top: 8px;' : ''} display: flex; flex-direction: column; gap: 3px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <strong style="color: #18181b; font-size: 11px;">${acc.bank_name}${acc.alias ? ` (${acc.alias})` : ''}</strong>
-                      ${acc.account_type ? `<span style="font-size: 9px; color: #52525b; background: #f4f4f5; padding: 1px 5px; border-radius: 4px; text-transform: capitalize; font-weight: 600;">${acc.account_type}</span>` : ''}
+                      <strong style="color: #18181b; font-size: 11.5px; font-weight: 800; letter-spacing: -0.01em;">
+                        ${acc.bank_name}${acc.alias ? ` (${acc.alias})` : ''}
+                      </strong>
+                      ${acc.account_type ? `
+                        <span style="font-size: 9px; font-weight: 700; color: #18181b; background: #f4f4f5; border: 1px solid #ebecee; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.03em;">
+                          ${acc.account_type}
+                        </span>
+                      ` : ''}
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
                       <div>
-                        <span style="color: #a1a1aa; font-size: 9px; font-weight: 600;">No:</span>
-                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #0284c7; font-size: 11.5px; letter-spacing: 0.02em;">${acc.account_number}</span>
+                        <span style="color: #71717a; font-size: 9.5px; font-weight: 700; text-transform: uppercase; margin-right: 4px;">No:</span>
+                        <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #18181b; font-size: 13px; letter-spacing: 0.03em;">
+                          ${acc.account_number}
+                        </span>
                       </div>
-                      ${acc.holder_name ? `<span style="font-size: 9px; color: #52525b; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${acc.holder_name}</span>` : ''}
+                      ${acc.holder_name ? `
+                        <span style="font-size: 9.5px; color: #52525b; font-weight: 600; max-width: 175px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                          ${acc.holder_name}
+                        </span>
+                      ` : ''}
                     </div>
+                    ${acc.rnc_cedula ? `
+                      <div style="font-size: 9px; color: #71717a;">
+                        <span>RNC / Cédula: </span><strong style="color: #3f3f46;">${acc.rnc_cedula}</strong>
+                      </div>
+                    ` : ''}
                   </div>
                 `).join('')}
               </div>
