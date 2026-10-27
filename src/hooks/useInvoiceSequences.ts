@@ -22,16 +22,58 @@ export const useInvoiceSequences = () => {
   return useQuery({
     queryKey: ['invoice-sequences'],
     queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
       const { data, error } = await supabase
         .from('invoice_sequences')
         .select('*')
         .order('invoice_type_id');
 
       if (error) throw error;
-      return data as InvoiceSequence[];
+      const sequences = (data || []) as InvoiceSequence[];
+
+      // Si el usuario está autenticado y tiene una tienda asociada, asegurar que existan secuencias tanto para NCF (B) como para e-CF (E)
+      if (session?.user?.id) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('store_id')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (profile?.store_id) {
+            const existingTypeIds = new Set(sequences.map(s => s.invoice_type_id));
+            const requiredTypes = [
+              'B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16',
+              'E31', 'E32', 'E33', 'E34', 'E41', 'E44', 'E45', 'E46'
+            ];
+            const missingTypes = requiredTypes.filter(t => !existingTypeIds.has(t));
+
+            if (missingTypes.length > 0) {
+              const toInsert = missingTypes.map(t => ({
+                store_id: profile.store_id,
+                invoice_type_id: t,
+                current_number: 0
+              }));
+              const { data: inserted, error: insertErr } = await supabase
+                .from('invoice_sequences')
+                .insert(toInsert)
+                .select();
+
+              if (!insertErr && inserted && inserted.length > 0) {
+                return [...sequences, ...(inserted as InvoiceSequence[])].sort((a, b) => a.invoice_type_id.localeCompare(b.invoice_type_id));
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Aviso asegurando secuencias:', err);
+        }
+      }
+
+      return sequences;
     },
-    staleTime: 1000 * 60 * 60, // 1 hour
-    gcTime: 1000 * 60 * 60 * 2, // 2 hours
+    staleTime: 1000 * 60 * 15, // 15 mins
+    gcTime: 1000 * 60 * 60, // 1 hour
   });
 };
 
@@ -67,10 +109,13 @@ export const useDgiiSequenceStats = () => {
 
       if (!profile?.store_id) return {};
 
-      const invoiceTypes = ['B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16'];
+      const allTypes = [
+        'B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16',
+        'E31', 'E32', 'E33', 'E34', 'E41', 'E44', 'E45', 'E46'
+      ];
       const statsMap: Record<string, DgiiTypeStats> = {};
 
-      for (const t of invoiceTypes) {
+      for (const t of allTypes) {
         statsMap[t] = {
           emittedCount: 0,
           lastAcceptedSeq: 0,
@@ -94,18 +139,31 @@ export const useDgiiSequenceStats = () => {
       if (acceptedSales && acceptedSales.length > 0) {
         const seenEncfPerType: Record<string, Set<number>> = {};
         for (const row of acceptedSales) {
-          const typeId = row.invoice_type_id || 'B02';
+          const rawCode = (row as any).encf || row.invoice_number || '';
+          let typeId = row.invoice_type_id || 'B02';
+
+          if (rawCode.startsWith('E')) {
+            const prefix = rawCode.slice(0, 3).toUpperCase();
+            if (statsMap[prefix]) {
+              typeId = prefix;
+            }
+          } else if (rawCode.startsWith('B')) {
+            const prefix = rawCode.slice(0, 3).toUpperCase();
+            if (statsMap[prefix]) {
+              typeId = prefix;
+            }
+          }
+
           if (!statsMap[typeId]) continue;
           if (!seenEncfPerType[typeId]) seenEncfPerType[typeId] = new Set<number>();
 
-          const rawCode = (row as any).encf || row.invoice_number || '';
           const seqNum = extractSeqNum(rawCode);
           if (seqNum > 0 && !seenEncfPerType[typeId].has(seqNum)) {
             seenEncfPerType[typeId].add(seqNum);
             statsMap[typeId].acceptedSeqNumbers.push(seqNum);
             if (seqNum > statsMap[typeId].lastAcceptedSeq) {
               statsMap[typeId].lastAcceptedSeq = seqNum;
-              statsMap[typeId].lastAcceptedEncf = rawCode.startsWith('E') ? rawCode : null;
+              statsMap[typeId].lastAcceptedEncf = rawCode;
             }
           }
         }
@@ -115,12 +173,21 @@ export const useDgiiSequenceStats = () => {
         }
       }
 
-      // Si Alanube reporta un conteo de aceptados mayor (por ej. facturas previas), sincronizar emittedCount
+      // Si Alanube reporta un conteo de aceptados mayor (e-CF), sincronizar emittedCount para los tipos E correspondientes
       if (alanubeAcceptedCounts && typeof alanubeAcceptedCounts === 'object') {
-        for (const typeId of invoiceTypes) {
-          const remoteAccepted = Number(alanubeAcceptedCounts[typeId]) || 0;
-          if (remoteAccepted > statsMap[typeId].emittedCount) {
-            statsMap[typeId].emittedCount = remoteAccepted;
+        const eMapping: Record<string, string> = {
+          B01: 'E31', B02: 'E32', B03: 'E33', B04: 'E34',
+          B11: 'E41', B14: 'E44', B15: 'E45', B16: 'E46',
+          E31: 'E31', E32: 'E32', E33: 'E33', E34: 'E34',
+          E41: 'E41', E44: 'E44', E45: 'E45', E46: 'E46'
+        };
+        for (const [key, count] of Object.entries(alanubeAcceptedCounts)) {
+          const targetType = eMapping[key] || key;
+          if (statsMap[targetType]) {
+            const remoteAccepted = Number(count) || 0;
+            if (remoteAccepted > statsMap[targetType].emittedCount) {
+              statsMap[targetType].emittedCount = remoteAccepted;
+            }
           }
         }
       }
@@ -167,10 +234,11 @@ export const useUpdateInvoiceSequence = () => {
 
       // Actualizar caché offline inmediatamente
       try {
+        const isElectronic = variables.invoice_type_id.startsWith('E');
         const settings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'invoice_sequences') || { key: 'invoice_sequences' };
         settings[variables.invoice_type_id] = {
           current: variables.current_number,
-          prefix: `${variables.invoice_type_id}-`
+          prefix: isElectronic ? variables.invoice_type_id : `${variables.invoice_type_id}-`
         };
         await offlineDB.put(OfflineStore.SETTINGS, settings);
         console.log(`💾 Secuencia ${variables.invoice_type_id} guardada en offlineDB: #${variables.current_number}`);
@@ -197,7 +265,10 @@ export const useGetNextInvoiceNumber = (invoiceTypeId: string) => {
 
       // Format the next number
       const nextNumber = data.current_number + 1;
-      return `${invoiceTypeId}-${String(nextNumber).padStart(8, '0')}`;
+      const isElectronic = invoiceTypeId.startsWith('E');
+      const separator = isElectronic ? '' : '-';
+      const padding = isElectronic ? 10 : 8;
+      return `${invoiceTypeId}${separator}${String(nextNumber).padStart(padding, '0')}`;
     },
     enabled: !!invoiceTypeId,
   });

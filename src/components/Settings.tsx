@@ -106,6 +106,14 @@ const Settings = () => {
       B14: 500,
       B15: 500,
       B16: 500,
+      E31: 1000,
+      E32: 10000,
+      E33: 500,
+      E34: 500,
+      E41: 500,
+      E44: 500,
+      E45: 500,
+      E46: 500,
     };
     try {
       const saved = JSON.parse(localStorage.getItem('dgii_authorized_limits') || '{}');
@@ -680,7 +688,13 @@ const Settings = () => {
       let repairedCount = 0;
       const repairedDetails: string[] = [];
 
-      for (const seq of invoiceSequences) {
+      const targetTypes = localBillingMode === 'e-ncf'
+        ? ['E31', 'E32', 'E33', 'E34', 'E41', 'E44', 'E45', 'E46']
+        : ['B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16'];
+
+      const activeSequences = invoiceSequences.filter(s => targetTypes.includes(s.invoice_type_id));
+
+      for (const seq of activeSequences) {
         const usedInDgii = latestMax[seq.invoice_type_id] || 0;
         if (usedInDgii > seq.current_number) {
           await updateSequenceMutation.mutateAsync({
@@ -689,10 +703,7 @@ const Settings = () => {
             invoice_type_id: seq.invoice_type_id,
           });
           repairedCount++;
-          const label = localBillingMode === 'e-ncf'
-            ? (seq.invoice_type_id === 'B01' ? 'E31' : seq.invoice_type_id === 'B02' ? 'E32' : seq.invoice_type_id)
-            : seq.invoice_type_id;
-          repairedDetails.push(`${label} → #${usedInDgii + 1}`);
+          repairedDetails.push(`${seq.invoice_type_id} → #${usedInDgii + 1}`);
         }
       }
 
@@ -704,7 +715,7 @@ const Settings = () => {
       } else if (!silent) {
         toast({
           title: "Secuencias al día con la DGII",
-          description: "Todas las secuencias coinciden con el último comprobante emitido en DGII / Alanube.",
+          description: `Todas las secuencias de ${localBillingMode === 'e-ncf' ? 'Facturación Electrónica' : 'Facturación Fiscal'} coinciden con los comprobantes emitidos.`,
         });
       }
     } catch (error: any) {
@@ -720,18 +731,24 @@ const Settings = () => {
     }
   };
 
-  // Auto-reparar únicamente si el próximo número configurado choca con un e-NCF ya aceptado en DGII
+  // Auto-reparar únicamente si el próximo número configurado choca con un comprobante ya aceptado en DGII
   useEffect(() => {
     if (!invoiceSequences || !dgiiStatsMap || isRepairingSequences) return;
-    const hasCollision = invoiceSequences.some(seq => {
-      const nextNum = seq.current_number + 1;
-      const acceptedList = dgiiStatsMap[seq.invoice_type_id]?.acceptedSeqNumbers || [];
-      return acceptedList.includes(nextNum);
-    });
+    const targetTypes = localBillingMode === 'e-ncf'
+      ? ['E31', 'E32', 'E33', 'E34', 'E41', 'E44', 'E45', 'E46']
+      : ['B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16'];
+
+    const hasCollision = invoiceSequences
+      .filter(seq => targetTypes.includes(seq.invoice_type_id))
+      .some(seq => {
+        const nextNum = seq.current_number + 1;
+        const acceptedList = dgiiStatsMap[seq.invoice_type_id]?.acceptedSeqNumbers || [];
+        return acceptedList.includes(nextNum);
+      });
     if (hasCollision) {
       handleRepairAllSequences(true);
     }
-  }, [invoiceSequences, dgiiStatsMap]);
+  }, [invoiceSequences, dgiiStatsMap, localBillingMode]);
 
   const handleSavePrintSettings = async () => {
     await handleSaveSettings('impresion');
@@ -2580,51 +2597,30 @@ const Settings = () => {
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {invoiceSequences
-                    ?.filter(seq => ['B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16'].includes(seq.invoice_type_id))
-                    .map((sequence) => {
+                  {(() => {
+                    const isElectronic = localBillingMode === 'e-ncf';
+                    const targetTypes = isElectronic
+                      ? ['E31', 'E32', 'E33', 'E34', 'E41', 'E44', 'E45', 'E46']
+                      : ['B01', 'B02', 'B03', 'B04', 'B11', 'B14', 'B15', 'B16'];
+
+                    const filteredSequences = invoiceSequences
+                      ?.filter(seq => targetTypes.includes(seq.invoice_type_id))
+                      ?.sort((a, b) => targetTypes.indexOf(a.invoice_type_id) - targetTypes.indexOf(b.invoice_type_id)) || [];
+
+                    if (filteredSequences.length === 0) {
+                      return (
+                        <div className="text-center py-6 text-muted-foreground text-sm">
+                          {isElectronic
+                            ? 'Inicializando secuencias electrónicas...'
+                            : 'No se encontraron secuencias configuradas para Facturación Fiscal (NCF).'}
+                        </div>
+                      );
+                    }
+
+                    return filteredSequences.map((sequence) => {
                       const invoiceType = invoiceTypes?.find(type => type.id === sequence.invoice_type_id);
-                      
-                      const isElectronic = localBillingMode === 'e-ncf';
-                      let displayId = sequence.invoice_type_id;
-                      let displayName = invoiceType?.name;
-                      
-                      if (isElectronic) {
-                         switch (sequence.invoice_type_id) {
-                            case 'B01':
-                               displayId = 'E31';
-                               displayName = 'Crédito Fiscal Electrónico';
-                               break;
-                            case 'B02':
-                               displayId = 'E32';
-                               displayName = 'Consumidor Final Electrónico';
-                               break;
-                            case 'B03':
-                               displayId = 'E33';
-                               displayName = 'Nota de Débito Electrónica';
-                               break;
-                            case 'B04':
-                               displayId = 'E34';
-                               displayName = 'Nota de Crédito Electrónica';
-                               break;
-                            case 'B11':
-                               displayId = 'E41';
-                               displayName = 'Comprobante de Compras Electrónico';
-                               break;
-                            case 'B14':
-                               displayId = 'E44';
-                               displayName = 'Régimen Especial Electrónico';
-                               break;
-                            case 'B15':
-                               displayId = 'E45';
-                               displayName = 'Gubernamental Electrónico';
-                               break;
-                            case 'B16':
-                               displayId = 'E46';
-                               displayName = 'Exportación Electrónica';
-                               break;
-                         }
-                      }
+                      const displayId = sequence.invoice_type_id;
+                      const displayName = invoiceType?.name || (isElectronic ? `Comprobante ${displayId}` : `Factura ${displayId}`);
 
                       return (
                         <div key={sequence.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border rounded-xl bg-card">
@@ -2635,6 +2631,7 @@ const Settings = () => {
                           </div>
                           <div className="flex items-center justify-end gap-2">
                             <InvoiceSequenceInput
+                              key={`${sequence.id}-${displayId}`}
                               id={sequence.id}
                               invoiceTypeId={sequence.invoice_type_id}
                               currentNumber={sequence.current_number}
@@ -2650,7 +2647,8 @@ const Settings = () => {
                           </div>
                         </div>
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               )}
             </CardContent>

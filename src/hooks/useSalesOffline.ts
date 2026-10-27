@@ -233,39 +233,38 @@ async function generateLocalInvoiceNumber(invoiceTypeId: string): Promise<string
         return `${typeCode}-OFFLINE-${timestamp}`;
     }
 
-    // 3. Generar número usando la secuencia correcta
-    // Usamos typeCode (ej: 'B02') para buscar en settings
-    const sequence = settings[typeCode] || { current: 0 };
-
-    sequence.current += 1;
-
-    let displayPrefix = typeCode;
-    let separator = '-';
-    let padding = 8;
-
-    if (isElectronicActive) {
-        separator = '';
-        padding = 10;
-        switch (typeCode) {
-            case 'B01': displayPrefix = 'E31'; break;
-            case 'B02': displayPrefix = 'E32'; break;
-            case 'B03': displayPrefix = 'E33'; break;
-            case 'B04': displayPrefix = 'E34'; break;
-            case 'B14': displayPrefix = 'E44'; break;
-            case 'B15': displayPrefix = 'E45'; break;
-            case 'B16': displayPrefix = 'E46'; break;
+    // 3. Mapear a código electrónico si corresponde para aislar la secuencia
+    let effectiveCode = typeCode;
+    if (isElectronicActive && effectiveCode !== 'FAC' && effectiveCode !== 'COT') {
+        switch (effectiveCode) {
+            case 'B01': effectiveCode = 'E31'; break;
+            case 'B02': effectiveCode = 'E32'; break;
+            case 'B03': effectiveCode = 'E33'; break;
+            case 'B04': effectiveCode = 'E34'; break;
+            case 'B11': effectiveCode = 'E41'; break;
+            case 'B14': effectiveCode = 'E44'; break;
+            case 'B15': effectiveCode = 'E45'; break;
+            case 'B16': effectiveCode = 'E46'; break;
         }
     }
 
-    const formattedNumber = `${displayPrefix}${separator}${String(sequence.current).padStart(padding, '0')}`;
+    // Generar número usando la secuencia aislada del tipo correspondiente
+    const sequence = settings[effectiveCode] || { current: 0 };
+    sequence.current += 1;
 
-    console.log(`🎫 Generando factura offline: Tipo=${typeCode} (#${sequence.current}) -> ${formattedNumber}`);
+    const isElectronic = effectiveCode.startsWith('E');
+    const separator = isElectronic ? '' : '-';
+    const padding = isElectronic ? 10 : 8;
+
+    const formattedNumber = `${effectiveCode}${separator}${String(sequence.current).padStart(padding, '0')}`;
+
+    console.log(`🎫 Generando factura offline: Tipo=${effectiveCode} (#${sequence.current}) -> ${formattedNumber}`);
 
     // Guardar la secuencia actualizada
     await offlineDB.put(OfflineStore.SETTINGS, {
         key: 'invoice_sequences',
         ...settings,
-        [typeCode]: sequence,
+        [effectiveCode]: sequence,
     });
 
     return formattedNumber;
@@ -441,6 +440,20 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         isElectronicActive = alanubeConfig?.is_active || false;
     }
 
+    let effectiveSeqCode = traditionalCode;
+    if (isElectronicActive && effectiveSeqCode !== 'FAC' && effectiveSeqCode !== 'COT') {
+        switch (effectiveSeqCode) {
+            case 'B01': effectiveSeqCode = 'E31'; break;
+            case 'B02': effectiveSeqCode = 'E32'; break;
+            case 'B03': effectiveSeqCode = 'E33'; break;
+            case 'B04': effectiveSeqCode = 'E34'; break;
+            case 'B11': effectiveSeqCode = 'E41'; break;
+            case 'B14': effectiveSeqCode = 'E44'; break;
+            case 'B15': effectiveSeqCode = 'E45'; break;
+            case 'B16': effectiveSeqCode = 'E46'; break;
+        }
+    }
+
     let attempts = 0;
     const maxAttempts = 3;
     let finalSale = null;
@@ -456,7 +469,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 const { data: seqData } = await supabase
                     .from('invoice_sequences')
                     .select('id, current_number')
-                    .eq('invoice_type_id', traditionalCode)
+                    .eq('invoice_type_id', effectiveSeqCode)
                     .eq('store_id', storeId)
                     .maybeSingle();
 
@@ -468,25 +481,11 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
 
             const nextNumber = Math.max(currentSeqNumber + 1, highestTriedNumber + 1);
             
-            let displayPrefix = traditionalCode;
-            let separator = '-';
-            let padding = 8;
+            const isElectronic = effectiveSeqCode.startsWith('E');
+            const separator = isElectronic ? '' : '-';
+            const padding = isElectronic ? 10 : 8;
 
-            if (isElectronicActive) {
-                separator = '';
-                padding = 10;
-                switch (traditionalCode) {
-                    case 'B01': displayPrefix = 'E31'; break;
-                    case 'B02': displayPrefix = 'E32'; break;
-                    case 'B03': displayPrefix = 'E33'; break;
-                    case 'B04': displayPrefix = 'E34'; break;
-                    case 'B14': displayPrefix = 'E44'; break;
-                    case 'B15': displayPrefix = 'E45'; break;
-                    case 'B16': displayPrefix = 'E46'; break;
-                }
-            }
-
-            const formattedInvoiceNumber = `${displayPrefix}${separator}${String(nextNumber).padStart(padding, '0')}`;
+            const formattedInvoiceNumber = `${effectiveSeqCode}${separator}${String(nextNumber).padStart(padding, '0')}`;
 
             const { data: sale, error: saleError } = await supabase
                 .from('sales')
@@ -556,7 +555,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             } else if (storeId) {
                 await supabase.from('invoice_sequences').insert({
                     store_id: storeId,
-                    invoice_type_id: traditionalCode,
+                    invoice_type_id: effectiveSeqCode,
                     current_number: nextNumber
                 });
             }
