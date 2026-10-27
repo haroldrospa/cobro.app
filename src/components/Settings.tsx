@@ -1093,6 +1093,7 @@ const Settings = () => {
           securityCode: localBillingMode === 'e-ncf' ? 'A1B2C3' : undefined,
           signatureDate: localBillingMode === 'e-ncf' ? new Date().toISOString() : undefined,
           qrCodeUrl: localBillingMode === 'e-ncf' ? 'https://dgii.gov.do/ecf/E310000000001' : undefined,
+          bankAccounts: (settings as any)?.bank_accounts || [],
         }
       );
 

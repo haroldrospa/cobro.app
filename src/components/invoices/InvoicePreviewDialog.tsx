@@ -92,6 +92,10 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
         securityCode: (saleData as any).codigo_seguridad,
         signatureDate: (saleData as any).fecha_firma,
         qrCodeUrl: (saleData as any).qrcode_url,
+        bankAccounts: (storeSettings?.bank_accounts ||
+          (Array.isArray((storeSettings as any)?.payment_methods)
+            ? (storeSettings as any)?.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')?.bank_accounts
+            : []) || []),
       }
     );
   }, [saleData, companyInfo, printSettings, storeSettings]);

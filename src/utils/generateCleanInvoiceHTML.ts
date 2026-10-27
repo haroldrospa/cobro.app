@@ -36,6 +36,15 @@ export interface InvoiceData {
   securityCode?: string;
   signatureDate?: string;
   qrCodeUrl?: string;
+  bankAccounts?: Array<{
+    id?: string;
+    bank_name: string;
+    account_number: string;
+    account_type?: string;
+    holder_name?: string;
+    rnc_cedula?: string;
+    alias?: string;
+  }>;
 }
 
 export interface CompanyData {
@@ -469,6 +478,31 @@ export const generateCleanInvoiceHTML = (
         </div>
       </div>
 
+      <!-- Cuentas Bancarias para Transferencias / Pagos -->
+      ${invoiceData.bankAccounts && invoiceData.bankAccounts.length > 0 ? `
+        <div style="margin-top: 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+            <div style="font-size: 11px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em;">
+              🏦 Datos Bancarios para Transferencias o Depósitos
+            </div>
+            <div style="font-size: 9.5px; color: #64748b; font-weight: 600;">Favor enviar comprobante luego de realizar el pago</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
+            ${invoiceData.bankAccounts.map((acc: any) => `
+              <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 10.5px; line-height: 1.45;">
+                <div style="font-weight: 800; color: #0f172a; font-size: 11.5px; margin-bottom: 2px;">
+                  ${acc.bank_name}${acc.alias ? ` <span style="font-weight: 600; color: #64748b; font-size: 10px;">(${acc.alias})</span>` : ''}
+                </div>
+                <div><span style="color: #64748b; font-weight: 600;">No. Cuenta:</span> <strong style="font-family: monospace; font-size: 12px; color: #0284c7; letter-spacing: 0.02em;">${acc.account_number}</strong></div>
+                ${acc.account_type ? `<div><span style="color: #64748b; font-weight: 600;">Tipo:</span> <span style="text-transform: capitalize;">${acc.account_type}</span></div>` : ''}
+                ${acc.holder_name ? `<div><span style="color: #64748b; font-weight: 600;">Titular:</span> <span>${acc.holder_name}</span></div>` : ''}
+                ${acc.rnc_cedula ? `<div><span style="color: #64748b; font-weight: 600;">RNC/Cédula:</span> <span>${acc.rnc_cedula}</span></div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
     </div>
 
     <!-- Pie de Página Institucional -->
@@ -711,6 +745,24 @@ export const generateCleanInvoiceHTML = (
         </span>
       </div>
     </div>
+
+    <!-- Card Bancaria: Cuentas para Transferencias -->
+    ${invoiceData.bankAccounts && invoiceData.bankAccounts.length > 0 ? `
+      <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 5px 6px; margin-bottom: 6px;">
+        <div style="font-weight: 900; font-size: ${sizeXSmall}px; text-transform: uppercase; margin-bottom: 3px; border-bottom: 1px dashed #000000; padding-bottom: 2px;">
+          CUENTAS PARA TRANSFERENCIAS:
+        </div>
+        ${invoiceData.bankAccounts.map((acc: any) => `
+          <div style="padding: 3px 0; border-bottom: 1px dotted #ccc; font-size: ${sizeXSmall}px; line-height: 1.25;">
+            <div style="font-weight: 900; color: #000000;">${acc.bank_name}${acc.alias ? ` (${acc.alias})` : ''}</div>
+            <div style="font-family: monospace; font-weight: 900; font-size: ${sizeSmall}px; color: #000000;">${acc.account_number}</div>
+            ${acc.account_type ? `<div>Tipo: ${acc.account_type}</div>` : ''}
+            ${acc.holder_name ? `<div>Titular: ${acc.holder_name}</div>` : ''}
+            ${acc.rnc_cedula ? `<div>RNC/Céd: ${acc.rnc_cedula}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
 
     ${(invoiceData.loyaltyPointsEarned !== undefined || invoiceData.loyaltyPoints !== undefined) ? `
       <div style="border-top: 2px dashed #000000; margin-top: 6px; padding-top: 4px; text-align: center;">

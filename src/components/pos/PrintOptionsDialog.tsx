@@ -435,6 +435,17 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       ? `• *Consulta Fiscal DGII:* ${saleData.qrcode_url}\n\n`
       : '';
 
+    const resolvedBankAccounts = storeSettings?.bank_accounts ||
+      (Array.isArray((storeSettings as any)?.payment_methods)
+        ? (storeSettings as any)?.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')?.bank_accounts
+        : []) || [];
+
+    const bankDetailsWhatsApp = (resolvedBankAccounts && resolvedBankAccounts.length > 0)
+      ? `*Cuentas para Transferencias / Depósitos:*\n` +
+        resolvedBankAccounts.map((b: any) => `🏦 *${b.bank_name}*${b.account_type ? ` (${b.account_type})` : ''}\n   No: \`${b.account_number}\`${b.holder_name ? `\n   Titular: ${b.holder_name}` : ''}${b.rnc_cedula ? `\n   RNC/Céd: ${b.rnc_cedula}` : ''}`).join('\n\n') +
+        `\n\n`
+      : '';
+
     const plainMessage = isQuote
       ? `*${companyName}*\n` +
         `*Cotización de Servicios*\n` +
@@ -445,6 +456,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         `• *Monto Total:* $${formattedInvoiceTotal}\n\n` +
         `*Detalle de Servicios:*\n${itemsList}\n` +
         `*Nota:* Esta cotización tiene una validez de ${saleData?.paymentTerms || 30} días a partir de su emisión.\n\n` +
+        bankDetailsWhatsApp +
         `Para cualquier consulta o aprobación, estamos a su entera disposición.\n\n` +
         `¡Gracias por su preferencia!\n\n` +
         `_(Mensaje enviado vía Cobroapp)_`
@@ -458,6 +470,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         (isCredit ? `• *Vencimiento:* ${formattedDueDate}\n\n` : '\n') +
         electronicInfo +
         `*Detalle de compra:*\n${itemsList}\n` +
+        bankDetailsWhatsApp +
         (isCredit ? `*Balance Pendiente:*\nSu deuda total acumulada a la fecha es de *$${formattedTotalDebt}*.\n\nLe recordamos realizar sus pagos a tiempo para evitar recargos.\n\n` : '') +
         `Para cualquier consulta sobre este balance, estamos a su entera disposición.\n\n` +
         `¡Gracias por su preferencia!\n\n` +
@@ -946,6 +959,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       securityCode: securityCode,
       signatureDate: signatureDate,
       qrCodeUrl: saleData.qrcode_url,
+      bankAccounts: (storeSettings?.bank_accounts ||
+        (Array.isArray((storeSettings as any)?.payment_methods)
+          ? (storeSettings as any)?.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')?.bank_accounts
+          : []) || []),
     };
 
     return { companyData, invoiceData };
@@ -1207,6 +1224,33 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     // --- 5. Summary Section ---
     const finalY = (doc as any).lastAutoTable?.finalY + 10;
     const summaryLeft = 130;
+
+    // Bank Accounts info box on the left side of summary
+    const pdfBankAccounts = storeSettings?.bank_accounts ||
+      (Array.isArray((storeSettings as any)?.payment_methods)
+        ? (storeSettings as any)?.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')?.bank_accounts
+        : []) || [];
+
+    if (pdfBankAccounts && pdfBankAccounts.length > 0) {
+      let bankY = finalY;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(26, 32, 44);
+      doc.text("DATOS PARA TRANSFERENCIAS:", 15, bankY);
+      bankY += 4.5;
+
+      pdfBankAccounts.slice(0, 3).forEach((acc: any) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`${acc.bank_name}${acc.alias ? ` (${acc.alias})` : ''}`, 15, bankY);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(51, 65, 85);
+        doc.text(`No: ${acc.account_number}${acc.account_type ? ` (${acc.account_type})` : ''}${acc.holder_name ? ` • ${acc.holder_name}` : ''}`, 15, bankY + 3.5);
+        bankY += 8;
+      });
+    }
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
