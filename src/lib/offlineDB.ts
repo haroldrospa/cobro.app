@@ -217,27 +217,40 @@ class OfflineDatabase {
      */
     async putBulk<T>(storeName: OfflineStore, items: T[]): Promise<void> {
         if (!items.length) return;
-        await this.ensureOpen();
-        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
-            try { await this.init(); } catch (_) {}
-            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
-        }
-
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db!.transaction([storeName], 'readwrite');
-                const store = transaction.objectStore(storeName);
-
-                transaction.oncomplete = () => resolve();
-                transaction.onerror = () => resolve();
-
-                for (const item of items) {
-                    store.put(item);
-                }
-            } catch (e) {
-                reject(e);
+        try {
+            await this.ensureOpen();
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+                try { await this.init(); } catch (_) {}
+                if (!this.db || !this.db.objectStoreNames.contains(storeName)) return;
             }
-        });
+
+            return new Promise((resolve) => {
+                try {
+                    const transaction = this.db!.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = (err) => {
+                        console.warn(`[OfflineDB] Error en transacción putBulk(${storeName}):`, err);
+                        resolve();
+                    };
+                    transaction.onabort = () => resolve();
+
+                    for (const item of items) {
+                        try {
+                            store.put(item);
+                        } catch (itemErr) {
+                            console.warn(`[OfflineDB] Error al insertar elemento en putBulk:`, itemErr);
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`[OfflineDB] Excepción en putBulk(${storeName}):`, e);
+                    resolve();
+                }
+            });
+        } catch (outerErr) {
+            console.warn(`[OfflineDB] Excepción general en putBulk:`, outerErr);
+        }
     }
 
     /**
@@ -245,67 +258,85 @@ class OfflineDatabase {
      */
     async deleteBulk(storeName: OfflineStore, keys: (string | number)[]): Promise<void> {
         if (!keys.length) return;
-        await this.ensureOpen();
-        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
-            try { await this.init(); } catch (_) {}
-            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
-        }
-
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db!.transaction([storeName], 'readwrite');
-                const store = transaction.objectStore(storeName);
-
-                transaction.oncomplete = () => resolve();
-                transaction.onerror = () => resolve();
-
-                for (const key of keys) {
-                    store.delete(key);
-                }
-            } catch (e) {
-                reject(e);
+        try {
+            await this.ensureOpen();
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+                try { await this.init(); } catch (_) {}
+                if (!this.db || !this.db.objectStoreNames.contains(storeName)) return;
             }
-        });
+
+            return new Promise((resolve) => {
+                try {
+                    const transaction = this.db!.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => resolve();
+                    transaction.onabort = () => resolve();
+
+                    for (const key of keys) {
+                        try {
+                            store.delete(key);
+                        } catch (_) {}
+                    }
+                } catch (e) {
+                    resolve();
+                }
+            });
+        } catch (_) {}
     }
 
     async get<T>(storeName: OfflineStore, key: string | number): Promise<T | null> {
-        await this.ensureOpen();
-        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
-            try { await this.init(); } catch (_) {}
-            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
-        }
-
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db!.transaction([storeName], 'readonly');
-                const store = transaction.objectStore(storeName);
-                const request = store.get(key);
-                request.onsuccess = () => resolve(request.result || null);
-                request.onerror = () => reject(request.error);
-            } catch (e) {
-                reject(e);
+        try {
+            await this.ensureOpen();
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+                try { await this.init(); } catch (_) {}
+                if (!this.db || !this.db.objectStoreNames.contains(storeName)) return null;
             }
-        });
+
+            return new Promise((resolve) => {
+                try {
+                    const transaction = this.db!.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get(key);
+                    request.onsuccess = () => resolve(request.result || null);
+                    request.onerror = () => resolve(null);
+                } catch (e) {
+                    resolve(null);
+                }
+            });
+        } catch (_) {
+            return null;
+        }
     }
 
     async getAll<T>(storeName: OfflineStore): Promise<T[]> {
-        await this.ensureOpen();
-        if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
-            try { await this.init(); } catch (_) {}
-            if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
-        }
-
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db!.transaction([storeName], 'readonly');
-                const store = transaction.objectStore(storeName);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result || []);
-                request.onerror = () => reject(request.error);
-            } catch (e) {
-                reject(e);
+        try {
+            await this.ensureOpen();
+            if (!this.db || !this.db.objectStoreNames.contains(storeName)) {
+                try { await this.init(); } catch (_) {}
+                if (!this.db || !this.db.objectStoreNames.contains(storeName)) return [] as any;
             }
-        });
+
+            return new Promise((resolve) => {
+                try {
+                    const transaction = this.db!.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = (err) => {
+                        console.warn(`[OfflineDB] Error en getAll(${storeName}):`, err);
+                        resolve([]);
+                    };
+                } catch (e) {
+                    console.warn(`[OfflineDB] Excepción en transaction getAll(${storeName}):`, e);
+                    resolve([]);
+                }
+            });
+        } catch (outerErr) {
+            console.warn(`[OfflineDB] Excepción general en getAll(${storeName}):`, outerErr);
+            return [];
+        }
     }
 
     async delete(storeName: OfflineStore, key: string | number): Promise<void> {

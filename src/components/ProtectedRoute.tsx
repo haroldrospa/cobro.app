@@ -134,6 +134,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           
           setSession(session);
           setProfileMissing(false);
+          if (session?.user?.id) {
+            localStorage.setItem('cobro_last_user_id', session.user.id);
+          }
         } else {
           // User logged in but no profile found or store is missing — try to auto-repair first
           console.warn("User has no profile record or store is missing. Attempting auto-repair...");

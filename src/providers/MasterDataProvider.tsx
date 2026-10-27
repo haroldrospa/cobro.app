@@ -25,16 +25,19 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const { data: categories = [], isLoading: isLoadingCategories, refetch: refetchCategories } = useCategories();
   const { data: products = [], isLoading: isLoadingProducts, refetch: refetchProducts } = useProductsOffline();
 
-  const isLoading = !!storeId && (isLoadingCustomers || isLoadingCategories || isLoadingProducts);
+  // Solo se considera cargando si realmente no hay datos en memoria/caché
+  const isLoading = !!storeId && (
+    (isLoadingCustomers && customers.length === 0) ||
+    (isLoadingCategories && categories.length === 0) ||
+    (isLoadingProducts && products.length === 0)
+  );
 
   const refreshMasterData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['customers'] });
     queryClient.invalidateQueries({ queryKey: ['categories'] });
-    queryClient.invalidateQueries({ queryKey: ['products'] });
     refetchCustomers();
     refetchCategories();
-    refetchProducts();
-  }, [queryClient, refetchCustomers, refetchCategories, refetchProducts]);
+  }, [queryClient, refetchCustomers, refetchCategories]);
 
   const refreshRef = React.useRef(refreshMasterData);
   React.useEffect(() => {
@@ -48,15 +51,13 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
         refreshRef.current();
-      }, 500);
+      }, 1000);
     };
 
     window.addEventListener('cobro:sync-completed', handleSyncComplete);
-    window.addEventListener('cobro:offline-products-updated', handleSyncComplete);
     return () => {
       clearTimeout(timeout);
       window.removeEventListener('cobro:sync-completed', handleSyncComplete);
-      window.removeEventListener('cobro:offline-products-updated', handleSyncComplete);
     };
   }, []);
 

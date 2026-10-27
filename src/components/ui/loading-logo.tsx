@@ -46,6 +46,12 @@ export const LoadingLogo: React.FC<LoadingLogoProps> = ({
                     style={{ animation: 'loading-slide 1.5s infinite ease-in-out' }}
                 ></div>
             </div>
+
+            {text && (
+                <p className="text-xs text-muted-foreground font-medium animate-pulse mt-1 text-center">
+                    {text}
+                </p>
+            )}
         </div>
     );
 };

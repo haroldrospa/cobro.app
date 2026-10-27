@@ -2421,8 +2421,8 @@ const POSContent: React.FC = () => {
   const hasValidStore = !!(rawStore && rawStore.id && rawStore.id !== '00000000-0000-0000-0000-000000000000');
   const hasValidSettings = !!rawStoreSettings;
 
-  const profileLoading = (isPendingProfile || isLoadingProfile) || !hasValidProfile;
-  const storeLoading = (isPendingStore || isLoadingStore) || !hasValidStore;
+  const profileLoading = isPendingProfile || isLoadingProfile;
+  const storeLoading = isPendingStore || isLoadingStore;
   const settingsLoading = loadingSettings && !hasValidSettings;
 
   if (loadingProducts || settingsLoading || storeLoading || profileLoading) {
