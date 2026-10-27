@@ -388,6 +388,37 @@ export const useSaleDetails = (saleId: string) => {
           throw error;
         }
 
+        // Fallback: If sale_items is empty in Supabase (e.g. for service invoices), load from offlineDB
+        if (data && (!data.sale_items || data.sale_items.length === 0)) {
+          try {
+            const localSale = await offlineDB.get<any>(OfflineStore.SALES, saleId);
+            if (localSale && (localSale.items?.length > 0 || localSale.sale_items?.length > 0)) {
+              const fallbackItems = localSale.items || localSale.sale_items || [];
+              data.sale_items = fallbackItems.map((it: any) => {
+                const qty = Number(it.quantity) || 1;
+                const unitPrice = Number(it.price ?? it.unit_price ?? 0);
+                const name = it.name || it.product_name || it.description || it.product?.name || 'Servicio / Concepto';
+                return {
+                  id: it.id || crypto.randomUUID(),
+                  product_id: it.product_id || null,
+                  quantity: qty,
+                  unit_price: unitPrice,
+                  discount_percentage: Number(it.discount_percentage ?? 0),
+                  tax_percentage: Number(it.tax_percentage ?? ((it.tax || 0.18) * 100)),
+                  subtotal: Number(it.subtotal ?? (qty * unitPrice)),
+                  discount_amount: Number(it.discount_amount ?? 0),
+                  tax_amount: Number(it.tax_amount ?? 0),
+                  total: Number(it.total ?? (qty * unitPrice)),
+                  product: { name },
+                  product_name: name,
+                };
+              });
+            }
+          } catch (e) {
+            console.warn('Could not read offline items fallback in useSaleDetails', e);
+          }
+        }
+
         // Fallback if profile not joined directly (e.g. legacy sales referencing user_id or without foreign key match)
         if (data && !data.profile && (data.profile_id || (data as any).user_id)) {
           const fallbackProfileId = data.profile_id || (data as any).user_id;

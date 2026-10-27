@@ -412,7 +412,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
                         {/* Name + details */}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-foreground truncate leading-snug">
-                            {item.product?.name || 'Producto'}
+                            {item.product?.name || (item as any).product_name || (item as any).name || (item as any).description || 'Servicio / Concepto'}
                           </p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <span className="text-xs text-foreground font-mono font-semibold bg-muted/50 px-2 py-0.5 rounded-lg border border-border/30">

@@ -179,6 +179,29 @@ export class AlanubeService {
         throw new Error('Factura no tiene tienda asociada');
       }
 
+      // Si no tiene sale_items en DB (ej: servicios emitidos sin producto de inventario), recuperar desde offlineDB
+      if (!sale.sale_items || sale.sale_items.length === 0) {
+        try {
+          const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
+          const localSale = await offlineDB.get<any>(OfflineStore.SALES, saleId);
+          if (localSale && (localSale.items?.length > 0 || localSale.sale_items?.length > 0)) {
+            const fallbackItems = localSale.items || localSale.sale_items || [];
+            sale.sale_items = fallbackItems.map((it: any) => ({
+              product: { name: it.name || it.product_name || it.description || 'Servicio' },
+              product_name: it.name || it.product_name || it.description,
+              quantity: Number(it.quantity) || 1,
+              unit_price: Number(it.price ?? it.unit_price ?? 0),
+              total: Number(it.total ?? ((it.quantity || 1) * (it.price ?? it.unit_price ?? 0))),
+              tax_amount: Number(it.tax_amount ?? 0),
+              tax_percentage: Number(it.tax_percentage ?? ((it.tax || 0.18) * 100)),
+              is_service: true,
+            }));
+          }
+        } catch (e) {
+          console.warn('Could not read offline items in AlanubeService', e);
+        }
+      }
+
       // Si ya fue aceptada previamente y tiene QR, notificar de inmediato sin reenviar
       if (sale.estado_fiscal === 'ACEPTADO' && sale.qrcode_url) {
         this.notifySignatureUpdate({
@@ -257,11 +280,13 @@ export class AlanubeService {
           exemptAmount = Number((exemptAmount + itemAmount).toFixed(2));
         }
 
+        const resolvedName = item.product?.name || item.product_name || item.name || item.description || 'Servicio General';
+        const isService = item.is_service || sale.is_service || !item.product_id;
         return {
           lineNumber: index + 1,
           billingIndicator,
-          itemName: (item.product?.name || 'Producto General').slice(0, 80),
-          goodServiceIndicator: 1, // 1 = Bien, 2 = Servicio
+          itemName: resolvedName.slice(0, 80),
+          goodServiceIndicator: isService ? 2 : 1, // 1 = Bien, 2 = Servicio
           quantityItem: Number(quantity.toFixed(2)),
           unitPriceItem: unitPriceNet,
           itemAmount

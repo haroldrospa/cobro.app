@@ -94,11 +94,21 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
         if (data) {
           console.log("🔄 Polling sale status, received:", data.estado_fiscal, !!data.qrcode_url);
-          setLiveSaleData(prev => ({
-            ...prev,
-            ...data,
-            items: data.sale_items || data.items || prev?.items || propSaleData.items,
-          }));
+          const hasDbItems = Array.isArray(data.sale_items) && data.sale_items.length > 0;
+          setLiveSaleData(prev => {
+            const preservedItems = (prev?.items && prev.items.length > 0)
+              ? prev.items
+              : (propSaleData?.items && propSaleData.items.length > 0)
+                ? propSaleData.items
+                : (propSaleData?.sale_items && propSaleData.sale_items.length > 0)
+                  ? propSaleData.sale_items
+                  : [];
+            return {
+              ...prev,
+              ...data,
+              items: hasDbItems ? data.sale_items : preservedItems,
+            };
+          });
 
           // If the electronic QR code has loaded successfully or if finished/rejected, we stop polling!
           if (data.qrcode_url || data.estado_fiscal === 'RECHAZADO' || data.estado_fiscal === 'ERROR_CONEXION') {
@@ -127,7 +137,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         ...(detail.codigo_seguridad ? { codigo_seguridad: detail.codigo_seguridad } : {}),
         ...(detail.fecha_firma ? { fecha_firma: detail.fecha_firma } : {}),
         ...(detail.qrcode_url ? { qrcode_url: detail.qrcode_url } : {}),
-        items: prev?.items || propSaleData.items,
+        items: (prev?.items && prev.items.length > 0)
+          ? prev.items
+          : (propSaleData?.items && propSaleData.items.length > 0)
+            ? propSaleData.items
+            : (propSaleData?.sale_items && propSaleData.sale_items.length > 0)
+              ? propSaleData.sale_items
+              : [],
       }));
       if ((detail.qrcode_url || detail.estado_fiscal === 'RECHAZADO' || detail.estado_fiscal === 'ERROR_CONEXION') && pollInterval) {
         clearInterval(pollInterval);
@@ -179,7 +195,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             setLiveSaleData(prev => ({
               ...prev,
               ...payload.new,
-              items: prev?.items || propSaleData.items || propSaleData.sale_items,
+              items: (prev?.items && prev.items.length > 0)
+                ? prev.items
+                : (propSaleData?.items && propSaleData.items.length > 0)
+                  ? propSaleData.items
+                  : (propSaleData?.sale_items && propSaleData.sale_items.length > 0)
+                    ? propSaleData.sale_items
+                    : [],
             }));
             if ((payload.new.qrcode_url || payload.new.estado_fiscal === 'RECHAZADO' || payload.new.estado_fiscal === 'ERROR_CONEXION') && pollInterval) {
               console.log("🎯 Real-time event finished status. Stopping polling.");
@@ -253,15 +275,33 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const saleData = useMemo(() => {
     if (!rawSaleData) return null;
     
-    const rawItems = rawSaleData.items || rawSaleData.sale_items || [];
-    const normalizedItems = rawItems.map((item: any) => ({
-      name: item.name || item.product?.name || item.product_name || 'Producto',
-      quantity: item.quantity || 1,
-      price: item.price || item.unit_price || 0,
-      total: item.total || ((item.quantity || 1) * (item.price || item.unit_price || 0)),
-      comment: item.comment,
-      tax_amount: item.tax_amount || item.tax || 0,
-    }));
+    const rawItems = (rawSaleData.items && rawSaleData.items.length > 0)
+      ? rawSaleData.items
+      : (rawSaleData.sale_items && rawSaleData.sale_items.length > 0)
+        ? rawSaleData.sale_items
+        : (propSaleData?.items && propSaleData.items.length > 0)
+          ? propSaleData.items
+          : (propSaleData?.sale_items && propSaleData.sale_items.length > 0)
+            ? propSaleData.sale_items
+            : [];
+
+    const normalizedItems = rawItems.map((item: any) => {
+      const itemName = item.name || item.product_name || item.description || item.product?.name || 'Servicio / Concepto';
+      const itemQty = Number(item.quantity) || 1;
+      const itemPrice = Number(item.price ?? item.unit_price ?? 0);
+      const itemTotal = Number(item.total ?? (itemQty * itemPrice));
+      return {
+        ...item,
+        name: itemName,
+        product_name: itemName,
+        quantity: itemQty,
+        price: itemPrice,
+        unit_price: itemPrice,
+        total: itemTotal,
+        comment: item.comment || item.description || '',
+        tax_amount: Number(item.tax_amount ?? item.tax ?? 0),
+      };
+    });
 
     const invNum = rawSaleData.encf || rawSaleData.invoice_number || rawSaleData.invoiceNumber || '000001';
     const isInternal = rawSaleData.invoiceType === 'FAC' || rawSaleData.invoice_type_id === 'FAC' || invNum.startsWith('FAC');
@@ -377,7 +417,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     let itemsList = '';
     const items = saleData?.items || [];
     items.forEach((item: any) => {
-      itemsList += `• ${item.quantity}x ${item.name || item.product?.name || 'Producto'} ($${((item.price || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })})\n`;
+      const name = item.name || item.product_name || item.description || item.product?.name || 'Servicio / Concepto';
+      const qty = Number(item.quantity) || 1;
+      const price = Number(item.price ?? item.unit_price ?? 0);
+      itemsList += `• ${qty}x ${name} ($${(price * qty).toLocaleString('en-US', { minimumFractionDigits: 2 })})\n`;
     });
 
     const isCredit = saleData?.paymentMethod === 'credit';
@@ -872,11 +915,11 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       invoicePrefix: storeSettings?.invoice_prefix || 'FAC-',
       date: new Date(),
       items: items.map(item => ({
-        name: item.name || item.product?.name || 'Producto',
-        quantity: item.quantity || 1,
-        price: item.price || 0,
-        total: item.total || (item.quantity * item.price) || 0,
-        comment: item.comment,
+        name: item.name || item.product_name || item.description || item.product?.name || 'Servicio / Concepto',
+        quantity: Number(item.quantity) || 1,
+        price: Number(item.price ?? item.unit_price ?? 0),
+        total: Number(item.total ?? ((item.quantity || 1) * (item.price ?? item.unit_price ?? 0))),
+        comment: item.comment || item.description,
       })),
       subtotal: subtotalAmount,
       tax: taxAmount,
@@ -1136,15 +1179,18 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
     // --- 4. Products Table ---
     const tableData = (saleData.items || []).map((item: any) => {
-      let description = String(item.name || 'Producto');
-      if (item.comment) {
+      let description = String(item.name || item.product_name || item.description || item.product?.name || 'Servicio / Concepto');
+      if (item.comment && item.comment !== description) {
         description += `\n(Nota: ${item.comment})`;
       }
+      const qty = Number(item.quantity || 1);
+      const unitPrice = Number(item.price ?? item.unit_price ?? 0);
+      const total = Number(item.total ?? (qty * unitPrice));
       return [
         description,
-        Number(item.quantity || 0),
-        `$${Number(item.price || item.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} `,
-        `$${(Number(item.price || item.unit_price || 0) * Number(item.quantity || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })} `
+        qty,
+        `$${unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })} `,
+        `$${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} `
       ];
     });
 

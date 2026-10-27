@@ -1029,10 +1029,10 @@ const Reports = () => {
     // Items Table
     const head = [['Cant.', 'Descripción', 'Precio', 'Total']];
     const body = items.map(item => [
-      item.quantity.toString(),
-      item.product?.name || 'Producto',
-      `$${item.unit_price.toLocaleString()}`,
-      `$${item.total.toLocaleString()}`
+      (item.quantity || 1).toString(),
+      item.product?.name || (item as any).product_name || (item as any).name || (item as any).description || 'Servicio / Concepto',
+      `$${Number(item.unit_price ?? (item as any).price ?? 0).toLocaleString()}`,
+      `$${Number(item.total ?? ((item.quantity || 1) * Number(item.unit_price ?? (item as any).price ?? 0))).toLocaleString()}`
     ]);
 
     autoTable(doc, {

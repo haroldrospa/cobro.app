@@ -1938,7 +1938,11 @@ const POSContent: React.FC = () => {
             }
             return {
               ...it,
-              product_name: it.name,
+              name: it.name || (it as any).description || 'Servicio / Concepto',
+              product_name: it.name || (it as any).description || 'Servicio / Concepto',
+              description: (it as any).description || it.name,
+              quantity: Number(it.quantity) || 1,
+              price: lineUnit,
               unit_price: lineUnit,
               tax_amount: lineTax,
               subtotal: lineSub,
@@ -2016,14 +2020,25 @@ const POSContent: React.FC = () => {
       const printSaleData = {
         id: result?.id || salePayload.id,
         total: totalAmount,
-        items: data.items.map(it => ({
-          ...it,
-          product_name: it.name,
-          unit_price: it.price,
-          tax_amount: (it.price * it.quantity) * (it.tax || 0),
-          subtotal: it.price * it.quantity,
-          total: (it.price * it.quantity) * (1 + (it.tax || 0))
-        })),
+        items: data.items.map(it => {
+          const lineQty = Number(it.quantity) || 1;
+          const linePrice = Number(it.price) || 0;
+          const lineTaxRate = Number(it.tax) || 0;
+          const lineSub = linePrice * lineQty;
+          const lineTax = lineSub * lineTaxRate;
+          return {
+            ...it,
+            name: it.name || (it as any).description || 'Servicio / Concepto',
+            product_name: it.name || (it as any).description || 'Servicio / Concepto',
+            description: (it as any).description || it.name,
+            quantity: lineQty,
+            price: linePrice,
+            unit_price: linePrice,
+            tax_amount: lineTax,
+            subtotal: lineSub,
+            total: lineSub + lineTax
+          };
+        }),
         paymentMethod: data.paymentMethod,
         customer: selectedCustomerData,
         invoice_number: result?.invoice_number || (result as any)?.encf || '',

@@ -32,13 +32,17 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
   const invoiceHTML = useMemo(() => {
     if (!saleData) return '';
 
-    const rawItems = (saleData as any).sale_items || (saleData as any).items || [];
+    const rawItems = (saleData as any).sale_items && (saleData as any).sale_items.length > 0
+      ? (saleData as any).sale_items
+      : (saleData as any).items && (saleData as any).items.length > 0
+        ? (saleData as any).items
+        : [];
     const items = rawItems.map((item: any) => ({
-      name: item.product?.name || item.product_name || item.name || 'Producto',
-      quantity: item.quantity || 1,
-      price: item.unit_price || item.price || 0,
-      total: item.total || (item.quantity || 1) * (item.unit_price || item.price || 0),
-      comment: item.comment,
+      name: item.product?.name || item.product_name || item.name || item.description || 'Servicio / Concepto',
+      quantity: Number(item.quantity) || 1,
+      price: Number(item.unit_price ?? item.price ?? 0),
+      total: Number(item.total ?? ((item.quantity || 1) * (item.unit_price ?? item.price ?? 0))),
+      comment: item.comment || item.description,
     }));
 
     const taxRate = parseFloat(storeSettings?.default_tax_rate?.toString() || '18');
