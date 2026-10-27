@@ -361,7 +361,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                           const updateHeight = () => {
                             const h = doc.body.scrollHeight || doc.documentElement.scrollHeight;
                             if (h && h > 0) {
-                              iframe.style.height = `${h + 10}px`;
+                              iframe.style.height = `${h}px`;
                             }
                           };
 
@@ -384,7 +384,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
                         try {
                           const height = iframe.contentDocument?.body?.scrollHeight;
                           if (height) {
-                            iframe.style.height = (height + 10) + 'px';
+                            iframe.style.height = `${height}px`;
                           }
                         } catch (__) {}
                       }

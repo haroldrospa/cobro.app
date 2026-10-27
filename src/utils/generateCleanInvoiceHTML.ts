@@ -206,10 +206,13 @@ export const generateCleanInvoiceHTML = (
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @page { 
       size: ${pageCSS}; 
-      margin: 8mm 10mm; 
+      margin: 0; 
     }
     html, body {
       width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
       background: #ffffff !important;
       color: #18181b !important;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -222,9 +225,9 @@ export const generateCleanInvoiceHTML = (
       position: relative;
       width: 100%;
       max-width: ${isCarta ? '215.9mm' : '210mm'};
-      min-height: ${isCarta ? '265mm' : '282mm'};
+      min-height: ${isCarta ? '279.4mm' : '297mm'};
       margin: 0 auto;
-      padding: 6mm 8mm;
+      padding: 0 !important;
       background: #ffffff;
       box-sizing: border-box;
       display: flex;
@@ -237,7 +240,9 @@ export const generateCleanInvoiceHTML = (
       position: relative;
       display: flex;
       flex-direction: column;
-      flex-grow: 1;
+      flex: 1 0 auto;
+      padding: 8mm 10mm 4mm 10mm;
+      box-sizing: border-box;
     }
 
     .items-table {
@@ -248,29 +253,32 @@ export const generateCleanInvoiceHTML = (
       margin-bottom: 8px;
     }
     .items-table th {
-      background: #27272a;
-      color: #ffffff;
-      padding: 8px 12px;
-      font-size: 11px;
+      background: #18181b !important;
+      color: #ffffff !important;
+      padding: 10px 14px;
+      font-size: 10.5px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      border: none;
+      border: none !important;
     }
     .items-table th:first-child {
-      border-top-left-radius: 4px;
-      border-bottom-left-radius: 4px;
+      border-top-left-radius: 6px;
+      border-bottom-left-radius: 6px;
     }
     .items-table th:last-child {
-      border-top-right-radius: 4px;
-      border-bottom-right-radius: 4px;
+      border-top-right-radius: 6px;
+      border-bottom-right-radius: 6px;
     }
     .items-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #f4f4f5;
+      padding: 11px 14px;
+      border-bottom: 1px solid #f0f0f2;
+      border-left: none !important;
+      border-right: none !important;
+      border-top: none !important;
       font-size: 12px;
       color: #18181b;
-      vertical-align: top;
+      vertical-align: middle;
     }
 
     .tabular-numbers {
@@ -284,9 +292,23 @@ export const generateCleanInvoiceHTML = (
         print-color-adjust: exact !important; 
         color-adjust: exact !important;
       }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
       .invoice-sheet {
-        padding: 4mm 6mm !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
         max-width: 100% !important;
+        min-height: 100vh !important;
+        height: 100vh !important;
+        page-break-after: avoid !important;
+      }
+      .invoice-content {
+        padding: 8mm 10mm 4mm 10mm !important;
       }
     }
   </style>
@@ -294,14 +316,6 @@ export const generateCleanInvoiceHTML = (
 <body>
   <div class="invoice-sheet">
     
-    <!-- Acento geométrico moderno superior derecho -->
-    <div style="position: absolute; top: 0; right: 0; width: 180px; height: 105px; pointer-events: none; z-index: 0; overflow: hidden;">
-      <svg width="180" height="105" viewBox="0 0 180 105" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
-        <polygon points="45,0 180,0 180,105" fill="#18181b" />
-        <polygon points="105,0 180,0 180,60" fill="#27272a" opacity="0.7" />
-      </svg>
-    </div>
-
     <!-- CONTENIDO DE LA FACTURA -->
     <div class="invoice-content">
       
@@ -309,13 +323,13 @@ export const generateCleanInvoiceHTML = (
       <div style="position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 20px;">
         <div style="max-width: 58%;">
           ${companyData.logo ? `
-            <img src="${companyData.logo}" alt="Logo" style="max-height: ${logoHeight}px; max-width: 290px; width: auto; object-fit: contain; margin-bottom: 8px; display: block;" />
+            <img src="${companyData.logo}" alt="Logo" style="max-height: ${logoHeight}px; max-width: 290px; width: auto; object-fit: contain; margin-bottom: 6px; display: block;" />
           ` : `
             <div style="display: inline-flex; align-items: center; justify-content: center; background: #18181b; color: #ffffff; padding: 10px 20px; border-radius: 8px; font-weight: 900; font-size: 18px; letter-spacing: 0.05em; margin-bottom: 8px;">
               ${companyInitials}
             </div>
           `}
-          <div style="font-size: 18px; font-weight: 800; color: #18181b; letter-spacing: -0.02em; line-height: 1.2;">
+          <div style="font-size: 16px; font-weight: 800; color: #18181b; letter-spacing: -0.02em; line-height: 1.2;">
             ${companyData.name}
           </div>
           <div style="font-size: 11px; color: #71717a; line-height: 1.45; margin-top: 3px;">
@@ -326,12 +340,12 @@ export const generateCleanInvoiceHTML = (
           </div>
         </div>
 
-        <div style="text-align: right; margin-top: 4px; max-width: 40%;">
-          <h1 style="font-size: 26px; font-weight: 900; color: #18181b; letter-spacing: -0.03em; margin: 0; line-height: 1.1; text-transform: uppercase;">
+        <div style="text-align: right; margin-top: 2px; max-width: 42%;">
+          <h1 style="font-size: 24px; font-weight: 900; color: #18181b; letter-spacing: -0.02em; margin: 0 0 6px 0; line-height: 1.15; text-transform: uppercase;">
             ${isQuotation ? 'Presupuesto' : (isInternalInvoice ? 'Factura Interna' : (invoiceData.isElectronic ? 'Factura Electrónica' : 'Factura Fiscal'))}
           </h1>
-          <div style="margin-top: 5px;">
-            <span style="display: inline-block; background: #f4f4f5; color: #52525b; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 6px; letter-spacing: 0.04em; text-transform: uppercase;">
+          <div>
+            <span style="display: inline-block; background: #18181b; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.06em; text-transform: uppercase;">
               ${isQuotation ? 'COTIZACIÓN' : (isInternalInvoice ? 'CONTROL INTERNO' : customerTypeLabel)}
             </span>
           </div>
@@ -414,7 +428,6 @@ export const generateCleanInvoiceHTML = (
           `}
         </tbody>
       </table>
-      <div style="border-bottom: 1px solid #e4e4e7; margin-bottom: 12px;"></div>
 
       <!-- Sección Inferior: Cuentas Bancarias / QR (Izq) y Totales (Der) -->
       <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; align-items: start; margin-top: 2px;">
@@ -524,8 +537,8 @@ export const generateCleanInvoiceHTML = (
 
     </div>
 
-    <!-- Pie de página oscuro moderno estilo referencia -->
-    <div style="background: #18181b; color: #f4f4f5; margin-left: -8mm; margin-right: -8mm; margin-bottom: -6mm; margin-top: auto; padding: 12px 18px; display: flex; justify-content: center; align-items: center; gap: 16px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.02em;">
+    <!-- Pie de página oscuro moderno al ras de la base de la factura -->
+    <div style="background: #18181b; color: #f4f4f5; width: 100%; margin: 0; padding: 13px 20px; display: flex; justify-content: center; align-items: center; gap: 16px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.02em; flex-shrink: 0; box-sizing: border-box;">
       ${companyData.email ? `<span>${companyData.email}</span>` : ''}
       ${companyData.email && companyData.phone ? `<span style="color: #71717a;">|</span>` : ''}
       ${companyData.phone ? `<span>${companyData.phone}</span>` : ''}
