@@ -873,81 +873,69 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
           
           {/* Top Form Controls: Scrollable internally on laptops so Totals & Action buttons are ALWAYS visible! */}
           <div className="space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1.5">
-            {/* Selector de Moneda & Tasa de Cambio */}
-            <div className="p-2 rounded-xl bg-background/80 border border-border/70 space-y-1.5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5">
-                  <Coins className="h-3.5 w-3.5 text-emerald-400" />
-                  Moneda de la Factura
-                </label>
-                <span className={cn(
-                  "text-[10px] font-extrabold px-2 py-0.5 rounded-full border tracking-wide uppercase",
-                  currency === 'USD' 
-                    ? "bg-blue-500/15 text-blue-400 border-blue-500/30" 
-                    : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                )}>
-                  {currency === 'USD' ? 'US$ Dólares' : 'RD$ Pesos'}
-                </span>
+            {/* Selector de Moneda (Minimizado) */}
+            <div className="p-1.5 px-2.5 rounded-xl bg-background/80 border border-border/70 flex flex-wrap items-center justify-between gap-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Coins className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                <span className="text-[11px] font-bold text-muted-foreground truncate">Moneda</span>
               </div>
 
-              {/* Botones de Moneda DOP / USD */}
-              <div className="grid grid-cols-2 p-0.5 bg-muted/40 rounded-lg border border-border/60 gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleCurrencyChange('DOP')}
-                  className={cn(
-                    "py-1 text-xs font-bold rounded transition-all cursor-pointer flex items-center justify-center gap-1.5",
-                    currency === 'DOP'
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <DollarSign className="h-3.5 w-3.5" />
-                  <span>DOP (RD$)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCurrencyChange('USD')}
-                  className={cn(
-                    "py-1 text-xs font-bold rounded transition-all cursor-pointer flex items-center justify-center gap-1.5",
-                    currency === 'USD'
-                      ? "bg-blue-600 text-white shadow-xs"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <DollarSign className="h-3.5 w-3.5" />
-                  <span>USD (US$)</span>
-                </button>
-              </div>
-
-              {/* Tasa y botón para recalcular montos */}
-              <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/40 text-[11px]">
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                  <span className="text-muted-foreground text-[10px] font-medium shrink-0">1 USD = RD$</span>
-                  <input
-                    type="number"
-                    step="0.05"
-                    min="1"
-                    value={exchangeRate}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      setExchangeRate(val);
-                      if (val > 0) localStorage.setItem('cobro_pos_exchange_rate', val.toString());
-                    }}
-                    className="h-6 w-16 px-1.5 text-center font-mono font-bold text-xs bg-background/80 border border-border/70 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    placeholder="60.00"
-                  />
+              <div className="flex items-center gap-1.5">
+                {/* Segmented compact switch */}
+                <div className="flex items-center bg-muted/40 p-0.5 rounded-lg border border-border/50 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleCurrencyChange('DOP')}
+                    className={cn(
+                      "px-2.5 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer",
+                      currency === 'DOP'
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    RD$ DOP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCurrencyChange('USD')}
+                    className={cn(
+                      "px-2.5 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer",
+                      currency === 'USD'
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    US$ USD
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleConvertPrices}
-                  title="Recalcular precios de los conceptos con la tasa actual"
-                  className="px-2 py-0.5 text-[10px] font-semibold rounded bg-muted/60 hover:bg-muted text-foreground border border-border/60 flex items-center gap-1 transition-all cursor-pointer hover:border-emerald-500/40 shrink-0"
-                >
-                  <ArrowLeftRight className="h-2.5 w-2.5 text-emerald-400" />
-                  <span>Convertir montos</span>
-                </button>
+                {/* Si es USD, tasa de cambio compacta al lado */}
+                {currency === 'USD' && (
+                  <div className="flex items-center gap-1 pl-1 border-l border-border/50">
+                    <span className="text-[10px] text-muted-foreground font-mono">Tasa:</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="1"
+                      value={exchangeRate}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setExchangeRate(val);
+                        if (val > 0) localStorage.setItem('cobro_pos_exchange_rate', val.toString());
+                      }}
+                      className="h-6 w-14 px-1 text-center font-mono font-bold text-[11px] bg-card border border-border/60 rounded text-foreground outline-none focus:border-blue-500"
+                      placeholder="60.00"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleConvertPrices}
+                      title="Convertir montos entre monedas"
+                      className="h-6 w-6 flex items-center justify-center rounded bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 cursor-pointer"
+                    >
+                      <ArrowLeftRight className="h-3 w-3 text-blue-400" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
