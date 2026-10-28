@@ -43,6 +43,7 @@ const OpenAccountsDialog = lazy(() => import('./pos/OpenAccountsDialog'));
 const SaveOrderDialog = lazy(() => import('./pos/SaveOrderDialog'));
 const TableSelectorDialog = lazy(() => import('./pos/TableSelectorDialog'));
 const DailySalesDialog = lazy(() => import('./pos/DailySalesDialog'));
+const PendingInvoicesDialog = lazy(() => import('./pos/PendingInvoicesDialog'));
 const RefundDialog = lazy(() => import('./pos/RefundDialog'));
 const CashMovementsDialog = lazy(() => import('./pos/CashMovementsDialog'));
 const CloseDayDialog = lazy(() => import('./pos/CloseDayDialog'));
@@ -137,6 +138,7 @@ const POSContent: React.FC = () => {
   const [selectedInvoiceType, setSelectedInvoiceType] = useState('B02');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showServiceInvoiceDialog, setShowServiceInvoiceDialog] = useState(false);
+  const [showPendingInvoicesDialog, setShowPendingInvoicesDialog] = useState(false);
   const [servicesViewMode, setServicesViewMode] = useState<'services' | 'catalog'>('services');
   const [isEmittingServiceInvoice, setIsEmittingServiceInvoice] = useState(false);
   const [isServicePendingPayment, setIsServicePendingPayment] = useState(false);
@@ -431,6 +433,25 @@ const POSContent: React.FC = () => {
   const customerBalances = allBalancesData?.balances || {};
   const { data: invoiceTypes = [] } = useInvoiceTypes();
   const createSale = useCreateSaleOffline();
+
+  // Contador en vivo de facturas pendientes de pago
+  const { data: pendingSalesCount = 0 } = useQuery({
+    queryKey: ['pending-sales-count', storeId || store?.id],
+    queryFn: async () => {
+      const effectiveStoreId = storeId || store?.id;
+      if (!effectiveStoreId) return 0;
+      const { count, error } = await supabase
+        .from('sales')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', effectiveStoreId)
+        .neq('payment_status', 'paid')
+        .neq('status', 'cancelled');
+      if (error) return 0;
+      return count || 0;
+    },
+    enabled: !!(storeId || store?.id),
+    staleTime: 1000 * 30,
+  });
 
   // Detect when a customer without phone is selected
   useEffect(() => {
@@ -2417,10 +2438,10 @@ const POSContent: React.FC = () => {
       selectedTable={displayTableLabel || effectiveSelectedTable}
       onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
       onClearTable={handleClearTable}
-      isPendingPayment={isServicePendingPayment}
-      onTogglePendingPayment={() => setIsServicePendingPayment(prev => !prev)}
+      onOpenPendingInvoices={() => setShowPendingInvoicesDialog(true)}
+      pendingInvoicesCount={pendingSalesCount}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, isServicePendingPayment]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, pendingSalesCount]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
@@ -2535,8 +2556,8 @@ const POSContent: React.FC = () => {
             onDirectEmit={handleDirectEmitServiceInvoice}
             isElectronic={isElectronicActive}
             isEmitting={isEmittingServiceInvoice}
-            isPendingPayment={isServicePendingPayment}
-            onTogglePendingPayment={() => setIsServicePendingPayment(prev => !prev)}
+            onOpenPendingInvoices={() => setShowPendingInvoicesDialog(true)}
+            pendingInvoicesCount={pendingSalesCount}
             onLoadToCart={handleLoadServicesToCart}
             onSwitchToCatalog={() => setServicesViewMode('catalog')}
             currencySymbol={storeSettings?.currency_symbol || 'RD$'}
@@ -2732,6 +2753,21 @@ const POSContent: React.FC = () => {
               onLoadToCart={handleLoadWebOrder}
               currentLoadedOrderId={cart.length > 0 ? currentWebOrderId : null}
               onSelectTable={(tbl) => handleSelectTableWithPerson(tbl)}
+            />
+          </Suspense>
+        )}
+
+        {showPendingInvoicesDialog && (
+          <Suspense fallback={null}>
+            <PendingInvoicesDialog
+              isOpen={showPendingInvoicesDialog}
+              onClose={() => setShowPendingInvoicesDialog(false)}
+              storeId={storeId || store?.id}
+              onSelectSaleForPrint={(sale) => {
+                setSaleData(sale);
+                setShowPendingInvoicesDialog(false);
+                setShowPrintOptionsDialog(true);
+              }}
             />
           </Suspense>
         )}
@@ -2977,8 +3013,8 @@ const POSContent: React.FC = () => {
                 onDirectEmit={handleDirectEmitServiceInvoice}
                 isElectronic={isElectronicActive}
                 isEmitting={isEmittingServiceInvoice}
-                isPendingPayment={isServicePendingPayment}
-                onTogglePendingPayment={() => setIsServicePendingPayment(prev => !prev)}
+                onOpenPendingInvoices={() => setShowPendingInvoicesDialog(true)}
+                pendingInvoicesCount={pendingSalesCount}
                 onLoadToCart={handleLoadServicesToCart}
                 onSwitchToCatalog={() => setServicesViewMode('catalog')}
                 currencySymbol={storeSettings?.currency_symbol || 'RD$'}
@@ -3299,6 +3335,21 @@ const POSContent: React.FC = () => {
           </Suspense>
         )}
 
+        {showPendingInvoicesDialog && (
+          <Suspense fallback={null}>
+            <PendingInvoicesDialog
+              isOpen={showPendingInvoicesDialog}
+              onClose={() => setShowPendingInvoicesDialog(false)}
+              storeId={storeId || store?.id}
+              onSelectSaleForPrint={(sale) => {
+                setSaleData(sale);
+                setShowPendingInvoicesDialog(false);
+                setShowPrintOptionsDialog(true);
+              }}
+            />
+          </Suspense>
+        )}
+
         {showSaveOrderDialog && (
           <Suspense fallback={null}>
             <SaveOrderDialog
@@ -3615,8 +3666,8 @@ interface POSActionButtonsProps {
   selectedTable?: string | null;
   onOpenTableSelector?: () => void;
   onClearTable?: () => void;
-  isPendingPayment?: boolean;
-  onTogglePendingPayment?: () => void;
+  onOpenPendingInvoices?: () => void;
+  pendingInvoicesCount?: number;
 }
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
@@ -3637,8 +3688,8 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
   selectedTable,
   onOpenTableSelector,
   onClearTable,
-  isPendingPayment,
-  onTogglePendingPayment,
+  onOpenPendingInvoices,
+  pendingInvoicesCount,
 }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -3720,35 +3771,23 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         <span className="hidden lg:inline">Cuentas</span>
       </Button>
 
-      {/* Para servicios: botón Pendiente de Pago en barra superior (reemplaza a Cotizaciones) */}
+      {/* Para servicios: botón Pendiente de Pago en barra superior (abre el modal con las facturas pendientes) */}
       {isServices ? (
         <Button
           variant="outline"
-          onClick={onTogglePendingPayment}
+          onClick={onOpenPendingInvoices}
           size="sm"
-          className={cn(
-            "h-8 px-2.5 gap-1.5 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer",
-            isPendingPayment
-              ? "border-amber-500/60 bg-amber-500/20 text-amber-500 hover:bg-amber-500/30"
-              : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground hover:bg-accent"
-          )}
-          title={isPendingPayment ? "Factura se emitirá como Pendiente de Pago (Click para cambiar a Pagado)" : "Factura se emitirá como Pagada (Click para cambiar a Pendiente de Pago)"}
+          className="h-8 px-2.5 gap-1.5 rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-bold text-amber-700 dark:text-amber-400 shadow-xs transition-all cursor-pointer"
+          title="Ver Facturas Pendientes de Pago"
         >
-          {isPendingPayment ? (
-            <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
-          ) : (
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-          )}
+          <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
           <span className="hidden sm:inline">Pendiente de pago</span>
-          <span className="sm:hidden">Pendiente</span>
-          <span className={cn(
-            "text-[9px] font-black uppercase px-1.5 py-0.2 rounded border ml-0.5",
-            isPendingPayment
-              ? "bg-amber-500/25 text-amber-400 border-amber-500/40"
-              : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-          )}>
-            {isPendingPayment ? "Activo" : "Pagado"}
-          </span>
+          <span className="sm:hidden">Pendientes</span>
+          {Boolean(pendingInvoicesCount && pendingInvoicesCount > 0) && (
+            <span className="bg-amber-600 text-white text-[9px] font-black rounded-full h-4 min-w-4 px-1 flex items-center justify-center ml-0.5">
+              {pendingInvoicesCount}
+            </span>
+          )}
         </Button>
       ) : onOpenQuotes ? (
         <Button
