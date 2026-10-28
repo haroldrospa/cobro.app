@@ -16,7 +16,7 @@ import {
   Maximize, Minimize, Menu, Home, Package, Users, FileText, BarChart,
   Settings as SettingsIcon, Store, LogOut, Save, ClipboardList, Receipt,
   RefreshCcw, HandCoins, Lock, Unlock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
-  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils, X
+  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils, X, Clock, CheckCircle2
 } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
@@ -139,6 +139,7 @@ const POSContent: React.FC = () => {
   const [showServiceInvoiceDialog, setShowServiceInvoiceDialog] = useState(false);
   const [servicesViewMode, setServicesViewMode] = useState<'services' | 'catalog'>('services');
   const [isEmittingServiceInvoice, setIsEmittingServiceInvoice] = useState(false);
+  const [isServicePendingPayment, setIsServicePendingPayment] = useState(false);
   const [userClosedRegisterDialog, setUserClosedRegisterDialog] = useState(false);
   const [showOpenRegisterDialog, setShowOpenRegisterDialog] = useState(false);
   const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
@@ -2416,8 +2417,10 @@ const POSContent: React.FC = () => {
       selectedTable={displayTableLabel || effectiveSelectedTable}
       onOpenTableSelector={isServices ? undefined : () => setShowTableSelectorDialog(true)}
       onClearTable={handleClearTable}
+      isPendingPayment={isServicePendingPayment}
+      onTogglePendingPayment={() => setIsServicePendingPayment(prev => !prev)}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, isServicePendingPayment]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
@@ -2532,6 +2535,8 @@ const POSContent: React.FC = () => {
             onDirectEmit={handleDirectEmitServiceInvoice}
             isElectronic={isElectronicActive}
             isEmitting={isEmittingServiceInvoice}
+            isPendingPayment={isServicePendingPayment}
+            onTogglePendingPayment={() => setIsServicePendingPayment(prev => !prev)}
             onLoadToCart={handleLoadServicesToCart}
             onSwitchToCatalog={() => setServicesViewMode('catalog')}
             currencySymbol={storeSettings?.currency_symbol || 'RD$'}
@@ -2972,6 +2977,8 @@ const POSContent: React.FC = () => {
                 onDirectEmit={handleDirectEmitServiceInvoice}
                 isElectronic={isElectronicActive}
                 isEmitting={isEmittingServiceInvoice}
+                isPendingPayment={isServicePendingPayment}
+                onTogglePendingPayment={() => setIsServicePendingPayment(prev => !prev)}
                 onLoadToCart={handleLoadServicesToCart}
                 onSwitchToCatalog={() => setServicesViewMode('catalog')}
                 currencySymbol={storeSettings?.currency_symbol || 'RD$'}
@@ -3608,6 +3615,8 @@ interface POSActionButtonsProps {
   selectedTable?: string | null;
   onOpenTableSelector?: () => void;
   onClearTable?: () => void;
+  isPendingPayment?: boolean;
+  onTogglePendingPayment?: () => void;
 }
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
@@ -3628,6 +3637,8 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
   selectedTable,
   onOpenTableSelector,
   onClearTable,
+  isPendingPayment,
+  onTogglePendingPayment,
 }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -3709,7 +3720,37 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         <span className="hidden lg:inline">Cuentas</span>
       </Button>
 
-      {onOpenQuotes && (
+      {/* Para servicios: botón Pendiente de Pago en barra superior (reemplaza a Cotizaciones) */}
+      {isServices ? (
+        <Button
+          variant="outline"
+          onClick={onTogglePendingPayment}
+          size="sm"
+          className={cn(
+            "h-8 px-2.5 gap-1.5 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer",
+            isPendingPayment
+              ? "border-amber-500/60 bg-amber-500/20 text-amber-500 hover:bg-amber-500/30"
+              : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground hover:bg-accent"
+          )}
+          title={isPendingPayment ? "Factura se emitirá como Pendiente de Pago (Click para cambiar a Pagado)" : "Factura se emitirá como Pagada (Click para cambiar a Pendiente de Pago)"}
+        >
+          {isPendingPayment ? (
+            <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+          ) : (
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+          )}
+          <span className="hidden sm:inline">Pendiente de pago</span>
+          <span className="sm:hidden">Pendiente</span>
+          <span className={cn(
+            "text-[9px] font-black uppercase px-1.5 py-0.2 rounded border ml-0.5",
+            isPendingPayment
+              ? "bg-amber-500/25 text-amber-400 border-amber-500/40"
+              : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+          )}>
+            {isPendingPayment ? "Activo" : "Pagado"}
+          </span>
+        </Button>
+      ) : onOpenQuotes ? (
         <Button
           variant="outline"
           onClick={onOpenQuotes}
@@ -3725,7 +3766,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
             </span>
           )}
         </Button>
-      )}
+      ) : null}
 
       <Button
         variant="outline"
