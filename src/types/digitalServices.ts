@@ -1,16 +1,6 @@
-export type DigitalServiceType = 'recharge' | 'data_package' | 'bill_payment' | 'prepaid_power';
+export type DigitalServiceType = 'recharge' | 'data_package' | 'bill_payment' | 'prepaid_power' | 'gaming_pincode';
 
-export type CarrierType = 
-  | 'claro' 
-  | 'altice' 
-  | 'viva' 
-  | 'edeeste' 
-  | 'edesur' 
-  | 'edenorte' 
-  | 'caasd' 
-  | 'coraasan' 
-  | 'senasa' 
-  | 'cepm';
+export type CarrierType = string;
 
 export interface DigitalServiceWallet {
   id: string;
