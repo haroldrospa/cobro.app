@@ -19,6 +19,7 @@ import {
   LogOut,
   Truck,
   Landmark,
+  Smartphone,
 } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
@@ -82,7 +83,8 @@ export const MobileBottomNav: React.FC = () => {
         { name: 'Banco', href: '/banco', icon: Landmark },
         { name: 'Proveedores', href: '/suppliers', icon: Truck },
         { name: 'Reportes', href: '/reports', icon: BarChart },
-        { name: 'Facturas', href: '/invoices', icon: FileText },
+        { name: 'Servicios', href: '/servicios-digitales', icon: Smartphone },
+      { name: 'Facturas', href: '/invoices', icon: FileText },
       ];
     }
 
@@ -112,6 +114,7 @@ export const MobileBottomNav: React.FC = () => {
     return [
       ...(hasDelivery ? [{ name: 'Delivery', href: '/delivery', icon: Bike }] : []),
       ...(hasKitchenDisplay ? [{ name: 'Cocina', href: '/kitchen', icon: ChefHat }] : []),
+      { name: 'Servicios', href: '/servicios-digitales', icon: Smartphone },
       { name: 'Facturas', href: '/invoices', icon: FileText },
       { name: 'Reportes', href: '/reports', icon: BarChart },
       { name: 'Banco', href: '/banco', icon: Landmark },

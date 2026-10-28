@@ -16,7 +16,7 @@ import {
   Maximize, Minimize, Menu, Home, Package, Users, FileText, BarChart,
   Settings as SettingsIcon, Store, LogOut, Save, ClipboardList, Receipt,
   RefreshCcw, HandCoins, Lock, Unlock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
-  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils, X, Clock, CheckCircle2
+  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils, X, Clock, CheckCircle2, Smartphone
 } from 'lucide-react';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
@@ -47,6 +47,7 @@ const PendingInvoicesDialog = lazy(() => import('./pos/PendingInvoicesDialog'));
 const RefundDialog = lazy(() => import('./pos/RefundDialog'));
 const CashMovementsDialog = lazy(() => import('./pos/CashMovementsDialog'));
 const CloseDayDialog = lazy(() => import('./pos/CloseDayDialog'));
+const DigitalServicesPOSDialog = lazy(() => import('./pos/DigitalServicesPOSDialog').then(m => ({ default: m.DigitalServicesPOSDialog })));
 import { extractTableFromNotes, formatTableCustomerName, extractPersonFromCustomerName } from '@/utils/tableUtils';
 // OpenRegisterDialog se queda eager: su apertura depende de una condicion
 // automatica (!activeSession) que puede dispararse casi de inmediato al
@@ -145,6 +146,7 @@ const POSContent: React.FC = () => {
   const [userClosedRegisterDialog, setUserClosedRegisterDialog] = useState(false);
   const [showOpenRegisterDialog, setShowOpenRegisterDialog] = useState(false);
   const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
+  const [showDigitalServicesDialog, setShowDigitalServicesDialog] = useState(false);
   const [saleData, setSaleData] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountReceived, setAmountReceived] = useState('');
@@ -2275,6 +2277,7 @@ const POSContent: React.FC = () => {
 
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
       return [
+        { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
         { name: 'Clientes', href: '/customers', icon: Users },
       ];
     }
@@ -2286,6 +2289,7 @@ const POSContent: React.FC = () => {
     }
 
     return [
+      { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
       { name: 'Administración', href: '/dashboard', icon: Home }
     ];
   }, [profile, hasKitchenDisplay]);
@@ -2295,6 +2299,7 @@ const POSContent: React.FC = () => {
   const handleShowCashMovements = useCallback(() => setShowCashMovementsDialog(true), []);
   const handleShowCloseDay = useCallback(() => setShowCloseDayDialog(true), []);
   const handleShowDebtSelect = useCallback(() => setShowDebtSelectDialog(true), []);
+  const handleOpenDigitalServices = useCallback(() => setShowDigitalServicesDialog(true), []);
   const handleShowOpenAccounts = useCallback(() => { setOpenAccountsInitialTab('orders'); setShowOpenAccountsDialog(true); }, []);
   const { data: posOpenOrdersAll = [] } = useQuery({
     queryKey: ['pos-open-orders', userStore?.id],
@@ -2466,8 +2471,9 @@ const POSContent: React.FC = () => {
       onClearTable={handleClearTable}
       onOpenPendingInvoices={() => setShowPendingInvoicesDialog(true)}
       pendingInvoicesCount={pendingSalesCount}
+      onOpenDigitalServices={handleOpenDigitalServices}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, pendingSalesCount]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, pendingSalesCount, handleOpenDigitalServices]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
@@ -2618,6 +2624,15 @@ const POSContent: React.FC = () => {
                 onSessionUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['active-cash-session'] });
                 }}
+              />
+            </Suspense>
+          )}
+
+          {showDigitalServicesDialog && (
+            <Suspense fallback={null}>
+              <DigitalServicesPOSDialog
+                open={showDigitalServicesDialog}
+                onOpenChange={setShowDigitalServicesDialog}
               />
             </Suspense>
           )}
@@ -2879,6 +2894,15 @@ const POSContent: React.FC = () => {
               isOpen={showCloseDayDialog}
               onClose={() => setShowCloseDayDialog(false)}
               onGoToPOS={handleGoToPOSFromCloseDay}
+            />
+          </Suspense>
+        )}
+
+        {showDigitalServicesDialog && (
+          <Suspense fallback={null}>
+            <DigitalServicesPOSDialog
+              open={showDigitalServicesDialog}
+              onOpenChange={setShowDigitalServicesDialog}
             />
           </Suspense>
         )}
@@ -3461,6 +3485,15 @@ const POSContent: React.FC = () => {
           </Suspense>
         )}
 
+        {showDigitalServicesDialog && (
+          <Suspense fallback={null}>
+            <DigitalServicesPOSDialog
+              open={showDigitalServicesDialog}
+              onOpenChange={setShowDigitalServicesDialog}
+            />
+          </Suspense>
+        )}
+
         {/* --- DEBT COLLECTION DIALOGS --- */}
         <Dialog open={showDebtSelectDialog} onOpenChange={setShowDebtSelectDialog}>
           <DialogContent
@@ -3694,6 +3727,7 @@ interface POSActionButtonsProps {
   onClearTable?: () => void;
   onOpenPendingInvoices?: () => void;
   pendingInvoicesCount?: number;
+  onOpenDigitalServices?: () => void;
 }
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
@@ -3710,6 +3744,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
   onOpenAccounts,
   onShowWebSales,
   onToggleFullscreen,
+  onOpenDigitalServices,
   onGenerateServiceInvoice,
   selectedTable,
   onOpenTableSelector,
@@ -3852,6 +3887,19 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
           </span>
         )}
       </Button>
+
+      {onOpenDigitalServices && (
+        <Button
+          variant="outline"
+          onClick={onOpenDigitalServices}
+          size="sm"
+          className="h-8 px-2.5 gap-1.5 rounded-lg border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-xs font-bold text-blue-700 dark:text-blue-300 shadow-xs transition-all cursor-pointer"
+          title="Venta de Recargas y Servicios Digitales (RecargameYa)"
+        >
+          <Smartphone className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+          <span className="hidden sm:inline">Recargas</span>
+        </Button>
+      )}
 
       <Button
         variant="outline"

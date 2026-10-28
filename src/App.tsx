@@ -40,6 +40,7 @@ const SuperAdmin = lazy(() => import("./pages/admin/SuperAdmin"));
 const StoreSuspended = lazy(() => import("./pages/StoreSuspended"));
 const Delivery = lazy(() => import("./components/Delivery"));
 const Kitchen = lazy(() => import("./components/KitchenDisplay"));
+const DigitalServicesDashboard = lazy(() => import("./components/DigitalServicesDashboard"));
 // Landing ya no se importa acá directo — ver RootRoute, que revisa la sesión
 // antes de decidir si hace falta cargarla (evita bajar la landing completa
 // de marketing para usuarios que ya tienen sesión iniciada).
@@ -265,6 +266,7 @@ const App = () => {
                           <Route path="/banco" element={<Bank />} />
                           <Route path="/payroll" element={<Payroll />} />
                           <Route path="/subscription" element={<UserSubscription />} />
+                          <Route path="/servicios-digitales" element={<DigitalServicesDashboard />} />
                           <Route path="/admin/super-panel" element={<SuperAdmin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

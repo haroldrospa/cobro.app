@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Truck, Landmark, Sparkles, MessageSquarePlus } from 'lucide-react';
+import { Home, ShoppingCart, Package, Users, FileText, BarChart, Settings, Menu, ChevronDown, LogOut, Store, User, Briefcase, Database, CloudUpload, X, Bike, ChefHat, Truck, Landmark, Sparkles, MessageSquarePlus, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ClientReportDialog } from '@/components/ClientReportDialog';
@@ -128,6 +128,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (profile?.role === 'waiter' || profile?.role === 'mesero') {
       return [
         { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
+        { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
         ...(hasKitchenDisplay ? [{ name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat }] : []),
       ];
     }
@@ -136,6 +137,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
       const items = [
         { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
+        { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
         ...(hasDelivery ? [{ name: 'Pedidos Delivery', href: '/delivery', icon: Bike }] : []),
         ...(hasKitchenDisplay ? [{ name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat }] : []),
         { name: 'Clientes', href: '/customers', icon: Users },
@@ -148,6 +150,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
       ...(hasDelivery ? [{ name: 'Pedidos Delivery', href: '/delivery', icon: Bike }] : []),
       ...(hasKitchenDisplay ? [{ name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat }] : []),
+      { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
       { name: 'Dashboard', href: '/dashboard', icon: Home },
       { name: 'Productos', href: '/products', icon: Package },
       { name: 'Clientes', href: '/customers', icon: Users },
