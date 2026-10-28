@@ -439,18 +439,37 @@ const POSContent: React.FC = () => {
     queryKey: ['pending-sales-count', storeId || store?.id],
     queryFn: async () => {
       const effectiveStoreId = storeId || store?.id;
-      if (!effectiveStoreId) return 0;
-      const { count, error } = await supabase
+      let query = supabase
         .from('sales')
-        .select('*', { count: 'exact', head: true })
-        .eq('store_id', effectiveStoreId)
-        .neq('payment_status', 'paid')
+        .select('id, total, amount_paid, payment_status, payment_method, status, store_id')
         .neq('status', 'cancelled');
-      if (error) return 0;
-      return count || 0;
+
+      if (effectiveStoreId && effectiveStoreId !== '00000000-0000-0000-0000-000000000000') {
+        query = query.or(`store_id.eq.${effectiveStoreId},store_id.is.null`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(200);
+      if (error || !data) return 0;
+
+      const pending = data.filter((s: any) => {
+        if (s.status === 'cancelled') return false;
+        if (s.payment_status === 'paid') return false;
+        const total = Number(s.total) || 0;
+        const paid = Number(s.amount_paid) || 0;
+        const remaining = total - paid;
+        return (
+          s.payment_status === 'pending' ||
+          s.payment_status === 'partial' ||
+          s.payment_method === 'credit' ||
+          s.payment_method === 'pending' ||
+          remaining > 0.01
+        );
+      });
+
+      return pending.length;
     },
-    enabled: !!(storeId || store?.id),
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 20,
+    refetchInterval: 1000 * 30,
   });
 
   // Detect when a customer without phone is selected
@@ -2091,6 +2110,13 @@ const POSContent: React.FC = () => {
 
       setSaleData(printSaleData);
       setShowServiceInvoiceDialog(false);
+
+      // Refrescar contadores y listados de pendientes
+      queryClient.invalidateQueries({ queryKey: ['pending-sales-count'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-sales-list'] });
+      queryClient.invalidateQueries({ queryKey: ['customerBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['allCustomersBalances'] });
+
       setTimeout(() => {
         setShowPrintOptionsDialog(true);
       }, 150);

@@ -14,16 +14,12 @@ import {
   Clock,
   CheckCircle2,
   Printer,
-  Eye,
   MessageCircle,
-  FileText,
-  AlertCircle,
-  DollarSign,
   Calendar,
   User,
   Loader2,
   RefreshCw,
-  Receipt
+  AlertCircle
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,12 +47,11 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [payingSaleId, setPayingSaleId] = useState<string | null>(null);
 
-  // Fetch pending sales
+  // Fetch pending sales using valid Supabase schema relations
   const { data: pendingSales = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['pending-sales-list', storeId],
     queryFn: async () => {
-      if (!storeId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('sales')
         .select(`
           id,
@@ -64,28 +59,36 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
           total,
           subtotal,
           tax_total,
-          tax_rate,
           amount_paid,
+          amount_received,
           payment_status,
           payment_method,
           status,
           due_date,
           created_at,
           customer_id,
-          customer_name,
-          customer_phone,
-          customer_rnc,
-          notes,
-          encf,
-          is_electronic,
-          qrcode_url,
-          items,
-          codigo_seguridad,
-          fecha_firma
+          store_id,
+          customer:customers(id, name, phone, rnc, email),
+          invoice_type:invoice_types(name, code),
+          sale_items:sale_items(
+            id,
+            product_id,
+            quantity,
+            unit_price,
+            subtotal,
+            tax_amount,
+            total,
+            product:products(name)
+          )
         `)
-        .eq('store_id', storeId)
-        .neq('payment_status', 'paid')
-        .neq('status', 'cancelled')
+        .neq('status', 'cancelled');
+
+      // Filter by store_id if a valid store is provided
+      if (storeId && storeId !== '00000000-0000-0000-0000-000000000000') {
+        query = query.or(`store_id.eq.${storeId},store_id.is.null`);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -93,28 +96,55 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
         console.error('Error fetching pending sales:', error);
         throw error;
       }
-      return data || [];
+
+      // Robust filter for pending payment records
+      const pending = (data || []).filter((s: any) => {
+        if (s.status === 'cancelled') return false;
+        if (s.payment_status === 'paid') return false;
+        const total = Number(s.total) || 0;
+        const paid = Number(s.amount_paid) || 0;
+        const remaining = total - paid;
+        return (
+          s.payment_status === 'pending' ||
+          s.payment_status === 'partial' ||
+          s.payment_method === 'credit' ||
+          s.payment_method === 'pending' ||
+          remaining > 0.01
+        );
+      });
+
+      return pending;
     },
-    enabled: isOpen && !!storeId,
+    enabled: isOpen,
     staleTime: 1000 * 15,
   });
 
-  // Filtered sales
+  // Filtered sales by search input
   const filteredSales = useMemo(() => {
     if (!searchTerm.trim()) return pendingSales;
     const term = searchTerm.toLowerCase();
-    return pendingSales.filter(s =>
-      (s.invoice_number && s.invoice_number.toLowerCase().includes(term)) ||
-      (s.encf && s.encf.toLowerCase().includes(term)) ||
-      (s.customer_name && s.customer_name.toLowerCase().includes(term)) ||
-      (s.customer_phone && s.customer_phone.includes(term)) ||
-      (s.customer_rnc && s.customer_rnc.includes(term))
-    );
+    return pendingSales.filter((s: any) => {
+      const inv = (s.invoice_number || '').toLowerCase();
+      const cName = (s.customer?.name || '').toLowerCase();
+      const cPhone = (s.customer?.phone || '').toLowerCase();
+      const cRnc = (s.customer?.rnc || '').toLowerCase();
+      return (
+        inv.includes(term) ||
+        cName.includes(term) ||
+        cPhone.includes(term) ||
+        cRnc.includes(term)
+      );
+    });
   }, [pendingSales, searchTerm]);
 
   // Total pending sum
   const totalPendingAmount = useMemo(() => {
-    return pendingSales.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    return pendingSales.reduce((acc, s: any) => {
+      const total = Number(s.total) || 0;
+      const paid = Number(s.amount_paid) || 0;
+      const remaining = Math.max(0, total - paid);
+      return acc + (remaining > 0 ? remaining : total);
+    }, 0);
   }, [pendingSales]);
 
   // Mark sale as paid mutation
@@ -135,12 +165,13 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
     onSuccess: (sale) => {
       toast({
         title: "¡Factura saldada!",
-        description: `La factura #${sale.invoice_number || sale.encf} ha sido marcada como Pagada.`,
+        description: `La factura #${sale.invoice_number} ha sido marcada como Pagada.`,
         variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['pending-sales-list'] });
       queryClient.invalidateQueries({ queryKey: ['pending-sales-count'] });
       queryClient.invalidateQueries({ queryKey: ['customerBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['allCustomersBalances'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
     },
     onError: (err: any) => {
@@ -156,7 +187,7 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
   });
 
   const handleWhatsAppReminder = (sale: any) => {
-    const phone = (sale.customer_phone || '').replace(/\D/g, '');
+    const phone = (sale.customer?.phone || '').replace(/\D/g, '');
     if (!phone) {
       toast({
         title: "Sin teléfono",
@@ -167,12 +198,50 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
     }
 
     const businessName = storeSettings?.name || 'Cobro App';
-    const invCode = sale.invoice_number || sale.encf || 'N/A';
-    const amount = Number(sale.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    const invCode = sale.invoice_number || 'N/A';
+    const total = Number(sale.total) || 0;
+    const paid = Number(sale.amount_paid) || 0;
+    const remaining = total - paid > 0 ? total - paid : total;
+    const amountStr = remaining.toLocaleString('en-US', { minimumFractionDigits: 2 });
     const text = encodeURIComponent(
-      `Hola *${sale.customer_name || 'Estimado/a cliente'}*, le saludamos de *${businessName}*.\n\nLe recordamos que tiene pendiente de pago la factura *#${invCode}* por un monto total de *RD$ ${amount}*.\n\nFavor de notificar cuando realice el pago o transferencia. ¡Muchas gracias!`
+      `Hola *${sale.customer?.name || 'Estimado/a cliente'}*, le saludamos de *${businessName}*.\n\nLe recordamos que tiene pendiente de pago la factura *#${invCode}* por un monto total de *RD$ ${amountStr}*.\n\nFavor de notificar cuando realice el pago o transferencia. ¡Muchas gracias!`
     );
     window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+  };
+
+  const handlePrintSale = (sale: any) => {
+    if (!onSelectSaleForPrint) return;
+    const cName = sale.customer?.name || 'Cliente Ocasional';
+    const cPhone = sale.customer?.phone || '';
+    const cRnc = sale.customer?.rnc || '';
+    const items = (sale.sale_items && sale.sale_items.length > 0)
+      ? sale.sale_items.map((si: any) => ({
+          id: si.id,
+          name: si.product?.name || 'Servicio / Concepto',
+          product_name: si.product?.name || 'Servicio / Concepto',
+          price: Number(si.unit_price) || 0,
+          unit_price: Number(si.unit_price) || 0,
+          quantity: Number(si.quantity) || 1,
+          tax_amount: Number(si.tax_amount) || 0,
+          subtotal: Number(si.subtotal) || 0,
+          total: Number(si.total) || 0,
+        }))
+      : [];
+
+    const saleForPrint = {
+      ...sale,
+      customer_name: cName,
+      customer_phone: cPhone,
+      customer_rnc: cRnc,
+      customer: sale.customer || { name: cName, phone: cPhone, rnc: cRnc },
+      items,
+      invoiceType: sale.invoice_type?.code || (sale.invoice_number ? sale.invoice_number.slice(0, 3) : 'FAC'),
+      paymentMethod: sale.payment_method,
+      payment_status: sale.payment_status || 'pending',
+      is_pending_payment: true,
+    };
+
+    onSelectSaleForPrint(saleForPrint);
   };
 
   return (
@@ -255,11 +324,15 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
             </div>
           ) : (
             <div className="space-y-2.5">
-              {filteredSales.map((sale) => {
+              {filteredSales.map((sale: any) => {
                 const isPayingThis = payingSaleId === sale.id;
                 const formattedDate = sale.created_at ? formatSafe(sale.created_at, 'dd/MM/yyyy hh:mm a') : 'Fecha no disp.';
-                const code = sale.invoice_number || sale.encf || 'N/A';
+                const code = sale.invoice_number || 'N/A';
                 const total = Number(sale.total) || 0;
+                const paid = Number(sale.amount_paid) || 0;
+                const remaining = total - paid > 0 ? total - paid : total;
+                const cName = sale.customer?.name || 'Cliente Ocasional';
+                const cPhone = sale.customer?.phone || '';
 
                 return (
                   <div
@@ -277,17 +350,22 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
                         </Badge>
                         {sale.payment_method && (
                           <span className="text-[10px] text-muted-foreground font-medium uppercase bg-muted/60 px-1.5 py-0.5 rounded">
-                            {sale.payment_method === 'transfer' ? 'Transferencia' : sale.payment_method}
+                            {sale.payment_method === 'transfer' ? 'Transferencia' : sale.payment_method === 'credit' ? 'Crédito' : sale.payment_method}
+                          </span>
+                        )}
+                        {sale.invoice_type?.name && (
+                          <span className="text-[10px] text-muted-foreground/80 font-medium">
+                            • {sale.invoice_type.name}
                           </span>
                         )}
                       </div>
 
                       <div className="text-xs text-foreground font-semibold truncate flex items-center gap-1.5">
                         <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="truncate">{sale.customer_name || 'Cliente Ocasional'}</span>
-                        {sale.customer_phone && (
+                        <span className="truncate">{cName}</span>
+                        {cPhone && (
                           <span className="text-muted-foreground text-[11px] font-normal">
-                            • {sale.customer_phone}
+                            • {cPhone}
                           </span>
                         )}
                       </div>
@@ -297,9 +375,9 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
                           <Calendar className="h-3 w-3 text-muted-foreground/70" />
                           {formattedDate}
                         </span>
-                        {sale.notes && (
-                          <span className="truncate max-w-[200px]" title={sale.notes}>
-                            • {sale.notes}
+                        {sale.due_date && (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">
+                            • Vence: {formatSafe(sale.due_date, 'dd/MM/yyyy')}
                           </span>
                         )}
                       </div>
@@ -308,21 +386,28 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
                     {/* Right: Amount & Actions */}
                     <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
                       <div className="text-left sm:text-right">
-                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">Monto a cobrar</div>
-                        <div className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-400">
-                          RD$ {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <div className="text-[10px] text-muted-foreground font-semibold uppercase">
+                          {paid > 0 ? 'Balance pendiente' : 'Monto a cobrar'}
                         </div>
+                        <div className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-400">
+                          RD$ {remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        {paid > 0 && (
+                          <div className="text-[10px] text-muted-foreground font-mono">
+                            Total: RD$ {total.toFixed(2)} • Abonado: RD$ {paid.toFixed(2)}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">
                         {/* WhatsApp reminder */}
-                        {sale.customer_phone && (
+                        {cPhone && (
                           <Button
                             type="button"
                             variant="outline"
                             size="icon"
                             onClick={() => handleWhatsAppReminder(sale)}
-                            className="h-8 w-8 text-emerald-500 hover:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-lg"
+                            className="h-8 w-8 text-emerald-500 hover:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-lg cursor-pointer"
                             title="Enviar recordatorio por WhatsApp"
                           >
                             <MessageCircle className="h-4 w-4" />
@@ -335,8 +420,8 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={() => onSelectSaleForPrint(sale)}
-                            className="h-8 w-8 text-foreground/80 hover:text-foreground border-border/60 hover:bg-muted rounded-lg"
+                            onClick={() => handlePrintSale(sale)}
+                            className="h-8 w-8 text-foreground/80 hover:text-foreground border-border/60 hover:bg-muted rounded-lg cursor-pointer"
                             title="Ver o Imprimir factura"
                           >
                             <Printer className="h-4 w-4" />
