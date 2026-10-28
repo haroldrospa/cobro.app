@@ -160,12 +160,16 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
         .eq('id', sale.id);
 
       if (error) throw error;
-      return sale;
+      return {
+        ...sale,
+        payment_status: 'paid',
+        amount_paid: sale.total,
+      };
     },
-    onSuccess: (sale) => {
+    onSuccess: (updatedSale) => {
       toast({
         title: "¡Factura saldada!",
-        description: `La factura #${sale.invoice_number} ha sido marcada como Pagada.`,
+        description: `La factura #${updatedSale.invoice_number} ha sido marcada como Pagada.`,
         variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['pending-sales-list'] });
@@ -173,6 +177,9 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['customerBalance'] });
       queryClient.invalidateQueries({ queryKey: ['allCustomersBalances'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+
+      // Dar la opción de imprimir y compartir la factura recién cobrada
+      handlePrintSale(updatedSale, 'paid');
     },
     onError: (err: any) => {
       toast({
@@ -209,7 +216,7 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
     window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
   };
 
-  const handlePrintSale = (sale: any) => {
+  const handlePrintSale = (sale: any, overrideStatus?: 'paid' | 'pending') => {
     if (!onSelectSaleForPrint) return;
     const cName = sale.customer?.name || 'Cliente Ocasional';
     const cPhone = sale.customer?.phone || '';
@@ -228,6 +235,9 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
         }))
       : [];
 
+    const effectiveStatus = overrideStatus || sale.payment_status || 'pending';
+    const isPending = effectiveStatus !== 'paid';
+
     const saleForPrint = {
       ...sale,
       customer_name: cName,
@@ -237,8 +247,10 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
       items,
       invoiceType: sale.invoice_type?.code || (sale.invoice_number ? sale.invoice_number.slice(0, 3) : 'FAC'),
       paymentMethod: sale.payment_method,
-      payment_status: sale.payment_status || 'pending',
-      is_pending_payment: true,
+      payment_status: effectiveStatus,
+      is_pending_payment: isPending,
+      amount_paid: isPending ? (sale.amount_paid || 0) : (sale.total || 0),
+      is_service: true,
     };
 
     onSelectSaleForPrint(saleForPrint);
