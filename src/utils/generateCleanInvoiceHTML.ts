@@ -341,7 +341,7 @@ export const generateCleanInvoiceHTML = (
           </div>
         </div>
 
-        <div style="text-align: right; margin-top: 2px; max-width: 42%;">
+        <div style="text-align: right; margin-top: 2px; display: flex; flex-direction: column; align-items: flex-end; max-width: 48%;">
           <h1 style="font-size: 24px; font-weight: 900; color: #18181b; letter-spacing: -0.02em; margin: 0 0 6px 0; line-height: 1.15; text-transform: uppercase;">
             ${isQuotation ? 'Presupuesto' : (isInternalInvoice ? 'Factura Interna' : (invoiceData.isElectronic ? 'Factura Electrónica' : 'Factura Fiscal'))}
           </h1>
@@ -350,6 +350,20 @@ export const generateCleanInvoiceHTML = (
               ${isQuotation ? 'COTIZACIÓN' : (isInternalInvoice ? 'CONTROL INTERNO' : customerTypeLabel)}
             </span>
           </div>
+
+          <!-- Si es Fiscal (NO interna): Código QR DGII debajo del título de Factura Electrónica -->
+          ${hasElectronicStyle && effectiveQrCodeUrl ? `
+            <div style="display: flex; align-items: center; gap: 10px; background: #fbfbfc; border: 1px solid #ebecee; border-radius: 8px; padding: 6px 10px; margin-top: 8px; text-align: left; box-sizing: border-box;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR DGII" style="width: 52px; height: 52px; border-radius: 5px; background: #ffffff; padding: 2px; border: 1px solid #e4e4e7; flex-shrink: 0;" />
+              <div style="font-size: 9.5px; line-height: 1.35; color: #52525b;">
+                <div style="font-weight: 800; color: #0284c7; text-transform: uppercase; font-size: 8px; letter-spacing: 0.04em; margin-bottom: 2px;">
+                  Comprobante Autorizado por la DGII
+                </div>
+                ${effectiveSecurityCode ? `<div><strong style="color: #18181b;">Cód. Seguridad:</strong> <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace;">${effectiveSecurityCode}</span></div>` : ''}
+                ${effectiveSignatureDate ? `<div><strong style="color: #18181b;">Firma Digital:</strong> <span class="tabular-numbers">${effectiveSignatureDate}</span></div>` : ''}
+              </div>
+            </div>
+          ` : ''}
         </div>
       </div>
 
@@ -484,19 +498,7 @@ export const generateCleanInvoiceHTML = (
             </div>
           ` : ''}
 
-          <!-- Si es Fiscal (NO interna): Código QR DGII debajo de las cuentas bancarias -->
-          ${hasElectronicStyle && effectiveQrCodeUrl ? `
-            <div style="display: flex; align-items: center; gap: 12px; background: #fbfbfc; border: 1px solid #ebecee; border-radius: 10px; padding: 8px 12px; width: 100%; box-sizing: border-box;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR DGII" style="width: 58px; height: 58px; border-radius: 6px; background: #ffffff; padding: 2px; border: 1px solid #e4e4e7; flex-shrink: 0;" />
-              <div style="font-size: 9.5px; line-height: 1.35; color: #52525b;">
-                <div style="font-weight: 800; color: #0284c7; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.04em; margin-bottom: 2px;">
-                  Comprobante Autorizado por la DGII
-                </div>
-                ${effectiveSecurityCode ? `<div><strong style="color: #18181b;">Cód. Seguridad:</strong> <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace;">${effectiveSecurityCode}</span></div>` : ''}
-                ${effectiveSignatureDate ? `<div><strong style="color: #18181b;">Firma Digital:</strong> <span class="tabular-numbers">${effectiveSignatureDate}</span></div>` : ''}
-              </div>
-            </div>
-          ` : ''}
+
 
         </div>
 
