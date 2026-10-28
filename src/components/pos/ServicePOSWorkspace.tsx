@@ -30,7 +30,8 @@ import {
   Package,
   ArrowLeftRight,
   Coins,
-  Percent
+  Percent,
+  Clock
 } from 'lucide-react';
 import { CartItem } from '@/types/pos';
 import { Customer } from '@/hooks/useCustomers';
@@ -66,6 +67,7 @@ interface ServicePOSWorkspaceProps {
     notes?: string;
     currency?: 'DOP' | 'USD';
     exchangeRate?: number;
+    isPendingPayment?: boolean;
   }) => Promise<void>;
   isEmitting?: boolean;
   onLoadToCart: (items: CartItem[], customerId: string, invoiceTypeId: string) => void;
@@ -253,6 +255,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   });
 
   const [paymentCondition, setPaymentCondition] = useState<'contado' | 'credito'>('contado');
+  const [isPendingPayment, setIsPendingPayment] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('transfer');
   const [creditDays, setCreditDays] = useState<number>(() => {
     return parseInt(localStorage.getItem('cobro_quote_validity_days') || '30', 10) || 30;
@@ -454,10 +457,11 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       invoiceTypeId: selectedInvoiceTypeId,
       items: validItems,
       paymentMethod: paymentCondition === 'credito' ? 'credit' : paymentMethod,
-      creditDays: isQuote ? (creditDays || 30) : (paymentCondition === 'credito' ? creditDays : undefined),
+      creditDays: isQuote ? (creditDays || 30) : (paymentCondition === 'credito' || isPendingPayment ? creditDays : undefined),
       notes: finalNotes,
       currency,
       exchangeRate,
+      isPendingPayment,
     });
   };
 
@@ -1009,7 +1013,10 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               <div className="grid grid-cols-2 p-0.5 bg-background/80 rounded-lg border border-border/60 gap-1">
                 <button
                   type="button"
-                  onClick={() => setPaymentCondition('contado')}
+                  onClick={() => {
+                    setPaymentCondition('contado');
+                    setIsPendingPayment(false);
+                  }}
                   className={cn(
                     "py-1 text-xs font-semibold rounded transition-all cursor-pointer flex items-center justify-center gap-1",
                     paymentCondition === 'contado'
@@ -1022,7 +1029,10 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPaymentCondition('credito')}
+                  onClick={() => {
+                    setPaymentCondition('credito');
+                    setIsPendingPayment(true);
+                  }}
                   className={cn(
                     "py-1 text-xs font-semibold rounded transition-all cursor-pointer flex items-center justify-center gap-1",
                     paymentCondition === 'credito'
@@ -1138,6 +1148,49 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
 
             {/* Action Buttons */}
             <div className="space-y-1.5">
+              {/* Botón Pendiente de Pago para Negocio de Servicios */}
+              {!isQuote && (
+                <div 
+                  onClick={() => setIsPendingPayment(!isPendingPayment)}
+                  className={cn(
+                    "flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer select-none",
+                    isPendingPayment
+                      ? "bg-amber-500/10 border-amber-500/40 shadow-xs"
+                      : "bg-background/60 hover:bg-muted/40 border-border/50"
+                  )}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={cn(
+                      "p-1.5 rounded-lg shrink-0 transition-colors",
+                      isPendingPayment ? "bg-amber-500/20 text-amber-500" : "bg-muted text-muted-foreground"
+                    )}>
+                      {isPendingPayment ? <Clock className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold leading-tight">Pendiente de pago</span>
+                        <span className={cn(
+                          "text-[9px] font-black uppercase px-1.5 py-0.5 rounded border",
+                          isPendingPayment
+                            ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
+                            : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                        )}>
+                          {isPendingPayment ? "Activo" : "Pagado"}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {isPendingPayment ? "Se emitirá la factura como pendiente de cobro" : "Se emitirá la factura como cobrada"}
+                      </span>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={isPendingPayment}
+                    onCheckedChange={setIsPendingPayment}
+                    className="data-[state=checked]:bg-amber-500 shrink-0 ml-2"
+                  />
+                </div>
+              )}
+
               <Button
                 type="button"
                 size="default"
@@ -1147,18 +1200,20 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                   "h-10 w-full font-bold text-xs sm:text-sm text-white rounded-xl shadow-md gap-2 transition-all cursor-pointer active:scale-95",
                   isQuote 
                     ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20" 
-                    : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
+                    : isPendingPayment
+                      ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20"
+                      : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
                 )}
               >
                 {isEmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{isQuote ? 'Generando Cotización...' : 'Emitiendo Factura Carta...'}</span>
+                    <span>{isQuote ? 'Generando Cotización...' : (isPendingPayment ? 'Emitiendo Factura Pendiente...' : 'Emitiendo Factura Carta...')}</span>
                   </>
                 ) : (
                   <>
-                    <FileText className="h-4 w-4" />
-                    <span>{isQuote ? 'Guardar Cotización en POS' : 'Emitir Factura (Carta)'}</span>
+                    {isPendingPayment ? <Clock className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                    <span>{isQuote ? 'Guardar Cotización en POS' : (isPendingPayment ? 'Emitir Factura (Pendiente de Pago)' : 'Emitir Factura (Carta)')}</span>
                   </>
                 )}
               </Button>

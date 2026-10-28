@@ -36,6 +36,8 @@ export interface InvoiceData {
   securityCode?: string;
   signatureDate?: string;
   qrCodeUrl?: string;
+  paymentStatus?: string;
+  isPendingPayment?: boolean;
   bankAccounts?: Array<{
     id?: string;
     bank_name: string;
@@ -128,6 +130,7 @@ export const generateCleanInvoiceHTML = (
   const isInternalInvoice = !isQuotation && (rawInvoiceNum.startsWith('FAC') || invoiceData.invoicePrefix === 'FAC' || (invoiceData as any).invoiceType === 'FAC');
   const hasElectronicStyle = Boolean(invoiceData.isElectronic && !isInternalInvoice && !isQuotation);
   const hasTax = Boolean(invoiceData.taxRate > 0 && (invoiceData.tax || 0) > 0.005);
+  const isPendingPayment = invoiceData.isPendingPayment ?? (invoiceData.paymentStatus === 'pending' || isCreditSale);
 
   const effectiveSecurityCode = (() => {
     if (invoiceData.securityCode && invoiceData.securityCode !== 'undefined') return invoiceData.securityCode;
@@ -384,6 +387,20 @@ export const generateCleanInvoiceHTML = (
           <div><span style="color: #71717a;">Fecha de Emisión:</span> <strong style="color: #18181b;">${formattedDateStr}</strong></div>
           <div><span style="color: #71717a;">No. Comprobante:</span> <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 800; color: #18181b; letter-spacing: 0.02em;">${displayNCF}</span></div>
           <div><span style="color: #71717a;">Condición de Pago:</span> <strong style="color: #18181b;">${pMethod}${isCreditSale && invoiceData.paymentTerms ? ` (${invoiceData.paymentTerms} días)` : ''}</strong></div>
+          ${!isQuotation ? `
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="color: #71717a;">Estado:</span>
+              ${isPendingPayment ? `
+                <span style="display: inline-block; background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; font-size: 9.5px; font-weight: 800; padding: 1.5px 8px; border-radius: 4px; letter-spacing: 0.04em; text-transform: uppercase;">
+                  Pendiente de Pago
+                </span>
+              ` : `
+                <span style="display: inline-block; background: #dcfce7; color: #15803d; border: 1px solid #22c55e; font-size: 9.5px; font-weight: 800; padding: 1.5px 8px; border-radius: 4px; letter-spacing: 0.04em; text-transform: uppercase;">
+                  Pagado
+                </span>
+              `}
+            </div>
+          ` : ''}
           ${invoiceData.cashierName ? `<div><span style="color: #a1a1aa;">Atendido por:</span> <span style="color: #71717a;">${invoiceData.cashierName}</span></div>` : ''}
         </div>
       </div>
@@ -457,11 +474,22 @@ export const generateCleanInvoiceHTML = (
                 <span style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;">
                   Cuentas para Transferencia
                 </span>
-                <span style="font-size: 8.5px; color: #a1a1aa; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">
-                  Notificar pago
-                </span>
+                ${!isQuotation ? `
+                  <span style="background: ${isPendingPayment ? '#f59e0b' : '#10b981'}; color: #ffffff; padding: 2.5px 8px; border-radius: 4px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">
+                    ${isPendingPayment ? 'Pendiente de Pago' : 'Pagado'}
+                  </span>
+                ` : `
+                  <span style="font-size: 8.5px; color: #a1a1aa; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">
+                    Notificar pago
+                  </span>
+                `}
               </div>
               <div style="padding: 10px 13px; display: flex; flex-direction: column; gap: 8px;">
+                ${isPendingPayment && !isQuotation ? `
+                  <div style="background: #fffbeb; border: 1px solid #fef3c7; color: #b45309; padding: 6px 9px; border-radius: 6px; font-size: 9px; font-weight: 700; line-height: 1.35;">
+                    ⚠️ <strong>Pendiente de Pago:</strong> Favor realizar la transferencia a cualquiera de las siguientes cuentas y notificar el comprobante.
+                  </div>
+                ` : ''}
                 ${invoiceData.bankAccounts.map((acc: any, idx: number) => `
                   <div style="${idx > 0 ? 'border-top: 1px solid #f0f0f2; padding-top: 8px;' : ''} display: flex; flex-direction: column; gap: 3px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -522,6 +550,13 @@ export const generateCleanInvoiceHTML = (
                 ${invoiceData.currency} ${fmt(invoiceData.total)}
               </span>
             </div>
+            ${!isQuotation ? `
+              <div style="margin-top: 6px; text-align: right;">
+                <span style="display: inline-block; background: ${isPendingPayment ? '#fef3c7' : '#dcfce7'}; color: ${isPendingPayment ? '#b45309' : '#15803d'}; border: 1px solid ${isPendingPayment ? '#fde68a' : '#bbf7d0'}; font-size: 9.5px; font-weight: 800; padding: 2.5px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em;">
+                  ${isPendingPayment ? '● Pendiente de Pago' : '✓ Pagado'}
+                </span>
+              </div>
+            ` : ''}
 
             ${(invoiceData.amountPaid !== undefined && invoiceData.amountPaid > 0 && (invoiceData.change || 0) > 0) ? `
               <div style="margin-top: 8px; padding-top: 5px; border-top: 1px dashed #e4e4e7; font-size: 10.5px; color: #71717a; padding-left: 4px; padding-right: 4px;">
@@ -766,6 +801,14 @@ export const generateCleanInvoiceHTML = (
           ${pMethod}
         </span>
       </div>
+      ${!isQuotation ? `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+          <span style="font-weight: 900; font-size: ${sizeXSmall}px; text-transform: uppercase;">ESTADO DE PAGO:</span>
+          <span style="background-color: #000000; color: #ffffff; font-weight: 900; font-size: ${is58mm ? '10px' : '9px'}; padding: 1px 4px; border-radius: 4px; text-transform: uppercase;">
+            ${isPendingPayment ? 'PENDIENTE DE PAGO' : 'PAGADO'}
+          </span>
+        </div>
+      ` : ''}
       
       <div style="display: flex; justify-content: space-between; font-size: ${sizeSmall}px; font-weight: 800; margin-top: 3px;">
         <span>Monto Recibido:</span>

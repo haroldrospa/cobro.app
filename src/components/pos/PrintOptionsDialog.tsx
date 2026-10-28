@@ -1026,6 +1026,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       securityCode: securityCode,
       signatureDate: signatureDate,
       qrCodeUrl: saleData.qrcode_url,
+      paymentStatus: (saleData as any).payment_status || (saleData as any).paymentStatus || ((saleData as any).paymentMethod === 'credit' ? 'pending' : 'paid'),
+      isPendingPayment: (saleData as any).is_pending_payment ?? ((saleData as any).payment_status === 'pending' || (saleData as any).paymentMethod === 'credit'),
       bankAccounts: (storeSettings?.bank_accounts ||
         (Array.isArray((storeSettings as any)?.payment_methods)
           ? (storeSettings as any)?.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')?.bank_accounts

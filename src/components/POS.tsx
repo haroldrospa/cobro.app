@@ -1758,6 +1758,7 @@ const POSContent: React.FC = () => {
     notes?: string;
     currency?: 'DOP' | 'USD';
     exchangeRate?: number;
+    isPendingPayment?: boolean;
   }) => {
     try {
       setIsEmittingServiceInvoice(true);
@@ -1986,13 +1987,13 @@ const POSContent: React.FC = () => {
       const code = data.invoiceTypeId === 'FAC' ? 'FAC' : (data.invoiceTypeId.startsWith('E') ? data.invoiceTypeId : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02'));
 
       let dueDate = null;
-      let paymentStatus = 'paid';
-      if (data.paymentMethod === 'credit') {
+      const isPending = Boolean(data.isPendingPayment || data.paymentMethod === 'credit');
+      let paymentStatus = isPending ? 'pending' : 'paid';
+      if (isPending) {
         const dueDateObj = new Date();
         const days = Number(data.creditDays || creditDays) || 30;
         dueDateObj.setDate(dueDateObj.getDate() + days);
         dueDate = isNaN(dueDateObj.getTime()) ? new Date().toISOString() : dueDateObj.toISOString();
-        paymentStatus = 'pending';
       }
 
       const salePayload = {
@@ -2048,6 +2049,8 @@ const POSContent: React.FC = () => {
           };
         }),
         paymentMethod: data.paymentMethod,
+        payment_status: paymentStatus,
+        is_pending_payment: isPending,
         customer: selectedCustomerData,
         invoice_number: result?.invoice_number || (result as any)?.encf || '',
         invoiceType: code,
