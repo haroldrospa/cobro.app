@@ -50,15 +50,6 @@ export interface ServiceLineItem {
   taxRate: number; // e.g. 18, 16, 0
 }
 
-const QUICK_SERVICE_PRESETS = [
-  'Mantenimiento',
-  'Reparación',
-  'Mano de Obra',
-  'Asesoría',
-  'Instalación',
-  'Transporte',
-];
-
 interface ServicePOSWorkspaceProps {
   onOpenQuotes?: () => void;
   quoteCount?: number;
@@ -375,27 +366,6 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
     ]);
   };
 
-  const handleAddPreset = (desc: string) => {
-    setServiceLines(prev => {
-      if (prev.length === 1 && !prev[0].description.trim() && (prev[0].unitPrice || 0) === 0) {
-        return [{
-          ...prev[0],
-          description: desc,
-        }];
-      }
-      return [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          description: desc,
-          quantity: 1,
-          unitPrice: 0,
-          taxRate: defaultTaxRate,
-        }
-      ];
-    });
-  };
-
   const handleToggleTaxRate = (id: string, currentRate: number) => {
     const nextRate = currentRate > 0 ? 0 : defaultTaxRate;
     handleUpdateLine(id, 'taxRate', nextRate);
@@ -652,34 +622,16 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
           </div>
 
           {/* Service Items Table Container */}
-          <div className="flex flex-col rounded-xl border border-border/50 bg-card/40 overflow-hidden shadow-xs shrink-0 lg:shrink lg:flex-1 lg:min-h-0">
-            {/* Header with Quick Presets */}
-            <div className="shrink-0 border-b border-border/40 bg-muted/30 p-2 sm:px-3 sm:py-2 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wide">
-                  <Briefcase className="h-3.5 w-3.5 text-emerald-400" />
-                  Conceptos / Servicios
-                </span>
-                <span className="text-[10px] font-mono text-muted-foreground">
-                  {serviceLines.length} {serviceLines.length === 1 ? 'concepto' : 'conceptos'}
-                </span>
-              </div>
-
-              {/* Quick Preset Pills */}
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-                <span className="text-[10px] text-muted-foreground/70 shrink-0 font-medium mr-0.5">Rápidos:</span>
-                {QUICK_SERVICE_PRESETS.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => handleAddPreset(preset)}
-                    className="h-5.5 px-2 rounded-full text-[10px] font-medium bg-background/80 hover:bg-emerald-500/15 text-muted-foreground hover:text-emerald-300 border border-border/50 hover:border-emerald-500/30 transition-all shrink-0 cursor-pointer active:scale-95"
-                    title={`Agregar ${preset}`}
-                  >
-                    + {preset}
-                  </button>
-                ))}
-              </div>
+          <div className="flex flex-col rounded-xl border border-border/50 bg-card/40 overflow-hidden shadow-xs shrink-0 lg:shrink lg:flex-1 lg:min-h-0 w-full max-w-full">
+            {/* Header */}
+            <div className="shrink-0 border-b border-border/40 bg-muted/30 px-3 py-2 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wide">
+                <Briefcase className="h-3.5 w-3.5 text-emerald-400" />
+                Conceptos / Servicios
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {serviceLines.length} {serviceLines.length === 1 ? 'concepto' : 'conceptos'}
+              </span>
             </div>
 
             {/* Desktop Table Header */}
@@ -700,20 +652,20 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 return (
                   <div
                     key={line.id}
-                    className="p-2 sm:px-2 sm:py-1.5 hover:bg-muted/10 transition-colors rounded-lg group bg-card/60 sm:bg-transparent border sm:border-0 border-border/50 shadow-2xs sm:shadow-none"
+                    className="p-2 sm:px-2 sm:py-1.5 hover:bg-muted/10 transition-colors rounded-lg group bg-card/60 sm:bg-transparent border sm:border-0 border-border/50 shadow-2xs sm:shadow-none w-full max-w-full overflow-hidden"
                   >
-                    {/* MOBILE CARD VIEW (< sm) - Rediseño limpio, compacto y eficiente */}
-                    <div className="sm:hidden space-y-1.5">
-                      {/* Fila 1: Numerador + Concepto + Botón Eliminar */}
-                      <div className="flex items-center gap-1.5">
+                    {/* MOBILE CARD VIEW (< sm) - 100% responsivo, sin desbordamiento horizontal */}
+                    <div className="sm:hidden space-y-2 p-0.5 w-full max-w-full">
+                      {/* Fila 1: Numerador + Input concepto + Eliminar */}
+                      <div className="flex items-center gap-1.5 w-full">
                         <span className="w-5 h-5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-black flex items-center justify-center shrink-0">
                           {idx + 1}
                         </span>
                         <Input
-                          placeholder="Concepto o descripción del servicio..."
+                          placeholder="Concepto o descripción..."
                           value={line.description}
                           onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
-                          className="h-8 rounded-lg text-xs bg-background/90 border-border/50 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1"
+                          className="h-8 rounded-lg text-xs bg-background/90 border-border/50 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1 min-w-0"
                         />
                         <button
                           type="button"
@@ -725,14 +677,14 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                         </button>
                       </div>
 
-                      {/* Fila 2: Stepper Cantidad + Precio con Moneda + ITBIS rápido + Total de línea */}
-                      <div className="flex items-center justify-between gap-1.5 pt-0.5">
-                        {/* Stepper Cantidad */}
-                        <div className="flex items-center bg-background/90 border border-border/50 rounded-lg p-0.5 shrink-0">
+                      {/* Fila 2: Cantidad y Precio en cuadrícula responsiva que nunca se desborda */}
+                      <div className="grid grid-cols-12 gap-2 items-center w-full">
+                        {/* Stepper Cantidad (5 cols) */}
+                        <div className="col-span-5 flex items-center bg-background/90 border border-border/50 rounded-lg p-0.5 h-8">
                           <button
                             type="button"
                             onClick={() => handleUpdateLine(line.id, 'quantity', Math.max(1, (Number(line.quantity) || 1) - 1))}
-                            className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                            className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
                           >
                             -
                           </button>
@@ -743,19 +695,19 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                             value={line.quantity}
                             onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
                             onFocus={e => e.target.select()}
-                            className="w-8 text-center text-xs font-mono font-bold bg-transparent outline-none text-foreground"
+                            className="flex-1 text-center text-xs font-mono font-bold bg-transparent outline-none text-foreground min-w-0"
                           />
                           <button
                             type="button"
                             onClick={() => handleUpdateLine(line.id, 'quantity', (Number(line.quantity) || 1) + 1)}
-                            className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                            className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
                           >
                             +
                           </button>
                         </div>
 
-                        {/* Input de Precio con Moneda */}
-                        <div className="relative flex-1 min-w-[95px]">
+                        {/* Input de Precio con Moneda (7 cols) */}
+                        <div className="col-span-7 relative h-8">
                           <span className="absolute left-2.5 top-2 text-[10px] font-bold text-muted-foreground/60 pointer-events-none select-none">
                             {activeCurrencySymbol}
                           </span>
@@ -773,30 +725,31 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                                 handleAddLine();
                               }
                             }}
-                            className="h-7.5 pl-8 pr-2 text-right font-mono font-bold text-xs text-emerald-400 bg-background/90 border-border/50 rounded-lg focus-visible:border-emerald-500"
+                            className="h-8 pl-8 pr-2 text-right font-mono font-bold text-xs text-emerald-400 bg-background/90 border-border/50 rounded-lg focus-visible:border-emerald-500 w-full"
                           />
                         </div>
+                      </div>
 
-                        {/* Botón rápido ITBIS */}
+                      {/* Fila 3: ITBIS a la izquierda y Total a la derecha */}
+                      <div className="flex items-center justify-between pt-0.5 px-0.5 text-xs w-full">
                         <button
                           type="button"
                           onClick={() => handleToggleTaxRate(line.id, line.taxRate)}
                           className={cn(
-                            "h-7.5 px-2 rounded-lg text-[10px] font-bold border transition-all shrink-0 flex items-center gap-1 cursor-pointer active:scale-95",
+                            "px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer active:scale-95",
                             line.taxRate > 0
                               ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                               : "bg-muted/40 text-muted-foreground border-border/40"
                           )}
-                          title="Toca para alternar ITBIS (18% o Exento)"
+                          title="Alternar ITBIS"
                         >
-                          <span>{line.taxRate > 0 ? `${line.taxRate}%` : 'Exento'}</span>
+                          ITBIS: {line.taxRate > 0 ? `${line.taxRate}%` : 'Exento'}
                         </button>
 
-                        {/* Total de Línea */}
-                        <div className="text-right shrink-0 min-w-[65px]">
-                          <span className="text-[8px] text-muted-foreground/60 block uppercase font-semibold leading-none mb-0.5">Total</span>
-                          <span className="text-xs font-black font-mono text-foreground leading-none">
-                            {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <div className="text-right">
+                          <span className="text-[10px] text-muted-foreground mr-1 font-medium">Subtotal:</span>
+                          <span className="font-mono font-bold text-xs text-foreground">
+                            {activeCurrencySymbol} {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
                       </div>
