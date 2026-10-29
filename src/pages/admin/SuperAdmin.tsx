@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { OfficialBankAccountsSettings } from "@/components/admin/OfficialBankAccountsSettings";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -2274,6 +2275,9 @@ const SuperAdmin = () => {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* CONFIGURACIÓN Y VISUALIZACIÓN DE CUENTAS BANCARIAS OFICIALES */}
+                    <OfficialBankAccountsSettings />
                 </TabsContent>
             </Tabs>
 

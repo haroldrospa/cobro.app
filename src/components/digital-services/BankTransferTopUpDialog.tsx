@@ -24,7 +24,8 @@ import {
   ShieldCheck,
   FileText
 } from 'lucide-react';
-import { useDigitalServices, useDigitalTopupRequests, COBROAPP_BANK_ACCOUNTS } from '@/hooks/useDigitalServices';
+import { useDigitalServices, useDigitalTopupRequests } from '@/hooks/useDigitalServices';
+import { useOfficialBankAccounts } from '@/hooks/useOfficialBankAccounts';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -41,8 +42,9 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
 }) => {
   const { wallet, submitTopupRequest, isSubmittingTopup } = useDigitalServices();
   const { data: recentRequests = [] } = useDigitalTopupRequests({ allStores: false });
+  const { activeAccounts: bankAccounts } = useOfficialBankAccounts();
 
-  const [selectedBank, setSelectedBank] = useState<string>('Banco BHD');
+  const [selectedBank, setSelectedBank] = useState<string>('Banco de Reservas');
   const [amount, setAmount] = useState<number | string>(defaultAmount);
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
@@ -50,6 +52,13 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [copiedBankId, setCopiedBankId] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<'form' | 'success'>('form');
+
+  // Asegurar que selectedBank coincida con una de las cuentas activas
+  React.useEffect(() => {
+    if (bankAccounts && bankAccounts.length > 0 && !bankAccounts.some(b => b.bank === selectedBank)) {
+      setSelectedBank(bankAccounts[0].bank);
+    }
+  }, [bankAccounts, selectedBank]);
 
   const currentBalance = Number(wallet?.balance || 0);
   const numericAmount = Number(amount) || 0;
@@ -211,7 +220,7 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
                 </Label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {COBROAPP_BANK_ACCOUNTS.map((b) => (
+                  {bankAccounts.map((b) => (
                     <div
                       key={b.id}
                       onClick={() => {
@@ -229,7 +238,7 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
                         <span className="text-xs font-bold text-foreground truncate">{b.bank}</span>
                         <button
                           type="button"
-                          className="text-muted-foreground hover:text-primary transition-colors"
+                          className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                           title="Copiar número"
                         >
                           {copiedBankId === b.id ? (
@@ -244,6 +253,9 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
                         {b.accountType} &bull; {b.holder}
+                      </div>
+                      <div className="text-[9px] text-muted-foreground/80 font-mono">
+                        Cédula: {b.taxId}
                       </div>
                     </div>
                   ))}

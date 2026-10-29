@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useOfficialBankAccounts } from '@/hooks/useOfficialBankAccounts';
 import { getDaysRemaining } from '@/lib/utils';
 
 const UserSubscription = () => {
@@ -57,6 +58,11 @@ const UserSubscription = () => {
             return data || { value: 'romargroup.do@gmail.com' };
         }
     });
+
+    const { activeAccounts } = useOfficialBankAccounts();
+    const [selectedBankId, setSelectedBankId] = useState<string>('');
+
+    const currentSelectedAccount = activeAccounts.find(a => a.id === selectedBankId) || activeAccounts[0];
 
     const [targetPlan, setTargetPlan] = useState<string | null>(null);
 
@@ -226,13 +232,15 @@ const UserSubscription = () => {
         const planNameToReport = targetPlanDetails?.name || currentPlanDetails?.name || 'Suscripción';
         const finalEmail = (clientEmail || profile?.email || companySettings?.email || '').trim();
         const finalPhone = (clientPhone || profile?.phone || companySettings?.phone || '').trim();
+        const bankName = currentSelectedAccount?.bank || 'Banco de Reservas';
         const msg = encodeURIComponent(
-            `¡Hola Harold! Acabo de realizar una transferencia bancaria en Banreservas para CobroApp.\n\n` +
+            `¡Hola Harold! Acabo de realizar una transferencia bancaria en ${bankName} para CobroApp.\n\n` +
             `🏪 Tienda: ${store?.store_name || 'Mi Tienda'} (${store?.store_code || 'S/C'})\n` +
             `👤 Titular/Usuario: ${profile?.full_name || 'Usuario'}\n` +
             (finalPhone ? `📱 Teléfono: ${finalPhone}\n` : '') +
             (finalEmail ? `✉️ Correo: ${finalEmail}\n` : '') +
             `📦 Plan: ${planNameToReport}\n` +
+            `🏦 Banco Destino: ${bankName} (${currentSelectedAccount?.accountNumber || ''})\n` +
             `💰 Monto: RD$ ${paymentAmount || '---'}\n\n` +
             `Adjunto mi comprobante por este medio para su confirmación. ¡Muchas gracias!`
         );
@@ -279,12 +287,13 @@ const UserSubscription = () => {
             }
             console.log('✅ Comprobante subido:', filePath);
 
-            // 2. REPORTAR PAGO PENDIENTE (Banreservas)
+            // 2. REPORTAR PAGO PENDIENTE
+            const targetBankName = currentSelectedAccount?.bank || 'Banco de Reservas';
             const { data: rpcData, error: rpcError } = await supabase.rpc('submit_payment_pending', {
                 p_company_id: store?.id,
                 p_amount: parseFloat(paymentAmount),
-                p_currency: 'DOP',
-                p_bank_name: 'Banreservas',
+                p_currency: currentSelectedAccount?.currency || 'DOP',
+                p_bank_name: targetBankName,
                 p_proof_url: filePath,
                 p_target_plan_id: targetPlan || activePlan
             });
@@ -335,7 +344,7 @@ const UserSubscription = () => {
                         userEmail: finalUserEmail,
                         userPhone: finalUserPhone,
                         proofUrl: signedProofUrl || filePath,
-                        bankName: 'Banreservas'
+                        bankName: targetBankName
                     }
                 });
                 
@@ -349,7 +358,7 @@ const UserSubscription = () => {
             setIsSuccess(true);
             toast({
                 title: "¡Comprobante Recibido!",
-                description: "Comprobante de Banreservas recibido. Tu pago está en validación.",
+                description: `Comprobante de ${targetBankName} recibido. Tu pago está en validación.`,
                 duration: 5000
             });
 
@@ -367,9 +376,33 @@ const UserSubscription = () => {
 
     const renderBanreservasBankCard = () => (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-stretch">
-            {/* COLUMNA 1: DATOS BANCARIOS (BANRESERVAS) */}
+            {/* COLUMNA 1: DATOS BANCARIOS */}
             <div className="md:col-span-7 bg-card/95 border border-emerald-500/30 rounded-xl p-3 sm:p-3.5 shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
+
+                {/* Selector de Cuentas Bancarias Si Hay Múltiples */}
+                {activeAccounts.length > 1 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border/50 scrollbar-none">
+                        {activeAccounts.map((acc) => {
+                            const isSelected = (currentSelectedAccount?.id || activeAccounts[0]?.id) === acc.id;
+                            return (
+                                <button
+                                    key={acc.id}
+                                    type="button"
+                                    onClick={() => setSelectedBankId(acc.id)}
+                                    className={`px-2.5 py-1 text-[11px] rounded-lg font-bold border transition-all shrink-0 flex items-center gap-1.5 ${
+                                        isSelected 
+                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
+                                            : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                                    }`}
+                                >
+                                    <Landmark className="h-3 w-3" />
+                                    <span>{acc.badge || acc.bank}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Encabezado del Banco */}
                 <div className="flex items-center justify-between border-b border-border/70 pb-1.5">
@@ -380,14 +413,14 @@ const UserSubscription = () => {
                         <div>
                             <div className="flex items-center gap-1.5">
                                 <h3 className="font-bold text-foreground text-xs sm:text-sm leading-none">
-                                    Banco de Reservas
+                                    {currentSelectedAccount?.bank || 'Banco de Reservas'}
                                 </h3>
                                 <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold px-1.5 py-0 border-0 h-4">
-                                    DOP
+                                    {currentSelectedAccount?.currency || 'DOP'}
                                 </Badge>
                             </div>
                             <span className="text-[10px] text-muted-foreground font-medium">
-                                Cuenta de ahorro en Pesos Dominicanos
+                                {currentSelectedAccount?.accountType || 'Cuenta de Ahorros'}
                             </span>
                         </div>
                     </div>
@@ -400,13 +433,13 @@ const UserSubscription = () => {
                             Número de Cuenta
                         </span>
                         <p className="font-mono text-lg sm:text-xl font-black text-foreground tracking-tight select-all leading-none">
-                            9601938364
+                            {currentSelectedAccount?.accountNumber || '9601938364'}
                         </p>
                     </div>
                     <Button
                         size="sm"
                         className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md shadow-sm gap-1 text-[11px] transition-all shrink-0"
-                        onClick={() => handleCopy('9601938364', 'num_cuenta', 'Número de cuenta')}
+                        onClick={() => handleCopy(currentSelectedAccount?.accountNumber || '', 'num_cuenta', 'Número de cuenta')}
                     >
                         {copiedField === 'num_cuenta' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                         <span>{copiedField === 'num_cuenta' ? 'Copiado' : 'Copiar'}</span>
@@ -420,14 +453,14 @@ const UserSubscription = () => {
                         <div className="min-w-0 flex-1">
                             <span className="text-[9px] font-medium text-muted-foreground block leading-tight">Titular</span>
                             <span className="font-bold text-foreground text-xs truncate block select-all leading-tight">
-                                HAROLD MANUEL ROSADO PACHECO
+                                {currentSelectedAccount?.holder || 'HAROLD MANUEL ROSADO PACHECO'}
                             </span>
                         </div>
                         <Button
                             variant="ghost"
                             size="sm"
                             className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleCopy('HAROLD MANUEL ROSADO PACHECO', 'titular', 'Nombre del titular')}
+                            onClick={() => handleCopy(currentSelectedAccount?.holder || '', 'titular', 'Nombre del titular')}
                             title="Copiar Titular"
                         >
                             {copiedField === 'titular' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -438,16 +471,16 @@ const UserSubscription = () => {
                     <div className="grid grid-cols-2 gap-1.5">
                         <div className="bg-muted/40 px-2 py-1 rounded-md border border-border/60 flex items-center justify-between gap-1">
                             <div className="min-w-0 flex-1">
-                                <span className="text-[9px] font-medium text-muted-foreground block leading-tight">Cédula</span>
+                                <span className="text-[9px] font-medium text-muted-foreground block leading-tight">Cédula / RNC</span>
                                 <span className="font-mono font-bold text-foreground text-[11px] truncate block select-all leading-tight">
-                                    40218246656
+                                    {currentSelectedAccount?.taxId || '402-1824665-6'}
                                 </span>
                             </div>
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
-                                onClick={() => handleCopy('40218246656', 'cedula', 'Documento de identidad')}
+                                onClick={() => handleCopy(currentSelectedAccount?.taxId || '', 'cedula', 'Documento de identidad')}
                                 title="Copiar Cédula"
                             >
                                 {copiedField === 'cedula' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -458,14 +491,14 @@ const UserSubscription = () => {
                             <div className="min-w-0 flex-1">
                                 <span className="text-[9px] font-medium text-muted-foreground block leading-tight">Correo</span>
                                 <span className="font-medium text-foreground text-[11px] truncate block select-all leading-tight">
-                                    haroldrospa@gmail.com
+                                    {currentSelectedAccount?.email || 'haroldrospa@gmail.com'}
                                 </span>
                             </div>
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
-                                onClick={() => handleCopy('haroldrospa@gmail.com', 'correo', 'Correo')}
+                                onClick={() => handleCopy(currentSelectedAccount?.email || 'haroldrospa@gmail.com', 'correo', 'Correo')}
                                 title="Copiar Correo"
                             >
                                 {copiedField === 'correo' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -473,47 +506,50 @@ const UserSubscription = () => {
                         </div>
                     </div>
 
-                    {/* Cuenta estándar ACH */}
-                    <div className="bg-muted/40 px-2 py-1 rounded-md border border-border/60 flex items-center justify-between gap-1.5">
-                        <div className="min-w-0 flex-1">
-                            <span className="text-[9px] font-medium text-muted-foreground block leading-tight">
-                                Cuenta Estándar (ACH / Interbancaria)
-                            </span>
-                            <span className="font-mono font-bold text-[10.5px] text-foreground truncate block select-all leading-tight">
-                                DO36BRRD00000000009601938364
-                            </span>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleCopy('DO36BRRD00000000009601938364', 'iban', 'Cuenta estándar')}
-                            title="Copiar Cuenta Estándar"
-                        >
-                            {copiedField === 'iban' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                        </Button>
-                    </div>
+                    {/* Cuenta estándar ACH solo para Banreservas o cuenta predeterminada */}
+                    {currentSelectedAccount?.id === 'banreservas' && (
+                        <>
+                            <div className="bg-muted/40 px-2 py-1 rounded-md border border-border/60 flex items-center justify-between gap-1.5">
+                                <div className="min-w-0 flex-1">
+                                    <span className="text-[9px] font-medium text-muted-foreground block leading-tight">
+                                        Cuenta Estándar (ACH / Interbancaria)
+                                    </span>
+                                    <span className="font-mono font-bold text-[10.5px] text-foreground truncate block select-all leading-tight">
+                                        DO36BRRD00000000009601938364
+                                    </span>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                                    onClick={() => handleCopy('DO36BRRD00000000009601938364', 'iban', 'Cuenta estándar')}
+                                    title="Copiar Cuenta Estándar"
+                                >
+                                    {copiedField === 'iban' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                </Button>
+                            </div>
 
-                    {/* SWIFT */}
-                    <div className="bg-muted/30 px-2 py-1 rounded-md border border-dashed border-border/80 flex items-center justify-between gap-1.5">
-                        <div className="min-w-0 flex-1 flex items-center gap-2">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">
-                                SWIFT:
-                            </span>
-                            <span className="font-mono font-bold text-xs text-foreground select-all">
-                                BRRDDOSDXXX
-                            </span>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleCopy('BRRDDOSDXXX', 'swift', 'Código SWIFT')}
-                            title="Copiar SWIFT"
-                        >
-                            {copiedField === 'swift' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                        </Button>
-                    </div>
+                            <div className="bg-muted/30 px-2 py-1 rounded-md border border-dashed border-border/80 flex items-center justify-between gap-1.5">
+                                <div className="min-w-0 flex-1 flex items-center gap-2">
+                                    <span className="text-[9px] font-bold text-muted-foreground uppercase">
+                                        SWIFT:
+                                    </span>
+                                    <span className="font-mono font-bold text-xs text-foreground select-all">
+                                        BRRDDOSDXXX
+                                    </span>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                                    onClick={() => handleCopy('BRRDDOSDXXX', 'swift', 'Código SWIFT')}
+                                    title="Copiar SWIFT"
+                                >
+                                    {copiedField === 'swift' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -759,7 +795,7 @@ const UserSubscription = () => {
                                 >
                                     <Landmark className="h-4 w-4 shrink-0" />
                                     <span className="text-center font-bold">
-                                        Pagar con Transferencia Banreservas
+                                        Pagar con Transferencia Bancaria
                                     </span>
                                 </Button>
                             )}
@@ -779,7 +815,7 @@ const UserSubscription = () => {
                 </Card>
             </div>
 
-            {/* Modal Exclusivo de Transferencia Banreservas */}
+            {/* Modal de Transferencia Bancaria */}
             <Dialog open={isBankModalOpen} onOpenChange={setIsBankModalOpen}>
                 <DialogContent className="w-[96vw] sm:max-w-[720px] md:max-w-[760px] p-0 overflow-hidden gap-0 bg-background border-border shadow-2xl max-h-[96vh] flex flex-col">
                     {isSuccess ? (
@@ -789,7 +825,7 @@ const UserSubscription = () => {
                             </div>
                             <div className="space-y-1 max-w-sm">
                                 <h2 className="text-xl font-black text-foreground">¡Comprobante Recibido!</h2>
-                                <p className="text-xs text-muted-foreground">Tu transferencia a Banreservas ha sido reportada exitosamente.</p>
+                                <p className="text-xs text-muted-foreground">Tu transferencia a {currentSelectedAccount?.bank || 'nuestra cuenta oficial'} ha sido reportada exitosamente.</p>
                                 <p className="text-[11px] text-muted-foreground font-medium pt-0.5">
                                     Revisaremos el comprobante y activaremos tu plan a la mayor brevedad.
                                 </p>
@@ -822,7 +858,7 @@ const UserSubscription = () => {
                                 <DialogHeader className="relative z-10 flex flex-col items-center text-center space-y-1">
                                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-0.5 shadow-sm">
                                         <Landmark className="h-3 w-3 text-emerald-400" />
-                                        <span>Pago Directo Banreservas</span>
+                                        <span>Cuentas Bancarias Oficiales</span>
                                     </div>
 
                                     <DialogTitle className="text-base sm:text-lg font-black tracking-tight text-white flex items-center justify-center gap-2">
@@ -835,7 +871,7 @@ const UserSubscription = () => {
                                     </DialogTitle>
 
                                     <DialogDescription className="text-zinc-300 text-[11px] sm:text-xs font-normal max-w-sm mx-auto">
-                                        Transfiere a nuestra cuenta en Pesos Dominicanos (DOP) y adjunta tu comprobante
+                                        Transfiere a nuestras cuentas oficiales autorizadas y adjunta tu comprobante
                                     </DialogDescription>
                                 </DialogHeader>
                             </div>

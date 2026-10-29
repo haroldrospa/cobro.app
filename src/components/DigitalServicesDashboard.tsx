@@ -24,7 +24,8 @@ import {
   Server,
   Clock
 } from 'lucide-react';
-import { useDigitalServices, useDigitalTransactions, COBROAPP_BANK_ACCOUNTS } from '@/hooks/useDigitalServices';
+import { useDigitalServices, useDigitalTransactions } from '@/hooks/useDigitalServices';
+import { useOfficialBankAccounts } from '@/hooks/useOfficialBankAccounts';
 import { DigitalServicesPOSDialog } from '@/components/pos/DigitalServicesPOSDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -50,6 +51,8 @@ export const DigitalServicesDashboard: React.FC = () => {
     isUpdatingConfig,
     checkHealth
   } = useDigitalServices();
+
+  const { activeAccounts: officialAccounts } = useOfficialBankAccounts();
 
   // Estados para Configuración de Credenciales API RecargameYa
   const [apiKey, setApiKey] = useState('');
@@ -587,12 +590,12 @@ export const DigitalServicesDashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {COBROAPP_BANK_ACCOUNTS.map((b) => (
+                {officialAccounts.map((b) => (
                   <div key={b.id} className="p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-xs text-foreground">{b.bank}</span>
                       <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary font-medium">
-                        {b.badge}
+                        {b.badge || 'Oficial'}
                       </Badge>
                     </div>
                     <div>
@@ -601,7 +604,7 @@ export const DigitalServicesDashboard: React.FC = () => {
                     </div>
                     <div className="text-xs text-muted-foreground pt-1 border-t border-border/40 space-y-0.5">
                       <div>Titular: <strong className="text-foreground">{b.holder}</strong></div>
-                      <div>RNC: <strong className="text-foreground">{b.rnc}</strong></div>
+                      <div>Cédula / RNC: <strong className="text-foreground">{b.taxId}</strong></div>
                     </div>
                   </div>
                 ))}
