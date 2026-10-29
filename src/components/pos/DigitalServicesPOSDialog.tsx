@@ -356,45 +356,48 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden bg-background border border-border/80 shadow-2xl max-h-[92vh] flex flex-col rounded-2xl">
-        {/* Cabecera Minimalista */}
-        <div className="bg-card border-b border-border/60 p-4 sm:p-5 shrink-0 flex items-center justify-between">
+      <DialogContent className="w-[96vw] max-w-5xl p-0 overflow-hidden bg-background border border-border/80 shadow-2xl h-[88vh] max-h-[700px] flex flex-col rounded-2xl">
+        {/* Cabecera Minimalista Compacta */}
+        <div className="bg-card border-b border-border/60 px-4 py-2.5 sm:px-5 sm:py-3 shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
-              <Smartphone className="h-5 w-5" />
+            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+              <Smartphone className="h-4.5 w-4.5" />
             </div>
             <div>
-              <DialogTitle className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+              <DialogTitle className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                 Servicios Digitales & Recargas
-                <Badge variant="outline" className="border-border text-[10px] text-muted-foreground font-normal">
+                <Badge variant="outline" className="border-border text-[9px] text-muted-foreground font-normal py-0 px-1.5 h-4">
                   RecargameYa Oficial
                 </Badge>
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Recargas, luz prepago, remesas, universidades, bancos y servicios
+              <DialogDescription className="text-[11px] text-muted-foreground line-clamp-1">
+                Recargas, luz prepago, remesas a Haití, facturas y entretenimiento
               </DialogDescription>
             </div>
           </div>
 
           {/* Saldo de Billetera */}
-          <div className="text-right px-3.5 py-1.5 rounded-xl bg-muted/50 border border-border/60">
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider block">
-              Saldo Billetera
-            </span>
-            <span className={cn(
-              "text-sm sm:text-base font-bold",
-              balance < 200 ? "text-amber-500" : "text-primary"
-            )}>
-              RD$ {balance.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-            </span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60">
+            <Wallet className="h-4 w-4 text-primary shrink-0" />
+            <div className="text-right">
+              <span className="text-[9px] text-muted-foreground uppercase font-semibold block leading-tight">
+                Saldo Billetera
+              </span>
+              <span className={cn(
+                "text-xs sm:text-sm font-bold block leading-tight",
+                balance < 200 ? "text-amber-500" : "text-primary"
+              )}>
+                RD$ {balance.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* CONTENIDO PRINCIPAL SCROLLEABLE */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        {/* CONTENIDO PRINCIPAL ADAPTADO Y SIN SCROLL GLOBAL */}
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {completedTx ? (
             // Vista de Éxito / Comprobante
-            <div className="p-4 text-center space-y-4 max-w-md mx-auto">
+            <div className="p-6 text-center space-y-4 max-w-md mx-auto my-auto">
               <div className="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto border border-primary/20">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
@@ -442,381 +445,435 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
               </div>
             </div>
           ) : (
-            // Formulario de Venta
-            <div className="space-y-4">
-              {/* Pestañas Principales */}
-              <Tabs
-                value={activeTab}
-                onValueChange={(val) => {
-                  const newTab = val as DigitalServiceType;
-                  setActiveTab(newTab);
-                  if (newTab === 'recharge') setSelectedCarrier('claro');
-                  if (newTab === 'prepaid_power') setSelectedCarrier('edesur_prepago');
-                  if (newTab === 'remittance') setSelectedCarrier('moncash');
-                  if (newTab === 'bill_payment') setSelectedCarrier('caasd');
-                }}
-                className="w-full"
-              >
-                <TabsList className="grid grid-cols-5 w-full h-10 bg-muted/60 p-1 rounded-xl">
-                  <TabsTrigger value="recharge" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
-                    <Smartphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Recargas</span><span className="sm:hidden">Recarga</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="data_package" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
-                    <Wifi className="h-3.5 w-3.5" /> Paqueticos
-                  </TabsTrigger>
-                  <TabsTrigger value="prepaid_power" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
-                    <Zap className="h-3.5 w-3.5" /> Luz Prepago
-                  </TabsTrigger>
-                  <TabsTrigger value="remittance" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
-                    <SendHorizontal className="h-3.5 w-3.5" /> Remesas
-                  </TabsTrigger>
-                  <TabsTrigger value="bill_payment" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
-                    <Receipt className="h-3.5 w-3.5" /> Facturas ({ALL_BILLERS.length})
-                  </TabsTrigger>
-                </TabsList>
+            // Formulario Dividido en 2 Columnas (Master-Detail) Adaptado al 100% de la pantalla
+            <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
+              {/* COLUMNA IZQUIERDA: CATÁLOGO Y PROVEEDORES */}
+              <div className="md:col-span-7 flex flex-col min-h-0 border-b md:border-b-0 md:border-r border-border/60 p-3 sm:p-4 gap-2.5 overflow-hidden bg-background">
+                {/* Pestañas Principales */}
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(val) => {
+                    const newTab = val as DigitalServiceType;
+                    setActiveTab(newTab);
+                    if (newTab === 'recharge') setSelectedCarrier('claro');
+                    if (newTab === 'prepaid_power') setSelectedCarrier('edesur_prepago');
+                    if (newTab === 'remittance') setSelectedCarrier('moncash');
+                    if (newTab === 'bill_payment') setSelectedCarrier('caasd');
+                  }}
+                  className="w-full flex flex-col min-h-0 flex-1 overflow-hidden"
+                >
+                  <TabsList className="grid grid-cols-5 w-full h-9 bg-muted/60 p-1 rounded-xl shrink-0">
+                    <TabsTrigger value="recharge" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                      <Smartphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Recargas</span><span className="sm:hidden">Rec.</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="data_package" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                      <Wifi className="h-3.5 w-3.5" /> Paquetes
+                    </TabsTrigger>
+                    <TabsTrigger value="prepaid_power" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                      <Zap className="h-3.5 w-3.5" /> Luz Prepago
+                    </TabsTrigger>
+                    <TabsTrigger value="remittance" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                      <SendHorizontal className="h-3.5 w-3.5" /> Remesas
+                    </TabsTrigger>
+                    <TabsTrigger value="bill_payment" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                      <Receipt className="h-3.5 w-3.5" /> Facturas ({ALL_BILLERS.length})
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* 1. OPERADORAS MÓVILES */}
-                <TabsContent value="recharge" className="mt-3.5 space-y-3.5">
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground block mb-2">
-                      Operadoras Móviles (RD y Haití)
-                    </Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                      {MOBILE_OPERATORS.map((c) => {
-                        const isSelected = selectedCarrier === c.id;
+                  {/* 1. OPERADORAS MÓVILES */}
+                  <TabsContent value="recharge" className="mt-2.5 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground block mb-2">
+                        Operadoras Móviles (RD y Haití)
+                      </Label>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {MOBILE_OPERATORS.map((c) => {
+                          const isSelected = selectedCarrier === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => setSelectedCarrier(c.id)}
+                              className={cn(
+                                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all text-center group cursor-pointer",
+                                isSelected
+                                  ? "border-primary bg-primary/[0.08] ring-2 ring-primary/40 shadow-xs"
+                                  : "border-border/60 hover:border-border bg-card"
+                              )}
+                            >
+                              <BrandLogo id={c.id} className="w-14 h-11 rounded-lg mb-1.5 shrink-0" />
+                              <span className="font-bold text-xs text-foreground truncate w-full">{c.name}</span>
+                              <span className="text-[10px] text-muted-foreground truncate w-full">{c.sub}</span>
+                              <span className="text-[10px] text-primary font-semibold mt-0.5">
+                                {c.badge}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2">
+                      <span className="text-base">💡</span>
+                      <span>Recargas inmediatas procesadas vía API oficial con confirmación instantánea.</span>
+                    </div>
+                  </TabsContent>
+
+                  {/* 2. PAQUETICOS */}
+                  <TabsContent value="data_package" className="mt-2.5 flex-1 flex flex-col min-h-0 overflow-hidden gap-2">
+                    <div className="flex gap-2 shrink-0">
+                      {['claro', 'altice', 'viva'].map((car) => (
+                        <Button
+                          key={car}
+                          type="button"
+                          size="sm"
+                          variant={selectedCarrier === car ? 'default' : 'outline'}
+                          className={cn(
+                            "capitalize text-xs font-semibold h-8 rounded-lg gap-2 px-3",
+                            selectedCarrier === car && "bg-primary text-primary-foreground"
+                          )}
+                          onClick={() => setSelectedCarrier(car)}
+                        >
+                          <BrandLogo id={car} className="w-4 h-4 rounded-xs" />
+                          {car}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
+                      {ALL_PACKAGES.filter((p) => p.carrier === selectedCarrier).map((pkg) => (
+                        <button
+                          key={pkg.id}
+                          type="button"
+                          onClick={() => handleSelectPackage(pkg)}
+                          className={cn(
+                            "p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between",
+                            selectedPackage === pkg.id
+                              ? "border-primary bg-primary/[0.08] ring-2 ring-primary/40 shadow-xs"
+                              : "border-border/60 hover:border-border bg-card"
+                          )}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="font-semibold text-xs text-foreground truncate">{pkg.name}</span>
+                            <span className="font-mono text-xs text-primary font-bold shrink-0">
+                              RD$ {pkg.price}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{pkg.desc}</p>
+                          <span className="text-[10px] text-muted-foreground mt-1 block">⏱️ {pkg.validity}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  {/* 3. LUZ PREPAGO Y ELECTRICIDAD */}
+                  <TabsContent value="prepaid_power" className="mt-2.5 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground block mb-2">
+                        Empresas Eléctricas y Luz Prepago
+                      </Label>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {PREPAID_POWER_PROVIDERS.map((b) => {
+                          const isSelected = selectedCarrier === b.id;
+                          return (
+                            <button
+                              key={b.id}
+                              type="button"
+                              onClick={() => setSelectedCarrier(b.id)}
+                              className={cn(
+                                "flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer",
+                                isSelected
+                                  ? "border-primary bg-primary/[0.08] ring-2 ring-primary/40 shadow-xs"
+                                  : "border-border/60 hover:border-border bg-card"
+                              )}
+                            >
+                              <BrandLogo id={b.id} className="w-14 h-11 rounded-lg mb-1 shrink-0" />
+                              <span className="font-bold text-xs text-foreground block truncate w-full">{b.name}</span>
+                              <span className="text-[10px] text-muted-foreground block truncate w-full">{b.desc}</span>
+                              <span className="text-[10px] text-primary font-medium mt-0.5">+RD$ {b.fee} ganancia</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2">
+                      <span className="text-base">⚡</span>
+                      <span>El PIN de recarga para el medidor prepago se genera e imprime en el comprobante fiscal/ticket.</span>
+                    </div>
+                  </TabsContent>
+
+                  {/* 4. REMESAS A HAITÍ */}
+                  <TabsContent value="remittance" className="mt-2.5 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground block mb-2">
+                        Billeteras Móviles de Envío a Haití
+                      </Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {REMITTANCE_PROVIDERS.map((r) => {
+                          const isSelected = selectedCarrier === r.id;
+                          return (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => setSelectedCarrier(r.id)}
+                              className={cn(
+                                "flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer",
+                                isSelected
+                                  ? "border-primary bg-primary/[0.08] ring-2 ring-primary/40 shadow-xs"
+                                  : "border-border/60 hover:border-border bg-card"
+                              )}
+                            >
+                              <BrandLogo id={r.id} className="w-14 h-11 rounded-lg shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <span className="font-bold text-sm text-foreground block">{r.name}</span>
+                                <span className="text-xs text-muted-foreground block">{r.sub}</span>
+                                <span className="text-[11px] text-primary font-semibold mt-0.5 block">+RD$ {r.fee} comisión</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2">
+                      <span className="text-base">💸</span>
+                      <span>Envío inmediato a Haití. El receptor recibe saldo en su billetera digital MonCash o Natcash.</span>
+                    </div>
+                  </TabsContent>
+
+                  {/* 5. FACTURAS Y SERVICIOS PÚBLICOS */}
+                  <TabsContent value="bill_payment" className="mt-2 flex-1 flex flex-col min-h-0 overflow-hidden gap-2">
+                    {/* Categorías oficiales */}
+                    <div className="flex items-center gap-1 overflow-x-auto pb-1 shrink-0 no-scrollbar">
+                      {RECARGAMEYA_CATEGORIES.map((cat) => {
+                        const Icon = cat.icon;
+                        const isSelected = selectedBillCategory === cat.id;
                         return (
                           <button
-                            key={c.id}
+                            key={cat.id}
                             type="button"
-                            onClick={() => setSelectedCarrier(c.id)}
                             className={cn(
-                              "flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all text-center group",
+                              "h-6.5 text-[11px] font-medium rounded-lg px-2 flex items-center gap-1 shrink-0 transition-colors border cursor-pointer",
                               isSelected
-                                ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
-                                : "border-border/60 hover:border-border bg-card"
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "border-border/60 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
                             )}
+                            onClick={() => setSelectedBillCategory(cat.id)}
                           >
-                            <BrandLogo id={c.id} className="w-12 h-10 rounded-lg mb-1.5 shrink-0" />
-                            <span className="font-semibold text-xs text-foreground truncate w-full">{c.name}</span>
-                            <span className="text-[10px] text-muted-foreground truncate w-full">{c.sub}</span>
-                            <span className="text-[9px] text-primary font-medium mt-0.5">
-                              {c.badge}
-                            </span>
+                            <Icon className="h-3 w-3" />
+                            {cat.label}
                           </button>
                         );
                       })}
                     </div>
+
+                    {/* Buscador compacto */}
+                    <div className="relative shrink-0">
+                      <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar empresa (ej. CAASD, DGII, UNIBE, Free Fire, Paso Rápido, AVON)..."
+                        value={billSearchQuery}
+                        onChange={(e) => setBillSearchQuery(e.target.value)}
+                        className="pl-8 h-7.5 text-xs rounded-lg border-border/60 bg-card"
+                      />
+                    </div>
+
+                    {/* Catálogo con Logos Oficiales de RecargameYa */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 flex-1 min-h-0 overflow-y-auto pr-1">
+                      {filteredBillers.map((b) => {
+                        const isSelected = selectedCarrier === b.id;
+                        return (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => setSelectedCarrier(b.id)}
+                            className={cn(
+                              "flex items-center gap-2 p-1.5 rounded-xl border text-left transition-all cursor-pointer",
+                              isSelected
+                                ? "border-primary bg-primary/[0.08] ring-2 ring-primary/40 shadow-xs"
+                                : "border-border/60 hover:border-border bg-card"
+                            )}
+                          >
+                            <BrandLogo id={b.id} className="w-9 h-7 rounded-md shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <span className="font-semibold text-xs text-foreground block truncate">{b.name}</span>
+                              <span className="text-[10px] text-muted-foreground block truncate">{b.sub}</span>
+                              <span className="text-[9px] text-primary font-medium block">
+                                +RD$ {b.fee} ganancia
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* COLUMNA DERECHA: PANEL DE COBRO Y FACTURACIÓN (100% FIJO SIN SCROLL) */}
+              <div className="md:col-span-5 flex flex-col justify-between min-h-0 p-3 sm:p-4 bg-muted/20 overflow-hidden border-t md:border-t-0 md:border-l border-border/60">
+                {/* PARTE SUPERIOR: SERVICIO SELECCIONADO Y CAMPOS */}
+                <div className="space-y-3">
+                  {/* Tarjeta del Proveedor Seleccionado */}
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-card border border-border/60 shadow-2xs">
+                    <BrandLogo id={currentBiller?.id || selectedCarrier} className="w-12 h-10 rounded-lg shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4 className="font-bold text-sm text-foreground truncate">
+                          {(currentBiller as any)?.name || selectedCarrier}
+                        </h4>
+                        <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 shrink-0 font-medium">
+                          {activeTab === 'recharge' 
+                            ? `${commissionRate}% com.` 
+                            : `+RD$ ${estimatedCommission.toFixed(0)} ganancia`}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {(currentBiller as any)?.sub || (currentBiller as any)?.desc || 'Servicio Digital'}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                      Montos Rápidos (RD$)
-                    </Label>
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-                      {QUICK_AMOUNTS.map((amt) => (
-                        <Button
+                  {/* Campos del Formulario */}
+                  <div className="space-y-2.5">
+                    {/* Input Destino */}
+                    <div className="space-y-1">
+                      <Label htmlFor="target-input" className="text-xs font-semibold text-foreground flex items-center justify-between">
+                        <span>
+                          {activeTab === 'bill_payment'
+                            ? 'Número de Cuenta / Contrato / NIC'
+                            : activeTab === 'prepaid_power'
+                            ? 'Número de Medidor'
+                            : activeTab === 'remittance'
+                            ? 'Teléfono en Haití'
+                            : 'Número de Teléfono'}
+                        </span>
+                      </Label>
+                      <Input
+                        id="target-input"
+                        type="text"
+                        autoFocus
+                        placeholder={
+                          activeTab === 'bill_payment'
+                            ? 'Ej. 100234567 o Cédula'
+                            : activeTab === 'prepaid_power'
+                            ? 'Ej. 0123456789'
+                            : activeTab === 'remittance'
+                            ? '50931234567'
+                            : '8091234567'
+                        }
+                        value={phoneNumber}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && hasEnoughBalance && phoneNumber && numericAmount > 0) {
+                            handleExecuteTransaction();
+                          }
+                        }}
+                        className="h-9 sm:h-10 text-sm font-semibold tracking-wider rounded-xl border-border/70 bg-card"
+                      />
+                    </div>
+
+                    {/* Input Monto */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <Label htmlFor="custom-amount" className="text-xs font-semibold text-foreground">
+                          Monto a Cobrar (RD$)
+                        </Label>
+                        <span className="text-xs font-bold text-primary">
+                          Ganancia: +RD$ {estimatedCommission.toFixed(2)}
+                        </span>
+                      </div>
+                      <Input
+                        id="custom-amount"
+                        type="number"
+                        min={10}
+                        max={50000}
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && hasEnoughBalance && phoneNumber && numericAmount > 0) {
+                            handleExecuteTransaction();
+                          }
+                        }}
+                        className="h-9 sm:h-10 text-sm font-bold rounded-xl border-border/70 bg-card"
+                      />
+                    </div>
+
+                    {/* Montos Rápidos en Botones Compactos */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {[50, 100, 150, 200, 300, 500, 1000].map((amt) => (
+                        <button
                           key={amt}
                           type="button"
-                          variant={Number(amount) === amt ? 'default' : 'outline'}
-                          size="sm"
-                          className={cn(
-                            "h-9 font-semibold text-xs rounded-lg",
-                            Number(amount) === amt ? "bg-primary text-primary-foreground" : "border-border/60 hover:bg-muted/50"
-                          )}
                           onClick={() => setAmount(amt)}
+                          className={cn(
+                            "px-2 py-0.5 text-xs font-medium rounded-lg border transition-all cursor-pointer",
+                            Number(amount) === amt
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-card hover:bg-muted border-border/60 text-muted-foreground hover:text-foreground"
+                          )}
                         >
                           ${amt}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                   </div>
-                </TabsContent>
+                </div>
 
-                {/* 2. PAQUETICOS */}
-                <TabsContent value="data_package" className="mt-3.5 space-y-3">
-                  <div className="flex gap-2">
-                    {['claro', 'altice', 'viva'].map((car) => (
+                {/* PARTE INFERIOR: RESUMEN, SALDO Y BOTÓN PRINCIPAL (SIEMPRE VISIBLE) */}
+                <div className="space-y-2.5 pt-2">
+                  {/* Desglose Financiero */}
+                  <div className="p-2.5 bg-card rounded-xl border border-border/60 text-xs grid grid-cols-3 gap-2 text-center shadow-2xs">
+                    <div className="text-left border-r border-border/40 pr-1">
+                      <div className="text-muted-foreground text-[10px]">Cobras en caja:</div>
+                      <div className="text-xs sm:text-sm font-bold text-foreground">RD$ {numericAmount.toFixed(2)}</div>
+                    </div>
+                    <div className="border-r border-border/40 px-1">
+                      <div className="text-muted-foreground text-[10px]">Tu ganancia:</div>
+                      <div className="text-xs sm:text-sm font-bold text-primary">+ RD$ {estimatedCommission.toFixed(2)}</div>
+                    </div>
+                    <div className="text-right pl-1">
+                      <div className="text-muted-foreground text-[10px]">Deducción:</div>
+                      <div className="text-[11px] sm:text-xs font-semibold text-muted-foreground mt-0.5">RD$ {estimatedCost.toFixed(2)}</div>
+                    </div>
+                  </div>
+
+                  {/* Alerta de Saldo Insuficiente */}
+                  {!hasEnoughBalance && (
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span className="truncate text-[11px]">Saldo insuficiente (Req. RD$ {estimatedCost.toFixed(2)})</span>
+                      </div>
                       <Button
-                        key={car}
-                        type="button"
                         size="sm"
-                        variant={selectedCarrier === car ? 'default' : 'outline'}
-                        className={cn(
-                          "capitalize text-xs font-semibold h-9 rounded-lg gap-2 px-3",
-                          selectedCarrier === car && "bg-primary text-primary-foreground"
-                        )}
-                        onClick={() => setSelectedCarrier(car)}
+                        variant="outline"
+                        className="h-6 text-[10px] px-2 border-destructive/30 hover:bg-destructive/20 text-destructive font-medium shrink-0"
+                        onClick={() => addBalance({ amount: 1000, description: 'Recarga rápida POS' })}
                       >
-                        <BrandLogo id={car} className="w-5 h-5 rounded-md" />
-                        {car}
+                        + Abonar RD$ 1,000
                       </Button>
-                    ))}
-                  </div>
+                    </div>
+                  )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
-                    {ALL_PACKAGES.filter((p) => p.carrier === selectedCarrier).map((pkg) => (
-                      <button
-                        key={pkg.id}
-                        type="button"
-                        onClick={() => handleSelectPackage(pkg)}
-                        className={cn(
-                          "p-2.5 rounded-xl border text-left transition-all",
-                          selectedPackage === pkg.id
-                            ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
-                            : "border-border/60 hover:border-border bg-card"
-                        )}
-                      >
-                        <div className="flex justify-between items-start">
-                          <span className="font-semibold text-xs text-foreground">{pkg.name}</span>
-                          <span className="font-mono text-xs text-primary font-bold">
-                            RD$ {pkg.price}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{pkg.desc}</p>
-                        <span className="text-[10px] text-muted-foreground mt-1 block">⏱️ {pkg.validity}</span>
-                      </button>
-                    ))}
-                  </div>
-                </TabsContent>
-
-                {/* 3. LUZ PREPAGO Y ELECTRICIDAD */}
-                <TabsContent value="prepaid_power" className="mt-3.5 space-y-3">
-                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground">
-                    ⚡ <strong>Luz Prepago & Electricidad:</strong> Ingresa el número de medidor o NIC. El PIN de recarga se emitirá en el comprobante de venta.
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                    {PREPAID_POWER_PROVIDERS.map((b) => {
-                      const isSelected = selectedCarrier === b.id;
-                      return (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setSelectedCarrier(b.id)}
-                          className={cn(
-                            "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
-                            isSelected
-                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
-                              : "border-border/60 hover:border-border bg-card"
-                          )}
-                        >
-                          <BrandLogo id={b.id} className="w-12 h-10 rounded-lg mb-1 shrink-0" />
-                          <span className="font-semibold text-xs text-foreground block truncate w-full">{b.name}</span>
-                          <span className="text-[10px] text-muted-foreground block truncate w-full">{b.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </TabsContent>
-
-                {/* 4. REMESAS A HAITÍ */}
-                <TabsContent value="remittance" className="mt-3.5 space-y-3">
-                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground">
-                    💸 <strong>Remesas Directas a Haití:</strong> Envío inmediato a billeteras móviles MonCash (Digicel) y Natcash (Natcom).
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
-                    {REMITTANCE_PROVIDERS.map((r) => {
-                      const isSelected = selectedCarrier === r.id;
-                      return (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => setSelectedCarrier(r.id)}
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
-                            isSelected
-                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
-                              : "border-border/60 hover:border-border bg-card"
-                          )}
-                        >
-                          <BrandLogo id={r.id} className="w-12 h-10 rounded-lg shrink-0" />
-                          <div>
-                            <span className="font-semibold text-sm text-foreground block">{r.name}</span>
-                            <span className="text-xs text-muted-foreground block">{r.sub}</span>
-                            <span className="text-[10px] text-primary font-medium">+RD$ {r.fee} comisión</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </TabsContent>
-
-                {/* 5. FACTURAS Y SERVICIOS PÚBLICOS */}
-                <TabsContent value="bill_payment" className="mt-3.5 space-y-3">
-                  {/* Categorías oficiales */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                    {RECARGAMEYA_CATEGORIES.map((cat) => {
-                      const Icon = cat.icon;
-                      const isSelected = selectedBillCategory === cat.id;
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          className={cn(
-                            "h-7 text-xs font-medium rounded-lg px-2.5 flex items-center gap-1.5 shrink-0 transition-colors border",
-                            isSelected
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "border-border/60 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
-                          )}
-                          onClick={() => setSelectedBillCategory(cat.id)}
-                        >
-                          <Icon className="h-3 w-3" />
-                          {cat.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Buscador de servicios */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por empresa (ej. CAASD, DGII, UNIBE, Free Fire, Paso Rápido, AVON)..."
-                      value={billSearchQuery}
-                      onChange={(e) => setBillSearchQuery(e.target.value)}
-                      className="pl-8 h-8 text-xs rounded-lg border-border/60 bg-background"
-                    />
-                  </div>
-
-                  {/* Catálogo con Logos Oficiales de RecargameYa */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
-                    {filteredBillers.map((b) => {
-                      const isSelected = selectedCarrier === b.id;
-                      return (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setSelectedCarrier(b.id)}
-                          className={cn(
-                            "flex items-center gap-2.5 p-2 rounded-xl border text-left transition-all",
-                            isSelected
-                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
-                              : "border-border/60 hover:border-border bg-card"
-                          )}
-                        >
-                          <BrandLogo id={b.id} className="w-10 h-8 rounded-lg shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <span className="font-semibold text-xs text-foreground block truncate">{b.name}</span>
-                            <span className="text-[10px] text-muted-foreground block truncate">{b.sub}</span>
-                            <span className="text-[9px] text-primary font-medium block">
-                              +RD$ {b.fee} ganancia
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              {/* CAMPOS COMUNES DE ENTRADA: NÚMERO Y MONTO */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/60">
-                <div className="space-y-1">
-                  <Label htmlFor="target-input" className="text-xs font-medium text-muted-foreground flex items-center justify-between">
-                    <span>
-                      {activeTab === 'bill_payment'
-                        ? 'Número de Cuenta / Contrato / NIC'
-                        : activeTab === 'prepaid_power'
-                        ? 'Número de Medidor'
-                        : activeTab === 'remittance'
-                        ? 'Número de Teléfono en Haití'
-                        : 'Número de Teléfono'}
-                    </span>
-                    <span className="text-[10px] text-primary">
-                      {(currentBiller as any)?.name}
-                    </span>
-                  </Label>
-                  <Input
-                    id="target-input"
-                    type="text"
-                    placeholder={
-                      activeTab === 'bill_payment'
-                        ? 'Ej. 100234567 o Cédula'
-                        : activeTab === 'prepaid_power'
-                        ? 'Ej. 0123456789'
-                        : activeTab === 'remittance'
-                        ? '50931234567'
-                        : '8091234567'
-                    }
-                    value={phoneNumber}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    className="h-10 text-sm font-semibold tracking-wider rounded-xl border-border/60"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="custom-amount" className="text-xs font-medium text-muted-foreground">
-                      Monto a Cobrar (RD$)
-                    </Label>
-                    <span className="text-xs font-semibold text-primary">
-                      + Tu Ganancia: RD$ {estimatedCommission.toFixed(2)}
-                    </span>
-                  </div>
-                  <Input
-                    id="custom-amount"
-                    type="number"
-                    min={10}
-                    max={50000}
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="h-10 text-sm font-semibold rounded-xl border-border/60"
-                  />
-                </div>
-              </div>
-
-              {/* RESUMEN FINANCIERO */}
-              <div className="p-3 bg-muted/30 rounded-xl border border-border/60 text-xs flex items-center justify-between">
-                <div>
-                  <div className="text-muted-foreground text-[11px]">Cobras en caja:</div>
-                  <div className="text-sm font-bold text-foreground">RD$ {numericAmount.toFixed(2)}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-muted-foreground text-[11px]">Tu comisión limpia:</div>
-                  <div className="text-sm font-bold text-primary">+ RD$ {estimatedCommission.toFixed(2)}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-muted-foreground text-[11px]">Se debita de saldo:</div>
-                  <div className="text-sm font-semibold text-muted-foreground">RD$ {estimatedCost.toFixed(2)}</div>
-                </div>
-              </div>
-
-              {/* SALDO INSUFICIENTE */}
-              {!hasEnoughBalance && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>Saldo insuficiente (Requieres RD$ {estimatedCost.toFixed(2)}).</span>
-                  </div>
+                  {/* Botón Principal de Acción */}
                   <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs border-destructive/30 hover:bg-destructive/20 text-destructive font-medium"
-                    onClick={() => addBalance({ amount: 1000, description: 'Recarga rápida POS' })}
+                    type="button"
+                    className="w-full h-11 text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer"
+                    disabled={!hasEnoughBalance || isProcessingSale || !phoneNumber || numericAmount <= 0}
+                    onClick={handleExecuteTransaction}
                   >
-                    + Abonar RD$ 1,000
+                    {isProcessingSale ? (
+                      <>Procesando con RecargameYa...</>
+                    ) : (
+                      <>
+                        Cobrar {(currentBiller as any)?.name || 'Servicio'} &bull; RD$ {numericAmount.toFixed(2)}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 </div>
-              )}
-
-              {/* BOTÓN DE ACCIÓN */}
-              <div>
-                <Button
-                  type="button"
-                  className="w-full h-11 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-2 shadow-xs transition-all active:scale-[0.99]"
-                  disabled={!hasEnoughBalance || isProcessingSale || !phoneNumber || numericAmount <= 0}
-                  onClick={handleExecuteTransaction}
-                >
-                  {isProcessingSale ? (
-                    <>Procesando con RecargameYa...</>
-                  ) : (
-                    <>
-                      Cobrar y Procesar {(currentBiller as any)?.name || 'Servicio'} &bull; RD$ {numericAmount.toFixed(2)}
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
               </div>
             </div>
           )}
