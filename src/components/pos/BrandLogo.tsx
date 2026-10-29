@@ -8,68 +8,93 @@ interface BrandLogoProps {
   fallbackText?: string;
 }
 
-const LOGO_MAP: Record<string, string> = {
-  // --- TELEFONÍA & INTERNET ---
-  claro: '/logos/services/claro.svg',
-  claro_factura: '/logos/services/claro.svg',
+// Mapeo exhaustivo y exacto a los archivos oficiales descargados de RecargameYa
+const RECARGAMEYA_LOGOS: Record<string, string> = {
+  // Operadoras Móviles RD y Haití
+  claro: '/logos/services/claro.png',
   altice: '/logos/services/altice.png',
-  altice_factura: '/logos/services/altice.png',
-  viva: '/logos/services/viva.png',
-  viva_pospago: '/logos/services/viva.png',
-  wind: '/logos/services/wind.png',
+  viva: '/logos/services/viva.jpg',
   digicel: '/logos/services/digicel.png',
-  natcom: '/logos/services/digicel.png',
-  moun: '/logos/services/claro.svg',
-  sky: '/logos/services/wind.png',
-  aster: '/logos/services/wind.png',
-  telecable_central: '/logos/services/wind.png',
-  activa_telecable: '/logos/services/wind.png',
+  natcom: '/logos/services/natcom.png',
+  wind: '/logos/services/wind_telecom.png',
+  wind_telecom: '/logos/services/wind_telecom.png',
 
-  // --- ELECTRICIDAD ---
+  // Luz Prepago y Electricidad
   edesur: '/logos/services/edesur.png',
   edesur_prepago: '/logos/services/edesur.png',
-  edeeste: '/logos/services/edeeste.png',
-  edeeste_prepago: '/logos/services/edeeste.png',
   edenorte: '/logos/services/edenorte.png',
   edenorte_prepago: '/logos/services/edenorte.png',
+  edeeste: '/logos/services/edeeste.png',
+  edeeste_prepago: '/logos/services/edeeste.png',
   cepm: '/logos/services/cepm.png',
   cepm_prepago: '/logos/services/cepm.png',
-  cepp: '/logos/services/edenorte.png',
+  ceb: '/logos/services/ceb.png',
+  ceb_prepago: '/logos/services/ceb.png',
+  luz_y_fuerza: '/logos/services/luz_y_fuerza.png',
+  luz_y_fuerza_prepago: '/logos/services/luz_y_fuerza.png',
 
-  // --- AGUA POTABLE ---
+  // Remesas a Haití
+  moncash: '/logos/services/moncash.png',
+  natcash: '/logos/services/natcash.png',
+
+  // Agua y Acueductos
   caasd: '/logos/services/caasd.png',
-  coraasan: '/logos/services/coraasan.png',
+  coraasan: '/logos/services/coraasan.jpg',
+  coraaplata: '/logos/services/coraaplata.png',
+  coraavega: '/logos/services/coraavega.png',
+  coaarom: '/logos/services/coaarom.png',
+  asdn: '/logos/services/asdn.jpg',
   inapa: '/logos/services/inapa.png',
-  coraamoca: '/logos/services/CORAAMOCA.png',
-  coaarom: '/logos/services/COAAROM.png',
-  coraavega: '/logos/services/CORAAVEGA.png',
-  coraaplata: '/logos/services/coraasan.png',
 
-  // --- GOBIERNO & IMPUESTOS ---
+  // Impuestos y Gobierno
   dgii: '/logos/services/dgii.png',
-  digesett: '/logos/services/digesett.png',
+  tss: '/logos/services/tss.png',
+  adn: '/logos/services/adn.png',
+  pgr_multas: '/logos/services/pgr_multas.jpg',
+  digesett: '/logos/services/pgr_multas.jpg',
   senasa: '/logos/services/senasa.png',
-  policia_nacional: '/logos/services/PN.png',
-  pasaportes_rd: '/logos/services/DGP.png',
-  alcaldia_adn: '/logos/services/ADN.png',
-  alcaldia_asde: '/logos/services/ASDE.png',
-  alcaldia_santiago: '/logos/services/coraasan.png',
 
-  // --- CATÁLOGOS & BELLEZA ---
+  // Universidades y Educación
+  uapa: '/logos/services/uapa.png',
+  unapec: '/logos/services/unapec.png',
+  unibe: '/logos/services/unibe.png',
+  utel: '/logos/services/utel.png',
+  infotep: '/logos/services/infotep.png',
+
+  // TV, Cable e Internet
+  starcable: '/logos/services/starcable.png',
+  telecasa: '/logos/services/telecasa.png',
+  milchans: '/logos/services/milchans.webp',
+
+  // Financieras y Crédito
+  credigo: '/logos/services/credigo.jpg',
+  krece: '/logos/services/krece.png',
+  solucredito: '/logos/services/solucredito.png',
+  paycash: '/logos/services/paycash.png',
+  paso_rapido: '/logos/services/paso_rapido.png',
+  moneyshop: '/logos/services/moneyshop.png',
+
+  // Catálogos y Cosméticos
   avon: '/logos/services/avon.png',
   belcorp: '/logos/services/belcorp.png',
-  yanbal: '/logos/services/belcorp.png',
-  cristel: '/logos/services/belcorp.png',
 
-  // --- VIDEOJUEGOS & STREAMING ---
-  free_fire: '/logos/services/free_fire.png',
-  netflix: '/logos/services/netflix.svg',
-  spotify: '/logos/services/spotify.svg',
-  psn: '/logos/services/psn.svg',
-  xbox: '/logos/services/xbox.svg',
-  roblox: '/logos/services/roblox.svg',
-  google_play: '/logos/services/google_play.svg',
-  apple_itunes: '/logos/services/apple.svg',
+  // Apuestas Deportivas
+  betcris: '/logos/services/betcris.png',
+  starsport: '/logos/services/starsport.png',
+  juancito_sport: '/logos/services/juancito_sport.jpg',
+  activa: '/logos/services/activa.png',
+
+  // Seguros
+  angloamericana: '/logos/services/angloamericana.jpg',
+  seguro_midas: '/logos/services/seguro-midas.jpg',
+  midas: '/logos/services/seguro-midas.jpg',
+
+  // Gaming y Recreación Digital
+  freefire: '/logos/services/freefire.webp',
+  free_fire: '/logos/services/freefire.webp',
+  mobile_legends: '/logos/services/mobile_legends.png',
+  pubg: '/logos/services/pubg.jpg',
+  roblox: '/logos/services/roblox.png',
 };
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
@@ -79,13 +104,14 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   fallbackText,
 }) => {
   const [hasError, setHasError] = useState(false);
-  const src = LOGO_MAP[id.toLowerCase()];
+  const normalizedId = id.toLowerCase().trim();
+  const src = RECARGAMEYA_LOGOS[normalizedId];
 
   if (!src || hasError) {
     return (
       <div
         className={cn(
-          "rounded-xl bg-muted/60 border border-border/50 flex items-center justify-center font-bold text-xs text-foreground uppercase shrink-0 shadow-2xs select-none",
+          "rounded-xl bg-muted/60 border border-border/50 flex items-center justify-center font-bold text-xs text-foreground uppercase shrink-0 select-none shadow-2xs",
           className
         )}
       >
@@ -97,7 +123,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   return (
     <div
       className={cn(
-        "rounded-xl bg-white dark:bg-zinc-900/90 border border-border/50 p-1 flex items-center justify-center shrink-0 shadow-2xs overflow-hidden transition-transform",
+        "rounded-xl bg-white border border-border/40 p-1 flex items-center justify-center shrink-0 shadow-2xs overflow-hidden",
         className
       )}
     >

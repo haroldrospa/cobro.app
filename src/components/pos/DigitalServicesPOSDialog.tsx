@@ -32,6 +32,11 @@ import {
   Gamepad2,
   ShoppingBag,
   Layers,
+  GraduationCap,
+  CreditCard,
+  Trophy,
+  ShieldCheck,
+  SendHorizontal
 } from 'lucide-react';
 import { useDigitalServices } from '@/hooks/useDigitalServices';
 import { DigitalServiceType } from '@/types/digitalServices';
@@ -44,84 +49,116 @@ interface DigitalServicesPOSDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// 1. RECARGAS
-const RECHARGE_CARRIERS = [
+// 1. OPERADORAS MÓVILES - RD Y HAITÍ
+const MOBILE_OPERATORS = [
   { id: 'claro', name: 'Claro', sub: 'Dominicana', badge: '6% com.' },
   { id: 'altice', name: 'Altice', sub: 'Dominicana', badge: '5% com.' },
-  { id: 'viva', name: 'Viva', sub: 'Dominicana', badge: '7% com.' },
-  { id: 'digicel', name: 'Digicel', sub: 'Haití / Int.', badge: '5% com.' },
-  { id: 'natcom', name: 'Natcom', sub: 'Haití / Int.', badge: '5% com.' },
-  { id: 'wind', name: 'Wind', sub: 'Dominicana', badge: '5% com.' },
+  { id: 'viva', name: 'Viva', sub: 'Tu Voz Viva', badge: '7% com.' },
+  { id: 'digicel', name: 'Digicel', sub: 'Haití / Caribe', badge: '5% com.' },
+  { id: 'natcom', name: 'Natcom', sub: 'Haití', badge: '5% com.' },
+  { id: 'wind_telecom', name: 'Wind Telecom', sub: 'Dominicana', badge: '5% com.' },
 ];
 
-// 2. LUZ PREPAGO
-const PREPAID_POWER_BILLERS = [
-  { id: 'edesur_prepago', name: 'Edesur Prepago', desc: 'PIN para medidor' },
-  { id: 'edeeste_prepago', name: 'Edeeste Prepago', desc: 'PIN para medidor' },
-  { id: 'edenorte_prepago', name: 'Edenorte Prepago', desc: 'PIN para medidor' },
-  { id: 'cepm_prepago', name: 'CEPM Prepago', desc: 'Punta Cana / Bávaro' },
+// 2. LUZ PREPAGO Y ELECTRICIDAD
+const PREPAID_POWER_PROVIDERS = [
+  { id: 'edesur_prepago', name: 'Edesur Dominicana', desc: 'PIN para medidor', fee: 15 },
+  { id: 'edenorte_prepago', name: 'Edenorte', desc: 'PIN para medidor', fee: 15 },
+  { id: 'edeeste_prepago', name: 'Edeeste', desc: 'PIN para medidor', fee: 15 },
+  { id: 'cepm_prepago', name: 'CEPM', desc: 'Punta Cana - Macao', fee: 20 },
+  { id: 'ceb_prepago', name: 'CEB', desc: 'Bayahibe', fee: 20 },
+  { id: 'luz_y_fuerza_prepago', name: 'Luz y Fuerza', desc: 'Las Terrenas', fee: 20 },
 ];
 
-// 3. FACTURAS POR CATEGORÍAS
-type BillCategory = 'all' | 'electricity' | 'water' | 'telecom' | 'government' | 'catalog' | 'gaming';
+// 3. REMESAS A HAITÍ
+const REMITTANCE_PROVIDERS = [
+  { id: 'moncash', name: 'MonCash', sub: 'Digicel Haití', fee: 25 },
+  { id: 'natcash', name: 'Natcash', sub: 'Natcom Haití', fee: 25 },
+];
 
-const BILL_CATEGORIES: { id: BillCategory; label: string; icon: any }[] = [
+// 4. CATEGORÍAS OFICIALES RECARGAMEYA
+type BillCategory = 
+  | 'all'
+  | 'water'
+  | 'gov'
+  | 'education'
+  | 'telecom'
+  | 'finance'
+  | 'catalog'
+  | 'betting'
+  | 'insurance'
+  | 'gaming';
+
+const RECARGAMEYA_CATEGORIES: { id: BillCategory; label: string; icon: any }[] = [
   { id: 'all', label: 'Todos', icon: Layers },
-  { id: 'electricity', label: 'Electricidad', icon: Zap },
-  { id: 'water', label: 'Agua', icon: Droplets },
-  { id: 'telecom', label: 'Teléfono & Cable', icon: Tv },
-  { id: 'government', label: 'Gobierno', icon: Landmark },
-  { id: 'catalog', label: 'Catálogos', icon: ShoppingBag },
-  { id: 'gaming', label: 'Streaming & Pines', icon: Gamepad2 },
+  { id: 'water', label: 'Agua y Acueductos', icon: Droplets },
+  { id: 'gov', label: 'Impuestos y Gobierno', icon: Landmark },
+  { id: 'education', label: 'Universidades', icon: GraduationCap },
+  { id: 'telecom', label: 'TV, Cable e Internet', icon: Tv },
+  { id: 'finance', label: 'Financieras y Crédito', icon: CreditCard },
+  { id: 'catalog', label: 'Catálogos y Cosméticos', icon: ShoppingBag },
+  { id: 'betting', label: 'Apuestas Deportivas', icon: Trophy },
+  { id: 'insurance', label: 'Seguros', icon: ShieldCheck },
+  { id: 'gaming', label: 'Gaming y Recreación', icon: Gamepad2 },
 ];
 
+// 5. PROVEEDORES DE FACTURAS Y SERVICIOS RECARGAMEYA
 const ALL_BILLERS = [
-  // Electricidad
-  { id: 'edesur', name: 'Edesur Dominicana', category: 'electricity', sub: 'Factura (NIC)', fee: 15 },
-  { id: 'edeeste', name: 'Edeeste', category: 'electricity', sub: 'Factura (NIC)', fee: 15 },
-  { id: 'edenorte', name: 'Edenorte', category: 'electricity', sub: 'Factura (NIC)', fee: 15 },
-  { id: 'cepm', name: 'CEPM', category: 'electricity', sub: 'Punta Cana - Macao', fee: 20 },
-  { id: 'cepp', name: 'CEPP Puerto Plata', category: 'electricity', sub: 'Costa Norte', fee: 20 },
-
-  // Agua
+  // Agua y Acueductos
   { id: 'caasd', name: 'CAASD', category: 'water', sub: 'Santo Domingo', fee: 15 },
-  { id: 'coraasan', name: 'Coraasan', category: 'water', sub: 'Santiago', fee: 15 },
-  { id: 'inapa', name: 'INAPA', category: 'water', sub: 'Nacional', fee: 15 },
-  { id: 'coraamoca', name: 'Coraamoca', category: 'water', sub: 'Moca', fee: 15 },
-  { id: 'coraaplata', name: 'Coraaplata', category: 'water', sub: 'Puerto Plata', fee: 15 },
-  { id: 'coaarom', name: 'Coaarom', category: 'water', sub: 'La Romana', fee: 15 },
+  { id: 'coraasan', name: 'CORAASAN', category: 'water', sub: 'Santiago', fee: 15 },
+  { id: 'coraaplata', name: 'CORAAPLATA', category: 'water', sub: 'Puerto Plata', fee: 15 },
+  { id: 'coraavega', name: 'CORAAVEGA', category: 'water', sub: 'La Vega', fee: 15 },
+  { id: 'coaarom', name: 'COAAROM', category: 'water', sub: 'La Romana', fee: 15 },
+  { id: 'asdn', name: 'ASDN', category: 'water', sub: 'Santo Domingo Norte', fee: 15 },
 
-  // Telecomunicaciones
-  { id: 'claro_factura', name: 'Claro Factura', category: 'telecom', sub: 'Móvil / Fibra', fee: 15 },
-  { id: 'altice_factura', name: 'Altice Factura', category: 'telecom', sub: 'Móvil / Fibra', fee: 15 },
-  { id: 'viva_pospago', name: 'Viva Factura', category: 'telecom', sub: 'Pospago', fee: 15 },
-  { id: 'wind', name: 'Wind Telecom', category: 'telecom', sub: 'Internet y TV', fee: 15 },
-  { id: 'aster', name: 'Aster', category: 'telecom', sub: 'Cable e Internet', fee: 15 },
-  { id: 'sky', name: 'Sky Dominicana', category: 'telecom', sub: 'TV Satelital', fee: 20 },
+  // Impuestos y Gobierno
+  { id: 'dgii', name: 'Impuestos Internos (DGII)', category: 'gov', sub: 'Tributos y Marbetes', fee: 25 },
+  { id: 'tss', name: 'TSS', category: 'gov', sub: 'Seguridad Social', fee: 25 },
+  { id: 'adn', name: 'ADN', category: 'gov', sub: 'Distrito Nacional', fee: 20 },
+  { id: 'pgr_multas', name: 'Procuraduría (PGR)', category: 'gov', sub: 'Multas y Certificaciones', fee: 25 },
 
-  // Gobierno
-  { id: 'dgii', name: 'DGII', category: 'government', sub: 'Impuestos / Marbetes', fee: 25 },
-  { id: 'digesett', name: 'Digesett', category: 'government', sub: 'Multas de Tránsito', fee: 20 },
-  { id: 'policia_nacional', name: 'Policía Nacional', category: 'government', sub: 'Buena Conducta', fee: 25 },
-  { id: 'pasaportes_rd', name: 'Pasaportes RD', category: 'government', sub: 'Tasas de Libreta', fee: 25 },
+  // Universidades y Educación
+  { id: 'uapa', name: 'UAPA', category: 'education', sub: 'Universidad Abierta', fee: 20 },
+  { id: 'unapec', name: 'UNAPEC', category: 'education', sub: 'Universidad APEC', fee: 20 },
+  { id: 'unibe', name: 'UNIBE', category: 'education', sub: 'Universidad Iberoamericana', fee: 20 },
+  { id: 'utel', name: 'Utel', category: 'education', sub: 'Universidad Online', fee: 20 },
+  { id: 'infotep', name: 'INFOTEP', category: 'education', sub: 'Formación Técnico Profesional', fee: 20 },
 
-  // Catálogos
-  { id: 'belcorp', name: 'Belcorp (Ésika / L\'Bel)', category: 'catalog', sub: 'Consultoras', fee: 20 },
-  { id: 'avon', name: 'Avon Dominicana', category: 'catalog', sub: 'Representantes', fee: 20 },
-  { id: 'yanbal', name: 'Yanbal', category: 'catalog', sub: 'Belleza', fee: 20 },
+  // TV, Cable e Internet
+  { id: 'starcable', name: 'Star Cable', category: 'telecom', sub: 'Cable e Internet', fee: 15 },
+  { id: 'telecasa', name: 'TELECASA', category: 'telecom', sub: 'Televisión por Cable', fee: 15 },
+  { id: 'milchans', name: 'Milchans', category: 'telecom', sub: 'Entretenimiento y Cable', fee: 15 },
 
-  // Streaming & Juegos
-  { id: 'free_fire', name: 'Free Fire', category: 'gaming', sub: 'Diamantes (ID)', fee: 15 },
-  { id: 'netflix', name: 'Netflix', category: 'gaming', sub: 'Pines y Cuenta', fee: 25 },
-  { id: 'spotify', name: 'Spotify', category: 'gaming', sub: 'Membresía', fee: 20 },
-  { id: 'psn', name: 'PlayStation (PSN)', category: 'gaming', sub: 'Tarjetas de regalo', fee: 25 },
-  { id: 'xbox', name: 'Xbox Live', category: 'gaming', sub: 'Pines y Game Pass', fee: 25 },
-  { id: 'roblox', name: 'Roblox (Robux)', category: 'gaming', sub: 'Pines para juegos', fee: 15 },
-  { id: 'google_play', name: 'Google Play', category: 'gaming', sub: 'Saldo Play Store', fee: 20 },
-  { id: 'apple_itunes', name: 'Apple Store', category: 'gaming', sub: 'Saldo App Store', fee: 25 },
+  // Financieras y Crédito
+  { id: 'credigo', name: 'CrediGo', category: 'finance', sub: 'Financiamiento Móvil', fee: 20 },
+  { id: 'krece', name: 'Krece', category: 'finance', sub: 'Microcréditos', fee: 20 },
+  { id: 'solucredito', name: 'Solucrédito', category: 'finance', sub: 'Créditos Personales', fee: 20 },
+  { id: 'paycash', name: 'PayCash', category: 'finance', sub: 'Red de Pagos', fee: 20 },
+  { id: 'paso_rapido', name: 'Paso Rápido', category: 'finance', sub: 'Peajes RD Vial', fee: 15 },
+  { id: 'moneyshop', name: 'Money Shop', category: 'finance', sub: 'Servicios Financieros', fee: 20 },
+
+  // Catálogos y Cosméticos
+  { id: 'avon', name: 'AVON', category: 'catalog', sub: 'Catálogo de Belleza', fee: 20 },
+  { id: 'belcorp', name: 'BELCORP', category: 'catalog', sub: 'Ésika, L\'Bel, Cyzone', fee: 20 },
+
+  // Apuestas Deportivas
+  { id: 'betcris', name: 'Betcris', category: 'betting', sub: 'Recargas y Retiros', fee: 15 },
+  { id: 'starsport', name: 'Star Sport', category: 'betting', sub: 'Apuestas Deportivas', fee: 15 },
+  { id: 'juancito_sport', name: 'Juancito Sport', category: 'betting', sub: 'Bancas Deportivas', fee: 15 },
+  { id: 'activa', name: 'Activa', category: 'betting', sub: 'Cable Teléfono Internet', fee: 15 },
+
+  // Seguros
+  { id: 'angloamericana', name: 'Angloamericana', category: 'insurance', sub: 'Seguros Generales', fee: 25 },
+  { id: 'seguro_midas', name: 'Midas Seguros', category: 'insurance', sub: 'Pólizas y Coberturas', fee: 25 },
+
+  // Gaming y Recreación Digital
+  { id: 'freefire', name: 'Free Fire', category: 'gaming', sub: 'Diamantes y Pases', fee: 15 },
+  { id: 'mobile_legends', name: 'Mobile Legends', category: 'gaming', sub: 'Diamantes MLBB', fee: 15 },
+  { id: 'pubg', name: 'PUBG Mobile', category: 'gaming', sub: 'UC y Pases Royale', fee: 15 },
+  { id: 'roblox', name: 'Roblox', category: 'gaming', sub: 'Robux y Membresías', fee: 15 },
 ];
 
-// 4. PAQUETICOS
+// 6. PAQUETICOS REALES
 const ALL_PACKAGES = [
   // Claro
   { id: 'claro-1d', carrier: 'claro', name: '1 Día Ilimitado', price: 50, validity: '24 horas', desc: 'Internet Libre + Minutos' },
@@ -130,7 +167,6 @@ const ALL_PACKAGES = [
   { id: 'claro-7d', carrier: 'claro', name: '7 Días Ilimitado', price: 200, validity: '7 días', desc: 'Internet Full Libre' },
   { id: 'claro-10d', carrier: 'claro', name: '10 Días Ilimitado', price: 300, validity: '10 días', desc: 'Internet + Llamadas' },
   { id: 'claro-15d', carrier: 'claro', name: '15 Días Ilimitado', price: 400, validity: '15 días', desc: 'Internet Quincenal' },
-  { id: 'claro-noche', carrier: 'claro', name: 'Noche Libre', price: 40, validity: '12am a 6am', desc: 'Internet nocturno' },
   // Altice
   { id: 'altice-1d', carrier: 'altice', name: '1 Día Libre', price: 50, validity: '24 horas', desc: 'Datos ilimitados Altice' },
   { id: 'altice-3d', carrier: 'altice', name: '3 Días Libre', price: 95, validity: '3 días', desc: 'Datos ilimitados + Minutos' },
@@ -138,7 +174,6 @@ const ALL_PACKAGES = [
   { id: 'altice-7d', carrier: 'altice', name: '7 Días Libre', price: 190, validity: '7 días', desc: 'Internet Libre semanal' },
   { id: 'altice-10d', carrier: 'altice', name: '10 Días Libre', price: 280, validity: '10 días', desc: 'Internet 10 días' },
   { id: 'altice-15d', carrier: 'altice', name: '15 Días Libre', price: 380, validity: '15 días', desc: 'Internet Quincenal Altice' },
-  { id: 'altice-noche', carrier: 'altice', name: 'Noche Libre', price: 40, validity: '12am a 7am', desc: 'Datos libres noche' },
   // Viva
   { id: 'viva-1d', carrier: 'viva', name: 'Ta Nítido 1D', price: 40, validity: '24 horas', desc: 'Internet + Llamadas' },
   { id: 'viva-3d', carrier: 'viva', name: 'Ta Nítido 3D', price: 85, validity: '3 días', desc: 'Internet libre 3 días' },
@@ -185,15 +220,18 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
       return ALL_BILLERS.find((b) => b.id === selectedCarrier) || ALL_BILLERS[0];
     }
     if (activeTab === 'prepaid_power') {
-      return PREPAID_POWER_BILLERS.find((b) => b.id === selectedCarrier) || PREPAID_POWER_BILLERS[0];
+      return PREPAID_POWER_PROVIDERS.find((b) => b.id === selectedCarrier) || PREPAID_POWER_PROVIDERS[0];
     }
-    return RECHARGE_CARRIERS.find((c) => c.id === selectedCarrier) || RECHARGE_CARRIERS[0];
+    if (activeTab === 'remittance') {
+      return REMITTANCE_PROVIDERS.find((r) => r.id === selectedCarrier) || REMITTANCE_PROVIDERS[0];
+    }
+    return MOBILE_OPERATORS.find((c) => c.id === selectedCarrier) || MOBILE_OPERATORS[0];
   }, [activeTab, selectedCarrier]);
 
   // Cálculo de ganancia y costo en vivo
   const numericAmount = Number(amount) || 0;
   const estimatedCommission = useMemo(() => {
-    if (activeTab === 'bill_payment') {
+    if (activeTab === 'bill_payment' || activeTab === 'prepaid_power' || activeTab === 'remittance') {
       const billFee = (currentBiller as any)?.fee || Number(config?.default_bill_fixed_commission || 15.0);
       return Number(billFee);
     }
@@ -201,7 +239,9 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
   }, [numericAmount, commissionRate, activeTab, config, currentBiller]);
 
   const estimatedCost = useMemo(() => {
-    if (activeTab === 'bill_payment') return numericAmount;
+    if (activeTab === 'bill_payment' || activeTab === 'prepaid_power' || activeTab === 'remittance') {
+      return numericAmount;
+    }
     return Math.max(0, numericAmount - estimatedCommission);
   }, [numericAmount, estimatedCommission, activeTab]);
 
@@ -220,7 +260,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
 
   const handleExecuteTransaction = async () => {
     if (!phoneNumber || phoneNumber.length < 5) {
-      alert('Por favor ingrese un número de teléfono, contrato o NIC válido.');
+      alert('Por favor ingrese un número de teléfono, contrato, cuenta o NIC válido.');
       return;
     }
     if (numericAmount <= 0) {
@@ -273,7 +313,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
         </head>
         <body>
           <div class="text-center font-bold big">${storeSettings?.store_name || 'COBROAPP POS'}</div>
-          <div class="text-center">COMPROBANTE DE SERVICIO DIGITAL</div>
+          <div class="text-center">COMPROBANTE RECARGAMEYA</div>
           <div class="divider"></div>
           <div class="row"><span>Fecha:</span><span>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span></div>
           <div class="row"><span>Transacción:</span><span>${completedTx.id || completedTx.transaction_id}</span></div>
@@ -301,10 +341,10 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
 
   const handleSendWhatsApp = () => {
     if (!completedTx || !phoneNumber) return;
-    const msg = `🧾 *COMPROBANTE DE SERVICIO*\n` +
+    const msg = `🧾 *COMPROBANTE DE PAGO RECARGAMEYA*\n` +
       `*Comercio:* ${storeSettings?.store_name || 'CobroApp'}\n` +
       `*Servicio:* ${completedTx.carrier?.toUpperCase()}\n` +
-      `*Destino:* ${completedTx.target_number}\n` +
+      `*Número / Cuenta:* ${completedTx.target_number}\n` +
       `*Monto:* RD$ ${Number(completedTx.amount).toFixed(2)}\n` +
       `*Ref:* ${completedTx.id || completedTx.client_reference_id}\n` +
       `*Fecha:* ${new Date().toLocaleString()}\n\n` +
@@ -316,8 +356,8 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background border border-border/80 shadow-2xl max-h-[92vh] flex flex-col rounded-2xl">
-        {/* Cabecera Minimalista con los colores oficiales de CobroApp */}
+      <DialogContent className="max-w-4xl p-0 overflow-hidden bg-background border border-border/80 shadow-2xl max-h-[92vh] flex flex-col rounded-2xl">
+        {/* Cabecera Minimalista */}
         <div className="bg-card border-b border-border/60 p-4 sm:p-5 shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
@@ -327,17 +367,17 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
               <DialogTitle className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
                 Servicios Digitales & Recargas
                 <Badge variant="outline" className="border-border text-[10px] text-muted-foreground font-normal">
-                  RecargameYa
+                  RecargameYa Oficial
                 </Badge>
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Recargas, paqueticos y pago de servicios dominicanos
+                Recargas, luz prepago, remesas, universidades, bancos y servicios
               </DialogDescription>
             </div>
           </div>
 
-          {/* Saldo de Billetera Minimalista */}
-          <div className="text-right px-3 py-1.5 rounded-xl bg-muted/50 border border-border/60">
+          {/* Saldo de Billetera */}
+          <div className="text-right px-3.5 py-1.5 rounded-xl bg-muted/50 border border-border/60">
             <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider block">
               Saldo Billetera
             </span>
@@ -402,7 +442,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
               </div>
             </div>
           ) : (
-            // Formulario de Venta Minimalista
+            // Formulario de Venta
             <div className="space-y-4">
               {/* Pestañas Principales */}
               <Tabs
@@ -411,34 +451,38 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                   const newTab = val as DigitalServiceType;
                   setActiveTab(newTab);
                   if (newTab === 'recharge') setSelectedCarrier('claro');
-                  if (newTab === 'bill_payment') setSelectedCarrier('edesur');
                   if (newTab === 'prepaid_power') setSelectedCarrier('edesur_prepago');
+                  if (newTab === 'remittance') setSelectedCarrier('moncash');
+                  if (newTab === 'bill_payment') setSelectedCarrier('caasd');
                 }}
                 className="w-full"
               >
-                <TabsList className="grid grid-cols-4 w-full h-10 bg-muted/60 p-1 rounded-xl">
-                  <TabsTrigger value="recharge" className="text-xs font-medium gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
-                    <Smartphone className="h-3.5 w-3.5" /> Recargas
+                <TabsList className="grid grid-cols-5 w-full h-10 bg-muted/60 p-1 rounded-xl">
+                  <TabsTrigger value="recharge" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                    <Smartphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Recargas</span><span className="sm:hidden">Recarga</span>
                   </TabsTrigger>
-                  <TabsTrigger value="data_package" className="text-xs font-medium gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                  <TabsTrigger value="data_package" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
                     <Wifi className="h-3.5 w-3.5" /> Paqueticos
                   </TabsTrigger>
-                  <TabsTrigger value="bill_payment" className="text-xs font-medium gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
-                    <Receipt className="h-3.5 w-3.5" /> Facturas
-                  </TabsTrigger>
-                  <TabsTrigger value="prepaid_power" className="text-xs font-medium gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                  <TabsTrigger value="prepaid_power" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
                     <Zap className="h-3.5 w-3.5" /> Luz Prepago
+                  </TabsTrigger>
+                  <TabsTrigger value="remittance" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                    <SendHorizontal className="h-3.5 w-3.5" /> Remesas
+                  </TabsTrigger>
+                  <TabsTrigger value="bill_payment" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                    <Receipt className="h-3.5 w-3.5" /> Facturas ({ALL_BILLERS.length})
                   </TabsTrigger>
                 </TabsList>
 
-                {/* 1. TAB: RECARGAS */}
+                {/* 1. OPERADORAS MÓVILES */}
                 <TabsContent value="recharge" className="mt-3.5 space-y-3.5">
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground block mb-2">
-                      Selecciona Compañía
+                      Operadoras Móviles (RD y Haití)
                     </Label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                      {RECHARGE_CARRIERS.map((c) => {
+                      {MOBILE_OPERATORS.map((c) => {
                         const isSelected = selectedCarrier === c.id;
                         return (
                           <button
@@ -452,9 +496,9 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                                 : "border-border/60 hover:border-border bg-card"
                             )}
                           >
-                            <BrandLogo id={c.id} className="w-8 h-8 rounded-lg mb-1.5 shrink-0" />
-                            <span className="font-semibold text-xs text-foreground">{c.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{c.sub}</span>
+                            <BrandLogo id={c.id} className="w-12 h-10 rounded-lg mb-1.5 shrink-0" />
+                            <span className="font-semibold text-xs text-foreground truncate w-full">{c.name}</span>
+                            <span className="text-[10px] text-muted-foreground truncate w-full">{c.sub}</span>
                             <span className="text-[9px] text-primary font-medium mt-0.5">
                               {c.badge}
                             </span>
@@ -488,9 +532,9 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                   </div>
                 </TabsContent>
 
-                {/* 2. TAB: PAQUETICOS */}
+                {/* 2. PAQUETICOS */}
                 <TabsContent value="data_package" className="mt-3.5 space-y-3">
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-2">
                     {['claro', 'altice', 'viva'].map((car) => (
                       <Button
                         key={car}
@@ -498,12 +542,12 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                         size="sm"
                         variant={selectedCarrier === car ? 'default' : 'outline'}
                         className={cn(
-                          "capitalize text-xs font-semibold h-8 rounded-lg gap-1.5",
+                          "capitalize text-xs font-semibold h-9 rounded-lg gap-2 px-3",
                           selectedCarrier === car && "bg-primary text-primary-foreground"
                         )}
                         onClick={() => setSelectedCarrier(car)}
                       >
-                        <BrandLogo id={car} className="w-4 h-4 rounded-full" />
+                        <BrandLogo id={car} className="w-5 h-5 rounded-md" />
                         {car}
                       </Button>
                     ))}
@@ -535,11 +579,74 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                   </div>
                 </TabsContent>
 
-                {/* 3. TAB: FACTURAS & SERVICIOS */}
+                {/* 3. LUZ PREPAGO Y ELECTRICIDAD */}
+                <TabsContent value="prepaid_power" className="mt-3.5 space-y-3">
+                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground">
+                    ⚡ <strong>Luz Prepago & Electricidad:</strong> Ingresa el número de medidor o NIC. El PIN de recarga se emitirá en el comprobante de venta.
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    {PREPAID_POWER_PROVIDERS.map((b) => {
+                      const isSelected = selectedCarrier === b.id;
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setSelectedCarrier(b.id)}
+                          className={cn(
+                            "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
+                            isSelected
+                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
+                              : "border-border/60 hover:border-border bg-card"
+                          )}
+                        >
+                          <BrandLogo id={b.id} className="w-12 h-10 rounded-lg mb-1 shrink-0" />
+                          <span className="font-semibold text-xs text-foreground block truncate w-full">{b.name}</span>
+                          <span className="text-[10px] text-muted-foreground block truncate w-full">{b.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+
+                {/* 4. REMESAS A HAITÍ */}
+                <TabsContent value="remittance" className="mt-3.5 space-y-3">
+                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground">
+                    💸 <strong>Remesas Directas a Haití:</strong> Envío inmediato a billeteras móviles MonCash (Digicel) y Natcash (Natcom).
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+                    {REMITTANCE_PROVIDERS.map((r) => {
+                      const isSelected = selectedCarrier === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setSelectedCarrier(r.id)}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                            isSelected
+                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
+                              : "border-border/60 hover:border-border bg-card"
+                          )}
+                        >
+                          <BrandLogo id={r.id} className="w-12 h-10 rounded-lg shrink-0" />
+                          <div>
+                            <span className="font-semibold text-sm text-foreground block">{r.name}</span>
+                            <span className="text-xs text-muted-foreground block">{r.sub}</span>
+                            <span className="text-[10px] text-primary font-medium">+RD$ {r.fee} comisión</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+
+                {/* 5. FACTURAS Y SERVICIOS PÚBLICOS */}
                 <TabsContent value="bill_payment" className="mt-3.5 space-y-3">
-                  {/* Categorías en chips minimalistas */}
+                  {/* Categorías oficiales */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                    {BILL_CATEGORIES.map((cat) => {
+                    {RECARGAMEYA_CATEGORIES.map((cat) => {
                       const Icon = cat.icon;
                       const isSelected = selectedBillCategory === cat.id;
                       return (
@@ -561,19 +668,19 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                     })}
                   </div>
 
-                  {/* Buscador minimalista */}
+                  {/* Buscador de servicios */}
                   <div className="relative">
                     <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar servicio (ej. Edesur, CAASD, Claro, Avon, Free Fire)..."
+                      placeholder="Buscar por empresa (ej. CAASD, DGII, UNIBE, Free Fire, Paso Rápido, AVON)..."
                       value={billSearchQuery}
                       onChange={(e) => setBillSearchQuery(e.target.value)}
                       className="pl-8 h-8 text-xs rounded-lg border-border/60 bg-background"
                     />
                   </div>
 
-                  {/* Catálogo con Logos Oficiales */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
+                  {/* Catálogo con Logos Oficiales de RecargameYa */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
                     {filteredBillers.map((b) => {
                       const isSelected = selectedCarrier === b.id;
                       return (
@@ -582,13 +689,13 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                           type="button"
                           onClick={() => setSelectedCarrier(b.id)}
                           className={cn(
-                            "flex items-center gap-2 p-2 rounded-xl border text-left transition-all",
+                            "flex items-center gap-2.5 p-2 rounded-xl border text-left transition-all",
                             isSelected
                               ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
                               : "border-border/60 hover:border-border bg-card"
                           )}
                         >
-                          <BrandLogo id={b.id} className="w-8 h-8 rounded-lg shrink-0" />
+                          <BrandLogo id={b.id} className="w-10 h-8 rounded-lg shrink-0" />
                           <div className="min-w-0 flex-1">
                             <span className="font-semibold text-xs text-foreground block truncate">{b.name}</span>
                             <span className="text-[10px] text-muted-foreground block truncate">{b.sub}</span>
@@ -601,49 +708,19 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                     })}
                   </div>
                 </TabsContent>
-
-                {/* 4. TAB: LUZ PREPAGO */}
-                <TabsContent value="prepaid_power" className="mt-3.5 space-y-3">
-                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground">
-                    ⚡ <strong>Luz Prepago:</strong> Ingresa el número de medidor. El PIN de recarga se imprimirá en el comprobante y se enviará por WhatsApp.
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {PREPAID_POWER_BILLERS.map((b) => {
-                      const isSelected = selectedCarrier === b.id;
-                      return (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setSelectedCarrier(b.id)}
-                          className={cn(
-                            "flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all",
-                            isSelected
-                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/40 shadow-xs"
-                              : "border-border/60 hover:border-border bg-card"
-                          )}
-                        >
-                          <BrandLogo id={b.id} className="w-8 h-8 rounded-lg shrink-0" />
-                          <div className="min-w-0">
-                            <span className="font-semibold text-xs text-foreground block truncate">{b.name}</span>
-                            <span className="text-[10px] text-muted-foreground block truncate">{b.desc}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </TabsContent>
               </Tabs>
 
-              {/* CAMPOS DE ENTRADA: NÚMERO Y MONTO */}
+              {/* CAMPOS COMUNES DE ENTRADA: NÚMERO Y MONTO */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/60">
                 <div className="space-y-1">
                   <Label htmlFor="target-input" className="text-xs font-medium text-muted-foreground flex items-center justify-between">
                     <span>
                       {activeTab === 'bill_payment'
-                        ? 'Número de Contrato / NIC'
+                        ? 'Número de Cuenta / Contrato / NIC'
                         : activeTab === 'prepaid_power'
                         ? 'Número de Medidor'
+                        : activeTab === 'remittance'
+                        ? 'Número de Teléfono en Haití'
                         : 'Número de Teléfono'}
                     </span>
                     <span className="text-[10px] text-primary">
@@ -655,9 +732,11 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                     type="text"
                     placeholder={
                       activeTab === 'bill_payment'
-                        ? 'Ej. 100234567'
+                        ? 'Ej. 100234567 o Cédula'
                         : activeTab === 'prepaid_power'
                         ? 'Ej. 0123456789'
+                        : activeTab === 'remittance'
+                        ? '50931234567'
                         : '8091234567'
                     }
                     value={phoneNumber}
@@ -672,7 +751,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                       Monto a Cobrar (RD$)
                     </Label>
                     <span className="text-xs font-semibold text-primary">
-                      + Ganancia: RD$ {estimatedCommission.toFixed(2)}
+                      + Tu Ganancia: RD$ {estimatedCommission.toFixed(2)}
                     </span>
                   </div>
                   <Input
@@ -687,18 +766,18 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                 </div>
               </div>
 
-              {/* RESUMEN FINANCIERO MINIMALISTA */}
+              {/* RESUMEN FINANCIERO */}
               <div className="p-3 bg-muted/30 rounded-xl border border-border/60 text-xs flex items-center justify-between">
                 <div>
-                  <div className="text-muted-foreground text-[11px]">Cobras al cliente:</div>
+                  <div className="text-muted-foreground text-[11px]">Cobras en caja:</div>
                   <div className="text-sm font-bold text-foreground">RD$ {numericAmount.toFixed(2)}</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-muted-foreground text-[11px]">Tu comisión:</div>
+                  <div className="text-muted-foreground text-[11px]">Tu comisión limpia:</div>
                   <div className="text-sm font-bold text-primary">+ RD$ {estimatedCommission.toFixed(2)}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-muted-foreground text-[11px]">Costo saldo:</div>
+                  <div className="text-muted-foreground text-[11px]">Se debita de saldo:</div>
                   <div className="text-sm font-semibold text-muted-foreground">RD$ {estimatedCost.toFixed(2)}</div>
                 </div>
               </div>

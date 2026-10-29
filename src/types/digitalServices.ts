@@ -1,4 +1,4 @@
-export type DigitalServiceType = 'recharge' | 'data_package' | 'bill_payment' | 'prepaid_power' | 'gaming_pincode';
+export type DigitalServiceType = 'recharge' | 'data_package' | 'bill_payment' | 'prepaid_power' | 'remittance' | 'gaming_pincode';
 
 export type CarrierType = string;
 
