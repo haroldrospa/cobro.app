@@ -121,7 +121,20 @@ interface ProofModalData {
     reportId?: string;
     isPdf?: boolean;
     status?: string;
+    targetPlanId?: string;
+    adminNote?: string;
+    isDigitalTopup?: boolean;
 }
+
+const isReportDigitalTopup = (report: any): boolean => {
+    if (!report) return false;
+    return (
+        report.target_plan_id === 'digital_topup' ||
+        (typeof report.admin_note === 'string' && report.admin_note.toLowerCase().includes('billetera')) ||
+        (typeof report.admin_note === 'string' && report.admin_note.toLowerCase().includes('recarga')) ||
+        (typeof report.bank_name === 'string' && report.bank_name.toLowerCase().includes('recarga'))
+    );
+};
 
 const SuperAdmin = () => {
     const [selectedProof, setSelectedProof] = useState<ProofModalData | null>(null);
@@ -554,8 +567,7 @@ const SuperAdmin = () => {
                     .from("payment_reports")
                     .update({
                         status: status,
-                        admin_note: status === "approved" ? "Aprobado desde panel maestro" : "Rechazado por administrador",
-                        updated_at: new Date().toISOString()
+                        admin_note: status === "approved" ? "Aprobado desde panel maestro" : "Rechazado por administrador"
                     })
                     .eq("id", id);
 
@@ -563,7 +575,7 @@ const SuperAdmin = () => {
 
                 // Si fue aprobado, activar o extender la suscripción de la tienda O acreditar saldo de billetera
                 if (status === "approved" && report?.company_id) {
-                    const isDigitalTopup = report.target_plan_id === 'digital_topup' || (report.admin_note && report.admin_note.includes('Billetera'));
+                    const isDigitalTopup = isReportDigitalTopup(report);
 
                     if (isDigitalTopup) {
                         const topupAmt = Number(report.amount || 0);
@@ -640,13 +652,18 @@ const SuperAdmin = () => {
             return { previousReports };
         },
         onSuccess: ({ status, report }) => {
+            const isTopup = isReportDigitalTopup(report);
             toast.success(
                 status === "approved" 
-                    ? `Pago aprobado y suscripción activada para ${report?.store_name || "el comercio"}` 
+                    ? (isTopup 
+                        ? `¡Recarga de servicios aprobada y saldo acreditado con éxito a ${report?.store_name || "el comercio"}!`
+                        : `Pago aprobado y suscripción activada para ${report?.store_name || "el comercio"}`)
                     : "Pago rechazado correctamente"
             );
             queryClient.invalidateQueries({ queryKey: ["admin-pending-payments"] });
             queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
+            queryClient.invalidateQueries({ queryKey: ["digital-services-wallets"] });
+            queryClient.invalidateQueries({ queryKey: ["digital-services-topup-requests"] });
             setSelectedProof(null);
         },
         onError: (error: any, _vars, context) => {
@@ -866,6 +883,9 @@ const SuperAdmin = () => {
                 reportId: report.id,
                 isPdf,
                 status: report.status,
+                targetPlanId: report.target_plan_id,
+                adminNote: report.admin_note,
+                isDigitalTopup: isReportDigitalTopup(report),
             });
         } catch (err: any) {
             toast.error("Error al cargar comprobante: " + (err?.message || "Error de red"));
@@ -2165,8 +2185,9 @@ const SuperAdmin = () => {
                                     <TableHeader className="bg-muted/30">
                                         <TableRow className="border-b border-border/40">
                                             <TableHead className="pl-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Fecha</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo / Concepto</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Negocio</TableHead>
-                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Banco</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Banco / Ref</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Monto</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Comprobante</TableHead>
                                             <TableHead className="pr-5 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Acciones</TableHead>
@@ -2179,6 +2200,19 @@ const SuperAdmin = () => {
                                                     {new Date(report.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                 </TableCell>
                                                 <TableCell>
+                                                    {isReportDigitalTopup(report) ? (
+                                                        <Badge className="bg-sky-500/15 text-sky-400 border border-sky-500/30 text-[10px] font-bold gap-1 px-2.5 py-1 inline-flex items-center shadow-sm">
+                                                            <Sparkles className="h-3 w-3 shrink-0 text-sky-400" />
+                                                            <span>Recarga Servicios</span>
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-[10px] font-bold gap-1 px-2.5 py-1 inline-flex items-center">
+                                                            <ShieldCheck className="h-3 w-3 shrink-0 text-emerald-500" />
+                                                            <span>Membresía / Plan</span>
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-sm text-foreground">
                                                             {report.store_name || "Desconocido"}
@@ -2189,9 +2223,16 @@ const SuperAdmin = () => {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant="outline" className="text-[10px] font-semibold">
-                                                        {report.bank_name || 'Banreservas'}
-                                                    </Badge>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <Badge variant="outline" className="text-[10px] font-semibold w-fit">
+                                                            {report.bank_name || 'Banreservas'}
+                                                        </Badge>
+                                                        {report.admin_note && (
+                                                            <span className="text-[10px] text-muted-foreground max-w-[200px] truncate" title={report.admin_note}>
+                                                                {report.admin_note}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
                                                     RD$ {(report.amount || 0).toLocaleString()}
@@ -2245,7 +2286,7 @@ const SuperAdmin = () => {
                                                             ) : (
                                                                 <CheckCircle className="h-3.5 w-3.5 mr-1" />
                                                             )}
-                                                            Aprobar
+                                                            {isReportDigitalTopup(report) ? "Acreditar Saldo" : "Aprobar"}
                                                         </Button>
                                                     </div>
                                                 </TableCell>
@@ -2278,6 +2319,7 @@ const SuperAdmin = () => {
                                     <TableHeader className="bg-muted/30">
                                         <TableRow className="border-b border-border/40">
                                             <TableHead className="pl-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Fecha</TableHead>
+                                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo / Concepto</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Negocio</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Monto</TableHead>
                                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Comprobante</TableHead>
@@ -2289,6 +2331,19 @@ const SuperAdmin = () => {
                                             <TableRow key={report.id} className="opacity-90 hover:opacity-100 hover:bg-muted/30 transition-all border-b border-border/30">
                                                 <TableCell className="pl-5 text-xs font-medium">
                                                     {new Date(report.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {isReportDigitalTopup(report) ? (
+                                                        <Badge className="bg-sky-500/15 text-sky-400 border border-sky-500/30 text-[10px] font-bold gap-1 px-2 py-0.5 inline-flex items-center">
+                                                            <Sparkles className="h-3 w-3 shrink-0 text-sky-400" />
+                                                            <span>Recarga Servicios</span>
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-[10px] font-bold gap-1 px-2 py-0.5 inline-flex items-center">
+                                                            <ShieldCheck className="h-3 w-3 shrink-0 text-emerald-500" />
+                                                            <span>Membresía</span>
+                                                        </Badge>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="text-xs font-semibold text-foreground">
                                                     {report.store_name || "Desconocido"}
@@ -2483,19 +2538,32 @@ const SuperAdmin = () => {
             {/* MODAL PARA VER COMPROBANTE DE PAGO MEJORADO */}
             <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
                 <DialogContent className="max-w-2xl bg-card border border-border p-5 rounded-2xl max-h-[92vh] flex flex-col">
-                    <DialogHeader className="space-y-1 shrink-0 pb-2 border-b border-border/40">
+                    <DialogHeader className="space-y-1.5 shrink-0 pb-3 border-b border-border/40">
                         <div className="flex items-center justify-between gap-2">
                             <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
                                 <CreditCard className="h-4 w-4 text-emerald-500" />
                                 Comprobante de Pago
                             </DialogTitle>
-                            {selectedProof?.status === "pending" && (
-                                <Badge className="bg-orange-500/15 text-orange-500 border-orange-500/30 text-[10px] font-bold">
-                                    Por Validar
-                                </Badge>
-                            )}
+                            <div className="flex items-center gap-2">
+                                {selectedProof?.isDigitalTopup ? (
+                                    <Badge className="bg-sky-500/20 text-sky-400 border border-sky-500/40 text-xs font-bold px-2.5 py-0.5 flex items-center gap-1.5 shadow-sm">
+                                        <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+                                        Recarga Servicios Digitales (Billetera)
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-xs font-bold px-2.5 py-0.5 flex items-center gap-1.5">
+                                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                                        Membresía / Plan
+                                    </Badge>
+                                )}
+                                {selectedProof?.status === "pending" && (
+                                    <Badge className="bg-orange-500/15 text-orange-500 border-orange-500/30 text-[10px] font-bold">
+                                        Por Validar
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
-                        <DialogDescription className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+                        <DialogDescription className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1">
                             {selectedProof?.storeName && (
                                 <span>Negocio: <strong className="text-foreground">{selectedProof.storeName}</strong></span>
                             )}
@@ -2503,7 +2571,12 @@ const SuperAdmin = () => {
                                 <span>Monto: <strong className="text-emerald-500 font-bold">RD$ {selectedProof.amount.toLocaleString()}</strong></span>
                             )}
                             {selectedProof?.bankName && (
-                                <span>Banco: <strong className="text-foreground">{selectedProof.bankName}</strong></span>
+                                <span>Banco / Ref: <strong className="text-foreground">{selectedProof.bankName}</strong></span>
+                            )}
+                            {selectedProof?.adminNote && (
+                                <span className="w-full text-[11px] text-muted-foreground/90 bg-muted/40 p-2 rounded-lg border border-border/40 mt-1 block">
+                                    <strong className="text-foreground">Detalle / Referencia:</strong> {selectedProof.adminNote}
+                                </span>
                             )}
                         </DialogDescription>
                     </DialogHeader>
@@ -2599,7 +2672,7 @@ const SuperAdmin = () => {
                                         ) : (
                                             <CheckCircle className="h-3.5 w-3.5 mr-1" />
                                         )}
-                                        Aprobar
+                                        {selectedProof?.isDigitalTopup ? "Aprobar y Acreditar Saldo" : "Aprobar"}
                                     </Button>
                                 </>
                             )}

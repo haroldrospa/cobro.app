@@ -409,7 +409,6 @@ export const useDigitalServices = () => {
             .from('payment_reports')
             .update({
               status: 'approved',
-              updated_at: new Date().toISOString(),
               admin_note: 'Aprobado desde panel'
             })
             .eq('id', requestId);
@@ -511,8 +510,7 @@ export const useDigitalServices = () => {
         .from('payment_reports')
         .update({
           status: 'rejected',
-          admin_note: reason || 'Rechazado por administración',
-          updated_at: new Date().toISOString()
+          admin_note: reason || 'Rechazado por administración'
         })
         .eq('id', requestId);
 
