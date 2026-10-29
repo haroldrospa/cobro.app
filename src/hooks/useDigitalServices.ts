@@ -266,7 +266,9 @@ export const useDigitalServices = () => {
         }
       }
 
-      // 1. Intentar llamar al RPC oficial submit_digital_service_topup
+      const bankNameWithRef = `${payload.bankName}${payload.referenceNumber ? ` (Ref: ${payload.referenceNumber})` : ''}`;
+
+      // 1. Intentar llamar al RPC oficial submit_digital_service_topup si existiera
       let rpcSuccessful = false;
       let rpcResult: any = null;
       try {
@@ -282,48 +284,35 @@ export const useDigitalServices = () => {
         if (!error && data) {
           rpcSuccessful = true;
           rpcResult = data;
-        } else if (error) {
-          console.warn('RPC submit_digital_service_topup falló o no existe, intentando respaldo...', error.message);
         }
       } catch (rpcEx) {
-        console.warn('Excepción al ejecutar RPC submit_digital_service_topup:', rpcEx);
+        console.warn('RPC submit_digital_service_topup no disponible:', rpcEx);
       }
 
       if (rpcSuccessful) {
         return rpcResult;
       }
 
-      // 2. Respaldo A: Insertar directamente en la tabla digital_services_topup_requests
-      let savedInTopupTable = false;
+      // 2. Respaldo Principal: submit_payment_pending (RPC existente y 100% probado en producción)
       try {
-        const { data: userResp } = await supabase.auth.getUser();
-        const currentUserId = userResp?.user?.id || null;
+        const { error: pendingRpcErr } = await supabase.rpc('submit_payment_pending', {
+          p_company_id: storeId,
+          p_amount: payload.amount,
+          p_currency: 'DOP',
+          p_bank_name: bankNameWithRef,
+          p_proof_url: receiptUrl || '',
+          p_target_plan_id: 'digital_topup',
+        });
 
-        const { data: directTopup, error: topupError } = await supabase
-          .from('digital_services_topup_requests')
-          .insert({
-            store_id: storeId,
-            user_id: currentUserId,
-            amount: payload.amount,
-            bank_name: payload.bankName,
-            reference_number: payload.referenceNumber,
-            receipt_url: receiptUrl || null,
-            notes: payload.notes || null,
-            status: 'pending'
-          })
-          .select()
-          .maybeSingle();
-
-        if (!topupError && directTopup) {
-          savedInTopupTable = true;
-        } else if (topupError) {
-          console.warn('No se pudo insertar en digital_services_topup_requests:', topupError.message);
+        if (!pendingRpcErr) {
+          return { success: true, message: 'Solicitud enviada a validación' };
         }
-      } catch (topupEx) {
-        console.warn('Excepción en digital_services_topup_requests:', topupEx);
+        console.warn('submit_payment_pending devolvió error, probando inserción directa:', pendingRpcErr);
+      } catch (pendingEx) {
+        console.warn('submit_payment_pending RPC falló:', pendingEx);
       }
 
-      // 3. Respaldo B: Insertar SIEMPRE en payment_reports para garantizar sincronización con el Panel Maestro
+      // 3. Respaldo directo en payment_reports (usando únicamente columnas garantizadas: sin reference_number directo)
       try {
         const { error: prError } = await supabase
           .from('payment_reports')
@@ -331,21 +320,20 @@ export const useDigitalServices = () => {
             company_id: storeId,
             amount: payload.amount,
             currency: 'DOP',
-            bank_name: payload.bankName,
-            reference_number: payload.referenceNumber,
+            bank_name: bankNameWithRef,
             proof_url: receiptUrl || null,
             status: 'pending',
             target_plan_id: 'digital_topup',
-            admin_note: payload.notes ? `Recarga de Billetera: ${payload.notes}` : 'Recarga de Saldo Billetera Digital'
+            admin_note: payload.notes 
+              ? `Recarga de Billetera Digital. Ref: ${payload.referenceNumber}. ${payload.notes}` 
+              : `Recarga de Billetera Digital. Ref: ${payload.referenceNumber}`
           });
 
-        if (prError && !savedInTopupTable) {
+        if (prError) {
           throw new Error(prError.message);
         }
       } catch (prEx: any) {
-        if (!savedInTopupTable) {
-          throw new Error(prEx?.message || 'No se pudo registrar la solicitud de recarga.');
-        }
+        throw new Error(prEx?.message || 'No se pudo registrar la solicitud de recarga.');
       }
 
       return { success: true };
@@ -717,15 +705,17 @@ export const useDigitalTopupRequests = (options?: { status?: string; allStores?:
         const { data: prData, error: prErr } = await prQuery;
         if (!prErr && prData) {
           prData.forEach((pr: any) => {
-            const key = pr.reference_number || pr.id;
+            const refMatch = pr.bank_name?.match(/Ref:\s*([^)]+)/) || pr.admin_note?.match(/Ref:\s*([^.\s]+)/);
+            const refNum = pr.reference_number || (refMatch ? refMatch[1].trim() : 'S/R');
+            const key = refNum !== 'S/R' ? refNum : pr.id;
             if (!seenIds.has(key)) {
               results.push({
                 id: pr.id,
                 store_id: pr.company_id,
                 user_id: undefined,
                 amount: Number(pr.amount || 0),
-                bank_name: pr.bank_name || 'Transferencia',
-                reference_number: pr.reference_number || 'S/R',
+                bank_name: pr.bank_name?.replace(/\s*\(Ref:.*\)/, '') || 'Transferencia',
+                reference_number: refNum,
                 receipt_url: pr.proof_url || null,
                 notes: pr.admin_note || 'Recarga de Billetera Digital',
                 status: pr.status || 'pending',
