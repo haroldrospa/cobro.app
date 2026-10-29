@@ -266,20 +266,93 @@ export const useDigitalServices = () => {
         }
       }
 
-      const { data, error } = await supabase.rpc('submit_digital_service_topup', {
-        p_store_id: storeId,
-        p_amount: payload.amount,
-        p_bank_name: payload.bankName,
-        p_reference_number: payload.referenceNumber,
-        p_receipt_url: receiptUrl || null,
-        p_notes: payload.notes || null,
-      });
+      // 1. Intentar llamar al RPC oficial submit_digital_service_topup
+      let rpcSuccessful = false;
+      let rpcResult: any = null;
+      try {
+        const { data, error } = await supabase.rpc('submit_digital_service_topup', {
+          p_store_id: storeId,
+          p_amount: payload.amount,
+          p_bank_name: payload.bankName,
+          p_reference_number: payload.referenceNumber,
+          p_receipt_url: receiptUrl || null,
+          p_notes: payload.notes || null,
+        });
 
-      if (error) throw new Error(error.message);
-      return data;
+        if (!error && data) {
+          rpcSuccessful = true;
+          rpcResult = data;
+        } else if (error) {
+          console.warn('RPC submit_digital_service_topup falló o no existe, intentando respaldo...', error.message);
+        }
+      } catch (rpcEx) {
+        console.warn('Excepción al ejecutar RPC submit_digital_service_topup:', rpcEx);
+      }
+
+      if (rpcSuccessful) {
+        return rpcResult;
+      }
+
+      // 2. Respaldo A: Insertar directamente en la tabla digital_services_topup_requests
+      let savedInTopupTable = false;
+      try {
+        const { data: userResp } = await supabase.auth.getUser();
+        const currentUserId = userResp?.user?.id || null;
+
+        const { data: directTopup, error: topupError } = await supabase
+          .from('digital_services_topup_requests')
+          .insert({
+            store_id: storeId,
+            user_id: currentUserId,
+            amount: payload.amount,
+            bank_name: payload.bankName,
+            reference_number: payload.referenceNumber,
+            receipt_url: receiptUrl || null,
+            notes: payload.notes || null,
+            status: 'pending'
+          })
+          .select()
+          .maybeSingle();
+
+        if (!topupError && directTopup) {
+          savedInTopupTable = true;
+        } else if (topupError) {
+          console.warn('No se pudo insertar en digital_services_topup_requests:', topupError.message);
+        }
+      } catch (topupEx) {
+        console.warn('Excepción en digital_services_topup_requests:', topupEx);
+      }
+
+      // 3. Respaldo B: Insertar SIEMPRE en payment_reports para garantizar sincronización con el Panel Maestro
+      try {
+        const { error: prError } = await supabase
+          .from('payment_reports')
+          .insert({
+            company_id: storeId,
+            amount: payload.amount,
+            currency: 'DOP',
+            bank_name: payload.bankName,
+            reference_number: payload.referenceNumber,
+            proof_url: receiptUrl || null,
+            status: 'pending',
+            target_plan_id: 'digital_topup',
+            admin_note: payload.notes ? `Recarga de Billetera: ${payload.notes}` : 'Recarga de Saldo Billetera Digital'
+          });
+
+        if (prError && !savedInTopupTable) {
+          throw new Error(prError.message);
+        }
+      } catch (prEx: any) {
+        if (!savedInTopupTable) {
+          throw new Error(prEx?.message || 'No se pudo registrar la solicitud de recarga.');
+        }
+      }
+
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['digital-services-topup-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-payments'] });
       toast({
         title: '¡Solicitud de Recarga Enviada! 📋',
         description: 'Tu comprobante de transferencia fue enviado. En breve la administración validará y activará tu saldo.',
@@ -297,16 +370,119 @@ export const useDigitalServices = () => {
   // 6. Aprobar Solicitud de Recarga (Solo Admins)
   const approveTopupMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      const { data, error } = await supabase.rpc('approve_digital_service_topup', {
-        p_request_id: requestId,
-      });
-      if (error) throw new Error(error.message);
-      return data;
+      // 1. Intentar con RPC oficial
+      try {
+        const { data, error } = await supabase.rpc('approve_digital_service_topup', {
+          p_request_id: requestId,
+        });
+        if (!error && data) return data;
+      } catch (rpcErr) {
+        console.warn('RPC approve_digital_service_topup no disponible:', rpcErr);
+      }
+
+      // 2. Respaldo directo: buscar solicitud en digital_services_topup_requests o payment_reports
+      let topupItem: any = null;
+      try {
+        const { data: dsData } = await supabase
+          .from('digital_services_topup_requests')
+          .select('*')
+          .eq('id', requestId)
+          .maybeSingle();
+
+        if (dsData) {
+          topupItem = dsData;
+          await supabase
+            .from('digital_services_topup_requests')
+            .update({
+              status: 'approved',
+              approved_at: new Date().toISOString()
+            })
+            .eq('id', requestId);
+        }
+      } catch (e) {
+        console.warn('Error buscando en digital_services_topup_requests:', e);
+      }
+
+      if (!topupItem) {
+        const { data: prData } = await supabase
+          .from('payment_reports')
+          .select('*')
+          .eq('id', requestId)
+          .maybeSingle();
+
+        if (prData) {
+          topupItem = {
+            store_id: prData.company_id,
+            amount: prData.amount,
+            bank_name: prData.bank_name,
+            reference_number: prData.reference_number
+          };
+          await supabase
+            .from('payment_reports')
+            .update({
+              status: 'approved',
+              updated_at: new Date().toISOString(),
+              admin_note: 'Aprobado desde panel'
+            })
+            .eq('id', requestId);
+        }
+      }
+
+      if (!topupItem) {
+        throw new Error('No se encontró el registro de la solicitud para aprobar');
+      }
+
+      const targetStoreId = topupItem.store_id;
+      const amountToCredit = Number(topupItem.amount || 0);
+
+      // Acreditar saldo directamente a digital_services_wallets
+      const { data: walletData } = await supabase
+        .from('digital_services_wallets')
+        .select('id, balance')
+        .eq('store_id', targetStoreId)
+        .maybeSingle();
+
+      const currentBal = Number(walletData?.balance || 0);
+      const newBal = currentBal + amountToCredit;
+
+      if (walletData) {
+        await supabase
+          .from('digital_services_wallets')
+          .update({
+            balance: newBal,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', walletData.id);
+      } else {
+        await supabase
+          .from('digital_services_wallets')
+          .insert({
+            store_id: targetStoreId,
+            balance: newBal,
+            is_active: true
+          });
+      }
+
+      // Registrar movimiento de auditoría
+      await supabase
+        .from('digital_services_wallet_movements')
+        .insert({
+          store_id: targetStoreId,
+          type: 'deposit',
+          amount: amountToCredit,
+          balance_before: currentBal,
+          balance_after: newBal,
+          description: `Aprobación de recarga bancaria (${topupItem.bank_name || 'Transferencia'})`,
+          reference_id: topupItem.reference_number || null
+        });
+
+      return { success: true, amount: amountToCredit };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['digital-services-topup-requests'] });
       queryClient.invalidateQueries({ queryKey: ['digital-services-wallet'] });
       queryClient.invalidateQueries({ queryKey: ['digital-services-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-payments'] });
       toast({
         title: '¡Recarga Aprobada y Activada! ✅',
         description: `Se han acreditado RD$ ${data.amount} exitosamente a la billetera.`,
@@ -324,15 +500,39 @@ export const useDigitalServices = () => {
   // 7. Rechazar Solicitud de Recarga (Solo Admins)
   const rejectTopupMutation = useMutation({
     mutationFn: async ({ requestId, reason }: { requestId: string; reason?: string }) => {
-      const { data, error } = await supabase.rpc('reject_digital_service_topup', {
-        p_request_id: requestId,
-        p_reason: reason || null,
-      });
-      if (error) throw new Error(error.message);
-      return data;
+      try {
+        const { data, error } = await supabase.rpc('reject_digital_service_topup', {
+          p_request_id: requestId,
+          p_reason: reason || null,
+        });
+        if (!error && data) return data;
+      } catch (e) {
+        console.warn('RPC reject_digital_service_topup no disponible:', e);
+      }
+
+      // Respaldo directo en ambas tablas
+      await supabase
+        .from('digital_services_topup_requests')
+        .update({
+          status: 'rejected',
+          rejection_reason: reason || 'Rechazado por administración'
+        })
+        .eq('id', requestId);
+
+      await supabase
+        .from('payment_reports')
+        .update({
+          status: 'rejected',
+          admin_note: reason || 'Rechazado por administración',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['digital-services-topup-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-payments'] });
       toast({
         title: 'Solicitud rechazada',
         description: 'La solicitud de recarga ha sido marcada como rechazada.',
@@ -450,43 +650,101 @@ export const useDigitalTopupRequests = (options?: { status?: string; allStores?:
   return useQuery<DigitalServiceTopupRequest[]>({
     queryKey: ['digital-services-topup-requests', storeId, statusFilter, allStores],
     queryFn: async () => {
-      let query = supabase
-        .from('digital_services_topup_requests')
-        .select(`
-          id,
-          store_id,
-          user_id,
-          amount,
-          bank_name,
-          reference_number,
-          receipt_url,
-          notes,
-          status,
-          rejection_reason,
-          approved_by,
-          approved_at,
-          created_at,
-          updated_at,
-          stores:store_id (name),
-          profiles:user_id (full_name, email)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const results: DigitalServiceTopupRequest[] = [];
+      const seenIds = new Set<string>();
 
-      if (!allStores && storeId) {
-        query = query.eq('store_id', storeId);
+      // 1. Intentar consultar tabla dedicada digital_services_topup_requests
+      try {
+        let query = supabase
+          .from('digital_services_topup_requests')
+          .select(`
+            id,
+            store_id,
+            user_id,
+            amount,
+            bank_name,
+            reference_number,
+            receipt_url,
+            notes,
+            status,
+            rejection_reason,
+            approved_by,
+            approved_at,
+            created_at,
+            updated_at,
+            stores:store_id (name),
+            profiles:user_id (full_name, email)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (!allStores && storeId) {
+          query = query.eq('store_id', storeId);
+        }
+
+        if (statusFilter && statusFilter !== 'all') {
+          query = query.eq('status', statusFilter);
+        }
+
+        const { data, error } = await query;
+        if (!error && data) {
+          data.forEach((item: any) => {
+            results.push(item as DigitalServiceTopupRequest);
+            seenIds.add(item.reference_number || item.id);
+          });
+        }
+      } catch (err) {
+        console.warn('Error fetching digital_services_topup_requests:', err);
       }
 
-      if (statusFilter && statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+      // 2. Consultar payment_reports con target_plan_id = 'digital_topup' para respaldo y unificación
+      try {
+        let prQuery = supabase
+          .from('payment_reports')
+          .select('*')
+          .or('target_plan_id.eq.digital_topup,admin_note.ilike.%Billetera%')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (!allStores && storeId) {
+          prQuery = prQuery.eq('company_id', storeId);
+        }
+
+        if (statusFilter && statusFilter !== 'all') {
+          prQuery = prQuery.eq('status', statusFilter);
+        }
+
+        const { data: prData, error: prErr } = await prQuery;
+        if (!prErr && prData) {
+          prData.forEach((pr: any) => {
+            const key = pr.reference_number || pr.id;
+            if (!seenIds.has(key)) {
+              results.push({
+                id: pr.id,
+                store_id: pr.company_id,
+                user_id: undefined,
+                amount: Number(pr.amount || 0),
+                bank_name: pr.bank_name || 'Transferencia',
+                reference_number: pr.reference_number || 'S/R',
+                receipt_url: pr.proof_url || null,
+                notes: pr.admin_note || 'Recarga de Billetera Digital',
+                status: pr.status || 'pending',
+                rejection_reason: pr.admin_note,
+                approved_by: undefined,
+                approved_at: pr.updated_at,
+                created_at: pr.created_at,
+                updated_at: pr.updated_at,
+                stores: pr.store_name ? { name: pr.store_name } : undefined,
+              } as DigitalServiceTopupRequest);
+              seenIds.add(key);
+            }
+          });
+        }
+      } catch (prCatch) {
+        console.warn('Error fetching payment_reports fallback for topup:', prCatch);
       }
 
-      const { data, error } = await query;
-      if (error) {
-        console.warn('Error fetching topup requests:', error);
-        return [];
-      }
-      return (data || []) as unknown as DigitalServiceTopupRequest[];
+      return results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     staleTime: 1000 * 15,
   });

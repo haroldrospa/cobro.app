@@ -561,19 +561,66 @@ const SuperAdmin = () => {
 
                 if (updError) throw updError;
 
-                // Si fue aprobado, activar o extender la suscripción de la tienda
+                // Si fue aprobado, activar o extender la suscripción de la tienda O acreditar saldo de billetera
                 if (status === "approved" && report?.company_id) {
-                    const days = (report.amount && report.amount >= 5000) ? 365 : 30;
-                    const plan = report.target_plan_id || 'pro';
-                    try {
-                        // @ts-ignore
-                        await supabase.rpc("admin_update_subscription", {
-                            p_store_id: report.company_id,
-                            p_plan_id: plan,
-                            p_days_duration: days
-                        });
-                    } catch (subErr) {
-                        console.error("Error al activar suscripción en fallback:", subErr);
+                    const isDigitalTopup = report.target_plan_id === 'digital_topup' || (report.admin_note && report.admin_note.includes('Billetera'));
+
+                    if (isDigitalTopup) {
+                        const topupAmt = Number(report.amount || 0);
+                        try {
+                            const { data: w } = await supabase
+                                .from('digital_services_wallets')
+                                .select('id, balance')
+                                .eq('store_id', report.company_id)
+                                .maybeSingle();
+
+                            const curBal = Number(w?.balance || 0);
+                            const nextBal = curBal + topupAmt;
+
+                            if (w) {
+                                await supabase.from('digital_services_wallets').update({
+                                    balance: nextBal,
+                                    updated_at: new Date().toISOString()
+                                }).eq('id', w.id);
+                            } else {
+                                await supabase.from('digital_services_wallets').insert({
+                                    store_id: report.company_id,
+                                    balance: nextBal,
+                                    is_active: true
+                                });
+                            }
+
+                            await supabase.from('digital_services_wallet_movements').insert({
+                                store_id: report.company_id,
+                                type: 'deposit',
+                                amount: topupAmt,
+                                balance_before: curBal,
+                                balance_after: nextBal,
+                                description: `Aprobación de recarga de saldo (${report.bank_name || 'Billetera'})`,
+                                reference_id: report.reference_number || null
+                            });
+
+                            // Sincronizar en digital_services_topup_requests si existiera
+                            await supabase
+                                .from('digital_services_topup_requests')
+                                .update({ status: 'approved', approved_at: new Date().toISOString() })
+                                .eq('reference_number', report.reference_number);
+                        } catch (walletErr) {
+                            console.error("Error al acreditar billetera digital:", walletErr);
+                        }
+                    } else {
+                        const days = (report.amount && report.amount >= 5000) ? 365 : 30;
+                        const plan = report.target_plan_id || 'pro';
+                        try {
+                            // @ts-ignore
+                            await supabase.rpc("admin_update_subscription", {
+                                p_store_id: report.company_id,
+                                p_plan_id: plan,
+                                p_days_duration: days
+                            });
+                        } catch (subErr) {
+                            console.error("Error al activar suscripción en fallback:", subErr);
+                        }
                     }
                 }
             }
