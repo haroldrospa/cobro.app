@@ -62,7 +62,7 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
 
   const currentBalance = Number(wallet?.balance || 0);
   const numericAmount = Number(amount) || 0;
-  const isAmountValid = numericAmount >= 500 && numericAmount <= 20000;
+  const isAmountValid = numericAmount >= 100 && numericAmount <= 20000;
 
   const handleCopyAccount = (bankId: string, accountNumber: string) => {
     navigator.clipboard.writeText(accountNumber.replace(/-/g, ''));
@@ -93,7 +93,7 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAmountValid) {
-      alert('El monto debe estar entre RD$ 500 y RD$ 20,000');
+      alert('El monto debe estar entre RD$ 100 y RD$ 20,000');
       return;
     }
     if (!referenceNumber.trim()) {
@@ -262,7 +262,7 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
                 </div>
               </div>
 
-              {/* Paso 2: Monto a Recargar (Min 500 - Max 20,000) */}
+              {/* Paso 2: Monto a Recargar (Min 100 - Max 20,000) */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="topup-amount" className="text-xs font-bold text-foreground">
@@ -272,8 +272,8 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
                     "text-[11px] font-semibold",
                     isAmountValid ? "text-primary" : "text-destructive"
                   )}>
-                    {numericAmount < 500
-                      ? 'Mínimo RD$ 500'
+                    {numericAmount < 100
+                      ? 'Mínimo RD$ 100'
                       : numericAmount > 20000
                       ? 'Máximo RD$ 20,000'
                       : 'Monto válido ✓'}
@@ -283,19 +283,19 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
                 <Input
                   id="topup-amount"
                   type="number"
-                  min={500}
+                  min={100}
                   max={20000}
-                  step={100}
+                  step={50}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="500 a 20,000"
+                  placeholder="100 a 20,000"
                   className="h-10 text-base font-bold rounded-xl border-border/70 bg-card"
                   required
                 />
 
                 {/* Chips de montos rápidos */}
                 <div className="grid grid-cols-6 gap-1.5">
-                  {[500, 1000, 2000, 5000, 10000, 20000].map((amt) => (
+                  {[100, 500, 1000, 2000, 5000, 10000].map((amt) => (
                     <button
                       key={amt}
                       type="button"
