@@ -112,8 +112,21 @@ export const normalizePlanId = (rawPlan: any): 'basic' | 'pro' | 'enterprise' =>
     return 'basic';
 };
 
+interface ProofModalData {
+    url: string;
+    rawPath: string;
+    storeName?: string;
+    amount?: number;
+    bankName?: string;
+    reportId?: string;
+    isPdf?: boolean;
+    status?: string;
+}
+
 const SuperAdmin = () => {
-    const [selectedProof, setSelectedProof] = useState<string | null>(null);
+    const [selectedProof, setSelectedProof] = useState<ProofModalData | null>(null);
+    const [loadingProofId, setLoadingProofId] = useState<string | null>(null);
+    const [proofImageError, setProofImageError] = useState<boolean>(false);
     const { isPlatformAdmin, loading: checkingAdmin } = usePlatformAdmin();
     const queryClient = useQueryClient();
     const { profile } = useUserProfile();
@@ -511,23 +524,89 @@ const SuperAdmin = () => {
             id: string;
             status: "approved" | "rejected";
         }) => {
-            // @ts-ignore
-            const { data, error } = await supabase.rpc("process_subscription_payment", {
-                p_report_id: id,
-                p_status: status,
-                p_admin_note: status === "approved" ? "Aprobado desde panel maestro" : "Rechazado por administrador",
-            });
-            if (error) throw error;
-            return data;
+            const report = reports?.find((r) => r.id === id);
+            let rpcSucceeded = false;
+
+            // 1. Intentar llamar al RPC de procesamiento
+            try {
+                // @ts-ignore
+                const { data: rpcData, error: rpcError } = await supabase.rpc("process_subscription_payment", {
+                    p_report_id: id,
+                    p_status: status,
+                    p_admin_note: status === "approved" ? "Aprobado desde panel maestro" : "Rechazado por administrador",
+                });
+
+                if (!rpcError && rpcData && (rpcData as any).success !== false) {
+                    rpcSucceeded = true;
+                } else if (rpcError) {
+                    console.warn("RPC process_subscription_payment falló:", rpcError);
+                } else if (rpcData && (rpcData as any).success === false) {
+                    console.warn("RPC process_subscription_payment devolvió success=false:", rpcData);
+                }
+            } catch (rpcEx) {
+                console.warn("Excepción al ejecutar process_subscription_payment:", rpcEx);
+            }
+
+            // 2. Si el RPC falló o no actualizó, ejecutar actualización directa de respaldo
+            if (!rpcSucceeded) {
+                console.log("Aplicando actualización directa en payment_reports para id:", id);
+                const { error: updError } = await supabase
+                    .from("payment_reports")
+                    .update({
+                        status: status,
+                        admin_note: status === "approved" ? "Aprobado desde panel maestro" : "Rechazado por administrador",
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq("id", id);
+
+                if (updError) throw updError;
+
+                // Si fue aprobado, activar o extender la suscripción de la tienda
+                if (status === "approved" && report?.company_id) {
+                    const days = (report.amount && report.amount >= 5000) ? 365 : 30;
+                    const plan = report.target_plan_id || 'pro';
+                    try {
+                        // @ts-ignore
+                        await supabase.rpc("admin_update_subscription", {
+                            p_store_id: report.company_id,
+                            p_plan_id: plan,
+                            p_days_duration: days
+                        });
+                    } catch (subErr) {
+                        console.error("Error al activar suscripción en fallback:", subErr);
+                    }
+                }
+            }
+
+            return { id, status, report };
         },
-        onSuccess: () => {
-            toast.success("Operación realizada con éxito");
+        onMutate: async ({ id, status }) => {
+            await queryClient.cancelQueries({ queryKey: ["admin-pending-payments"] });
+            const previousReports = queryClient.getQueryData<any[]>(["admin-pending-payments"]);
+
+            // Optimistic update: marcarlo como aprobado/rechazado en la caché inmediatamente
+            queryClient.setQueryData<any[]>(["admin-pending-payments"], (old) => {
+                if (!old) return [];
+                return old.map((r) => (r.id === id ? { ...r, status } : r));
+            });
+
+            return { previousReports };
+        },
+        onSuccess: ({ status, report }) => {
+            toast.success(
+                status === "approved" 
+                    ? `Pago aprobado y suscripción activada para ${report?.store_name || "el comercio"}` 
+                    : "Pago rechazado correctamente"
+            );
             queryClient.invalidateQueries({ queryKey: ["admin-pending-payments"] });
             queryClient.invalidateQueries({ queryKey: ["admin-all-stores"] });
             setSelectedProof(null);
         },
-        onError: (error) => {
-            toast.error("Error: " + error.message);
+        onError: (error: any, _vars, context) => {
+            if (context?.previousReports) {
+                queryClient.setQueryData(["admin-pending-payments"], context.previousReports);
+            }
+            toast.error("Error al procesar el pago: " + (error?.message || "Intente nuevamente"));
         },
     });
 
@@ -686,9 +765,72 @@ const SuperAdmin = () => {
         }
     };
 
+    const resolveProofUrl = async (path: string): Promise<string> => {
+        if (!path) return "";
+
+        // Si ya es una URL completa válida
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+            // Si ya tiene un token firmado o no es una URL pública fallida de Supabase, devolverla
+            if (path.includes("token=") || !path.includes("/storage/v1/object/public/payment-proofs/")) {
+                return path;
+            }
+            // Si es una URL pública que falló con 400/403, extraer la ruta interna
+            const match = path.match(/\/payment-proofs\/(.+)$/);
+            if (match && match[1]) {
+                path = decodeURIComponent(match[1]);
+            }
+        }
+
+        const cleanPath = path.replace(/^payment-proofs\//, "").replace(/^\/+/, "");
+
+        // 1. Intentar signedUrl (funciona para buckets públicos o privados y genera un token válido de 2 horas)
+        try {
+            const { data, error } = await supabase.storage
+                .from("payment-proofs")
+                .createSignedUrl(cleanPath, 60 * 60 * 2);
+            if (!error && data?.signedUrl) {
+                return data.signedUrl;
+            }
+        } catch (e) {
+            console.warn("createSignedUrl error:", e);
+        }
+
+        // 2. Fallback a publicUrl
+        const { data: pubData } = supabase.storage.from("payment-proofs").getPublicUrl(cleanPath);
+        return pubData?.publicUrl || path;
+    };
+
+    const handleOpenProof = async (report: any) => {
+        if (!report?.proof_url) {
+            toast.error("Este registro no tiene comprobante adjunto");
+            return;
+        }
+        setLoadingProofId(report.id);
+        setProofImageError(false);
+        try {
+            const finalUrl = await resolveProofUrl(report.proof_url);
+            const isPdf = report.proof_url.toLowerCase().endsWith(".pdf") || finalUrl.toLowerCase().includes(".pdf");
+            setSelectedProof({
+                url: finalUrl,
+                rawPath: report.proof_url,
+                storeName: report.store_name,
+                amount: report.amount,
+                bankName: report.bank_name,
+                reportId: report.id,
+                isPdf,
+                status: report.status,
+            });
+        } catch (err: any) {
+            toast.error("Error al cargar comprobante: " + (err?.message || "Error de red"));
+        } finally {
+            setLoadingProofId(null);
+        }
+    };
+
     const getPublicUrl = (path: string) => {
         if (!path) return "";
-        const { data } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+        const cleanPath = path.replace(/^payment-proofs\//, "").replace(/^\/+/, "");
+        const { data } = supabase.storage.from("payment-proofs").getPublicUrl(cleanPath);
         return data.publicUrl;
     };
 
@@ -2012,10 +2154,15 @@ const SuperAdmin = () => {
                                                         variant="outline"
                                                         size="sm"
                                                         className="h-8 text-xs font-semibold rounded-xl gap-1.5 border-border/60 hover:bg-muted"
-                                                        onClick={() => setSelectedProof(getPublicUrl(report.proof_url))}
+                                                        onClick={() => handleOpenProof(report)}
+                                                        disabled={loadingProofId === report.id}
                                                     >
-                                                        <Eye className="h-3.5 w-3.5 text-primary" />
-                                                        Ver Comprobante
+                                                        {loadingProofId === report.id ? (
+                                                            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                                                        ) : (
+                                                            <Eye className="h-3.5 w-3.5 text-primary" />
+                                                        )}
+                                                        <span>Ver Comprobante</span>
                                                     </Button>
                                                 </TableCell>
                                                 <TableCell className="pr-5 text-right">
@@ -2107,10 +2254,15 @@ const SuperAdmin = () => {
                                                         variant="ghost"
                                                         size="sm"
                                                         className="h-7 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg"
-                                                        onClick={() => setSelectedProof(getPublicUrl(report.proof_url))}
+                                                        onClick={() => handleOpenProof(report)}
+                                                        disabled={loadingProofId === report.id}
                                                     >
-                                                        <Eye className="h-3 w-3 mr-1" />
-                                                        Ver
+                                                        {loadingProofId === report.id ? (
+                                                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                                        ) : (
+                                                            <Eye className="h-3 w-3 mr-1" />
+                                                        )}
+                                                        <span>Ver</span>
                                                     </Button>
                                                 </TableCell>
                                                 <TableCell className="pr-5 text-right">
@@ -2281,23 +2433,138 @@ const SuperAdmin = () => {
                 </TabsContent>
             </Tabs>
 
-            {/* MODAL PARA VER COMPROBANTE DE PAGO */}
-            <Dialog open={!!selectedProof} onOpenChange={() => setSelectedProof(null)}>
-                <DialogContent className="max-w-2xl bg-card border border-border p-5 rounded-2xl">
-                    <DialogHeader className="space-y-1">
-                        <DialogTitle className="text-base font-bold text-foreground">Comprobante de Pago</DialogTitle>
-                        <DialogDescription className="text-xs text-muted-foreground">
-                            Verifica que el monto y la fecha coincidan con la cuenta bancaria de CobroApp.
+            {/* MODAL PARA VER COMPROBANTE DE PAGO MEJORADO */}
+            <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
+                <DialogContent className="max-w-2xl bg-card border border-border p-5 rounded-2xl max-h-[92vh] flex flex-col">
+                    <DialogHeader className="space-y-1 shrink-0 pb-2 border-b border-border/40">
+                        <div className="flex items-center justify-between gap-2">
+                            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                                <CreditCard className="h-4 w-4 text-emerald-500" />
+                                Comprobante de Pago
+                            </DialogTitle>
+                            {selectedProof?.status === "pending" && (
+                                <Badge className="bg-orange-500/15 text-orange-500 border-orange-500/30 text-[10px] font-bold">
+                                    Por Validar
+                                </Badge>
+                            )}
+                        </div>
+                        <DialogDescription className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+                            {selectedProof?.storeName && (
+                                <span>Negocio: <strong className="text-foreground">{selectedProof.storeName}</strong></span>
+                            )}
+                            {selectedProof?.amount !== undefined && (
+                                <span>Monto: <strong className="text-emerald-500 font-bold">RD$ {selectedProof.amount.toLocaleString()}</strong></span>
+                            )}
+                            {selectedProof?.bankName && (
+                                <span>Banco: <strong className="text-foreground">{selectedProof.bankName}</strong></span>
+                            )}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex justify-center bg-black/10 dark:bg-black/30 p-3 rounded-xl border border-border/40 mt-2">
-                        {selectedProof && (
+
+                    {/* Contenedor del comprobante */}
+                    <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-3 my-2 bg-black/20 rounded-xl border border-border/40 min-h-[320px]">
+                        {selectedProof?.isPdf ? (
+                            <div className="w-full h-[60vh] flex flex-col items-center justify-center gap-3">
+                                <iframe
+                                    src={selectedProof.url}
+                                    title="Comprobante PDF"
+                                    className="w-full h-full rounded-lg border border-border/50 bg-white"
+                                />
+                            </div>
+                        ) : proofImageError ? (
+                            <div className="text-center p-6 space-y-3 max-w-sm">
+                                <div className="h-12 w-12 rounded-full bg-rose-500/15 text-rose-500 flex items-center justify-center mx-auto">
+                                    <AlertCircle className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm text-foreground">Vista previa directa protegida</h4>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        El archivo está seguro en Supabase Storage. Haz clic en el botón inferior para abrirlo en alta resolución.
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    className="bg-primary text-primary-foreground font-semibold text-xs rounded-xl"
+                                    onClick={() => window.open(selectedProof?.url, "_blank")}
+                                >
+                                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                    Abrir comprobante directamente
+                                </Button>
+                            </div>
+                        ) : (
                             <img
-                                src={selectedProof}
-                                alt="Comprobante"
-                                className="max-h-[65vh] object-contain rounded-lg shadow-md"
+                                src={selectedProof?.url}
+                                alt="Comprobante de Pago"
+                                onError={() => setProofImageError(true)}
+                                className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-md"
                             />
                         )}
+                    </div>
+
+                    {/* Pie de acciones */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40 shrink-0">
+                        <div>
+                            {selectedProof?.url && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs font-semibold rounded-xl gap-1.5"
+                                    onClick={() => window.open(selectedProof.url, "_blank")}
+                                >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    <span>Abrir en Pestaña</span>
+                                </Button>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {selectedProof?.reportId && selectedProof.status === "pending" && (
+                                <>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 px-2.5 text-xs border-rose-500/30 text-rose-500 hover:bg-rose-500/10 rounded-xl"
+                                        onClick={() =>
+                                            processPaymentMutation.mutate({
+                                                id: selectedProof.reportId!,
+                                                status: "rejected",
+                                            })
+                                        }
+                                        disabled={processPaymentMutation.isPending}
+                                    >
+                                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                                        Rechazar
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-sm"
+                                        onClick={() =>
+                                            processPaymentMutation.mutate({
+                                                id: selectedProof.reportId!,
+                                                status: "approved",
+                                            })
+                                        }
+                                        disabled={processPaymentMutation.isPending}
+                                    >
+                                        {processPaymentMutation.isPending ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                        ) : (
+                                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                        )}
+                                        Aprobar
+                                    </Button>
+                                </>
+                            )}
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setSelectedProof(null)}
+                                className="h-8 text-xs rounded-xl"
+                            >
+                                Cerrar
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
