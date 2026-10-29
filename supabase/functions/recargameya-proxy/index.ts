@@ -34,9 +34,12 @@ interface RechargeRequest {
   target_number?: string;
   target_name?: string;
   amount: number;
-  service_type?: "recharge" | "data_package" | "bill_payment" | "prepaid_power";
+  service_type?: "recharge" | "data_package" | "bill_payment" | "prepaid_power" | "remittance";
   client_reference_id?: string;
   package_id?: string;
+  commission?: number;
+  cost_amount?: number;
+  metadata?: Record<string, any>;
 }
 
 serve(async (req: Request) => {
@@ -125,17 +128,21 @@ serve(async (req: Request) => {
         );
       }
 
-      // Calcular comisión del comercio
-      const commissionRate = walletData.custom_commission_rate ?? config?.default_recharge_commission_rate ?? 6.0;
-      let commission = 0;
-      let costAmount = amount;
+      // Calcular o recibir comisión del comercio (50% de la comisión oficial de RecargameYa)
+      let commission = body.commission !== undefined ? Number(body.commission) : 0;
+      let costAmount = body.cost_amount !== undefined ? Number(body.cost_amount) : amount;
+      const customMetadata = body.metadata || {};
 
-      if (service_type === "bill_payment") {
-        commission = Number(config?.default_bill_fixed_commission || 15.0);
-        costAmount = amount; // En facturas normalmente el cliente paga monto + fee de RD$ 15-25
-      } else {
-        commission = Math.round((amount * (commissionRate / 100)) * 100) / 100;
-        costAmount = Math.round((amount - commission) * 100) / 100;
+      if (!commission) {
+        // Fallback: 50% de la comisión por defecto
+        const defaultRate = (walletData.custom_commission_rate ?? config?.default_recharge_commission_rate ?? 5.5) / 2;
+        if (service_type === "bill_payment") {
+          commission = 2.0; // 50% de RD$ 4.00
+          costAmount = Math.max(0, amount - commission);
+        } else {
+          commission = Math.round((amount * (defaultRate / 100)) * 100) / 100;
+          costAmount = Math.round((amount - commission) * 100) / 100;
+        }
       }
 
       // Verificar si tiene saldo suficiente en la billetera
@@ -232,6 +239,7 @@ serve(async (req: Request) => {
           p_external_id: externalId,
           p_metadata: {
             ...apiResponseData,
+            ...customMetadata,
             processed_at: new Date().toISOString(),
           }
         }

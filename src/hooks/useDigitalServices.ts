@@ -71,9 +71,12 @@ export const useDigitalServices = () => {
       carrier: string;
       phone: string;
       amount: number;
-      service_type: 'recharge' | 'data_package' | 'bill_payment' | 'prepaid_power';
+      service_type: 'recharge' | 'data_package' | 'bill_payment' | 'prepaid_power' | 'remittance';
       target_name?: string;
       package_id?: string;
+      commission?: number;
+      cost_amount?: number;
+      metadata?: any;
     }) => {
       if (!storeId) throw new Error('No se ha detectado el comercio actual.');
 
@@ -89,6 +92,9 @@ export const useDigitalServices = () => {
           service_type: payload.service_type,
           target_name: payload.target_name,
           package_id: payload.package_id,
+          commission: payload.commission,
+          cost_amount: payload.cost_amount,
+          metadata: payload.metadata,
           client_reference_id: clientReferenceId,
         },
       });

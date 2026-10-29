@@ -43,36 +43,37 @@ import { DigitalServiceType } from '@/types/digitalServices';
 import { cn } from '@/lib/utils';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { BrandLogo } from './BrandLogo';
+import { calculateDigitalServiceCommission } from '@/config/digitalServicesRates';
 
 interface DigitalServicesPOSDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-// 1. OPERADORAS MÓVILES - RD Y HAITÍ
+// 1. OPERADORAS MÓVILES - RD Y HAITÍ (Comisión 50% para el usuario)
 const MOBILE_OPERATORS = [
-  { id: 'claro', name: 'Claro', sub: 'Dominicana', badge: '6% com.' },
-  { id: 'altice', name: 'Altice', sub: 'Dominicana', badge: '5% com.' },
-  { id: 'viva', name: 'Viva', sub: 'Tu Voz Viva', badge: '7% com.' },
-  { id: 'digicel', name: 'Digicel', sub: 'Haití / Caribe', badge: '5% com.' },
-  { id: 'natcom', name: 'Natcom', sub: 'Haití', badge: '5% com.' },
-  { id: 'wind_telecom', name: 'Wind Telecom', sub: 'Dominicana', badge: '5% com.' },
+  { id: 'claro', name: 'Claro', sub: 'Dominicana', badge: '2.75% com.' },
+  { id: 'altice', name: 'Altice', sub: 'Dominicana', badge: '2.75% com.' },
+  { id: 'viva', name: 'Viva', sub: 'Tu Voz Viva', badge: '2.75% com.' },
+  { id: 'digicel', name: 'Digicel', sub: 'Haití / Caribe', badge: '3.00% com.' },
+  { id: 'natcom', name: 'Natcom', sub: 'Haití', badge: '3.00% com.' },
+  { id: 'wind_telecom', name: 'Wind Telecom', sub: 'Dominicana', badge: '1.25% com.' },
 ];
 
-// 2. LUZ PREPAGO Y ELECTRICIDAD
+// 2. LUZ PREPAGO Y ELECTRICIDAD (Comisión 50% para el usuario)
 const PREPAID_POWER_PROVIDERS = [
-  { id: 'edesur_prepago', name: 'Edesur Dominicana', desc: 'PIN para medidor', fee: 15 },
-  { id: 'edenorte_prepago', name: 'Edenorte', desc: 'PIN para medidor', fee: 15 },
-  { id: 'edeeste_prepago', name: 'Edeeste', desc: 'PIN para medidor', fee: 15 },
-  { id: 'cepm_prepago', name: 'CEPM', desc: 'Punta Cana - Macao', fee: 20 },
-  { id: 'ceb_prepago', name: 'CEB', desc: 'Bayahibe', fee: 20 },
-  { id: 'luz_y_fuerza_prepago', name: 'Luz y Fuerza', desc: 'Las Terrenas', fee: 20 },
+  { id: 'edesur_prepago', name: 'Edesur Dominicana', desc: 'PIN para medidor', badge: '1.00% com.' },
+  { id: 'edenorte_prepago', name: 'Edenorte', desc: 'PIN para medidor', badge: '1.00% com.' },
+  { id: 'edeeste_prepago', name: 'Edeeste', desc: 'PIN para medidor', badge: '+RD$ 2.00 ganancia' },
+  { id: 'cepm_prepago', name: 'CEPM', desc: 'Punta Cana - Macao', badge: '0.50% com.' },
+  { id: 'ceb_prepago', name: 'CEB', desc: 'Bayahibe', badge: '0.50% com.' },
+  { id: 'luz_y_fuerza_prepago', name: 'Luz y Fuerza', desc: 'Las Terrenas', badge: '+RD$ 1.00 ganancia' },
 ];
 
-// 3. REMESAS A HAITÍ
+// 3. REMESAS A HAITÍ (Comisión 50% para el usuario)
 const REMITTANCE_PROVIDERS = [
-  { id: 'moncash', name: 'MonCash', sub: 'Digicel Haití', fee: 25 },
-  { id: 'natcash', name: 'Natcash', sub: 'Natcom Haití', fee: 25 },
+  { id: 'moncash', name: 'MonCash', sub: 'Digicel Haití', badge: '2.50% com.' },
+  { id: 'natcash', name: 'Natcash', sub: 'Natcom Haití', badge: '2.50% com.' },
 ];
 
 // 4. CATEGORÍAS OFICIALES RECARGAMEYA
@@ -101,61 +102,61 @@ const RECARGAMEYA_CATEGORIES: { id: BillCategory; label: string; icon: any }[] =
   { id: 'gaming', label: 'Gaming y Recreación', icon: Gamepad2 },
 ];
 
-// 5. PROVEEDORES DE FACTURAS Y SERVICIOS RECARGAMEYA
+// 5. PROVEEDORES DE FACTURAS Y SERVICIOS RECARGAMEYA (Comisión 50% para el usuario)
 const ALL_BILLERS = [
   // Agua y Acueductos
-  { id: 'caasd', name: 'CAASD', category: 'water', sub: 'Santo Domingo', fee: 15 },
-  { id: 'coraasan', name: 'CORAASAN', category: 'water', sub: 'Santiago', fee: 15 },
-  { id: 'coraaplata', name: 'CORAAPLATA', category: 'water', sub: 'Puerto Plata', fee: 15 },
-  { id: 'coraavega', name: 'CORAAVEGA', category: 'water', sub: 'La Vega', fee: 15 },
-  { id: 'coaarom', name: 'COAAROM', category: 'water', sub: 'La Romana', fee: 15 },
-  { id: 'asdn', name: 'ASDN', category: 'water', sub: 'Santo Domingo Norte', fee: 15 },
+  { id: 'caasd', name: 'CAASD', category: 'water', sub: 'Santo Domingo', badge: '0.75% com.' },
+  { id: 'coraasan', name: 'CORAASAN', category: 'water', sub: 'Santiago', badge: '+RD$ 2.00 ganancia' },
+  { id: 'coraaplata', name: 'CORAAPLATA', category: 'water', sub: 'Puerto Plata', badge: '0.75% com.' },
+  { id: 'coraavega', name: 'CORAAVEGA', category: 'water', sub: 'La Vega', badge: '0.75% com.' },
+  { id: 'coaarom', name: 'COAAROM', category: 'water', sub: 'La Romana', badge: '+RD$ 0.50 ganancia' },
+  { id: 'asdn', name: 'ASDN', category: 'water', sub: 'Santo Domingo Norte', badge: '+RD$ 2.00 ganancia' },
 
   // Impuestos y Gobierno
-  { id: 'dgii', name: 'Impuestos Internos (DGII)', category: 'gov', sub: 'Tributos y Marbetes', fee: 25 },
-  { id: 'tss', name: 'TSS', category: 'gov', sub: 'Seguridad Social', fee: 25 },
-  { id: 'adn', name: 'ADN', category: 'gov', sub: 'Distrito Nacional', fee: 20 },
-  { id: 'pgr_multas', name: 'Procuraduría (PGR)', category: 'gov', sub: 'Multas y Certificaciones', fee: 25 },
+  { id: 'dgii', name: 'Impuestos Internos (DGII)', category: 'gov', sub: 'Tributos y Marbetes', badge: '+RD$ 2.00 ganancia' },
+  { id: 'tss', name: 'TSS', category: 'gov', sub: 'Seguridad Social', badge: '+RD$ 2.00 ganancia' },
+  { id: 'adn', name: 'ADN', category: 'gov', sub: 'Distrito Nacional', badge: '+RD$ 2.00 ganancia' },
+  { id: 'pgr_multas', name: 'Procuraduría (PGR)', category: 'gov', sub: 'Multas y Certificaciones', badge: '+RD$ 2.00 ganancia' },
+  { id: 'infotep', name: 'INFOTEP', category: 'gov', sub: 'Formación Profesional', badge: '+RD$ 2.00 ganancia' },
 
   // Universidades y Educación
-  { id: 'uapa', name: 'UAPA', category: 'education', sub: 'Universidad Abierta', fee: 20 },
-  { id: 'unapec', name: 'UNAPEC', category: 'education', sub: 'Universidad APEC', fee: 20 },
-  { id: 'unibe', name: 'UNIBE', category: 'education', sub: 'Universidad Iberoamericana', fee: 20 },
-  { id: 'utel', name: 'Utel', category: 'education', sub: 'Universidad Online', fee: 20 },
-  { id: 'infotep', name: 'INFOTEP', category: 'education', sub: 'Formación Técnico Profesional', fee: 20 },
+  { id: 'uapa', name: 'UAPA', category: 'education', sub: 'Universidad Abierta', badge: '+RD$ 2.00 ganancia' },
+  { id: 'unapec', name: 'UNAPEC', category: 'education', sub: 'Universidad APEC', badge: '+RD$ 2.00 ganancia' },
+  { id: 'unibe', name: 'UNIBE', category: 'education', sub: 'Universidad Iberoamericana', badge: '+RD$ 2.00 ganancia' },
+  { id: 'utel', name: 'Utel', category: 'education', sub: 'Universidad Online', badge: '+RD$ 2.00 ganancia' },
 
   // TV, Cable e Internet
-  { id: 'starcable', name: 'Star Cable', category: 'telecom', sub: 'Cable e Internet', fee: 15 },
-  { id: 'telecasa', name: 'TELECASA', category: 'telecom', sub: 'Televisión por Cable', fee: 15 },
-  { id: 'milchans', name: 'Milchans', category: 'telecom', sub: 'Entretenimiento y Cable', fee: 15 },
+  { id: 'starcable', name: 'Star Cable', category: 'telecom', sub: 'Cable e Internet', badge: '0.50% com.' },
+  { id: 'telecasa', name: 'TELECASA', category: 'telecom', sub: 'Televisión por Cable', badge: '+RD$ 2.00 ganancia' },
+  { id: 'milchans', name: 'Milchans', category: 'telecom', sub: 'Entretenimiento y Cable', badge: '+RD$ 2.00 ganancia' },
 
   // Financieras y Crédito
-  { id: 'credigo', name: 'CrediGo', category: 'finance', sub: 'Financiamiento Móvil', fee: 20 },
-  { id: 'krece', name: 'Krece', category: 'finance', sub: 'Microcréditos', fee: 20 },
-  { id: 'solucredito', name: 'Solucrédito', category: 'finance', sub: 'Créditos Personales', fee: 20 },
-  { id: 'paycash', name: 'PayCash', category: 'finance', sub: 'Red de Pagos', fee: 20 },
-  { id: 'paso_rapido', name: 'Paso Rápido', category: 'finance', sub: 'Peajes RD Vial', fee: 15 },
-  { id: 'moneyshop', name: 'Money Shop', category: 'finance', sub: 'Servicios Financieros', fee: 20 },
+  { id: 'credigo', name: 'CrediGo', category: 'finance', sub: 'Financiamiento Móvil', badge: '+RD$ 2.00 ganancia' },
+  { id: 'krece', name: 'Krece', category: 'finance', sub: 'Microcréditos', badge: '+RD$ 2.00 ganancia' },
+  { id: 'solucredito', name: 'Solucrédito', category: 'finance', sub: 'Créditos Personales', badge: '+RD$ 2.00 ganancia' },
+  { id: 'paycash', name: 'PayCash', category: 'finance', sub: 'Red de Pagos', badge: '+RD$ 2.00 ganancia' },
+  { id: 'paso_rapido', name: 'Paso Rápido', category: 'finance', sub: 'Peajes RD Vial', badge: '0.75% com.' },
+  { id: 'moneyshop', name: 'Money Shop', category: 'finance', sub: 'Servicios Financieros', badge: '+RD$ 2.00 ganancia' },
 
   // Catálogos y Cosméticos
-  { id: 'avon', name: 'AVON', category: 'catalog', sub: 'Catálogo de Belleza', fee: 20 },
-  { id: 'belcorp', name: 'BELCORP', category: 'catalog', sub: 'Ésika, L\'Bel, Cyzone', fee: 20 },
+  { id: 'avon', name: 'AVON', category: 'catalog', sub: 'Catálogo de Belleza', badge: '+RD$ 2.00 ganancia' },
+  { id: 'belcorp', name: 'BELCORP', category: 'catalog', sub: 'Ésika, L\'Bel, Cyzone', badge: '+RD$ 2.00 ganancia' },
 
-  // Apuestas Deportivas
-  { id: 'betcris', name: 'Betcris', category: 'betting', sub: 'Recargas y Retiros', fee: 15 },
-  { id: 'starsport', name: 'Star Sport', category: 'betting', sub: 'Apuestas Deportivas', fee: 15 },
-  { id: 'juancito_sport', name: 'Juancito Sport', category: 'betting', sub: 'Bancas Deportivas', fee: 15 },
-  { id: 'activa', name: 'Activa', category: 'betting', sub: 'Cable Teléfono Internet', fee: 15 },
+  // Apuestas Deportivas y Lotería
+  { id: 'betcris', name: 'Betcris', category: 'betting', sub: 'Recargas y Retiros', badge: '1.25% com.' },
+  { id: 'starsport', name: 'Star Sport', category: 'betting', sub: 'Apuestas Deportivas', badge: '1.25% com.' },
+  { id: 'juancito_sport', name: 'Juancito Sport', category: 'betting', sub: 'Bancas Deportivas', badge: '2.50% com.' },
+  { id: 'activa', name: 'Activa', category: 'betting', sub: 'Cable Teléfono Internet', badge: '0.50% com.' },
 
   // Seguros
-  { id: 'angloamericana', name: 'Angloamericana', category: 'insurance', sub: 'Seguros Generales', fee: 25 },
-  { id: 'seguro_midas', name: 'Midas Seguros', category: 'insurance', sub: 'Pólizas y Coberturas', fee: 25 },
+  { id: 'angloamericana', name: 'Angloamericana', category: 'insurance', sub: 'Seguros Generales', badge: '4.50% com.' },
+  { id: 'seguro_midas', name: 'Midas Seguros', category: 'insurance', sub: 'Pólizas y Coberturas', badge: '4.50% com.' },
 
   // Gaming y Recreación Digital
-  { id: 'freefire', name: 'Free Fire', category: 'gaming', sub: 'Diamantes y Pases', fee: 15 },
-  { id: 'mobile_legends', name: 'Mobile Legends', category: 'gaming', sub: 'Diamantes MLBB', fee: 15 },
-  { id: 'pubg', name: 'PUBG Mobile', category: 'gaming', sub: 'UC y Pases Royale', fee: 15 },
-  { id: 'roblox', name: 'Roblox', category: 'gaming', sub: 'Robux y Membresías', fee: 15 },
+  { id: 'freefire', name: 'Free Fire', category: 'gaming', sub: 'Diamantes y Pases', badge: '2.50% com.' },
+  { id: 'mobile_legends', name: 'Mobile Legends', category: 'gaming', sub: 'Diamantes MLBB', badge: '2.50% com.' },
+  { id: 'pubg', name: 'PUBG Mobile', category: 'gaming', sub: 'UC y Pases Royale', badge: '2.50% com.' },
+  { id: 'roblox', name: 'Roblox', category: 'gaming', sub: 'Robux y Membresías', badge: '2.50% com.' },
 ];
 
 // 6. PAQUETICOS REALES
@@ -228,22 +229,14 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
     return MOBILE_OPERATORS.find((c) => c.id === selectedCarrier) || MOBILE_OPERATORS[0];
   }, [activeTab, selectedCarrier]);
 
-  // Cálculo de ganancia y costo en vivo
+  // Cálculo de ganancia 50/50 en vivo (Al usuario SOLO se le muestra su 50%)
   const numericAmount = Number(amount) || 0;
-  const estimatedCommission = useMemo(() => {
-    if (activeTab === 'bill_payment' || activeTab === 'prepaid_power' || activeTab === 'remittance') {
-      const billFee = (currentBiller as any)?.fee || Number(config?.default_bill_fixed_commission || 15.0);
-      return Number(billFee);
-    }
-    return Math.round((numericAmount * (commissionRate / 100)) * 100) / 100;
-  }, [numericAmount, commissionRate, activeTab, config, currentBiller]);
+  const commissionCalc = useMemo(() => {
+    return calculateDigitalServiceCommission(selectedCarrier, numericAmount, activeTab);
+  }, [selectedCarrier, numericAmount, activeTab]);
 
-  const estimatedCost = useMemo(() => {
-    if (activeTab === 'bill_payment' || activeTab === 'prepaid_power' || activeTab === 'remittance') {
-      return numericAmount;
-    }
-    return Math.max(0, numericAmount - estimatedCommission);
-  }, [numericAmount, estimatedCommission, activeTab]);
+  const estimatedCommission = commissionCalc.userCommission; // 50% del usuario
+  const estimatedCost = commissionCalc.costAmount; // Saldo que se debita de la billetera
 
   const hasEnoughBalance = balance >= estimatedCost;
 
@@ -276,6 +269,14 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
         service_type: activeTab,
         target_name: targetName || undefined,
         package_id: selectedPackage || undefined,
+        commission: commissionCalc.userCommission,
+        cost_amount: commissionCalc.costAmount,
+        metadata: {
+          gross_commission: commissionCalc.grossCommission,
+          user_commission: commissionCalc.userCommission,
+          owner_commission: commissionCalc.ownerCommission,
+          split_ratio: '50/50'
+        }
       });
 
       setCompletedTx(result);
@@ -599,7 +600,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                               <BrandLogo id={b.id} className="w-12 h-9 rounded-lg mb-1 shrink-0" />
                               <span className="font-bold text-xs text-foreground block truncate w-full">{b.name}</span>
                               <span className="text-[10px] text-muted-foreground block truncate w-full">{b.desc}</span>
-                              <span className="text-[10px] text-primary font-medium mt-0.5">+RD$ {b.fee} ganancia</span>
+                              <span className="text-[10px] text-primary font-medium mt-0.5">{b.badge}</span>
                             </button>
                           );
                         })}
@@ -640,7 +641,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                               <div className="min-w-0 flex-1">
                                 <span className="font-bold text-sm text-foreground block">{r.name}</span>
                                 <span className="text-xs text-muted-foreground block">{r.sub}</span>
-                                <span className="text-[11px] text-primary font-semibold mt-0.5 block">+RD$ {r.fee} comisión</span>
+                                <span className="text-[11px] text-primary font-semibold mt-0.5 block">{r.badge}</span>
                               </div>
                             </button>
                           );
@@ -715,7 +716,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                               <span className="font-semibold text-xs text-foreground block truncate">{b.name}</span>
                               <span className="text-[10px] text-muted-foreground block truncate">{b.sub}</span>
                               <span className="text-[9px] text-primary font-medium block">
-                                +RD$ {b.fee} ganancia
+                                {b.badge}
                               </span>
                             </div>
                           </button>
@@ -739,9 +740,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                           {(currentBiller as any)?.name || selectedCarrier}
                         </h4>
                         <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 shrink-0 font-medium">
-                          {activeTab === 'recharge' 
-                            ? `${commissionRate}% com.` 
-                            : `+RD$ ${estimatedCommission.toFixed(0)} ganancia`}
+                          {commissionCalc.displayUserRate}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
