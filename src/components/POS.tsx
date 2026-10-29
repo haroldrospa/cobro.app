@@ -3893,11 +3893,11 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
           variant="outline"
           onClick={onOpenDigitalServices}
           size="sm"
-          className="h-8 px-2.5 gap-1.5 rounded-lg border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-xs font-bold text-blue-700 dark:text-blue-300 shadow-xs transition-all cursor-pointer"
-          title="Venta de Recargas y Servicios Digitales (RecargameYa)"
+          className="h-8 px-2.5 gap-1.5 rounded-lg border-primary/30 bg-primary/10 hover:bg-primary/20 text-xs font-bold text-primary shadow-xs transition-all cursor-pointer"
+          title="Venta de Servicios Digitales y Recargas (RecargameYa)"
         >
-          <Smartphone className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-          <span className="hidden sm:inline">Recargas</span>
+          <Smartphone className="h-3.5 w-3.5 text-primary" />
+          <span className="hidden sm:inline">Servicios</span>
         </Button>
       )}
 
