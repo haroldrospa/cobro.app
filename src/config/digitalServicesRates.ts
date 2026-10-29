@@ -17,10 +17,15 @@ export interface ServiceCommissionConfig {
 // 1. OPERADORAS MÓVILES - RECARGAS DE SALDO (RD Y HAITÍ)
 export const MOBILE_OPERATORS_RATES: Record<string, { grossRate: number; userRate: number; badge: string }> = {
   claro: { grossRate: 5.50, userRate: 2.75, badge: '2.75% com.' },
+  claro_recarga: { grossRate: 5.50, userRate: 2.75, badge: '2.75% com.' },
   altice: { grossRate: 5.50, userRate: 2.75, badge: '2.75% com.' },
+  altice_recarga: { grossRate: 5.50, userRate: 2.75, badge: '2.75% com.' },
   viva: { grossRate: 5.50, userRate: 2.75, badge: '2.75% com.' },
+  viva_recarga: { grossRate: 5.50, userRate: 2.75, badge: '2.75% com.' },
   digicel: { grossRate: 6.00, userRate: 3.00, badge: '3.00% com.' },
+  digicel_recarga: { grossRate: 6.00, userRate: 3.00, badge: '3.00% com.' },
   natcom: { grossRate: 6.00, userRate: 3.00, badge: '3.00% com.' },
+  natcom_recarga: { grossRate: 6.00, userRate: 3.00, badge: '3.00% com.' },
   wind_telecom: { grossRate: 2.50, userRate: 1.25, badge: '1.25% com.' },
   wind: { grossRate: 2.50, userRate: 1.25, badge: '1.25% com.' },
 };
