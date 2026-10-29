@@ -130,7 +130,14 @@ export const DigitalServicesDashboard: React.FC = () => {
   const handleTopUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const val = Number(topUpAmount);
-    if (!val || val <= 0) return;
+    if (!val || val < 500) {
+      alert('El monto mínimo de recarga es de RD$ 500');
+      return;
+    }
+    if (val > 20000) {
+      alert('El monto máximo de recarga es de RD$ 20,000');
+      return;
+    }
     await addBalance({ amount: val, description: 'Recarga de billetera desde panel de servicios' });
     setIsTopUpDialogOpen(false);
   };
@@ -748,42 +755,44 @@ export const DigitalServicesDashboard: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Añadir Saldo a Billetera</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Abona saldo a tu billetera de servicios para continuar vendiendo recargas a tus clientes.
+              Monto mínimo: <strong>RD$ 500</strong> &bull; Máximo: <strong>RD$ 20,000</strong>
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleTopUpSubmit} className="space-y-4 pt-1">
-            <div>
+            <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Monto a Acreditar (RD$)</Label>
               <Input
                 type="number"
-                min={100}
+                min={500}
+                max={20000}
                 step={100}
                 value={topUpAmount}
                 onChange={(e) => setTopUpAmount(e.target.value)}
                 className="h-10 text-base font-bold rounded-xl"
+                placeholder="500 - 20,000"
                 required
               />
             </div>
-            <div className="flex gap-2">
-              {[500, 1000, 2000, 5000].map((val) => (
+            <div className="grid grid-cols-3 gap-2">
+              {[500, 1000, 2000, 5000, 10000, 20000].map((val) => (
                 <Button
                   key={val}
                   type="button"
-                  variant="outline"
+                  variant={Number(topUpAmount) === val ? 'default' : 'outline'}
                   size="sm"
-                  className="flex-1 font-semibold text-xs rounded-lg"
+                  className="font-semibold text-xs rounded-lg"
                   onClick={() => setTopUpAmount(val.toString())}
                 >
-                  ${val}
+                  ${val.toLocaleString()}
                 </Button>
               ))}
             </div>
             <Button
               type="submit"
               className="w-full h-10 font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl"
-              disabled={isAddingBalance}
+              disabled={isAddingBalance || Number(topUpAmount) < 500 || Number(topUpAmount) > 20000}
             >
-              {isAddingBalance ? 'Acreditando...' : 'Confirmar Saldo'}
+              {isAddingBalance ? 'Acreditando...' : `Confirmar Saldo RD$ ${Number(topUpAmount || 0).toLocaleString()}`}
             </Button>
           </form>
         </DialogContent>
