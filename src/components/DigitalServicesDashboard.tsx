@@ -20,6 +20,7 @@ import { DigitalServicesPOSDialog } from '@/components/pos/DigitalServicesPOSDia
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { BrandLogo } from '@/components/pos/BrandLogo';
+import { CommissionRatesGrid } from '@/components/digital-services/CommissionRatesGrid';
 
 export const DigitalServicesDashboard: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<'today' | 'this_week' | 'this_month' | 'all'>('today');
@@ -288,6 +289,9 @@ export const DigitalServicesDashboard: React.FC = () => {
             <TabsTrigger value="settlement" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
               Cuadre & Liquidación
             </TabsTrigger>
+            <TabsTrigger value="commissions" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5 text-primary">
+              <Coins className="h-3.5 w-3.5" /> % de Ganancias
+            </TabsTrigger>
             <TabsTrigger value="bank-info" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
               Cuentas de Recarga
             </TabsTrigger>
@@ -464,6 +468,11 @@ export const DigitalServicesDashboard: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* PESTAÑA: TABLA OFICIAL DE COMISIONES Y GANANCIAS */}
+        <TabsContent value="commissions" className="space-y-4">
+          <CommissionRatesGrid />
         </TabsContent>
 
         {/* PESTAÑA: CUENTAS BANCARIAS */}

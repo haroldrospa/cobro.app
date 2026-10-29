@@ -36,7 +36,8 @@ import {
   CreditCard,
   Trophy,
   ShieldCheck,
-  SendHorizontal
+  SendHorizontal,
+  Percent
 } from 'lucide-react';
 import { useDigitalServices } from '@/hooks/useDigitalServices';
 import { DigitalServiceType } from '@/types/digitalServices';
@@ -44,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { BrandLogo } from './BrandLogo';
 import { calculateDigitalServiceCommission } from '@/config/digitalServicesRates';
+import { CommissionRatesGrid } from '@/components/digital-services/CommissionRatesGrid';
 
 interface DigitalServicesPOSDialogProps {
   open: boolean;
@@ -200,6 +202,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
   const [amount, setAmount] = useState<number | string>(100);
   const [selectedPackage, setSelectedPackage] = useState<string>('');
   const [completedTx, setCompletedTx] = useState<any | null>(null);
+  const [showCommissionsDialog, setShowCommissionsDialog] = useState(false);
 
   const balance = Number(wallet?.balance || 0);
   const commissionRate = wallet?.custom_commission_rate ?? config?.default_recharge_commission_rate ?? 6.0;
@@ -377,19 +380,32 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
             </div>
           </div>
 
-          {/* Saldo de Billetera */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60 mr-8 sm:mr-9 shrink-0">
-            <Wallet className="h-4 w-4 text-primary shrink-0" />
-            <div className="text-right">
-              <span className="text-[9px] text-muted-foreground uppercase font-semibold block leading-tight">
-                Saldo Billetera
-              </span>
-              <span className={cn(
-                "text-xs sm:text-sm font-bold block leading-tight",
-                balance < 200 ? "text-amber-500" : "text-primary"
-              )}>
-                RD$ {balance.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-              </span>
+          {/* Acciones de Cabecera: Ver Ganancias y Saldo de Billetera */}
+          <div className="flex items-center gap-2 mr-8 sm:mr-9 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCommissionsDialog(true)}
+              className="h-8 text-xs font-semibold gap-1.5 px-2.5 rounded-xl border-border/70 text-foreground hover:bg-muted cursor-pointer"
+            >
+              <Percent className="h-3.5 w-3.5 text-primary" />
+              <span className="hidden sm:inline">% Ganancias</span>
+            </Button>
+
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60">
+              <Wallet className="h-4 w-4 text-primary shrink-0" />
+              <div className="text-right">
+                <span className="text-[9px] text-muted-foreground uppercase font-semibold block leading-tight">
+                  Saldo Billetera
+                </span>
+                <span className={cn(
+                  "text-xs sm:text-sm font-bold block leading-tight",
+                  balance < 200 ? "text-amber-500" : "text-primary"
+                )}>
+                  RD$ {balance.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -893,6 +909,24 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
           )}
         </div>
       </DialogContent>
+
+      {/* MODAL: TABLA OFICIAL DE GANANCIAS DEL USUARIO (50%) */}
+      <Dialog open={showCommissionsDialog} onOpenChange={setShowCommissionsDialog}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-5 rounded-2xl bg-background border border-border/80 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Percent className="h-4.5 w-4.5 text-primary" />
+              Tabla Oficial de % de Ganancias
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Comisiones netas generadas por tu comercio en cada servicio vendido a través de RecargameYa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-2">
+            <CommissionRatesGrid />
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
