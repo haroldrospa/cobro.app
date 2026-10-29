@@ -75,6 +75,30 @@ export interface RemittanceRateResult {
   updated_at?: string;
 }
 
+export interface DigitalServiceTopupRequest {
+  id: string;
+  store_id: string;
+  user_id?: string;
+  amount: number;
+  bank_name: string;
+  reference_number: string;
+  receipt_url?: string;
+  notes?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  rejection_reason?: string;
+  approved_by?: string;
+  approved_at?: string;
+  created_at: string;
+  updated_at: string;
+  stores?: {
+    name: string;
+  };
+  profiles?: {
+    full_name?: string;
+    email?: string;
+  };
+}
+
 export interface DigitalPackageOption {
   id: string;
   carrier: CarrierType;

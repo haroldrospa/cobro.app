@@ -47,6 +47,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { BrandLogo } from './BrandLogo';
 import { calculateDigitalServiceCommission } from '@/config/digitalServicesRates';
 import { CommissionRatesGrid } from '@/components/digital-services/CommissionRatesGrid';
+import { BankTransferTopUpDialog } from '@/components/digital-services/BankTransferTopUpDialog';
 
 interface DigitalServicesPOSDialogProps {
   open: boolean;
@@ -221,29 +222,6 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
   // Estados para recarga de billetera (Min 500 - Max 20,000)
   const [showTopUpDialog, setShowTopUpDialog] = useState(false);
   const [walletTopUpAmount, setWalletTopUpAmount] = useState<number | string>(1000);
-
-  const handleWalletTopUp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const num = Number(walletTopUpAmount);
-    if (isNaN(num) || num < 500) {
-      alert('El monto mínimo de recarga es de RD$ 500');
-      return;
-    }
-    if (num > 20000) {
-      alert('El monto máximo de recarga es de RD$ 20,000');
-      return;
-    }
-
-    try {
-      await addBalance({
-        amount: num,
-        description: 'Recarga de billetera desde POS de servicios',
-      });
-      setShowTopUpDialog(false);
-    } catch (err: any) {
-      console.error(err);
-    }
-  };
 
   // Actualizar tasa de remesas al seleccionar proveedor haitiano
   useEffect(() => {
@@ -1132,119 +1110,12 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: RECARGAR SALDO DE BILLETERA (MIN 500 - MAX 20,000) */}
-      <Dialog open={showTopUpDialog} onOpenChange={setShowTopUpDialog}>
-        <DialogContent className="max-w-md p-5 rounded-2xl bg-background border border-border/80 shadow-2xl">
-          <DialogHeader>
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
-                <Wallet className="h-5 w-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-foreground">
-                  Recargar Saldo de Billetera
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Monto mínimo: <strong>RD$ 500</strong> &bull; Máximo: <strong>RD$ 20,000</strong>
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <form onSubmit={handleWalletTopUp} className="space-y-4 pt-2">
-            {/* Saldo actual y proyección */}
-            <div className="p-3 bg-muted/30 border border-border/60 rounded-xl flex items-center justify-between text-xs">
-              <div>
-                <span className="text-muted-foreground block text-[11px]">Saldo actual:</span>
-                <span className="font-bold text-foreground text-sm">
-                  RD$ {balance.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <div className="text-right">
-                <span className="text-muted-foreground block text-[11px]">Nuevo saldo estimado:</span>
-                <span className="font-bold text-primary text-sm">
-                  RD$ {(balance + (Number(walletTopUpAmount) || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
-
-            {/* Input de Monto */}
-            <div className="space-y-1.5">
-              <Label htmlFor="topup-amount-input" className="text-xs font-semibold text-foreground flex justify-between">
-                <span>Monto a Recargar (RD$)</span>
-                <span className={cn(
-                  "text-[11px] font-semibold",
-                  Number(walletTopUpAmount) < 500 || Number(walletTopUpAmount) > 20000
-                    ? "text-destructive"
-                    : "text-primary"
-                )}>
-                  {Number(walletTopUpAmount) < 500
-                    ? 'Mínimo RD$ 500'
-                    : Number(walletTopUpAmount) > 20000
-                    ? 'Máximo RD$ 20,000'
-                    : 'Monto válido ✓'}
-                </span>
-              </Label>
-              <Input
-                id="topup-amount-input"
-                type="number"
-                min={500}
-                max={20000}
-                step={100}
-                autoFocus
-                value={walletTopUpAmount}
-                onChange={(e) => setWalletTopUpAmount(e.target.value)}
-                placeholder="500 - 20,000"
-                className="h-11 text-base font-bold rounded-xl border-border/70 bg-card"
-                required
-              />
-            </div>
-
-            {/* Chips de Montos Rápidos (500 a 20,000) */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] text-muted-foreground block font-medium">Montos sugeridos:</span>
-              <div className="grid grid-cols-3 gap-2">
-                {[500, 1000, 2000, 5000, 10000, 20000].map((amt) => (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => setWalletTopUpAmount(amt)}
-                    className={cn(
-                      "py-2 px-2 text-xs font-bold rounded-xl border transition-all cursor-pointer text-center",
-                      Number(walletTopUpAmount) === amt
-                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                        : "bg-card hover:bg-muted border-border/70 text-foreground"
-                    )}
-                  >
-                    ${amt.toLocaleString()}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Botón de Confirmación */}
-            <Button
-              type="submit"
-              disabled={
-                isAddingBalance ||
-                !walletTopUpAmount ||
-                Number(walletTopUpAmount) < 500 ||
-                Number(walletTopUpAmount) > 20000
-              }
-              className="w-full h-11 text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer"
-            >
-              {isAddingBalance ? (
-                'Acreditando saldo...'
-              ) : (
-                <>
-                  Acreditar RD$ {Number(walletTopUpAmount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                </>
-              )}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* MODAL: RECARGAR SALDO DE BILLETERA VÍA TRANSFERENCIA (MIN 500 - MAX 20,000) */}
+      <BankTransferTopUpDialog
+        open={showTopUpDialog}
+        onOpenChange={setShowTopUpDialog}
+        defaultAmount={Number(walletTopUpAmount) || 1000}
+      />
     </Dialog>
   );
 };

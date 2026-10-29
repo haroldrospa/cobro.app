@@ -21,14 +21,17 @@ import {
   Activity,
   Eye,
   EyeOff,
-  Server
+  Server,
+  Clock
 } from 'lucide-react';
-import { useDigitalServices, useDigitalTransactions } from '@/hooks/useDigitalServices';
+import { useDigitalServices, useDigitalTransactions, COBROAPP_BANK_ACCOUNTS } from '@/hooks/useDigitalServices';
 import { DigitalServicesPOSDialog } from '@/components/pos/DigitalServicesPOSDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { BrandLogo } from '@/components/pos/BrandLogo';
 import { CommissionRatesGrid } from '@/components/digital-services/CommissionRatesGrid';
+import { BankTransferTopUpDialog } from '@/components/digital-services/BankTransferTopUpDialog';
+import { TopupRequestsApprovalList } from '@/components/digital-services/TopupRequestsApprovalList';
 
 export const DigitalServicesDashboard: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<'today' | 'this_week' | 'this_month' | 'all'>('today');
@@ -126,21 +129,6 @@ export const DigitalServicesDashboard: React.FC = () => {
       tx.client_reference_id.toLowerCase().includes(term)
     );
   }, [transactions, searchTerm]);
-
-  const handleTopUpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const val = Number(topUpAmount);
-    if (!val || val < 500) {
-      alert('El monto mínimo de recarga es de RD$ 500');
-      return;
-    }
-    if (val > 20000) {
-      alert('El monto máximo de recarga es de RD$ 20,000');
-      return;
-    }
-    await addBalance({ amount: val, description: 'Recarga de billetera desde panel de servicios' });
-    setIsTopUpDialogOpen(false);
-  };
 
   const handlePrintSettlementReport = () => {
     const printWindow = window.open('', '_blank', 'width=450,height=600');
@@ -352,6 +340,9 @@ export const DigitalServicesDashboard: React.FC = () => {
             <TabsTrigger value="history" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
               Historial de Ventas
             </TabsTrigger>
+            <TabsTrigger value="topup-requests" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-primary" /> Recargas & Aprobación
+            </TabsTrigger>
             <TabsTrigger value="settlement" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
               Cuadre & Liquidación
             </TabsTrigger>
@@ -362,7 +353,7 @@ export const DigitalServicesDashboard: React.FC = () => {
               <Key className="h-3.5 w-3.5 text-primary" /> API RecargameYa
             </TabsTrigger>
             <TabsTrigger value="bank-info" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-              Cuentas de Recarga
+              Cuentas Bancarias
             </TabsTrigger>
           </TabsList>
 
@@ -544,36 +535,82 @@ export const DigitalServicesDashboard: React.FC = () => {
           <CommissionRatesGrid />
         </TabsContent>
 
+        {/* PESTAÑA: SOLICITUDES Y APROBACIÓN DE RECARGAS */}
+        <TabsContent value="topup-requests" className="space-y-4">
+          <Card className="border border-border/60 bg-card shadow-xs">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Clock className="h-4.5 w-4.5 text-primary" />
+                  Solicitudes y Aprobación de Recargas
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Depósitos bancarios reportados por comercios pendientes de verificación y activación.
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setIsTopUpDialogOpen(true)}
+                className="h-9 font-bold text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 cursor-pointer shrink-0"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Reportar Transferencia
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <TopupRequestsApprovalList />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* PESTAÑA: CUENTAS BANCARIAS */}
         <TabsContent value="bank-info" className="space-y-4">
           <Card className="border border-border/60 bg-card shadow-xs">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Cuentas Bancarias Oficiales</CardTitle>
-              <CardDescription className="text-xs">
-                Transfiere y tu saldo de recargas será acreditado de inmediato.
-              </CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Building className="h-4.5 w-4.5 text-primary" />
+                  Cuentas Bancarias Oficiales de CobroApp
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Realiza tu depósito o transferencia bancaria y luego envía el comprobante para activar tu saldo.
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setIsTopUpDialogOpen(true)}
+                className="h-9 font-bold text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 cursor-pointer shrink-0"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Reportar Transferencia
+              </Button>
             </CardHeader>
-            <CardContent className="space-y-3.5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 space-y-1.5">
-                  <div className="font-semibold text-xs text-foreground">Banco BHD</div>
-                  <div className="text-xs text-muted-foreground">Cuenta Corriente: <strong className="text-foreground">123-456789-0</strong></div>
-                  <div className="text-xs text-muted-foreground">Titular: <strong>CobroApp Dominicana SRL</strong></div>
-                  <div className="text-xs text-muted-foreground">RNC: <strong>1-32-45678-9</strong></div>
-                </div>
-
-                <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 space-y-1.5">
-                  <div className="font-semibold text-xs text-foreground">Banco Popular Dominicano</div>
-                  <div className="text-xs text-muted-foreground">Cuenta Corriente: <strong className="text-foreground">987-654321-0</strong></div>
-                  <div className="text-xs text-muted-foreground">Titular: <strong>CobroApp Dominicana SRL</strong></div>
-                  <div className="text-xs text-muted-foreground">RNC: <strong>1-32-45678-9</strong></div>
-                </div>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {COBROAPP_BANK_ACCOUNTS.map((b) => (
+                  <div key={b.id} className="p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-foreground">{b.bank}</span>
+                      <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary font-medium">
+                        {b.badge}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-semibold">{b.accountType}</div>
+                      <div className="text-sm font-mono font-bold text-primary mt-0.5">{b.accountNumber}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground pt-1 border-t border-border/40 space-y-0.5">
+                      <div>Titular: <strong className="text-foreground">{b.holder}</strong></div>
+                      <div>RNC: <strong className="text-foreground">{b.rnc}</strong></div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div className="bg-muted/40 p-3 rounded-xl text-xs text-muted-foreground flex items-center justify-between border border-border/60">
-                <span>¿Hiciste una transferencia? Notifícala directamente al soporte para activación en 2 minutos.</span>
-                <Button size="sm" variant="outline" className="border-border/60 h-8" onClick={() => window.open('https://wa.me/18090000000?text=Hola,%20acabo%20de%20realizar%20un%20deposito%20de%20saldo%20para%20recargas', '_blank')}>
-                  Notificar WhatsApp
+              <div className="bg-muted/40 p-3.5 rounded-xl text-xs text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-2 border border-border/60">
+                <span>¿Tienes dudas con tu depósito? Comunícate directamente con soporte para confirmación inmediata.</span>
+                <Button size="sm" variant="outline" className="border-border/60 h-8 shrink-0" onClick={() => window.open('https://wa.me/18090000000?text=Hola,%20acabo%20de%20realizar%20un%20deposito%20de%20saldo%20para%20recargas', '_blank')}>
+                  WhatsApp Soporte
                 </Button>
               </div>
             </CardContent>
@@ -749,54 +786,12 @@ export const DigitalServicesDashboard: React.FC = () => {
         onOpenChange={setIsSellDialogOpen}
       />
 
-      {/* DIÁLOGO DE RECARGA DE BILLETERA */}
-      <Dialog open={isTopUpDialogOpen} onOpenChange={setIsTopUpDialogOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold">Añadir Saldo a Billetera</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Monto mínimo: <strong>RD$ 500</strong> &bull; Máximo: <strong>RD$ 20,000</strong>
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleTopUpSubmit} className="space-y-4 pt-1">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Monto a Acreditar (RD$)</Label>
-              <Input
-                type="number"
-                min={500}
-                max={20000}
-                step={100}
-                value={topUpAmount}
-                onChange={(e) => setTopUpAmount(e.target.value)}
-                className="h-10 text-base font-bold rounded-xl"
-                placeholder="500 - 20,000"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[500, 1000, 2000, 5000, 10000, 20000].map((val) => (
-                <Button
-                  key={val}
-                  type="button"
-                  variant={Number(topUpAmount) === val ? 'default' : 'outline'}
-                  size="sm"
-                  className="font-semibold text-xs rounded-lg"
-                  onClick={() => setTopUpAmount(val.toString())}
-                >
-                  ${val.toLocaleString()}
-                </Button>
-              ))}
-            </div>
-            <Button
-              type="submit"
-              className="w-full h-10 font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl"
-              disabled={isAddingBalance || Number(topUpAmount) < 500 || Number(topUpAmount) > 20000}
-            >
-              {isAddingBalance ? 'Acreditando...' : `Confirmar Saldo RD$ ${Number(topUpAmount || 0).toLocaleString()}`}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* DIÁLOGO DE RECARGA DE BILLETERA VÍA TRANSFERENCIA */}
+      <BankTransferTopUpDialog
+        open={isTopUpDialogOpen}
+        onOpenChange={setIsTopUpDialogOpen}
+        defaultAmount={Number(topUpAmount) || 1000}
+      />
     </div>
   );
 };

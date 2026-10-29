@@ -5,11 +5,42 @@ import {
   DigitalServiceWallet,
   DigitalServiceTransaction,
   DigitalServicesConfig,
+  DigitalServiceTopupRequest,
   InvoiceQueryResult,
   PrepaidMeterResult,
   RemittanceRateResult,
 } from '@/types/digitalServices';
 import { toast } from '@/hooks/use-toast';
+
+export const COBROAPP_BANK_ACCOUNTS = [
+  {
+    id: 'bhd',
+    bank: 'Banco BHD',
+    accountType: 'Cuenta Corriente',
+    accountNumber: '123-456789-0',
+    holder: 'CobroApp Dominicana SRL',
+    rnc: '1-32-45678-9',
+    badge: 'BHD',
+  },
+  {
+    id: 'popular',
+    bank: 'Banco Popular Dominicano',
+    accountType: 'Cuenta Corriente',
+    accountNumber: '987-654321-0',
+    holder: 'CobroApp Dominicana SRL',
+    rnc: '1-32-45678-9',
+    badge: 'Popular',
+  },
+  {
+    id: 'banreservas',
+    bank: 'Banreservas',
+    accountType: 'Cuenta de Ahorros',
+    accountNumber: '240-123456-7',
+    holder: 'CobroApp Dominicana SRL',
+    rnc: '1-32-45678-9',
+    badge: 'Banreservas',
+  },
+];
 
 export const useDigitalServices = () => {
   const queryClient = useQueryClient();
@@ -202,7 +233,121 @@ export const useDigitalServices = () => {
     return data;
   };
 
-  // 5. Mutación para Agregar Saldo a la Billetera (Simulación / Admin)
+  // 5. Enviar Solicitud de Recarga de Saldo con Comprobante (Transferencia Bancaria)
+  const submitTopupRequestMutation = useMutation({
+    mutationFn: async (payload: {
+      amount: number;
+      bankName: string;
+      referenceNumber: string;
+      receiptFile?: File | null;
+      notes?: string;
+    }) => {
+      if (!storeId) throw new Error('No hay comercio activo');
+      let receiptUrl = '';
+
+      if (payload.receiptFile) {
+        try {
+          const fileExt = payload.receiptFile.name.split('.').pop() || 'jpg';
+          const fileName = `topup-${storeId}-${Date.now()}.${fileExt}`;
+          const filePath = `digital-topups/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('payment-proofs')
+            .upload(filePath, payload.receiptFile, { upsert: true });
+
+          if (!uploadError) {
+            const { data: publicUrlData } = supabase.storage
+              .from('payment-proofs')
+              .getPublicUrl(filePath);
+            receiptUrl = publicUrlData?.publicUrl || filePath;
+          }
+        } catch (uploadErr) {
+          console.warn('Advertencia al subir comprobante a storage:', uploadErr);
+        }
+      }
+
+      const { data, error } = await supabase.rpc('submit_digital_service_topup', {
+        p_store_id: storeId,
+        p_amount: payload.amount,
+        p_bank_name: payload.bankName,
+        p_reference_number: payload.referenceNumber,
+        p_receipt_url: receiptUrl || null,
+        p_notes: payload.notes || null,
+      });
+
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-services-topup-requests'] });
+      toast({
+        title: '¡Solicitud de Recarga Enviada! 📋',
+        description: 'Tu comprobante de transferencia fue enviado. En breve la administración validará y activará tu saldo.',
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Error al enviar solicitud',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 6. Aprobar Solicitud de Recarga (Solo Admins)
+  const approveTopupMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { data, error } = await supabase.rpc('approve_digital_service_topup', {
+        p_request_id: requestId,
+      });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['digital-services-topup-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['digital-services-wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['digital-services-movements'] });
+      toast({
+        title: '¡Recarga Aprobada y Activada! ✅',
+        description: `Se han acreditado RD$ ${data.amount} exitosamente a la billetera.`,
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Error al aprobar recarga',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 7. Rechazar Solicitud de Recarga (Solo Admins)
+  const rejectTopupMutation = useMutation({
+    mutationFn: async ({ requestId, reason }: { requestId: string; reason?: string }) => {
+      const { data, error } = await supabase.rpc('reject_digital_service_topup', {
+        p_request_id: requestId,
+        p_reason: reason || null,
+      });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-services-topup-requests'] });
+      toast({
+        title: 'Solicitud rechazada',
+        description: 'La solicitud de recarga ha sido marcada como rechazada.',
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Error al rechazar solicitud',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 8. Mutación para Agregar Saldo Directo a Billetera (Fallback Seguro)
   const addBalanceMutation = useMutation({
     mutationFn: async ({ amount, description, reference }: { amount: number; description?: string; reference?: string }) => {
       if (!storeId) throw new Error('No hay comercio activo');
@@ -233,7 +378,7 @@ export const useDigitalServices = () => {
     }
   });
 
-  // 6. Actualizar Credenciales de API (Solo Admins)
+  // 9. Actualizar Credenciales de API (Solo Admins)
   const updateApiConfigMutation = useMutation({
     mutationFn: async (payload: {
       apiKey: string;
@@ -280,6 +425,12 @@ export const useDigitalServices = () => {
     isProcessingSale: processSaleMutation.isPending,
     addBalance: addBalanceMutation.mutateAsync,
     isAddingBalance: addBalanceMutation.isPending,
+    submitTopupRequest: submitTopupRequestMutation.mutateAsync,
+    isSubmittingTopup: submitTopupRequestMutation.isPending,
+    approveTopup: approveTopupMutation.mutateAsync,
+    isApprovingTopup: approveTopupMutation.isPending,
+    rejectTopup: rejectTopupMutation.mutateAsync,
+    isRejectingTopup: rejectTopupMutation.isPending,
     queryInvoice,
     queryPrepaidAccount,
     getRemittanceRate,
@@ -287,6 +438,98 @@ export const useDigitalServices = () => {
     updateApiConfig: updateApiConfigMutation.mutateAsync,
     isUpdatingConfig: updateApiConfigMutation.isPending,
   };
+};
+
+// Hook especializado para consultas de solicitudes de recarga de saldo
+export const useDigitalTopupRequests = (options?: { status?: string; allStores?: boolean }) => {
+  const { data: userStore } = useUserStore();
+  const storeId = userStore?.id;
+  const statusFilter = options?.status;
+  const allStores = options?.allStores ?? false;
+
+  return useQuery<DigitalServiceTopupRequest[]>({
+    queryKey: ['digital-services-topup-requests', storeId, statusFilter, allStores],
+    queryFn: async () => {
+      let query = supabase
+        .from('digital_services_topup_requests')
+        .select(`
+          id,
+          store_id,
+          user_id,
+          amount,
+          bank_name,
+          reference_number,
+          receipt_url,
+          notes,
+          status,
+          rejection_reason,
+          approved_by,
+          approved_at,
+          created_at,
+          updated_at,
+          stores:store_id (name),
+          profiles:user_id (full_name, email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!allStores && storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      if (statusFilter && statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn('Error fetching topup requests:', error);
+        return [];
+      }
+      return (data || []) as unknown as DigitalServiceTopupRequest[];
+    },
+    staleTime: 1000 * 15,
+  });
+};
+
+// Hook especializado para transacciones con paginación y filtro de fecha (Respeta regla de no consultas masivas)
+export const useDigitalTransactions = (options?: { limit?: number; dateFilter?: 'today' | 'this_week' | 'this_month' | 'all' }) => {
+  const { data: userStore } = useUserStore();
+  const storeId = userStore?.id;
+  const limit = options?.limit || 30;
+  const dateFilter = options?.dateFilter || 'today';
+
+  return useQuery<DigitalServiceTransaction[]>({
+    queryKey: ['digital-services-transactions', storeId, dateFilter, limit],
+    queryFn: async () => {
+      if (!storeId) return [];
+
+      let query = supabase
+        .from('digital_services_transactions')
+        .select('id, store_id, user_id, service_type, carrier, target_number, target_name, amount, amount_charged, commission, client_reference_id, external_id, status, error_message, metadata, created_at')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      const now = new Date();
+      if (dateFilter === 'today') {
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        query = query.gte('created_at', startOfDay);
+      } else if (dateFilter === 'this_month') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        query = query.gte('created_at', startOfMonth);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn('Error fetching transactions:', error);
+        return [];
+      }
+      return (data || []) as DigitalServiceTransaction[];
+    },
+    enabled: !!storeId,
+    staleTime: 1000 * 20, // 20s
+  });
 };
 
 // Hook especializado para transacciones con paginación y filtro de fecha (Respeta regla de no consultas masivas)
