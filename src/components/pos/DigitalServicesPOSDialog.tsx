@@ -377,7 +377,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
           </div>
 
           {/* Saldo de Billetera */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60 mr-8 sm:mr-9 shrink-0">
             <Wallet className="h-4 w-4 text-primary shrink-0" />
             <div className="text-right">
               <span className="text-[9px] text-muted-foreground uppercase font-semibold block leading-tight">
@@ -394,7 +394,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
         </div>
 
         {/* CONTENIDO PRINCIPAL ADAPTADO Y SIN SCROLL GLOBAL */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden h-full">
           {completedTx ? (
             // Vista de Éxito / Comprobante
             <div className="p-6 text-center space-y-4 max-w-md mx-auto my-auto">
@@ -446,9 +446,9 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
             </div>
           ) : (
             // Formulario Dividido en 2 Columnas (Master-Detail) Adaptado al 100% de la pantalla
-            <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
+            <div className="flex-1 h-full min-h-0 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
               {/* COLUMNA IZQUIERDA: CATÁLOGO Y PROVEEDORES */}
-              <div className="md:col-span-7 flex flex-col min-h-0 border-b md:border-b-0 md:border-r border-border/60 p-3 sm:p-4 gap-2.5 overflow-hidden bg-background">
+              <div className="md:col-span-7 h-full flex flex-col min-h-0 border-b md:border-b-0 md:border-r border-border/60 p-3 sm:p-4 gap-2.5 overflow-hidden bg-background">
                 {/* Pestañas Principales */}
                 <Tabs
                   value={activeTab}
@@ -460,7 +460,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                     if (newTab === 'remittance') setSelectedCarrier('moncash');
                     if (newTab === 'bill_payment') setSelectedCarrier('caasd');
                   }}
-                  className="w-full flex flex-col min-h-0 flex-1 overflow-hidden"
+                  className="w-full h-full flex flex-col min-h-0 flex-1 overflow-hidden"
                 >
                   <TabsList className="grid grid-cols-5 w-full h-9 bg-muted/60 p-1 rounded-xl shrink-0">
                     <TabsTrigger value="recharge" className="text-xs font-medium gap-1 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
@@ -481,12 +481,15 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                   </TabsList>
 
                   {/* 1. OPERADORAS MÓVILES */}
-                  <TabsContent value="recharge" className="mt-2.5 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground block mb-2">
+                  <TabsContent
+                    value="recharge"
+                    className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar outline-none data-[state=active]:flex data-[state=active]:flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground block">
                         Operadoras Móviles (RD y Haití)
                       </Label>
-                      <div className="grid grid-cols-3 gap-2.5">
+                      <div className="grid grid-cols-3 gap-2">
                         {MOBILE_OPERATORS.map((c) => {
                           const isSelected = selectedCarrier === c.id;
                           return (
@@ -495,13 +498,13 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                               type="button"
                               onClick={() => setSelectedCarrier(c.id)}
                               className={cn(
-                                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all text-center group cursor-pointer",
+                                "flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all text-center group cursor-pointer",
                                 isSelected
                                   ? "border-primary bg-primary/[0.08] ring-2 ring-primary/40 shadow-xs"
                                   : "border-border/60 hover:border-border bg-card"
                               )}
                             >
-                              <BrandLogo id={c.id} className="w-14 h-11 rounded-lg mb-1.5 shrink-0" />
+                              <BrandLogo id={c.id} className="w-12 h-9 rounded-lg mb-1.5 shrink-0" />
                               <span className="font-bold text-xs text-foreground truncate w-full">{c.name}</span>
                               <span className="text-[10px] text-muted-foreground truncate w-full">{c.sub}</span>
                               <span className="text-[10px] text-primary font-semibold mt-0.5">
@@ -513,14 +516,17 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2">
-                      <span className="text-base">💡</span>
+                    <div className="p-2.5 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2 mt-auto shrink-0">
+                      <span className="text-base shrink-0">💡</span>
                       <span>Recargas inmediatas procesadas vía API oficial con confirmación instantánea.</span>
                     </div>
                   </TabsContent>
 
                   {/* 2. PAQUETICOS */}
-                  <TabsContent value="data_package" className="mt-2.5 flex-1 flex flex-col min-h-0 overflow-hidden gap-2">
+                  <TabsContent
+                    value="data_package"
+                    className="mt-2.5 flex-1 min-h-0 overflow-hidden outline-none data-[state=active]:flex data-[state=active]:flex-col gap-2"
+                  >
                     <div className="flex gap-2 shrink-0">
                       {['claro', 'altice', 'viva'].map((car) => (
                         <Button
@@ -567,12 +573,15 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                   </TabsContent>
 
                   {/* 3. LUZ PREPAGO Y ELECTRICIDAD */}
-                  <TabsContent value="prepaid_power" className="mt-2.5 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground block mb-2">
+                  <TabsContent
+                    value="prepaid_power"
+                    className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar outline-none data-[state=active]:flex data-[state=active]:flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground block">
                         Empresas Eléctricas y Luz Prepago
                       </Label>
-                      <div className="grid grid-cols-3 gap-2.5">
+                      <div className="grid grid-cols-3 gap-2">
                         {PREPAID_POWER_PROVIDERS.map((b) => {
                           const isSelected = selectedCarrier === b.id;
                           return (
@@ -581,13 +590,13 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                               type="button"
                               onClick={() => setSelectedCarrier(b.id)}
                               className={cn(
-                                "flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer",
+                                "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
                                 isSelected
                                   ? "border-primary bg-primary/[0.08] ring-2 ring-primary/40 shadow-xs"
                                   : "border-border/60 hover:border-border bg-card"
                               )}
                             >
-                              <BrandLogo id={b.id} className="w-14 h-11 rounded-lg mb-1 shrink-0" />
+                              <BrandLogo id={b.id} className="w-12 h-9 rounded-lg mb-1 shrink-0" />
                               <span className="font-bold text-xs text-foreground block truncate w-full">{b.name}</span>
                               <span className="text-[10px] text-muted-foreground block truncate w-full">{b.desc}</span>
                               <span className="text-[10px] text-primary font-medium mt-0.5">+RD$ {b.fee} ganancia</span>
@@ -597,16 +606,19 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2">
-                      <span className="text-base">⚡</span>
+                    <div className="p-2.5 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2 mt-auto shrink-0">
+                      <span className="text-base shrink-0">⚡</span>
                       <span>El PIN de recarga para el medidor prepago se genera e imprime en el comprobante fiscal/ticket.</span>
                     </div>
                   </TabsContent>
 
                   {/* 4. REMESAS A HAITÍ */}
-                  <TabsContent value="remittance" className="mt-2.5 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground block mb-2">
+                  <TabsContent
+                    value="remittance"
+                    className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar outline-none data-[state=active]:flex data-[state=active]:flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground block">
                         Billeteras Móviles de Envío a Haití
                       </Label>
                       <div className="grid grid-cols-2 gap-3">
@@ -636,14 +648,17 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2">
-                      <span className="text-base">💸</span>
+                    <div className="p-2.5 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center gap-2 mt-auto shrink-0">
+                      <span className="text-base shrink-0">💸</span>
                       <span>Envío inmediato a Haití. El receptor recibe saldo en su billetera digital MonCash o Natcash.</span>
                     </div>
                   </TabsContent>
 
                   {/* 5. FACTURAS Y SERVICIOS PÚBLICOS */}
-                  <TabsContent value="bill_payment" className="mt-2 flex-1 flex flex-col min-h-0 overflow-hidden gap-2">
+                  <TabsContent
+                    value="bill_payment"
+                    className="mt-2 flex-1 min-h-0 overflow-hidden outline-none data-[state=active]:flex data-[state=active]:flex-col gap-2"
+                  >
                     {/* Categorías oficiales */}
                     <div className="flex items-center gap-1 overflow-x-auto pb-1 shrink-0 no-scrollbar">
                       {RECARGAMEYA_CATEGORIES.map((cat) => {
@@ -712,7 +727,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
               </div>
 
               {/* COLUMNA DERECHA: PANEL DE COBRO Y FACTURACIÓN (100% FIJO SIN SCROLL) */}
-              <div className="md:col-span-5 flex flex-col justify-between min-h-0 p-3 sm:p-4 bg-muted/20 overflow-hidden border-t md:border-t-0 md:border-l border-border/60">
+              <div className="md:col-span-5 h-full flex flex-col justify-between min-h-0 p-3 sm:p-4 bg-muted/20 overflow-hidden border-t md:border-t-0 md:border-l border-border/60">
                 {/* PARTE SUPERIOR: SERVICIO SELECCIONADO Y CAMPOS */}
                 <div className="space-y-3">
                   {/* Tarjeta del Proveedor Seleccionado */}
