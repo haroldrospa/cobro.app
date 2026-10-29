@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -190,7 +190,16 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
   open,
   onOpenChange,
 }) => {
-  const { wallet, config, processSale, isProcessingSale, addBalance } = useDigitalServices();
+  const {
+    wallet,
+    config,
+    processSale,
+    isProcessingSale,
+    addBalance,
+    queryInvoice,
+    queryPrepaidAccount,
+    getRemittanceRate,
+  } = useDigitalServices();
   const { data: storeSettings } = useStoreSettings();
 
   const [activeTab, setActiveTab] = useState<DigitalServiceType>('recharge');
@@ -203,6 +212,56 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
   const [selectedPackage, setSelectedPackage] = useState<string>('');
   const [completedTx, setCompletedTx] = useState<any | null>(null);
   const [showCommissionsDialog, setShowCommissionsDialog] = useState(false);
+  const [isQuerying, setIsQuerying] = useState(false);
+  const [queriedInfo, setQueriedInfo] = useState<any | null>(null);
+  const [remittanceRate, setRemittanceRate] = useState<number>(2.25);
+
+  // Actualizar tasa de remesas al seleccionar proveedor haitiano
+  useEffect(() => {
+    if (activeTab === 'remittance') {
+      getRemittanceRate(selectedCarrier)
+        .then((res) => {
+          if (res?.exchange_rate) setRemittanceRate(res.exchange_rate);
+        })
+        .catch(() => {});
+    }
+    setQueriedInfo(null);
+  }, [activeTab, selectedCarrier]);
+
+  const handleQueryBill = async () => {
+    if (!phoneNumber) return;
+    setIsQuerying(true);
+    try {
+      const info = await queryInvoice(selectedCarrier, phoneNumber);
+      setQueriedInfo(info);
+      if (info.amount_due) {
+        setAmount(info.amount_due);
+      }
+      if (info.subscriber_name) {
+        setTargetName(info.subscriber_name);
+      }
+    } catch (err: any) {
+      alert(err.message || 'No se pudo consultar la factura.');
+    } finally {
+      setIsQuerying(false);
+    }
+  };
+
+  const handleQueryPrepaid = async () => {
+    if (!phoneNumber) return;
+    setIsQuerying(true);
+    try {
+      const info = await queryPrepaidAccount(selectedCarrier, phoneNumber);
+      setQueriedInfo(info);
+      if (info.subscriber_name) {
+        setTargetName(info.subscriber_name);
+      }
+    } catch (err: any) {
+      alert(err.message || 'No se pudo consultar el medidor.');
+    } finally {
+      setIsQuerying(false);
+    }
+  };
 
   const balance = Number(wallet?.balance || 0);
   const commissionRate = wallet?.custom_commission_rate ?? config?.default_recharge_commission_rate ?? 6.0;
@@ -293,13 +352,17 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
     setPhoneNumber('');
     setTargetName('');
     setSelectedPackage('');
+    setQueriedInfo(null);
     setAmount(100);
   };
 
   const handlePrintReceipt = () => {
     if (!completedTx) return;
-    const printWindow = window.open('', '_blank', 'width=380,height=520');
+    const printWindow = window.open('', '_blank', 'width=380,height=560');
     if (!printWindow) return;
+
+    const pinCode = completedTx.pin || completedTx.token;
+    const kwhValue = completedTx.kwh;
 
     printWindow.document.write(`
       <html>
@@ -312,7 +375,7 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
             .row { display: flex; justify-content: space-between; margin: 3px 0; }
             .font-bold { font-weight: bold; }
             .big { font-size: 16px; }
-            .pin-box { border: 2px solid #000; padding: 6px; margin: 8px 0; text-align: center; font-size: 18px; font-weight: bold; }
+            .pin-box { border: 2px solid #000; padding: 6px; margin: 8px 0; text-align: center; font-size: 17px; font-weight: bold; letter-spacing: 1px; }
           </style>
         </head>
         <body>
@@ -323,9 +386,11 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
           <div class="row"><span>Transacción:</span><span>${completedTx.id || completedTx.transaction_id}</span></div>
           <div class="row"><span>Servicio:</span><span class="font-bold">${completedTx.carrier?.toUpperCase()}</span></div>
           <div class="row"><span>Destino:</span><span class="font-bold big">${completedTx.target_number}</span></div>
-          ${activeTab === 'prepaid_power' ? `
-            <div class="text-center" style="margin-top:6px;">PIN DE RECARGA:</div>
-            <div class="pin-box">${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}</div>
+          ${completedTx.target_name ? `<div class="row"><span>Cliente:</span><span>${completedTx.target_name}</span></div>` : ''}
+          ${pinCode ? `
+            <div class="text-center" style="margin-top:6px; font-weight:bold;">PIN DE RECARGA (20 DÍGITOS):</div>
+            <div class="pin-box">${pinCode}</div>
+            ${kwhValue ? `<div class="text-center" style="font-size:11px;">Energía Acreditada: <b>${kwhValue} kWh</b></div>` : ''}
           ` : ''}
           <div class="divider"></div>
           <div class="row font-bold big"><span>TOTAL PAGADO:</span><span>RD$ ${Number(completedTx.amount).toFixed(2)}</span></div>
@@ -345,14 +410,24 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
 
   const handleSendWhatsApp = () => {
     if (!completedTx || !phoneNumber) return;
-    const msg = `🧾 *COMPROBANTE DE PAGO RECARGAMEYA*\n` +
+    const pinCode = completedTx.pin || completedTx.token;
+    const kwhValue = completedTx.kwh;
+
+    let msg = `🧾 *COMPROBANTE DE PAGO RECARGAMEYA*\n` +
       `*Comercio:* ${storeSettings?.store_name || 'CobroApp'}\n` +
       `*Servicio:* ${completedTx.carrier?.toUpperCase()}\n` +
       `*Número / Cuenta:* ${completedTx.target_number}\n` +
+      (completedTx.target_name ? `*Cliente:* ${completedTx.target_name}\n` : '') +
       `*Monto:* RD$ ${Number(completedTx.amount).toFixed(2)}\n` +
       `*Ref:* ${completedTx.id || completedTx.client_reference_id}\n` +
-      `*Fecha:* ${new Date().toLocaleString()}\n\n` +
-      `¡Gracias por su compra! ✨`;
+      `*Fecha:* ${new Date().toLocaleString()}\n`;
+
+    if (pinCode) {
+      msg += `\n⚡ *PIN DE RECARGA:* \`${pinCode}\`\n`;
+      if (kwhValue) msg += `*Energía:* ${kwhValue} kWh\n`;
+    }
+
+    msg += `\n¡Gracias por su compra! ✨`;
 
     const encoded = encodeURIComponent(msg);
     window.open(`https://wa.me/1${phoneNumber.replace(/\D/g, '')}?text=${encoded}`, '_blank');
@@ -446,6 +521,22 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                     <span>Deducido de tu saldo:</span>
                     <span>RD$ {Number(completedTx.amount_charged).toFixed(2)}</span>
                   </div>
+
+                  {(completedTx.pin || completedTx.token) && (
+                    <div className="mt-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 block">
+                        PIN de Recarga Prepago (20 Dígitos)
+                      </span>
+                      <span className="font-mono text-base font-black tracking-wider text-amber-900 dark:text-amber-200 block">
+                        {completedTx.pin || completedTx.token}
+                      </span>
+                      {completedTx.kwh && (
+                        <span className="text-[11px] text-muted-foreground block">
+                          Energía acreditada: <strong>{completedTx.kwh} kWh</strong>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -774,11 +865,22 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                           {activeTab === 'bill_payment'
                             ? 'Número de Cuenta / Contrato / NIC'
                             : activeTab === 'prepaid_power'
-                            ? 'Número de Medidor'
+                            ? 'Número de Medidor / Contrato'
                             : activeTab === 'remittance'
-                            ? 'Teléfono en Haití'
+                            ? 'Teléfono en Haití (+509)'
                             : 'Número de Teléfono'}
                         </span>
+                        {(activeTab === 'bill_payment' || activeTab === 'prepaid_power') && (
+                          <button
+                            type="button"
+                            disabled={isQuerying || !phoneNumber}
+                            onClick={activeTab === 'bill_payment' ? handleQueryBill : handleQueryPrepaid}
+                            className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                          >
+                            <Search className="h-3 w-3" />
+                            {isQuerying ? 'Consultando...' : 'Consultar'}
+                          </button>
+                        )}
                       </Label>
                       <Input
                         id="target-input"
@@ -794,7 +896,10 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                             : '8091234567'
                         }
                         value={phoneNumber}
-                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        onChange={(e) => {
+                          handlePhoneChange(e.target.value);
+                          if (queriedInfo) setQueriedInfo(null);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && hasEnoughBalance && phoneNumber && numericAmount > 0) {
                             handleExecuteTransaction();
@@ -803,6 +908,50 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                         className="h-9 sm:h-10 text-sm font-semibold tracking-wider rounded-xl border-border/70 bg-card"
                       />
                     </div>
+
+                    {/* Banner de Consulta de Factura o Medidor */}
+                    {queriedInfo && (
+                      <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 text-xs space-y-1 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-foreground text-[11px] truncate">
+                            👤 {queriedInfo.subscriber_name || targetName || 'Abonado Verificado'}
+                          </span>
+                          {queriedInfo.status && (
+                            <Badge variant="outline" className="text-[9px] py-0 px-1 border-primary/40 text-primary uppercase">
+                              {queriedInfo.status}
+                            </Badge>
+                          )}
+                        </div>
+                        {queriedInfo.amount_due !== undefined && (
+                          <div className="flex justify-between text-muted-foreground text-[11px]">
+                            <span>Balance factura:</span>
+                            <span className="font-bold text-foreground">RD$ {Number(queriedInfo.amount_due).toFixed(2)}</span>
+                          </div>
+                        )}
+                        {queriedInfo.due_date && (
+                          <div className="flex justify-between text-muted-foreground text-[10px]">
+                            <span>Vence:</span>
+                            <span>{queriedInfo.due_date}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tasa y Cálculo de Remesa a Haití */}
+                    {activeTab === 'remittance' && (
+                      <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1">
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-muted-foreground">Tasa oficial RecargameYa:</span>
+                          <span className="font-bold text-foreground">1 DOP = {remittanceRate} HTG</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] pt-0.5 border-t border-amber-500/20">
+                          <span className="text-muted-foreground">Recibe en Haití:</span>
+                          <span className="font-bold text-amber-800 dark:text-amber-200 text-xs">
+                            {(numericAmount * remittanceRate).toLocaleString('es-DO', { minimumFractionDigits: 2 })} HTG
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Input Monto */}
                     <div className="space-y-1">

@@ -1,7 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserStore } from '@/hooks/useUserStore';
-import { DigitalServiceWallet, DigitalServiceTransaction, DigitalServicesConfig } from '@/types/digitalServices';
+import {
+  DigitalServiceWallet,
+  DigitalServiceTransaction,
+  DigitalServicesConfig,
+  InvoiceQueryResult,
+  PrepaidMeterResult,
+  RemittanceRateResult,
+} from '@/types/digitalServices';
 import { toast } from '@/hooks/use-toast';
 
 export const useDigitalServices = () => {
@@ -47,12 +54,12 @@ export const useDigitalServices = () => {
   });
 
   // 2. Obtener Configuración Global de la Plataforma
-  const { data: config } = useQuery<DigitalServicesConfig | null>({
+  const { data: config, refetch: refetchConfig } = useQuery<DigitalServicesConfig | null>({
     queryKey: ['digital-services-config'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('digital_services_config')
-        .select('id, api_environment, api_base_url, default_recharge_commission_rate, default_bill_fixed_commission, deposit_bank_details, is_active')
+        .select('id, api_environment, api_base_url, api_key, api_secret, default_recharge_commission_rate, default_bill_fixed_commission, deposit_bank_details, is_active')
         .limit(1)
         .maybeSingle();
 
@@ -62,7 +69,7 @@ export const useDigitalServices = () => {
       }
       return data as DigitalServicesConfig;
     },
-    staleTime: 1000 * 60 * 10, // 10 minutos
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
   // 3. Mutación para Procesar Venta de Recarga / Servicio
@@ -82,10 +89,20 @@ export const useDigitalServices = () => {
 
       const clientReferenceId = `REF-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
+      // Determinar acción según el tipo de servicio
+      let action: 'recharge' | 'pay_bill' | 'charge_prepaid_power' | 'send_remittance' = 'recharge';
+      if (payload.service_type === 'bill_payment') {
+        action = 'pay_bill';
+      } else if (payload.service_type === 'prepaid_power') {
+        action = 'charge_prepaid_power';
+      } else if (payload.service_type === 'remittance') {
+        action = 'send_remittance';
+      }
+
       // Llamada a la Edge Function segura
       const { data, error } = await supabase.functions.invoke('recargameya-proxy', {
         body: {
-          action: 'recharge',
+          action,
           carrier: payload.carrier,
           phone: payload.phone,
           amount: payload.amount,
@@ -112,21 +129,80 @@ export const useDigitalServices = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['digital-services-wallet', storeId] });
       queryClient.invalidateQueries({ queryKey: ['digital-services-transactions', storeId] });
+      const pinMsg = data.pin ? ` PIN: ${data.pin}` : '';
       toast({
         title: '¡Transacción Exitosa! 🎉',
-        description: `Recarga de RD$ ${data.amount} aplicada a ${data.carrier.toUpperCase()} (${data.target_number}). Ganaste RD$ ${data.commission} de comisión.`,
+        description: `Servicio de RD$ ${data.amount} aplicado a ${data.carrier.toUpperCase()} (${data.target_number}). Tu ganancia neta: RD$ ${data.commission}.${pinMsg}`,
       });
     },
     onError: (err: any) => {
       toast({
-        title: 'Error al procesar recarga',
+        title: 'Error al procesar servicio',
         description: err.message || 'Ocurrió un error inesperado.',
         variant: 'destructive',
       });
     },
   });
 
-  // 4. Mutación para Agregar Saldo a la Billetera (Simulación / Admin)
+  // 4. Consultas en Tiempo Real a la API de RecargameYa
+  const queryInvoice = async (companyId: string, contractNumber: string): Promise<InvoiceQueryResult> => {
+    const { data, error } = await supabase.functions.invoke('recargameya-proxy', {
+      body: {
+        action: 'query_invoice',
+        company_id: companyId,
+        contract_number: contractNumber,
+      },
+    });
+
+    if (error || !data?.ok) {
+      throw new Error(data?.error || error?.message || 'No se pudo consultar la factura.');
+    }
+    return data.data as InvoiceQueryResult;
+  };
+
+  const queryPrepaidAccount = async (provider: string, contract: string): Promise<PrepaidMeterResult> => {
+    const { data, error } = await supabase.functions.invoke('recargameya-proxy', {
+      body: {
+        action: 'query_prepaid_account',
+        provider,
+        contract,
+      },
+    });
+
+    if (error || !data?.ok) {
+      throw new Error(data?.error || error?.message || 'No se pudo consultar la cuenta prepago.');
+    }
+    return data.data as PrepaidMeterResult;
+  };
+
+  const getRemittanceRate = async (walletType: string = 'moncash'): Promise<RemittanceRateResult> => {
+    const { data, error } = await supabase.functions.invoke('recargameya-proxy', {
+      body: {
+        action: 'query_remittance_rate',
+        wallet_type: walletType,
+      },
+    });
+
+    if (error || !data?.ok) {
+      throw new Error(data?.error || error?.message || 'No se pudo obtener la tasa de remesa.');
+    }
+    return data.data as RemittanceRateResult;
+  };
+
+  const checkHealth = async () => {
+    const { data, error } = await supabase.functions.invoke('recargameya-proxy', {
+      body: {
+        action: 'check_health',
+      },
+    });
+
+    if (error || !data?.ok) {
+      throw new Error(data?.error || error?.message || 'Error al conectar con la API de RecargameYa.');
+    }
+    return data;
+  };
+
+  // 5. Mutación para Agregar Saldo a la Billetera (Simulación / Admin)
   const addBalanceMutation = useMutation({
     mutationFn: async ({ amount, description, reference }: { amount: number; description?: string; reference?: string }) => {
       if (!storeId) throw new Error('No hay comercio activo');
@@ -157,15 +233,59 @@ export const useDigitalServices = () => {
     }
   });
 
+  // 6. Actualizar Credenciales de API (Solo Admins)
+  const updateApiConfigMutation = useMutation({
+    mutationFn: async (payload: {
+      apiKey: string;
+      apiSecret: string;
+      environment: 'sandbox' | 'production';
+      baseUrl?: string;
+    }) => {
+      const { error } = await supabase
+        .from('digital_services_config')
+        .update({
+          api_key: payload.apiKey,
+          api_secret: payload.apiSecret,
+          api_environment: payload.environment,
+          api_base_url: payload.baseUrl || 'https://recargameya.com/api/v1/public',
+        })
+        .not('id', 'is', null);
+
+      if (error) throw new Error(error.message);
+      return true;
+    },
+    onSuccess: () => {
+      refetchConfig();
+      toast({
+        title: 'Credenciales Actualizadas',
+        description: 'La configuración de RecargameYa API ha sido guardada exitosamente.',
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Error al guardar credenciales',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     wallet,
     config,
     isLoadingWallet,
     refetchWallet,
+    refetchConfig,
     processSale: processSaleMutation.mutateAsync,
     isProcessingSale: processSaleMutation.isPending,
     addBalance: addBalanceMutation.mutateAsync,
     isAddingBalance: addBalanceMutation.isPending,
+    queryInvoice,
+    queryPrepaidAccount,
+    getRemittanceRate,
+    checkHealth,
+    updateApiConfig: updateApiConfigMutation.mutateAsync,
+    isUpdatingConfig: updateApiConfigMutation.isPending,
   };
 };
 

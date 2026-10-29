@@ -39,10 +39,40 @@ export interface DigitalServicesConfig {
   id: string;
   api_environment: 'sandbox' | 'production';
   api_base_url: string;
+  api_key?: string | null;
+  api_secret?: string | null;
   default_recharge_commission_rate: number;
   default_bill_fixed_commission: number;
   deposit_bank_details?: string;
   is_active: boolean;
+}
+
+export interface InvoiceQueryResult {
+  contract_number: string;
+  company_id: string;
+  subscriber_name: string;
+  amount_due: number;
+  minimum_amount?: number;
+  due_date?: string;
+  invoice_id?: string;
+  status?: string;
+}
+
+export interface PrepaidMeterResult {
+  provider: string;
+  contract: string;
+  subscriber_name: string;
+  meter_number?: string;
+  address?: string;
+  status?: string;
+}
+
+export interface RemittanceRateResult {
+  wallet_type: string;
+  exchange_rate: number;
+  currency_from: string;
+  currency_to: string;
+  updated_at?: string;
 }
 
 export interface DigitalPackageOption {

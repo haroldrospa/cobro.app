@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,14 @@ import {
   Building,
   PlusCircle,
   Sparkles,
+  Key,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
+  Activity,
+  Eye,
+  EyeOff,
+  Server
 } from 'lucide-react';
 import { useDigitalServices, useDigitalTransactions } from '@/hooks/useDigitalServices';
 import { DigitalServicesPOSDialog } from '@/components/pos/DigitalServicesPOSDialog';
@@ -29,7 +37,58 @@ export const DigitalServicesDashboard: React.FC = () => {
   const [isTopUpDialogOpen, setIsTopUpDialogOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('1000');
 
-  const { wallet, isLoadingWallet, addBalance, isAddingBalance } = useDigitalServices();
+  const {
+    wallet,
+    config,
+    isLoadingWallet,
+    addBalance,
+    isAddingBalance,
+    updateApiConfig,
+    isUpdatingConfig,
+    checkHealth
+  } = useDigitalServices();
+
+  // Estados para Configuración de Credenciales API RecargameYa
+  const [apiKey, setApiKey] = useState('');
+  const [apiSecret, setApiSecret] = useState('');
+  const [apiEnv, setApiEnv] = useState<'sandbox' | 'production'>('sandbox');
+  const [apiBaseUrl, setApiBaseUrl] = useState('https://recargameya.com/api/v1/public');
+  const [showSecret, setShowSecret] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<any | null>(null);
+  const [isTestingHealth, setIsTestingHealth] = useState(false);
+
+  useEffect(() => {
+    if (config) {
+      if (config.api_key) setApiKey(config.api_key);
+      if (config.api_secret) setApiSecret(config.api_secret);
+      if (config.api_environment) setApiEnv(config.api_environment);
+      if (config.api_base_url) setApiBaseUrl(config.api_base_url);
+    }
+  }, [config]);
+
+  const handleTestApiConnection = async () => {
+    setIsTestingHealth(true);
+    setHealthStatus(null);
+    try {
+      const res = await checkHealth();
+      setHealthStatus(res);
+    } catch (err: any) {
+      setHealthStatus({ ok: false, error: err.message || 'Error al conectar' });
+    } finally {
+      setIsTestingHealth(false);
+    }
+  };
+
+  const handleSaveApiConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateApiConfig({
+      apiKey,
+      apiSecret,
+      environment: apiEnv,
+      baseUrl: apiBaseUrl,
+    });
+  };
+
   const { data: transactions = [], isLoading: isLoadingTx } = useDigitalTransactions({
     dateFilter: dateFilter,
     limit: 50
@@ -292,6 +351,9 @@ export const DigitalServicesDashboard: React.FC = () => {
             <TabsTrigger value="commissions" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5 text-primary">
               <Coins className="h-3.5 w-3.5" /> % de Ganancias
             </TabsTrigger>
+            <TabsTrigger value="api-config" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+              <Key className="h-3.5 w-3.5 text-primary" /> API RecargameYa
+            </TabsTrigger>
             <TabsTrigger value="bank-info" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
               Cuentas de Recarga
             </TabsTrigger>
@@ -507,6 +569,168 @@ export const DigitalServicesDashboard: React.FC = () => {
                   Notificar WhatsApp
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* PESTAÑA: CONFIGURACIÓN OFICIAL API RECARGAMEYA */}
+        <TabsContent value="api-config" className="space-y-4">
+          <Card className="border border-border/60 shadow-xs">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Server className="h-4.5 w-4.5 text-primary" />
+                    Conexión API Oficial RecargameYa
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                    Configuración de llaves públicas y privadas con firma criptográfica HMAC-SHA256 (v1).
+                  </CardDescription>
+                </div>
+                <Badge
+                  variant={apiKey && apiSecret ? 'default' : 'outline'}
+                  className={apiKey && apiSecret ? 'bg-primary/10 text-primary border-primary/20' : 'text-muted-foreground'}
+                >
+                  {apiKey && apiSecret
+                    ? (apiEnv === 'production' ? '● En Vivo (Producción)' : '● Conectado (Sandbox)')
+                    : '○ Modo Simulado Local'}
+                </Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {/* Panel de Estado / Conectividad */}
+              {healthStatus && (
+                <div className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+                  healthStatus.ok
+                    ? 'bg-primary/10 border-primary/20 text-foreground'
+                    : 'bg-destructive/10 border-destructive/20 text-destructive'
+                }`}>
+                  {healthStatus.ok ? (
+                    <CheckCircle2 className="h-4.5 w-4.5 text-primary shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-4.5 w-4.5 text-destructive shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 space-y-0.5">
+                    <div className="font-bold">
+                      {healthStatus.ok ? '¡Conexión Exitosa con RecargameYa!' : 'Fallo en la prueba de conexión'}
+                    </div>
+                    <div className="text-[11px] opacity-90">
+                      {healthStatus.error || healthStatus.data?.message || (
+                        healthStatus.data?.balance !== undefined
+                          ? `Balance en cuenta API: RD$ ${Number(healthStatus.data.balance).toFixed(2)} (${healthStatus.data.currency || 'DOP'})`
+                          : 'Servidor respondiendo correctamente (200 OK).'
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveApiConfig} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Public Key */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                      <span>Public Key (pk_*)</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">Header X-API-Key</span>
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="pk_live_... o pk_sandbox_..."
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="h-10 text-xs font-mono rounded-xl bg-card border-border/70"
+                    />
+                  </div>
+
+                  {/* Secret Key */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                      <span>Secret Key (sk_*)</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">Para firma HMAC-SHA256</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type={showSecret ? 'text' : 'password'}
+                        placeholder="sk_live_... o sk_sandbox_..."
+                        value={apiSecret}
+                        onChange={(e) => setApiSecret(e.target.value)}
+                        className="h-10 text-xs font-mono rounded-xl bg-card border-border/70 pr-9"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSecret(!showSecret)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Entorno */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-foreground">
+                      Modo de Entorno
+                    </Label>
+                    <select
+                      value={apiEnv}
+                      onChange={(e) => setApiEnv(e.target.value as 'sandbox' | 'production')}
+                      className="w-full h-10 px-3 text-xs rounded-xl bg-card border border-border/70 text-foreground font-medium focus:outline-hidden focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="sandbox">Sandbox / Modo de Pruebas (pk_sandbox_ / sk_sandbox_)</option>
+                      <option value="production">Producción / En Vivo (pk_live_ / sk_live_)</option>
+                    </select>
+                  </div>
+
+                  {/* Base URL */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-foreground">
+                      Base URL del Endpoint
+                    </Label>
+                    <Input
+                      type="text"
+                      value={apiBaseUrl}
+                      onChange={(e) => setApiBaseUrl(e.target.value)}
+                      className="h-10 text-xs font-mono rounded-xl bg-card border-border/70"
+                    />
+                  </div>
+                </div>
+
+                {/* Callout de Seguridad y Reparto 50/50 */}
+                <div className="p-3 bg-muted/40 rounded-xl border border-border/60 text-xs space-y-1 text-muted-foreground">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                    Criptografía y División de Ingresos 50/50
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    Las firmas criptográficas se computan en Supabase Edge Functions mediante el estándar 
+                    <code>&lt;timestamp&gt;\n&lt;HTTP_METHOD&gt;\n&lt;path&gt;\n&lt;sha256(body)&gt;</code> con formato LF. 
+                    El sistema aplica automáticamente la división del 50% de beneficio al comerciante y el 50% a la plataforma, garantizando que el punto de venta solo exponga el margen asignado al comercio.
+                  </p>
+                </div>
+
+                {/* Botones de Acción */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTestApiConnection}
+                    disabled={isTestingHealth}
+                    className="h-9 text-xs font-medium rounded-xl gap-1.5"
+                  >
+                    <Activity className="h-3.5 w-3.5 text-primary" />
+                    {isTestingHealth ? 'Comprobando...' : 'Probar Conectividad (/health)'}
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    disabled={isUpdatingConfig}
+                    className="h-9 text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+                  >
+                    {isUpdatingConfig ? 'Guardando...' : 'Guardar Credenciales'}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
