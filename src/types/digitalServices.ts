@@ -107,3 +107,15 @@ export interface DigitalPackageOption {
   price: number;
   description: string;
 }
+
+export interface DigitalServiceWalletMovement {
+  id: string;
+  store_id: string;
+  type: 'deposit' | 'service_sale' | 'refund' | 'adjustment' | string;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  description?: string;
+  reference_id?: string;
+  created_at: string;
+}

@@ -28,6 +28,7 @@ import { useDigitalServices, useDigitalTopupRequests } from '@/hooks/useDigitalS
 import { useOfficialBankAccounts } from '@/hooks/useOfficialBankAccounts';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { WalletMovementsHistory } from './WalletMovementsHistory';
 
 interface BankTransferTopUpDialogProps {
   open: boolean;
@@ -52,6 +53,7 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [copiedBankId, setCopiedBankId] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<'form' | 'success'>('form');
+  const [showMovementsModal, setShowMovementsModal] = useState<boolean>(false);
 
   // Asegurar que selectedBank coincida con una de las cuentas activas
   React.useEffect(() => {
@@ -357,19 +359,38 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
               </div>
 
               {/* Resumen de Saldo */}
-              <div className="p-3 bg-muted/30 border border-border/60 rounded-xl flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-muted-foreground block text-[11px]">Saldo actual:</span>
-                  <span className="font-bold text-foreground">
-                    RD$ {currentBalance.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                  </span>
+              <div className="p-3 bg-muted/30 border border-border/60 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Saldo actual:</span>
+                    <span className="font-bold text-foreground">
+                      RD$ {currentBalance.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <div className="text-right">
+                    <span className="text-muted-foreground block text-[11px]">Saldo con esta recarga:</span>
+                    <span className="font-bold text-primary">
+                      RD$ {(currentBalance + numericAmount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <div className="text-right">
-                  <span className="text-muted-foreground block text-[11px]">Saldo con esta recarga:</span>
-                  <span className="font-bold text-primary">
-                    RD$ {(currentBalance + numericAmount).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+
+                <div className="pt-2 border-t border-border/40 flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    Auditoría de billetera
                   </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowMovementsModal(true)}
+                    className="h-6 text-[11px] text-primary hover:bg-primary/10 font-bold px-2 rounded-lg gap-1"
+                  >
+                    <Clock className="h-3 w-3" />
+                    Ver Historial de Movimientos
+                  </Button>
                 </div>
               </div>
 
@@ -391,6 +412,24 @@ export const BankTransferTopUpDialog: React.FC<BankTransferTopUpDialogProps> = (
           )}
         </div>
       </DialogContent>
+
+      {/* Modal Secundario para Historial de Movimientos */}
+      <Dialog open={showMovementsModal} onOpenChange={setShowMovementsModal}>
+        <DialogContent className="max-w-3xl bg-card border border-border p-5 rounded-2xl max-h-[88vh] overflow-y-auto">
+          <DialogHeader className="pb-3 border-b border-border/40">
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-primary" />
+              Historial de Movimientos de Billetera
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Auditoría detallada de recargas aprobadas, débitos por ventas de servicios y balance disponible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-2">
+            <WalletMovementsHistory showHeaderSummary={true} />
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

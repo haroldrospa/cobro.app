@@ -38,7 +38,8 @@ import {
   ShieldCheck,
   SendHorizontal,
   Percent,
-  PlusCircle
+  PlusCircle,
+  Clock
 } from 'lucide-react';
 import { useDigitalServices } from '@/hooks/useDigitalServices';
 import { DigitalServiceType } from '@/types/digitalServices';
@@ -48,6 +49,7 @@ import { BrandLogo } from './BrandLogo';
 import { calculateDigitalServiceCommission } from '@/config/digitalServicesRates';
 import { CommissionRatesGrid } from '@/components/digital-services/CommissionRatesGrid';
 import { BankTransferTopUpDialog } from '@/components/digital-services/BankTransferTopUpDialog';
+import { WalletMovementsHistory } from '@/components/digital-services/WalletMovementsHistory';
 
 interface DigitalServicesPOSDialogProps {
   open: boolean;
@@ -219,8 +221,9 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
   const [queriedInfo, setQueriedInfo] = useState<any | null>(null);
   const [remittanceRate, setRemittanceRate] = useState<number>(2.25);
 
-  // Estados para recarga de billetera (Min 500 - Max 20,000)
+  // Estados para recarga y auditoría de billetera
   const [showTopUpDialog, setShowTopUpDialog] = useState(false);
+  const [showMovementsDialog, setShowMovementsDialog] = useState(false);
   const [walletTopUpAmount, setWalletTopUpAmount] = useState<number | string>(1000);
 
   // Actualizar tasa de remesas al seleccionar proveedor haitiano
@@ -496,10 +499,20 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
                   setWalletTopUpAmount(1000);
                   setShowTopUpDialog(true);
                 }}
-                title="Recargar saldo de billetera (Min. RD$ 500 - Máx. RD$ 20,000)"
+                title="Recargar saldo de billetera"
                 className="h-6 w-6 ml-0.5 text-primary hover:bg-primary/10 rounded-lg cursor-pointer"
               >
                 <PlusCircle className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowMovementsDialog(true)}
+                title="Ver historial de movimientos de billetera"
+                className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg cursor-pointer"
+              >
+                <Clock className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -1110,12 +1123,30 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: RECARGAR SALDO DE BILLETERA VÍA TRANSFERENCIA (MIN 500 - MAX 20,000) */}
+      {/* MODAL: RECARGAR SALDO DE BILLETERA VÍA TRANSFERENCIA */}
       <BankTransferTopUpDialog
         open={showTopUpDialog}
         onOpenChange={setShowTopUpDialog}
         defaultAmount={Number(walletTopUpAmount) || 1000}
       />
+
+      {/* MODAL: HISTORIAL DE MOVIMIENTOS DE BILLETERA */}
+      <Dialog open={showMovementsDialog} onOpenChange={setShowMovementsDialog}>
+        <DialogContent className="max-w-3xl bg-card border border-border p-5 rounded-2xl max-h-[88vh] overflow-y-auto">
+          <DialogHeader className="pb-3 border-b border-border/40">
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-primary" />
+              Historial de Movimientos de Billetera
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Auditoría detallada de recargas aprobadas, comisiones y débitos por ventas de servicios.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-2">
+            <WalletMovementsHistory showHeaderSummary={true} />
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

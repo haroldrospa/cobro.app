@@ -538,6 +538,87 @@ const SuperAdmin = () => {
             status: "approved" | "rejected";
         }) => {
             const report = reports?.find((r) => r.id === id);
+            const isDigitalTopup = isReportDigitalTopup(report);
+
+            // Si es recarga de billetera digital de servicios, procesar por la ruta de billetera
+            if (isDigitalTopup) {
+                const { error: updError } = await supabase
+                    .from("payment_reports")
+                    .update({
+                        status: status,
+                        admin_note: status === "approved" ? "Aprobado desde panel maestro" : "Rechazado por administrador"
+                    })
+                    .eq("id", id);
+
+                if (updError) throw updError;
+
+                if (status === "approved" && report?.company_id) {
+                    const topupAmt = Number(report.amount || 0);
+                    let credited = false;
+                    try {
+                        const { data: rpcRes, error: rpcErr } = await supabase.rpc("add_store_digital_balance", {
+                            p_store_id: report.company_id,
+                            p_amount: topupAmt,
+                            p_description: `Aprobación de recarga de saldo (${report.bank_name || 'Billetera'})`,
+                            p_reference: report.id
+                        });
+                        if (!rpcErr && (rpcRes as any)?.success) {
+                            credited = true;
+                        }
+                    } catch (e) {
+                        console.warn("RPC add_store_digital_balance warning:", e);
+                    }
+
+                    if (!credited) {
+                        const { data: w } = await supabase
+                            .from('digital_services_wallets')
+                            .select('id, balance')
+                            .eq('store_id', report.company_id)
+                            .maybeSingle();
+
+                        const curBal = Number(w?.balance || 0);
+                        const nextBal = curBal + topupAmt;
+
+                        if (w) {
+                            await supabase.from('digital_services_wallets').update({
+                                balance: nextBal,
+                                updated_at: new Date().toISOString()
+                            }).eq('id', w.id);
+                        } else {
+                            await supabase.from('digital_services_wallets').insert({
+                                store_id: report.company_id,
+                                balance: nextBal,
+                                is_active: true
+                            });
+                        }
+
+                        await supabase.from('digital_services_wallet_movements').insert({
+                            store_id: report.company_id,
+                            type: 'deposit',
+                            amount: topupAmt,
+                            balance_before: curBal,
+                            balance_after: nextBal,
+                            description: `Aprobación de recarga de saldo (${report.bank_name || 'Billetera'})`,
+                            reference_id: report.id
+                        });
+                    }
+
+                    await supabase
+                        .from('digital_services_topup_requests')
+                        .update({ status: 'approved', approved_at: new Date().toISOString() })
+                        .eq('store_id', report.company_id)
+                        .eq('status', 'pending');
+                } else if (status === "rejected" && report?.company_id) {
+                    await supabase
+                        .from('digital_services_topup_requests')
+                        .update({ status: 'rejected', rejection_reason: 'Rechazado por administrador', updated_at: new Date().toISOString() })
+                        .eq('store_id', report.company_id)
+                        .eq('status', 'pending');
+                }
+
+                return { id, status, report };
+            }
+
             let rpcSucceeded = false;
 
             // 1. Intentar llamar al RPC de procesamiento

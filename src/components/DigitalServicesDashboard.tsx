@@ -33,8 +33,10 @@ import { BrandLogo } from '@/components/pos/BrandLogo';
 import { CommissionRatesGrid } from '@/components/digital-services/CommissionRatesGrid';
 import { BankTransferTopUpDialog } from '@/components/digital-services/BankTransferTopUpDialog';
 import { TopupRequestsApprovalList } from '@/components/digital-services/TopupRequestsApprovalList';
+import { WalletMovementsHistory } from '@/components/digital-services/WalletMovementsHistory';
 
 export const DigitalServicesDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>('history');
   const [dateFilter, setDateFilter] = useState<'today' | 'this_week' | 'this_month' | 'all'>('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSellDialogOpen, setIsSellDialogOpen] = useState(false);
@@ -265,13 +267,23 @@ export const DigitalServicesDashboard: React.FC = () => {
             <div className="text-2xl font-bold text-foreground">
               RD$ {Number(wallet?.balance || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {Number(wallet?.balance || 0) < 300 ? (
-                <span className="text-amber-500 font-medium">⚠️ Saldo bajo</span>
-              ) : (
-                <span className="text-primary font-medium">✓ Saldo activo</span>
-              )}
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">
+                {Number(wallet?.balance || 0) < 100 ? (
+                  <span className="text-amber-500 font-medium">⚠️ Saldo bajo</span>
+                ) : (
+                  <span className="text-emerald-500 font-medium">✓ Saldo activo</span>
+                )}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px] px-2 text-primary hover:bg-primary/10 rounded-lg -mr-1"
+                onClick={() => setActiveTab('wallet-movements')}
+              >
+                Ver Movimientos &rarr;
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -337,11 +349,14 @@ export const DigitalServicesDashboard: React.FC = () => {
       </div>
 
       {/* 3. PESTAÑAS DE CONTENIDO */}
-      <Tabs defaultValue="history" className="w-full space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <TabsList className="bg-muted/60 p-1 rounded-xl">
             <TabsTrigger value="history" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
               Historial de Ventas
+            </TabsTrigger>
+            <TabsTrigger value="wallet-movements" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+              <Wallet className="h-3.5 w-3.5 text-primary" /> Movimientos de Saldo
             </TabsTrigger>
             <TabsTrigger value="topup-requests" className="rounded-lg text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-primary" /> Recargas & Aprobación
@@ -473,6 +488,11 @@ export const DigitalServicesDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* PESTAÑA: HISTORIAL DE MOVIMIENTOS DE SALDO */}
+        <TabsContent value="wallet-movements" className="space-y-4">
+          <WalletMovementsHistory />
         </TabsContent>
 
         {/* PESTAÑA: CUADRE & LIQUIDACIÓN */}

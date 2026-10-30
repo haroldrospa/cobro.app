@@ -6,6 +6,7 @@ import {
   DigitalServiceTransaction,
   DigitalServicesConfig,
   DigitalServiceTopupRequest,
+  DigitalServiceWalletMovement,
   InvoiceQueryResult,
   PrepaidMeterResult,
   RemittanceRateResult,
@@ -775,5 +776,35 @@ export const useDigitalTransactions = (options?: { limit?: number; dateFilter?: 
     },
     enabled: !!storeId,
     staleTime: 1000 * 20, // 20s
+  });
+};
+
+// Hook para consultar el historial de movimientos de saldo (auditoría de depósitos y débitos)
+export const useDigitalWalletMovements = (options?: { limit?: number; storeId?: string }) => {
+  const { data: userStore } = useUserStore();
+  const storeId = options?.storeId || userStore?.id;
+  const limit = options?.limit || 50;
+
+  return useQuery<DigitalServiceWalletMovement[]>({
+    queryKey: ['digital-services-movements', storeId, limit],
+    queryFn: async () => {
+      if (!storeId) return [];
+
+      const { data, error } = await supabase
+        .from('digital_services_wallet_movements')
+        .select('id, store_id, type, amount, balance_before, balance_after, description, reference_id, created_at')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.warn('Error al consultar movimientos de billetera:', error);
+        return [];
+      }
+
+      return (data || []) as DigitalServiceWalletMovement[];
+    },
+    enabled: !!storeId,
+    staleTime: 1000 * 15,
   });
 };
