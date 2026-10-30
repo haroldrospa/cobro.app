@@ -962,23 +962,23 @@ function PayrollContent() {
                         {/* Table Area */}
                         <div className="flex-1 overflow-auto p-0">
                             <Table className="w-full min-w-[750px] border-collapse">
-                                <TableHeader className="bg-muted/60 sticky top-0 backdrop-blur-md z-10">
+                                <TableHeader className="bg-muted/90 dark:bg-zinc-950/90 sticky top-0 backdrop-blur-md z-10 border-b border-border">
                                     <TableRow className="border-b border-border hover:bg-transparent">
-                                        <TableHead className="w-[240px] pl-6 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Empleado</TableHead>
+                                        <TableHead className="w-[260px] pl-6 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Empleado</TableHead>
                                         <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Sal. Base</TableHead>
-                                        <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Bonos (+)</TableHead>
+                                        <TableHead className="text-right pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Bonos (+)</TableHead>
 
                                         {(showTSSGroup || showAFPOnly || showSFSOnly) && (
-                                            <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500">TSS / Ley (-)</TableHead>
+                                            <TableHead className="text-right pr-4 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500">TSS / Ley (-)</TableHead>
                                         )}
 
                                         {showInfotep && (
-                                            <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Infotep (-)</TableHead>
+                                            <TableHead className="text-right pr-4 text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Infotep (-)</TableHead>
                                         )}
 
-                                        <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Deducciones (-)</TableHead>
-                                        <TableHead className="text-right font-bold w-[160px] pr-6 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Neto a Pagar</TableHead>
-                                        <TableHead className="text-center font-bold w-[70px] pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Recibo</TableHead>
+                                        <TableHead className="text-right pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Deducciones (-)</TableHead>
+                                        <TableHead className="text-right font-bold w-[140px] pr-6 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Neto a Pagar</TableHead>
+                                        <TableHead className="text-center font-bold w-[60px] pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Recibo</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1002,24 +1002,24 @@ function PayrollContent() {
                                             const emp = employees.find(e => e.id === item.profile_id);
                                             const initials = getInitials(item.employee_name);
                                             return (
-                                                <TableRow key={item.id} className="hover:bg-muted/40 border-b border-border/60 transition-colors">
-                                                    <TableCell className="pl-6 py-3.5">
+                                                <TableRow key={item.id} className="hover:bg-muted/30 border-b border-border/50 transition-colors">
+                                                    <TableCell className="pl-6 py-3">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-muted border border-emerald-500/20 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0 shadow-sm">
+                                                            <div className="w-8 h-8 rounded-full bg-muted/70 border border-border flex items-center justify-center text-xs font-bold text-foreground/80 shrink-0">
                                                                 {initials}
                                                             </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-semibold text-sm text-foreground leading-snug">{item.employee_name}</span>
-                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className="font-semibold text-sm text-foreground truncate">{item.employee_name}</span>
+                                                                <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground whitespace-nowrap">
                                                                     {emp?.cedula ? (
-                                                                        <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border w-fit">
+                                                                        <span className="font-mono text-[11px] text-muted-foreground/80">
                                                                             ID: {emp.cedula}
                                                                         </span>
                                                                     ) : (
-                                                                        <span className="text-[10px] text-muted-foreground italic">Sin cédula</span>
+                                                                        <span className="text-[10px] text-muted-foreground/40 italic">Sin cédula</span>
                                                                     )}
                                                                     {(emp?.apply_law_deductions === true || emp?.apply_afp === true || emp?.apply_sfs === true) && (
-                                                                        <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded">
+                                                                        <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.2 rounded-full">
                                                                             TSS Ley
                                                                         </span>
                                                                     )}
@@ -1028,44 +1028,61 @@ function PayrollContent() {
                                                         </div>
                                                     </TableCell>
 
-                                                    <TableCell className="text-right font-mono text-xs sm:text-sm text-foreground py-3.5">
+                                                    <TableCell className="text-right font-mono text-sm text-foreground font-medium py-3">
                                                         ${item.base_salary.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </TableCell>
 
-                                                    <TableCell className="text-center py-3.5">
-                                                        <div className="flex justify-center items-center">
-                                                            <div className="relative w-28">
-                                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-emerald-600 dark:text-emerald-500/70">+$</span>
-                                                                <Input
-                                                                    type="number"
-                                                                    className="w-28 h-8 pl-7 pr-2 text-right bg-muted/40 border-border hover:border-emerald-500/40 focus:border-emerald-500/60 focus:bg-background transition-all font-mono text-xs text-emerald-700 dark:text-emerald-300 rounded-lg"
-                                                                    value={item.bonuses}
-                                                                    onChange={(e) => handleItemUpdate(item, 'bonuses', parseFloat(e.target.value) || 0)}
-                                                                    readOnly={selectedPayroll?.status === 'paid'}
-                                                                    disabled={selectedPayroll?.status === 'paid'}
-                                                                />
+                                                    <TableCell className="text-right pr-4 py-3">
+                                                        {selectedPayroll?.status === 'paid' ? (
+                                                            (item.bonuses || 0) > 0 ? (
+                                                                <span className="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                                                                    +${item.bonuses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="font-mono text-xs text-muted-foreground/30">—</span>
+                                                            )
+                                                        ) : (
+                                                            <div className="flex justify-end items-center">
+                                                                <div className="relative w-24">
+                                                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono text-emerald-600 dark:text-emerald-400/80">+$</span>
+                                                                    <Input
+                                                                        type="number"
+                                                                        className="w-24 h-7 pl-6 pr-2 text-right bg-muted/20 border-border/60 hover:border-emerald-500/40 focus:border-emerald-500 focus:bg-background transition-all font-mono text-xs text-emerald-700 dark:text-emerald-300 rounded-lg"
+                                                                        value={item.bonuses || ''}
+                                                                        placeholder="0.00"
+                                                                        onChange={(e) => handleItemUpdate(item, 'bonuses', parseFloat(e.target.value) || 0)}
+                                                                    />
+                                                                </div>
                                                             </div>
-                                                        </div>
+                                                        )}
                                                     </TableCell>
 
                                                     {(showTSSGroup || showAFPOnly || showSFSOnly) && (
-                                                        <TableCell className="text-center py-3.5">
-                                                            <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-xs font-semibold">
-                                                                -${item.tss.toFixed(2)}
-                                                            </div>
+                                                        <TableCell className="text-right pr-4 py-3">
+                                                            {item.tss > 0 ? (
+                                                                <span className="font-mono text-sm font-semibold text-amber-600 dark:text-amber-400">
+                                                                    -${item.tss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="font-mono text-xs text-muted-foreground/30">—</span>
+                                                            )}
                                                         </TableCell>
                                                     )}
 
                                                     {showInfotep && (
-                                                        <TableCell className="text-center py-3.5">
-                                                            <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 font-mono text-xs font-semibold">
-                                                                -${item.infotep.toFixed(2)}
-                                                            </div>
+                                                        <TableCell className="text-right pr-4 py-3">
+                                                            {item.infotep > 0 ? (
+                                                                <span className="font-mono text-sm font-semibold text-purple-600 dark:text-purple-400">
+                                                                    -${item.infotep.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="font-mono text-xs text-muted-foreground/30">—</span>
+                                                            )}
                                                         </TableCell>
                                                     )}
 
-                                                    <TableCell className="text-center py-3.5">
-                                                        <div className="flex justify-center">
+                                                    <TableCell className="text-right pr-4 py-3">
+                                                        <div className="flex justify-end">
                                                             <DeductionsManager
                                                                 deductions={item.deductions_details?.length ? item.deductions_details : (item.deductions ? [{ amount: item.deductions, reason: "Deducciones" }] : [])}
                                                                 onChange={(newDetails) => handleItemUpdate(item, 'deductions_details', newDetails)}
@@ -1074,17 +1091,17 @@ function PayrollContent() {
                                                         </div>
                                                     </TableCell>
 
-                                                    <TableCell className="text-right pr-6 py-3.5">
-                                                        <div className="inline-flex items-center justify-end font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
-                                                            ${item.net_salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        </div>
+                                                    <TableCell className="text-right pr-6 py-3">
+                                                        <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                                            ${item.net_salary.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
                                                     </TableCell>
 
-                                                    <TableCell className="text-center pr-4 py-3.5">
+                                                    <TableCell className="text-center pr-4 py-3">
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                                                            className="h-8 w-8 rounded-lg text-muted-foreground/50 hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors"
                                                             title={`Imprimir comprobante individual de ${item.employee_name}`}
                                                             onClick={() => {
                                                                 printSingleEmployeeVoucher(

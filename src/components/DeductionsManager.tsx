@@ -42,25 +42,34 @@ export function DeductionsManager({ deductions = [], onChange, readOnly = false 
         onChange(next);
     };
 
+    if (readOnly && total === 0) {
+        return <span className="font-mono text-xs text-muted-foreground/30">—</span>;
+    }
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     className={cn(
-                        "h-8 px-2.5 rounded-lg border transition-all text-xs font-mono flex items-center gap-1.5",
+                        "h-7 px-2.5 rounded-lg transition-all text-xs font-mono flex items-center gap-1.5",
                         total > 0
-                            ? "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-semibold"
-                            : "bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                            ? "bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-semibold"
+                            : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 border border-transparent"
                     )}
                 >
-                    <Receipt className="h-3 w-3 shrink-0" />
-                    <span>{total > 0 ? `-$${total.toLocaleString()}` : '$0'}</span>
-                    {items.length > 0 && (
-                        <span className="text-[10px] bg-muted text-muted-foreground px-1 py-0.2 rounded-full ml-0.5">
-                            {items.length}
-                        </span>
+                    {total > 0 ? (
+                        <>
+                            <span>-${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            {items.length > 1 && (
+                                <span className="text-[10px] bg-rose-500/20 text-rose-700 dark:text-rose-300 px-1 rounded-full font-bold">
+                                    {items.length}
+                                </span>
+                            )}
+                        </>
+                    ) : (
+                        <span className="text-muted-foreground/40 font-normal hover:text-foreground">+$0.00</span>
                     )}
                 </Button>
             </PopoverTrigger>
