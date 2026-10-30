@@ -32,7 +32,14 @@ export const generateCloseDayHTML = (
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Cierre de Caja - ${companyInfo.name || 'Cobro App'}</title>
                 <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    * { 
+                        margin: 0; 
+                        padding: 0; 
+                        box-sizing: border-box; 
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif;
                         font-size: 11px;
@@ -258,7 +265,14 @@ export const generateCloseDayHTML = (
             <title>Cierre de Caja - ${companyInfo.name || 'Cobro App'}</title>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
             <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
+                * { 
+                    margin: 0; 
+                    padding: 0; 
+                    box-sizing: border-box; 
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
                 body {
                     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
                     background: #ffffff;

@@ -49,7 +49,7 @@ export const CloseDayPreviewDialog: React.FC<CloseDayPreviewDialogProps> = ({
         if (!data) return;
         setIsDownloading(true);
         try {
-            const doc = await generateCloseDayPDF(companyInfo, data);
+            const doc = await generateCloseDayPDF(companyInfo, data, selectedPaper);
             doc.save(`Cierre_Caja_${format(new Date(), 'yyyy-MM-dd_HHmm')}.pdf`);
         } catch (e) {
             console.error('Error downloading closing PDF:', e);
