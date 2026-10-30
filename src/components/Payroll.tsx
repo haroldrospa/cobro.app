@@ -18,7 +18,7 @@ import { useEmployees, Employee } from '@/hooks/useEmployees';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
-import { Plus, Users, CheckCircle, Settings, Calculator, Percent, DollarSign, Trash2, Search, Printer, Mail, RefreshCcw, TrendingUp, TrendingDown, ArrowRight, Calendar, X, Save, Wallet, Gift, Receipt, Sparkles } from 'lucide-react';
+import { Plus, Users, CheckCircle, Settings, Calculator, Percent, DollarSign, Trash2, Search, Printer, Mail, RefreshCcw, TrendingUp, TrendingDown, ArrowRight, Calendar, X, Save, Wallet, Gift, Receipt, Sparkles, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -778,6 +778,29 @@ function PayrollContent() {
                                     >
                                         <Save className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                                         {isSaving ? "Guardando..." : "Guardar Cambios"}
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const printableItems = items.filter(item =>
+                                                (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
+                                            );
+                                            printEmployeeVouchers(
+                                                selectedPayroll,
+                                                printableItems.length > 0 ? printableItems : items,
+                                                employees,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings,
+                                                localSettings
+                                            );
+                                        }}
+                                        className="bg-muted border-border text-foreground hover:bg-muted/70 rounded-xl text-xs font-semibold h-9 px-3.5 transition-all gap-1.5"
+                                    >
+                                        <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                                        Vista Previa
                                     </Button>
 
                                     <Button
