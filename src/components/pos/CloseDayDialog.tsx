@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2, ChevronDown, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2, ChevronDown, ArrowDownLeft, ArrowUpRight, Eye } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
@@ -19,7 +19,8 @@ import CashCountDialog from './CashCountDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
-import { generateCloseDayPDF } from '@/utils/closeDayPdfGenerator';
+import { generateCloseDayPDF, CloseDayData } from '@/utils/closeDayPdfGenerator';
+import { CloseDayPreviewDialog } from './CloseDayPreviewDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -48,6 +49,11 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
     const [downloadPdf, setDownloadPdf] = useState(true);
     const [sendEmail, setSendEmail] = useState(true);
     const [printReport, setPrintReport] = useState(false);
+
+    // States for close day preview
+    const [previewData, setPreviewData] = useState<CloseDayData | null>(null);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [isPreviewFinalized, setIsPreviewFinalized] = useState(false);
 
     // Hooks
     const queryClient = useQueryClient();
@@ -439,27 +445,29 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
             toast({ title: 'Cierre Exitoso', description: 'La caja se ha cerrado correctamente.' });
 
-            if (downloadPdf || printReport) {
-                const openerName = history.find((h: any) => h.id === displayedSession.id)?.opener?.full_name 
-                    || (typeof displayedSession.opened_by === 'object' ? (displayedSession.opened_by as any)?.full_name : null) 
-                    || (displayedSession as any).opener?.full_name 
-                    || currentUserProfile?.full_name 
-                    || 'Desconocido';
-                const doc = await generateCloseDayPDF(companyInfo, {
-                    stats,
-                    actualCash: parseFloat(actualCash) || 0,
-                    difference,
-                    notes,
-                    openedAt: displayedSession.opened_at,
-                    closedAt: new Date().toISOString(),
-                    openedBy: openerName,
-                    closedBy: userData?.full_name || 'Usuario Actual'
-                });
+            const openerName = history.find((h: any) => h.id === displayedSession.id)?.opener?.full_name 
+                || (typeof displayedSession.opened_by === 'object' ? (displayedSession.opened_by as any)?.full_name : null) 
+                || (displayedSession as any).opener?.full_name 
+                || currentUserProfile?.full_name 
+                || 'Desconocido';
 
-                if (downloadPdf) doc.save(`Cierre_Caja_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-                if (printReport) {
-                    doc.autoPrint();
-                    window.open(doc.output('bloburl'), '_blank');
+            const closedData: CloseDayData = {
+                stats,
+                actualCash: parseFloat(actualCash) || 0,
+                difference,
+                notes,
+                openedAt: displayedSession.opened_at,
+                closedAt: new Date().toISOString(),
+                openedBy: openerName,
+                closedBy: userData?.full_name || 'Usuario Actual'
+            };
+
+            if (downloadPdf) {
+                try {
+                    const doc = await generateCloseDayPDF(companyInfo, closedData);
+                    doc.save(`Cierre_Caja_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+                } catch (pdfErr) {
+                    console.error('Error auto-saving PDF:', pdfErr);
                 }
             }
 
@@ -475,9 +483,10 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                 }
             }
 
-            onClose();
-            setActualCash('');
-            setNotes('');
+            // Mostrar la vista previa interactiva del cierre finalizado
+            setPreviewData(closedData);
+            setIsPreviewFinalized(true);
+            setIsPreviewOpen(true);
         } catch (error: any) {
             console.error("Cierre caja error:", error);
             const errorStr = error?.message || error?.error_description || (typeof error === 'object' ? JSON.stringify(error) : String(error));
@@ -485,7 +494,74 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         }
     };
 
+    const handleOpenPreviewBeforeClose = () => {
+        if (!displayedSession) return;
+        const openerName = history.find((h: any) => h.id === displayedSession.id)?.opener?.full_name 
+            || (typeof displayedSession.opened_by === 'object' ? (displayedSession.opened_by as any)?.full_name : null) 
+            || (displayedSession as any).opener?.full_name 
+            || currentUserProfile?.full_name 
+            || 'Desconocido';
+
+        setPreviewData({
+            stats,
+            actualCash: parseFloat(actualCash) || 0,
+            difference,
+            notes,
+            openedAt: displayedSession.opened_at,
+            closedAt: new Date().toISOString(),
+            openedBy: openerName,
+            closedBy: userData?.full_name || 'Usuario Actual'
+        });
+        setIsPreviewFinalized(false);
+        setIsPreviewOpen(true);
+    };
+
+    const handleClosePreview = () => {
+        setIsPreviewOpen(false);
+        if (isPreviewFinalized) {
+            onClose();
+            setActualCash('');
+            setNotes('');
+        }
+    };
+
+    const handleConfirmCloseFromPreview = async () => {
+        setIsPreviewOpen(false);
+        await handleCloseDay();
+    };
+
+    const handlePreviewHistoryClosing = (closing: any) => {
+        const historyStats = {
+            salesCount: 0,
+            cashSales: closing.total_sales_cash || 0,
+            cardSales: closing.total_sales_card || 0,
+            transferSales: closing.total_sales_transfer || 0,
+            otherSales: closing.total_sales_other || 0,
+            totalRefunds: closing.total_refunds || 0,
+            deposits: closing.total_cash_in || 0,
+            withdrawals: closing.total_cash_out || 0,
+            initialCash: Number(closing.initial_cash || 0),
+            cashToWithdraw: 0,
+            expectedCash: closing.expected_cash || 0,
+            totalSales: (closing.total_sales_cash || 0) + (closing.total_sales_card || 0) + (closing.total_sales_transfer || 0) + (closing.total_sales_other || 0)
+        };
+
+        setPreviewData({
+            stats: historyStats,
+            actualCash: closing.actual_cash || 0,
+            difference: closing.difference || 0,
+            notes: closing.notes,
+            openedAt: closing.opened_at,
+            closedAt: closing.closed_at || closing.opened_at,
+            openedBy: closing.opener?.full_name || 'N/A',
+            closedBy: closing.closer?.full_name || closing.opener?.full_name || 'N/A'
+        });
+        setIsPreviewFinalized(true);
+        setIsPreviewOpen(true);
+    };
+
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={onClose}>
             <CashCountDialog
                 isOpen={showCashCount}
@@ -1097,7 +1173,16 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                         Cancelar
                                     </Button>
                                     <Button 
-                                        className="flex-[2] h-10 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-xs tracking-wider uppercase shadow-md shadow-green-600/20" 
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1 h-10 rounded-xl font-bold border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 text-xs tracking-wider uppercase gap-1.5"
+                                        onClick={handleOpenPreviewBeforeClose}
+                                    >
+                                        <Eye className="h-4 w-4" />
+                                        Vista Previa
+                                    </Button>
+                                    <Button 
+                                        className="flex-[1.8] h-10 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-xs tracking-wider uppercase shadow-md shadow-green-600/20" 
                                         disabled={!actualCash || closeSession.isPending} 
                                         onClick={handleCloseDay}
                                     >
@@ -1152,9 +1237,20 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                                     <TableCell className="text-right text-muted-foreground font-bold text-xs">RD$ {(closing.initial_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</TableCell>
                                                     <TableCell className="text-right text-foreground font-black text-xs">RD$ {(closing.actual_cash || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</TableCell>
                                                     <TableCell className="text-right">
-                                                        <Badge className={cn("rounded-md px-1.5 h-5 font-bold text-[10px]", (closing.difference || 0) === 0 ? "bg-green-500/10 text-green-500 border-green-500/20" : (closing.difference || 0) > 0 ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-red-500/10 text-red-500 border-red-500/20")}>
-                                                            {(closing.difference || 0) > 0 ? '+' : ''}RD$ {(closing.difference || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
-                                                        </Badge>
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            <Badge className={cn("rounded-md px-1.5 h-5 font-bold text-[10px]", (closing.difference || 0) === 0 ? "bg-green-500/10 text-green-500 border-green-500/20" : (closing.difference || 0) > 0 ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-red-500/10 text-red-500 border-red-500/20")}>
+                                                                {(closing.difference || 0) > 0 ? '+' : ''}RD$ {(closing.difference || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                                            </Badge>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 rounded-md text-muted-foreground/60 hover:text-foreground"
+                                                                title="Ver reporte del cierre"
+                                                                onClick={() => handlePreviewHistoryClosing(closing)}
+                                                            >
+                                                                <Eye className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             ))
@@ -1167,6 +1263,19 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                 </Tabs>
             </DialogContent>
         </Dialog>
+
+        {previewData && (
+            <CloseDayPreviewDialog
+                isOpen={isPreviewOpen}
+                onClose={handleClosePreview}
+                data={previewData}
+                companyInfo={companyInfo}
+                isFinalized={isPreviewFinalized}
+                onConfirmClose={handleConfirmCloseFromPreview}
+                isClosingPending={closeSession.isPending}
+            />
+        )}
+        </>
     );
 };
 
