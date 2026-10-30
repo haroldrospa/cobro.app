@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeductionsManager } from './DeductionsManager';
-import { printPayrollReceipt } from '@/utils/printPayrollReceipt';
+import { printPayrollReceipt, printEmployeeVouchers, printSingleEmployeeVoucher } from '@/utils/printPayrollReceipt';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
 
@@ -711,7 +711,52 @@ function PayrollContent() {
 
                         {/* Top Action Buttons */}
                         <div className="flex items-center gap-2 flex-wrap">
-                            {selectedPayroll?.status !== 'paid' && (
+                            {selectedPayroll?.status === 'paid' ? (
+                                <>
+                                    <Button
+                                        size="sm"
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-9 px-3.5 shadow-sm transition-all gap-1.5"
+                                        onClick={() => {
+                                            const printableItems = items.filter(item =>
+                                                (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
+                                            );
+                                            printEmployeeVouchers(
+                                                selectedPayroll,
+                                                printableItems.length > 0 ? printableItems : items,
+                                                employees,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings,
+                                                localSettings
+                                            );
+                                        }}
+                                    >
+                                        <Receipt className="h-3.5 w-3.5" />
+                                        Imprimir Comprobantes
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="bg-muted border-border text-foreground hover:bg-muted/70 rounded-xl text-xs font-semibold h-9 px-3.5 transition-all gap-1.5"
+                                        onClick={() => {
+                                            const printableItems = items.filter(item =>
+                                                (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
+                                            );
+                                            printPayrollReceipt(
+                                                selectedPayroll,
+                                                printableItems.length > 0 ? printableItems : items,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings
+                                            );
+                                        }}
+                                    >
+                                        <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+                                        Resumen General
+                                    </Button>
+                                </>
+                            ) : (
                                 <>
                                     <Button
                                         variant="outline"
@@ -910,12 +955,13 @@ function PayrollContent() {
 
                                         <TableHead className="text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Deducciones (-)</TableHead>
                                         <TableHead className="text-right font-bold w-[160px] pr-6 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Neto a Pagar</TableHead>
+                                        <TableHead className="text-center font-bold w-[70px] pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Recibo</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loadingItems ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-48 text-center">
+                                            <TableCell colSpan={9} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                     <LoadingLogo text="" size="sm" />
                                                     <span className="text-xs text-muted-foreground">Cargando detalles de nómina...</span>
@@ -924,7 +970,7 @@ function PayrollContent() {
                                         </TableRow>
                                     ) : filteredItems.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-32 text-center text-muted-foreground text-xs">
+                                            <TableCell colSpan={9} className="h-32 text-center text-muted-foreground text-xs">
                                                 No se encontraron empleados registrados en este periodo
                                             </TableCell>
                                         </TableRow>
@@ -1010,6 +1056,28 @@ function PayrollContent() {
                                                             ${item.net_salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </div>
                                                     </TableCell>
+
+                                                    <TableCell className="text-center pr-4 py-3.5">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                                                            title={`Imprimir comprobante individual de ${item.employee_name}`}
+                                                            onClick={() => {
+                                                                printSingleEmployeeVoucher(
+                                                                    selectedPayroll,
+                                                                    item,
+                                                                    emp,
+                                                                    companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                                    companySettings?.logo_url || undefined,
+                                                                    companySettings,
+                                                                    localSettings
+                                                                );
+                                                            }}
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
                                                 </TableRow>
                                             );
                                         })
@@ -1047,19 +1115,52 @@ function PayrollContent() {
 
             {/* PRINT OPTION DIALOG */}
             <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-green-600">
+                        <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                             <CheckCircle className="h-6 w-6" />
-                            ¡Nómina Pagada!
+                            ¡Nómina Pagada Exitosamente!
                         </DialogTitle>
                         <DialogDescription>
-                            El pago se ha registrado correctamente. ¿Qué deseas hacer ahora?
+                            El pago de la nómina se ha registrado en el sistema. Puedes imprimir los comprobantes de pago individuales para cada empleado o el reporte general.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex flex-col gap-3 py-4">
+                    <div className="flex flex-col gap-3 py-3">
                         <Button
-                            className="w-full justify-start text-lg h-12"
+                            className="w-full justify-between h-auto py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 rounded-2xl group transition-all"
+                            onClick={() => {
+                                if (justPaidPayroll) {
+                                    printEmployeeVouchers(
+                                        justPaidPayroll.payroll,
+                                        justPaidPayroll.items,
+                                        employees,
+                                        companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                        companySettings?.logo_url || undefined,
+                                        companySettings,
+                                        localSettings
+                                    );
+                                }
+                                setIsPrintDialogOpen(false);
+                            }}
+                        >
+                            <div className="flex items-center text-left gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                                    <Receipt className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                    <div className="font-bold text-sm leading-snug">Imprimir Comprobantes Individuales</div>
+                                    <div className="text-[11px] text-white/80 font-normal">
+                                        Volantes por empleado con detalle de deducciones (TSS, créditos, etc.) y firmas
+                                    </div>
+                                </div>
+                            </div>
+                            <Badge className="bg-white/20 text-white text-[10px] ml-2 shrink-0 border-0">
+                                {justPaidPayroll?.items.length || 0} Volantes
+                            </Badge>
+                        </Button>
+
+                        <Button
+                            className="w-full justify-start h-auto py-3 px-4 rounded-2xl border-border/70 hover:bg-muted/60"
                             variant="outline"
                             onClick={() => {
                                 if (justPaidPayroll) {
@@ -1067,27 +1168,45 @@ function PayrollContent() {
                                         justPaidPayroll.payroll,
                                         justPaidPayroll.items,
                                         companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
-                                        companySettings?.logo_url || undefined
+                                        companySettings?.logo_url || undefined,
+                                        companySettings
                                     );
                                 }
                                 setIsPrintDialogOpen(false);
                             }}
                         >
-                            <Printer className="mr-3 h-5 w-5" /> Imprimir / Descargar Comprobante
+                            <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center mr-3 shrink-0">
+                                <Printer className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="text-left">
+                                <div className="font-semibold text-sm">Imprimir Resumen General</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                    Tabla consolidada de la nómina completa para archivo y contabilidad
+                                </div>
+                            </div>
                         </Button>
+
                         <Button
-                            className="w-full justify-start text-lg h-12"
+                            className="w-full justify-start h-auto py-3 px-4 rounded-2xl border-border/70 hover:bg-muted/60"
                             variant="outline"
                             onClick={() => {
                                 toast({ title: "Enviado", description: "Comprobantes enviados por correo (Simulación)." });
                                 setIsPrintDialogOpen(false);
                             }}
                         >
-                            <Mail className="mr-3 h-5 w-5" /> Enviar por Correo
+                            <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center mr-3 shrink-0">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="text-left">
+                                <div className="font-semibold text-sm">Enviar por Correo</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                    Enviar resumen por correo electrónico a administración
+                                </div>
+                            </div>
                         </Button>
                     </div>
                     <DialogFooter>
-                        <Button onClick={() => setIsPrintDialogOpen(false)}>Cerrar</Button>
+                        <Button variant="ghost" className="rounded-xl text-xs font-semibold" onClick={() => setIsPrintDialogOpen(false)}>Cerrar</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
