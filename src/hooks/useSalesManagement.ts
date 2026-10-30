@@ -52,6 +52,8 @@ export interface Sale {
     product?: {
       name: string;
       image_url?: string | null;
+      cost?: number;
+      is_variable_price?: boolean;
     };
   }[];
 }
@@ -111,7 +113,7 @@ export const useSales = (
             discount_amount,
             tax_amount,
             total,
-            product:products(name, image_url)
+            product:products(name, image_url, cost, is_variable_price)
           )
         `;
       }

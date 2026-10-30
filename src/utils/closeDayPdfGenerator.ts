@@ -16,6 +16,10 @@ export interface CloseDayStats {
     expectedCash: number;
     cashToWithdraw: number;
     totalSales: number;
+    salesCount?: number;
+    totalCost?: number;
+    netProfit?: number;
+    profitMargin?: number;
 }
 
 export interface CloseDayData {
@@ -149,6 +153,45 @@ export const generateCloseDayPDF = async (companyInfo: CompanyInfoForPrint, data
         styles: { fontSize: 9 },
         columnStyles: { 1: { halign: 'right' } }
     });
+
+    // --- Fund Separation: Reinvestment vs Net Profit ---
+    if (data.stats.totalCost !== undefined || data.stats.netProfit !== undefined) {
+        // @ts-ignore
+        currentY = (doc as any).lastAutoTable.finalY + 8;
+        const totalCost = data.stats.totalCost || 0;
+        const netProfit = data.stats.netProfit || 0;
+        const margin = data.stats.profitMargin ?? (data.stats.totalSales > 0 ? (netProfit / data.stats.totalSales) * 100 : 0);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(40, 40, 40);
+        doc.text("Separación de Fondos (Reinversión vs Ganancia Neta)", 14, currentY);
+        currentY += 2;
+
+        autoTable(doc, {
+            startY: currentY + 4,
+            body: [
+                ['Capital para Reinversión (Costo de Mercancía a Reponer)', `$${totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                ['Ganancia Neta Estimada (Beneficio Libre del Negocio)', `$${netProfit.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                ['Margen de Ganancia del Turno', `${margin.toFixed(1)}%`],
+            ],
+            theme: 'grid',
+            styles: { fontSize: 9.5, minCellHeight: 8, valign: 'middle' },
+            columnStyles: {
+                0: { fontStyle: 'bold' },
+                1: { halign: 'right', fontStyle: 'bold' }
+            },
+            didParseCell: (hookData) => {
+                if (hookData.column.index === 1) {
+                    if (hookData.row.index === 0) {
+                        hookData.cell.styles.textColor = [37, 99, 235]; // Azul
+                    } else if (hookData.row.index === 1) {
+                        hookData.cell.styles.textColor = [16, 185, 129]; // Verde esmeralda
+                    }
+                }
+            }
+        });
+    }
 
     // Notes
     if (data.notes) {

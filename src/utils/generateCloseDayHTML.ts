@@ -205,6 +205,25 @@ export const generateCloseDayHTML = (
                         <span class="font-mono">${data.stats.salesCount || 0} ventas</span>
                     </div>
 
+                    <div class="divider"></div>
+                    <div class="text-center font-bold" style="font-size: 10.5px; text-transform: uppercase; margin-bottom: 4px;">
+                        SEPARACIÓN DE FONDOS
+                    </div>
+                    <div class="row" style="color: #2563eb; font-weight: 700;">
+                        <span>REINVERSIÓN (COSTO MERCANCÍA):</span>
+                        <span class="font-mono">RD$ ${fmt(data.stats.totalCost || 0)}</span>
+                    </div>
+                    <div class="row-sub" style="font-size: 9px; margin-bottom: 2px;">
+                        Apartar para reponer inventario / suplidores
+                    </div>
+                    <div class="row" style="color: #059669; font-weight: 700; font-size: 11.5px;">
+                        <span>GANANCIA NETA ESTIMADA:</span>
+                        <span class="font-mono">RD$ ${fmt(data.stats.netProfit || 0)}</span>
+                    </div>
+                    <div class="row-sub" style="font-size: 9px;">
+                        Margen de utilidad: ${((data.stats.profitMargin ?? (data.stats.totalSales > 0 ? ((data.stats.netProfit || 0) / data.stats.totalSales) * 100 : 0))).toFixed(1)}%
+                    </div>
+
                     ${data.notes ? `
                         <div class="divider"></div>
                         <div class="font-bold" style="font-size: 10px; text-transform: uppercase;">NOTAS / OBSERVACIONES:</div>
@@ -540,6 +559,51 @@ export const generateCloseDayHTML = (
                         <tfoot>
                             <tr class="total-row">
                                 <td>TOTAL GENERAL FACTURADO (${data.stats.salesCount || 0} Ventas)</td>
+                                <td class="text-right font-mono" style="font-size: 14px;">$${fmt(data.stats.totalSales)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- SEPARACIÓN DE FONDOS: REINVERSIÓN Y GANANCIA NETA -->
+                <div class="table-box" style="border: 2px solid #0f172a;">
+                    <div class="table-header" style="background: #0f172a; color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Separación de Fondos (Cuadre de Ventas)</span>
+                        <span style="font-size: 10px; font-weight: 500; text-transform: none; color: #94a3b8;">Margen global: ${((data.stats.profitMargin ?? (data.stats.totalSales > 0 ? ((data.stats.netProfit || 0) / data.stats.totalSales) * 100 : 0))).toFixed(1)}%</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Destino de los Fondos</th>
+                                <th>Descripción / Propósito</th>
+                                <th class="text-right">Monto a Separar (RD$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 700; color: #2563eb;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2563eb;"></span>
+                                        Capital de Reinversión
+                                    </div>
+                                </td>
+                                <td style="color: #64748b; font-size: 11px;">Costo de mercancía a reponer en inventario y suplidores</td>
+                                <td class="text-right font-mono font-bold" style="color: #2563eb; font-size: 13px;">$${fmt(data.stats.totalCost || 0)}</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 700; color: #059669;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #059669;"></span>
+                                        Ganancia Neta Estimada
+                                    </div>
+                                </td>
+                                <td style="color: #64748b; font-size: 11px;">Utilidad líquida real generada por las ventas del turno</td>
+                                <td class="text-right font-mono font-bold" style="color: #059669; font-size: 13px;">$${fmt(data.stats.netProfit || 0)}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="2">TOTAL FACTURADO (Reinversión + Ganancia Neta)</td>
                                 <td class="text-right font-mono" style="font-size: 14px;">$${fmt(data.stats.totalSales)}</td>
                             </tr>
                         </tfoot>

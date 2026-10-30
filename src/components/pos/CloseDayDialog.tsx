@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Lock, Calculator, CheckCircle, Wallet, TrendingUp, TrendingDown, Clock, FileText, X, RefreshCcw, ShoppingCart, Trash2, ChevronDown, ArrowDownLeft, ArrowUpRight, Eye } from 'lucide-react';
 import { useSales } from '@/hooks/useSalesManagement';
+import { useProducts } from '@/hooks/useProducts';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useCloseSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
 import { useToast } from '@/hooks/use-toast';
@@ -251,8 +252,11 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
     const { data: allStoreSales = [] } = useSales({ 
         dateFrom: earliestStart,
-        userId: currentUserProfile?.role === 'admin' ? 'all' : (currentUserProfile?.id || 'all')
+        userId: currentUserProfile?.role === 'admin' ? 'all' : (currentUserProfile?.id || 'all'),
+        includeItems: true
     });
+    const { data: products = [] } = useProducts();
+    const productsMap = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
     
     const { data: movements = [] } = useCashMovements(
         earliestStart, 
@@ -326,6 +330,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
         let transferSales = 0;
         let otherSales = 0;
         let totalRefunds = 0;
+        let calculatedCost = 0;
 
         sessionSales.forEach(sale => {
             const amount = sale.total || 0;
@@ -349,6 +354,18 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                     else otherSales += diff;
                 }
                 else otherSales += amount;
+
+                // Calcular costo de productos vendidos en este turno
+                sale.sale_items?.forEach((item: any) => {
+                    const product = item.product || productsMap.get(item.product_id);
+                    if (product && product.cost) {
+                        if (product.is_variable_price) {
+                            calculatedCost += ((Number(product.cost) || 0) / 100) * (Number(item.total) || 0);
+                        } else {
+                            calculatedCost += (Number(product.cost) || 0) * (Number(item.quantity) || 0);
+                        }
+                    }
+                });
             }
         });
 
@@ -357,6 +374,10 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
 
         const initialCash = Number(displayedSession?.initial_cash || 0);
         const expectedCash = cashSales + deposits - withdrawals;
+        const totalSales = cashSales + cardSales + transferSales + otherSales;
+        const totalCost = Math.min(calculatedCost, Math.max(0, totalSales));
+        const netProfit = Math.max(0, totalSales - totalCost);
+        const profitMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
 
         return {
             salesCount: sessionSales.length,
@@ -370,9 +391,12 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             initialCash,
             cashToWithdraw: Math.max(0, expectedCash),
             expectedCash,
-            totalSales: cashSales + cardSales + transferSales + otherSales
+            totalSales,
+            totalCost,
+            netProfit,
+            profitMargin
         };
-    }, [sessionSales, sessionMovements, displayedSession]);
+    }, [sessionSales, sessionMovements, displayedSession, productsMap]);
 
     const difference = (parseFloat(actualCash) || 0) - stats.expectedCash;
 
@@ -531,6 +555,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
     };
 
     const handlePreviewHistoryClosing = (closing: any) => {
+        const totalSales = (closing.total_sales_cash || 0) + (closing.total_sales_card || 0) + (closing.total_sales_transfer || 0) + (closing.total_sales_other || 0);
         const historyStats = {
             salesCount: 0,
             cashSales: closing.total_sales_cash || 0,
@@ -543,7 +568,10 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
             initialCash: Number(closing.initial_cash || 0),
             cashToWithdraw: 0,
             expectedCash: closing.expected_cash || 0,
-            totalSales: (closing.total_sales_cash || 0) + (closing.total_sales_card || 0) + (closing.total_sales_transfer || 0) + (closing.total_sales_other || 0)
+            totalSales,
+            totalCost: closing.total_cost !== undefined ? closing.total_cost : undefined,
+            netProfit: closing.net_profit !== undefined ? closing.net_profit : undefined,
+            profitMargin: closing.profit_margin !== undefined ? closing.profit_margin : undefined
         };
 
         setPreviewData({
@@ -889,8 +917,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                         )}
                                     </TabsContent>
 
-                                    {/* Tab 3: Desglose por Método */}
-                                    <TabsContent value="breakdown" className="m-0 flex-1 h-full flex flex-col justify-between min-h-0 outline-none data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:flex-1">
+                                    {/* Tab 3: Desglose por Método & Separación de Fondos */}
+                                    <TabsContent value="breakdown" className="m-0 flex-1 h-full flex flex-col justify-between min-h-0 outline-none data-[state=active]:flex data-[state=active]:flex-col data-[state=active]:flex-1 overflow-y-auto no-scrollbar">
                                         <div className="space-y-2 py-1">
                                             <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-muted/20 border border-border/20">
                                                 <span className="text-muted-foreground font-medium">Efectivo</span>
@@ -907,6 +935,28 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                             <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-muted/20 border border-border/20">
                                                 <span className="text-muted-foreground font-medium">Crédito / Otros</span>
                                                 <span className="font-bold text-foreground font-mono">RD$ {stats.otherSales.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+
+                                            {/* Separación de Fondos: Reinversión vs Ganancia */}
+                                            <div className="mt-2.5 p-2.5 rounded-xl border border-border/40 bg-card/60 space-y-2">
+                                                <div className="flex items-center justify-between text-[11px] font-bold pb-1.5 border-b border-border/20">
+                                                    <span className="text-foreground uppercase tracking-wider">Separación de Fondos</span>
+                                                    <span className="text-[10px] text-emerald-500 font-bold">{stats.profitMargin.toFixed(1)}% margen</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                                                        <span className="text-muted-foreground">Capital Reinversión (Costo)</span>
+                                                    </div>
+                                                    <span className="font-bold text-blue-500 font-mono">RD$ {stats.totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                                        <span className="text-muted-foreground">Ganancia Neta Estimada</span>
+                                                    </div>
+                                                    <span className="font-bold text-emerald-500 font-mono">RD$ {stats.netProfit.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="pt-2 mt-auto border-t border-border/30 flex justify-between items-center text-xs text-muted-foreground shrink-0 px-1">
@@ -1074,6 +1124,28 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                         Ingresa el monto físico contado para calcular la diferencia.
                                     </p>
                                 )}
+                                {/* Separación de Fondos Preview Badge */}
+                                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                                    <div className="p-2 rounded-xl border border-blue-500/20 bg-blue-500/5 flex flex-col justify-between">
+                                        <span className="text-[9px] font-bold text-blue-500/80 uppercase tracking-wider flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Reinversión
+                                        </span>
+                                        <span className="font-mono font-black text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-0.5">
+                                            RD$ {stats.totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                    <div className="p-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex flex-col justify-between">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-wider flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ganancia Neta
+                                            </span>
+                                            <span className="text-[8px] font-bold text-emerald-500">{stats.profitMargin.toFixed(0)}%</span>
+                                        </div>
+                                        <span className="font-mono font-black text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                            RD$ {stats.netProfit.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Middle section: Blocking Orders or Notes */}
