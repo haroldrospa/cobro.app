@@ -18,12 +18,13 @@ import { useEmployees, Employee } from '@/hooks/useEmployees';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
-import { Plus, Users, CheckCircle, Settings, Calculator, Percent, DollarSign, Trash2, Search, Printer, Mail, RefreshCcw, TrendingUp, TrendingDown, ArrowRight, Calendar, X, Save, Wallet, Gift, Receipt, Sparkles, Eye } from 'lucide-react';
+import { Plus, Users, CheckCircle, Settings, Calculator, Percent, DollarSign, Trash2, Search, Printer, Mail, RefreshCcw, TrendingUp, TrendingDown, ArrowRight, Calendar, X, Save, Wallet, Gift, Receipt, Sparkles, Eye, Download, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeductionsManager } from './DeductionsManager';
-import { printPayrollReceipt, printEmployeeVouchers, printSingleEmployeeVoucher } from '@/utils/printPayrollReceipt';
+import { printPayrollReceipt, printEmployeeVouchers, printSingleEmployeeVoucher, printCompletePayrollPackage } from '@/utils/printPayrollReceipt';
+import { downloadCompletePayrollPDF, downloadPayrollSummaryPDF, downloadEmployeeVoucherPDF, downloadAllEmployeesIndividualPDFs } from '@/utils/payrollPdfGenerator';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 import { WithPlanAccess } from '@/components/subscription/WithPlanAccess';
 
@@ -57,6 +58,9 @@ function PayrollContent() {
     const [salaryFilter, setSalaryFilter] = useState<'all' | 'with_salary' | 'zero_salary'>('with_salary');
     const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
     const [justPaidPayroll, setJustPaidPayroll] = useState<{ payroll: PayrollType, items: PayrollItem[] } | null>(null);
+    const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState<string | null>(null);
+    const [showEmployeeList, setShowEmployeeList] = useState(false);
 
     const [periodStart, setPeriodStart] = useState(new Date().toISOString().split('T')[0]);
     const [periodEnd, setPeriodEnd] = useState(new Date().toISOString().split('T')[0]);
@@ -716,6 +720,31 @@ function PayrollContent() {
                                     <Button
                                         size="sm"
                                         className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-9 px-3.5 shadow-sm transition-all gap-1.5"
+                                        title="Nómina completa: Resumen general y todos los comprobantes individuales en un solo archivo"
+                                        onClick={() => {
+                                            const printableItems = items.filter(item =>
+                                                (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
+                                            );
+                                            printCompletePayrollPackage(
+                                                selectedPayroll,
+                                                printableItems.length > 0 ? printableItems : items,
+                                                employees,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings,
+                                                localSettings
+                                            );
+                                        }}
+                                    >
+                                        <FileText className="h-3.5 w-3.5" />
+                                        Nómina Completa (Todo en 1)
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="bg-muted border-border text-foreground hover:bg-muted/70 rounded-xl text-xs font-semibold h-9 px-3.5 transition-all gap-1.5"
+                                        title="Imprimir volantes de pago individuales por empleado"
                                         onClick={() => {
                                             const printableItems = items.filter(item =>
                                                 (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
@@ -731,14 +760,15 @@ function PayrollContent() {
                                             );
                                         }}
                                     >
-                                        <Receipt className="h-3.5 w-3.5" />
-                                        Imprimir Comprobantes
+                                        <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+                                        Comprobantes
                                     </Button>
 
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         className="bg-muted border-border text-foreground hover:bg-muted/70 rounded-xl text-xs font-semibold h-9 px-3.5 transition-all gap-1.5"
+                                        title="Imprimir resumen general contable consolidado"
                                         onClick={() => {
                                             const printableItems = items.filter(item =>
                                                 (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
@@ -787,17 +817,16 @@ function PayrollContent() {
                                             const printableItems = items.filter(item =>
                                                 (item.base_salary || 0) !== 0 || (item.bonuses || 0) !== 0 || (item.net_salary || 0) !== 0
                                             );
-                                            printEmployeeVouchers(
+                                            printPayrollReceipt(
                                                 selectedPayroll,
                                                 printableItems.length > 0 ? printableItems : items,
-                                                employees,
                                                 companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
                                                 companySettings?.logo_url || undefined,
-                                                companySettings,
-                                                localSettings
+                                                companySettings
                                             );
                                         }}
                                         className="bg-muted border-border text-foreground hover:bg-muted/70 rounded-xl text-xs font-semibold h-9 px-3.5 transition-all gap-1.5"
+                                        title="Vista previa del resumen general consolidado de la nómina completa"
                                     >
                                         <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                                         Vista Previa
@@ -978,7 +1007,7 @@ function PayrollContent() {
 
                                         <TableHead className="text-right pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Deducciones (-)</TableHead>
                                         <TableHead className="text-right font-bold w-[140px] pr-6 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Neto a Pagar</TableHead>
-                                        <TableHead className="text-center font-bold w-[60px] pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Recibo</TableHead>
+                                        <TableHead className="text-center font-bold w-[80px] pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">PDF / Recibo</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1098,25 +1127,46 @@ function PayrollContent() {
                                                     </TableCell>
 
                                                     <TableCell className="text-center pr-4 py-3">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 rounded-lg text-muted-foreground/50 hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors"
-                                                            title={`Imprimir comprobante individual de ${item.employee_name}`}
-                                                            onClick={() => {
-                                                                printSingleEmployeeVoucher(
-                                                                    selectedPayroll,
-                                                                    item,
-                                                                    emp,
-                                                                    companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
-                                                                    companySettings?.logo_url || undefined,
-                                                                    companySettings,
-                                                                    localSettings
-                                                                );
-                                                            }}
-                                                        >
-                                                            <Printer className="h-4 w-4" />
-                                                        </Button>
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-lg text-muted-foreground/60 hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                                                                title={`Descargar nómina en PDF de ${item.employee_name}`}
+                                                                onClick={async () => {
+                                                                    await downloadEmployeeVoucherPDF(
+                                                                        selectedPayroll,
+                                                                        item,
+                                                                        emp,
+                                                                        companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                                        companySettings?.logo_url || undefined,
+                                                                        companySettings,
+                                                                        localSettings
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <Download className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-lg text-muted-foreground/60 hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                                                                title={`Imprimir comprobante individual de ${item.employee_name}`}
+                                                                onClick={() => {
+                                                                    printSingleEmployeeVoucher(
+                                                                        selectedPayroll,
+                                                                        item,
+                                                                        emp,
+                                                                        companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                                        companySettings?.logo_url || undefined,
+                                                                        companySettings,
+                                                                        localSettings
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             );
@@ -1153,99 +1203,289 @@ function PayrollContent() {
             </Dialog>
 
 
-            {/* PRINT OPTION DIALOG */}
+            {/* PRINT & DOWNLOAD OPTION DIALOG */}
             <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                             <CheckCircle className="h-6 w-6" />
                             ¡Nómina Pagada Exitosamente!
                         </DialogTitle>
                         <DialogDescription>
-                            El pago de la nómina se ha registrado en el sistema. Puedes imprimir los comprobantes de pago individuales para cada empleado o el reporte general.
+                            El pago de la nómina se ha registrado en el sistema. Elige la opción que prefieras para descargar o imprimir:
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex flex-col gap-3 py-3">
-                        <Button
-                            className="w-full justify-between h-auto py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 rounded-2xl group transition-all"
-                            onClick={() => {
-                                if (justPaidPayroll) {
-                                    printEmployeeVouchers(
-                                        justPaidPayroll.payroll,
-                                        justPaidPayroll.items,
-                                        employees,
-                                        companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
-                                        companySettings?.logo_url || undefined,
-                                        companySettings,
-                                        localSettings
-                                    );
-                                }
-                                setIsPrintDialogOpen(false);
-                            }}
-                        >
-                            <div className="flex items-center text-left gap-3">
-                                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                                    <Receipt className="h-5 w-5 text-white" />
-                                </div>
-                                <div>
-                                    <div className="font-bold text-sm leading-snug">Imprimir Comprobantes Individuales</div>
-                                    <div className="text-[11px] text-white/80 font-normal">
-                                        Volantes por empleado con detalle de deducciones (TSS, créditos, etc.) y firmas
+
+                    <div className="flex flex-col gap-3 py-2">
+                        {/* Opción 1: Nómina Completa (Todo en 1) */}
+                        <div className="p-4 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 flex flex-col gap-3">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/30">
+                                        <FileText className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-sm text-foreground">Nómina Completa (Todo en 1)</span>
+                                            <Badge className="bg-emerald-600 text-white text-[10px] border-0">Recomendado</Badge>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            Un único archivo con el <strong>Resumen General</strong> y todas las <strong>nóminas separadas por página con el nombre</strong> de cada empleado.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
-                            <Badge className="bg-white/20 text-white text-[10px] ml-2 shrink-0 border-0">
-                                {justPaidPayroll?.items.length || 0} Volantes
-                            </Badge>
-                        </Button>
-
-                        <Button
-                            className="w-full justify-start h-auto py-3 px-4 rounded-2xl border-border/70 hover:bg-muted/60"
-                            variant="outline"
-                            onClick={() => {
-                                if (justPaidPayroll) {
-                                    printPayrollReceipt(
-                                        justPaidPayroll.payroll,
-                                        justPaidPayroll.items,
-                                        companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
-                                        companySettings?.logo_url || undefined,
-                                        companySettings
-                                    );
-                                }
-                                setIsPrintDialogOpen(false);
-                            }}
-                        >
-                            <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center mr-3 shrink-0">
-                                <Printer className="h-4 w-4 text-muted-foreground" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                <Button
+                                    size="sm"
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs h-9 px-3 gap-1.5 shadow-sm"
+                                    onClick={() => {
+                                        if (justPaidPayroll) {
+                                            printCompletePayrollPackage(
+                                                justPaidPayroll.payroll,
+                                                justPaidPayroll.items,
+                                                employees,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings,
+                                                localSettings
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <Printer className="h-3.5 w-3.5" />
+                                    Ver / Guardar en PDF
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold rounded-xl text-xs h-9 px-3 gap-1.5"
+                                    onClick={async () => {
+                                        if (justPaidPayroll) {
+                                            await downloadCompletePayrollPDF(
+                                                justPaidPayroll.payroll,
+                                                justPaidPayroll.items,
+                                                employees,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings,
+                                                localSettings
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    Descargar PDF Directo (.pdf)
+                                </Button>
                             </div>
-                            <div className="text-left">
-                                <div className="font-semibold text-sm">Imprimir Resumen General</div>
-                                <div className="text-[11px] text-muted-foreground">
-                                    Tabla consolidada de la nómina completa para archivo y contabilidad
+                        </div>
+
+                        {/* Opción 2: Descargar Comprobantes por Empleado (PDFs individuales con su nombre) */}
+                        <div className="p-4 rounded-2xl border border-border bg-card/60 flex flex-col gap-3">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                        <Users className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-sm text-foreground">Comprobantes por Empleado (PDF Individual)</span>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            Descarga o imprime cada nómina por separado con el nombre de cada colaborador.
+                                        </p>
+                                    </div>
+                                </div>
+                                <Badge variant="outline" className="text-[10px] shrink-0">
+                                    {justPaidPayroll?.items.length || 0} Empleados
+                                </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isDownloadingAll}
+                                    className="border-border hover:bg-muted font-semibold rounded-xl text-xs h-9 px-3 gap-1.5"
+                                    onClick={async () => {
+                                        if (justPaidPayroll) {
+                                            setIsDownloadingAll(true);
+                                            try {
+                                                await downloadAllEmployeesIndividualPDFs(
+                                                    justPaidPayroll.payroll,
+                                                    justPaidPayroll.items,
+                                                    employees,
+                                                    companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                    companySettings?.logo_url || undefined,
+                                                    companySettings,
+                                                    localSettings,
+                                                    (cur, tot, empName) => {
+                                                        setDownloadProgress(`Descargando ${cur}/${tot}: ${empName}...`);
+                                                    }
+                                                );
+                                                toast({
+                                                    title: "Descarga completada",
+                                                    description: `Se descargaron ${justPaidPayroll.items.length} archivos PDF identificados por nombre de empleado.`
+                                                });
+                                            } finally {
+                                                setIsDownloadingAll(false);
+                                                setDownloadProgress(null);
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <Download className={cn("h-3.5 w-3.5", isDownloadingAll && "animate-bounce")} />
+                                    {isDownloadingAll ? (downloadProgress || "Descargando...") : "Descargar Todos en PDF"}
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-border hover:bg-muted font-semibold rounded-xl text-xs h-9 px-3 gap-1.5"
+                                    onClick={() => {
+                                        if (justPaidPayroll) {
+                                            printEmployeeVouchers(
+                                                justPaidPayroll.payroll,
+                                                justPaidPayroll.items,
+                                                employees,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings,
+                                                localSettings
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <Printer className="h-3.5 w-3.5" />
+                                    Imprimir Todos los Volantes
+                                </Button>
+                            </div>
+
+                            {/* Sublista individual por empleado */}
+                            <div className="pt-1">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-between h-8 text-xs text-muted-foreground hover:text-foreground px-2"
+                                    onClick={() => setShowEmployeeList(prev => !prev)}
+                                >
+                                    <span>{showEmployeeList ? 'Ocultar listado de empleados' : 'Ver y descargar empleado individualmente'}</span>
+                                    {showEmployeeList ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                </Button>
+
+                                {showEmployeeList && justPaidPayroll && (
+                                    <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                        {justPaidPayroll.items.map((item, idx) => {
+                                            const emp = employees.find(e => e.id === item.profile_id);
+                                            return (
+                                                <div key={item.id || idx} className="flex items-center justify-between p-2 rounded-xl bg-muted/40 border border-border/50 text-xs">
+                                                    <div className="truncate pr-2">
+                                                        <span className="font-semibold text-foreground block truncate">{item.employee_name}</span>
+                                                        <span className="text-[10px] text-muted-foreground">Neto: RD$ {(Number(item.net_salary) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-7 px-2 text-[11px] rounded-lg gap-1"
+                                                            title={`Descargar PDF de ${item.employee_name}`}
+                                                            onClick={async () => {
+                                                                await downloadEmployeeVoucherPDF(
+                                                                    justPaidPayroll.payroll,
+                                                                    item,
+                                                                    emp,
+                                                                    companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                                    companySettings?.logo_url || undefined,
+                                                                    companySettings,
+                                                                    localSettings
+                                                                );
+                                                            }}
+                                                        >
+                                                            <Download className="h-3 w-3" />
+                                                            PDF
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-7 w-7 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+                                                            title={`Ver comprobante de ${item.employee_name}`}
+                                                            onClick={() => {
+                                                                printSingleEmployeeVoucher(
+                                                                    justPaidPayroll.payroll,
+                                                                    item,
+                                                                    emp,
+                                                                    companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                                    companySettings?.logo_url || undefined,
+                                                                    companySettings,
+                                                                    localSettings
+                                                                );
+                                                            }}
+                                                        >
+                                                            <Printer className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Opción 3: Solo Resumen General */}
+                        <div className="p-3.5 rounded-2xl border border-border bg-card/60 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                                    <Printer className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <div className="font-semibold text-xs text-foreground">Solo Resumen General</div>
+                                    <div className="text-[10px] text-muted-foreground">Tabla consolidada para contabilidad</div>
                                 </div>
                             </div>
-                        </Button>
-
-                        <Button
-                            className="w-full justify-start h-auto py-3 px-4 rounded-2xl border-border/70 hover:bg-muted/60"
-                            variant="outline"
-                            onClick={() => {
-                                toast({ title: "Enviado", description: "Comprobantes enviados por correo (Simulación)." });
-                                setIsPrintDialogOpen(false);
-                            }}
-                        >
-                            <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center mr-3 shrink-0">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-2.5 text-xs rounded-xl gap-1"
+                                    onClick={() => {
+                                        if (justPaidPayroll) {
+                                            printPayrollReceipt(
+                                                justPaidPayroll.payroll,
+                                                justPaidPayroll.items,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <Printer className="h-3.5 w-3.5" />
+                                    Ver
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-2.5 text-xs rounded-xl gap-1"
+                                    onClick={async () => {
+                                        if (justPaidPayroll) {
+                                            await downloadPayrollSummaryPDF(
+                                                justPaidPayroll.payroll,
+                                                justPaidPayroll.items,
+                                                companySettings?.company_name || userStore?.store_name || 'Mi Negocio',
+                                                companySettings?.logo_url || undefined,
+                                                companySettings
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    PDF
+                                </Button>
                             </div>
-                            <div className="text-left">
-                                <div className="font-semibold text-sm">Enviar por Correo</div>
-                                <div className="text-[11px] text-muted-foreground">
-                                    Enviar resumen por correo electrónico a administración
-                                </div>
-                            </div>
-                        </Button>
+                        </div>
                     </div>
-                    <DialogFooter>
+
+                    <DialogFooter className="sm:justify-between pt-2">
+                        <span className="text-[11px] text-muted-foreground self-center">También puedes volver a descargarlos en cualquier momento desde el historial de nóminas.</span>
                         <Button variant="ghost" className="rounded-xl text-xs font-semibold" onClick={() => setIsPrintDialogOpen(false)}>Cerrar</Button>
                     </DialogFooter>
                 </DialogContent>
