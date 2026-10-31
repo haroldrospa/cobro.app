@@ -662,10 +662,10 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                     </div>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    <TabsContent value="close" className="m-0 p-3 sm:p-4 lg:p-5 flex-1 min-h-0 h-full overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 outline-none">
+                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col min-h-0 overflow-hidden w-full max-w-full">
+                    <TabsContent value="close" className="m-0 p-3 sm:p-4 lg:p-5 flex-1 min-h-0 h-full overflow-y-auto overflow-x-hidden grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 outline-none w-full max-w-full">
                         {/* Left Column: Financial Overview */}
-                        <div className="lg:col-span-7 flex flex-col gap-3 min-h-0 h-full">
+                        <div className="lg:col-span-7 flex flex-col gap-3 min-h-0 h-full min-w-0 w-full">
                             {/* 4 Stats Cards in 2x2 grid on mobile, 4x1 on desktop */}
                             <div className="order-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
                                 <button
@@ -1056,7 +1056,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             </div>
 
                             {/* Bottom Hero: Expected Cash */}
-                            <div className="order-2 lg:order-3 bg-gradient-to-r from-green-500/15 via-green-500/10 to-transparent border border-green-500/25 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center justify-between shrink-0 shadow-sm">
+                            <div className="order-2 lg:order-3 bg-gradient-to-r from-green-500/15 via-green-500/10 to-transparent border border-green-500/25 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center justify-between shrink-0 shadow-sm min-w-0 w-full">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                     <div className="bg-green-500/20 p-2 rounded-xl text-green-500 shrink-0">
                                         <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -1077,7 +1077,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                         </div>
 
                         {/* Right Column: Declaration & Closing Actions */}
-                        <div className="lg:col-span-5 bg-card/50 border border-border/50 p-3.5 sm:p-4 rounded-2xl flex flex-col justify-between gap-3 min-h-0">
+                        <div className="lg:col-span-5 bg-card/50 border border-border/50 p-3.5 sm:p-4 rounded-2xl flex flex-col justify-between gap-3 min-h-0 min-w-0 w-full">
                             {/* Declaration Header & Input */}
                             <div className="space-y-2 shrink-0">
                                 <div className="flex justify-between items-center">
@@ -1125,23 +1125,23 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                     </p>
                                 )}
                                 {/* Separación de Fondos Preview Badge */}
-                                <div className="grid grid-cols-2 gap-2 pt-0.5">
-                                    <div className="p-2 rounded-xl border border-blue-500/20 bg-blue-500/5 flex flex-col justify-between">
-                                        <span className="text-[9px] font-bold text-blue-500/80 uppercase tracking-wider flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Reinversión
+                                <div className="grid grid-cols-2 gap-2 pt-0.5 min-w-0 w-full">
+                                    <div className="p-2 rounded-xl border border-blue-500/20 bg-blue-500/5 flex flex-col justify-between min-w-0">
+                                        <span className="text-[9px] font-bold text-blue-500/80 uppercase tracking-wider flex items-center gap-1 truncate">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span> Reinversión
                                         </span>
-                                        <span className="font-mono font-black text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-0.5">
+                                        <span className="font-mono font-black text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-0.5 truncate">
                                             RD$ {stats.totalCost.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
-                                    <div className="p-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex flex-col justify-between">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-wider flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ganancia Neta
+                                    <div className="p-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex flex-col justify-between min-w-0">
+                                        <div className="flex items-center justify-between min-w-0">
+                                            <span className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-wider flex items-center gap-1 truncate">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span> Ganancia Neta
                                             </span>
-                                            <span className="text-[8px] font-bold text-emerald-500">{stats.profitMargin.toFixed(0)}%</span>
+                                            <span className="text-[8px] font-bold text-emerald-500 shrink-0">{stats.profitMargin.toFixed(0)}%</span>
                                         </div>
-                                        <span className="font-mono font-black text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                        <span className="font-mono font-black text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
                                             RD$ {stats.netProfit.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
@@ -1222,8 +1222,8 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                             </div>
 
                             {/* Bottom: Options and Action Buttons */}
-                            <div className="space-y-2.5 shrink-0 pt-2 border-t border-border/30">
-                                <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5 rounded-xl border border-border/30">
+                            <div className="space-y-2.5 shrink-0 pt-2 border-t border-border/30 min-w-0 w-full">
+                                <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5 rounded-xl border border-border/30 min-w-0 w-full">
                                     <div className="flex items-center gap-4">
                                         <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setDownloadPdf(!downloadPdf)}>
                                             <Checkbox id="pdf-opt" checked={downloadPdf} onCheckedChange={(c) => setDownloadPdf(!!c)} className="w-3.5 h-3.5 border-border data-[state=checked]:bg-green-600" />
@@ -1240,21 +1240,21 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2.5">
-                                    <Button variant="ghost" className="flex-1 h-10 rounded-xl font-bold text-muted-foreground hover:text-foreground text-xs uppercase tracking-wider" onClick={onClose}>
+                                <div className="flex gap-2 min-w-0 w-full">
+                                    <Button variant="ghost" className="flex-1 min-w-0 px-2 h-10 rounded-xl font-bold text-muted-foreground hover:text-foreground text-[11px] sm:text-xs uppercase tracking-wider truncate" onClick={onClose}>
                                         Cancelar
                                     </Button>
                                     <Button 
                                         type="button"
                                         variant="outline"
-                                        className="flex-1 h-10 rounded-xl font-bold border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 text-xs tracking-wider uppercase gap-1.5"
+                                        className="flex-1 min-w-0 px-2 h-10 rounded-xl font-bold border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 text-[11px] sm:text-xs tracking-wider uppercase gap-1 shrink-0"
                                         onClick={handleOpenPreviewBeforeClose}
                                     >
-                                        <Eye className="h-4 w-4" />
-                                        Vista Previa
+                                        <Eye className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">Vista Previa</span>
                                     </Button>
                                     <Button 
-                                        className="flex-[1.8] h-10 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-xs tracking-wider uppercase shadow-md shadow-green-600/20" 
+                                        className="flex-[1.4] min-w-0 px-2 h-10 rounded-xl font-black bg-green-600 hover:bg-green-700 text-white active:scale-95 transition-all text-[11px] sm:text-xs tracking-wider uppercase shadow-md shadow-green-600/20 truncate" 
                                         disabled={!actualCash || closeSession.isPending} 
                                         onClick={handleCloseDay}
                                     >
@@ -1266,7 +1266,7 @@ const CloseDayDialog: React.FC<CloseDayDialogProps> = ({ isOpen, onClose, onGoTo
                     </TabsContent>
 
                     {/* History Tab */}
-                    <TabsContent value="history" className="m-0 p-4 flex-1 min-h-0 overflow-hidden outline-none">
+                    <TabsContent value="history" className="m-0 p-4 flex-1 min-h-0 overflow-hidden outline-none w-full max-w-full overflow-x-hidden">
                         <div className="bg-card/40 border border-border/40 rounded-2xl overflow-hidden h-full flex flex-col">
                             <ScrollArea className="flex-1 h-full px-4 py-2">
                                 <Table>
