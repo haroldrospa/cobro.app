@@ -34,7 +34,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { toast } = useToast();
   const { profile } = useUserProfile();
   const queryClient = useQueryClient();
-  const { hasKitchenDisplay, hasDelivery } = useBusinessType();
+  const { hasKitchenDisplay, hasDelivery, hasDigitalServices } = useBusinessType();
   const { settings } = useCompanySettings();
   const { isPlatformAdmin } = usePlatformAdmin();
   const { data: userStore } = useUserStore();
@@ -128,7 +128,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (profile?.role === 'waiter' || profile?.role === 'mesero') {
       return [
         { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
-        { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
+        ...(hasDigitalServices ? [{ name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone }] : []),
         ...(hasKitchenDisplay ? [{ name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat }] : []),
       ];
     }
@@ -137,7 +137,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
       const items = [
         { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
-        { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
+        ...(hasDigitalServices ? [{ name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone }] : []),
         ...(hasDelivery ? [{ name: 'Pedidos Delivery', href: '/delivery', icon: Bike }] : []),
         ...(hasKitchenDisplay ? [{ name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat }] : []),
         { name: 'Clientes', href: '/customers', icon: Users },
@@ -150,7 +150,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       { name: 'Punto de Venta', href: '/pos', icon: ShoppingCart },
       ...(hasDelivery ? [{ name: 'Pedidos Delivery', href: '/delivery', icon: Bike }] : []),
       ...(hasKitchenDisplay ? [{ name: 'Pantalla Cocina', href: '/kitchen', icon: ChefHat }] : []),
-      { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
+      ...(hasDigitalServices ? [{ name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone }] : []),
       { name: 'Dashboard', href: '/dashboard', icon: Home },
       { name: 'Productos', href: '/products', icon: Package },
       { name: 'Clientes', href: '/customers', icon: Users },
@@ -165,7 +165,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       { name: 'Configuración', href: '/settings', icon: Settings },
       ...(isPlatformAdmin ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }] : []),
     ];
-  }, [profile, hasKitchenDisplay, hasDelivery, isPlatformAdmin]);
+  }, [profile, hasKitchenDisplay, hasDelivery, hasDigitalServices, isPlatformAdmin]);
 
   const { theme } = useTheme();
   const [systemTheme, setSystemTheme] = React.useState<'dark' | 'light'>(

@@ -42,7 +42,7 @@ export const MobileBottomNav: React.FC = () => {
   const location = useLocation();
   const { profile } = useUserProfile();
   const { isPlatformAdmin } = usePlatformAdmin();
-  const { hasKitchenDisplay, hasDelivery } = useBusinessType();
+  const { hasKitchenDisplay, hasDelivery, hasDigitalServices } = useBusinessType();
   const [moreOpen, setMoreOpen] = React.useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -83,7 +83,7 @@ export const MobileBottomNav: React.FC = () => {
         { name: 'Banco', href: '/banco', icon: Landmark },
         { name: 'Proveedores', href: '/suppliers', icon: Truck },
         { name: 'Reportes', href: '/reports', icon: BarChart },
-        { name: 'Servicios', href: '/servicios-digitales', icon: Smartphone },
+        ...(hasDigitalServices ? [{ name: 'Servicios', href: '/servicios-digitales', icon: Smartphone }] : []),
       { name: 'Facturas', href: '/invoices', icon: FileText },
       ];
     }
@@ -103,7 +103,7 @@ export const MobileBottomNav: React.FC = () => {
       { name: 'Productos', href: '/products', icon: Package },
       { name: 'Contabilidad', href: '/accounting', icon: FileText },
     ];
-  }, [profile, hasKitchenDisplay, hasDelivery, isKitchen, isDelivery]);
+  }, [profile, hasKitchenDisplay, hasDelivery, hasDigitalServices, isKitchen, isDelivery]);
 
   // Items del menú "Más"
   const moreItems = React.useMemo(() => {
@@ -114,7 +114,7 @@ export const MobileBottomNav: React.FC = () => {
     return [
       ...(hasDelivery ? [{ name: 'Delivery', href: '/delivery', icon: Bike }] : []),
       ...(hasKitchenDisplay ? [{ name: 'Cocina', href: '/kitchen', icon: ChefHat }] : []),
-      { name: 'Servicios', href: '/servicios-digitales', icon: Smartphone },
+      ...(hasDigitalServices ? [{ name: 'Servicios', href: '/servicios-digitales', icon: Smartphone }] : []),
       { name: 'Facturas', href: '/invoices', icon: FileText },
       { name: 'Reportes', href: '/reports', icon: BarChart },
       { name: 'Banco', href: '/banco', icon: Landmark },
@@ -128,7 +128,7 @@ export const MobileBottomNav: React.FC = () => {
         ? [{ name: 'Panel Maestro', href: '/admin/super-panel', icon: Database }]
         : []),
     ];
-  }, [profile, hasKitchenDisplay, hasDelivery, isPlatformAdmin]);
+  }, [profile, hasKitchenDisplay, hasDelivery, hasDigitalServices, isPlatformAdmin]);
 
   return (
     <>

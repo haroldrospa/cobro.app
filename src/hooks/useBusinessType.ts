@@ -59,6 +59,10 @@ export const useBusinessType = () => {
     // PedidosYa integration is for food/retail delivery, strictly not for services
     const hasPedidosYa = !isServices;
 
+    // Servicios Digitales (recargas telefónicas y pago de servicios/facturas):
+    // Exclusivo para tiendas y supermercados. Deshabilitado para Restaurantes y Empresas de Servicios.
+    const hasDigitalServices = !isRestaurant && !isServices;
+
     // Kitchen order step should be skipped when kitchen is not active
     const skipKitchenStep = !hasKitchenDisplay;
 
@@ -94,6 +98,7 @@ export const useBusinessType = () => {
         hasKitchenDisplay,
         hasDelivery,
         hasPedidosYa,
+        hasDigitalServices,
         useKitchen,
         skipKitchenStep,
         orderTypeLabels,

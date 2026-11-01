@@ -24,6 +24,8 @@ import {
   Server,
   Clock
 } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { useBusinessType } from '@/hooks/useBusinessType';
 import { useDigitalServices, useDigitalTransactions } from '@/hooks/useDigitalServices';
 import { useOfficialBankAccounts } from '@/hooks/useOfficialBankAccounts';
 import { DigitalServicesPOSDialog } from '@/components/pos/DigitalServicesPOSDialog';
@@ -36,6 +38,7 @@ import { TopupRequestsApprovalList } from '@/components/digital-services/TopupRe
 import { WalletMovementsHistory } from '@/components/digital-services/WalletMovementsHistory';
 
 export const DigitalServicesDashboard: React.FC = () => {
+  const { hasDigitalServices } = useBusinessType();
   const [activeTab, setActiveTab] = useState<string>('history');
   const [dateFilter, setDateFilter] = useState<'today' | 'this_week' | 'this_month' | 'all'>('today');
   const [searchTerm, setSearchTerm] = useState('');
@@ -204,6 +207,10 @@ export const DigitalServicesDashboard: React.FC = () => {
       printWindow.close();
     }, 250);
   };
+
+  if (!hasDigitalServices) {
+    return <Navigate to="/pos" replace />;
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">

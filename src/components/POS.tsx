@@ -131,7 +131,7 @@ const POSContent: React.FC = () => {
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
   const isMobilePortrait = isMobile && !isLandscape;
-  const { skipKitchenStep, isStore, isSupermarket, isServices, isRestaurant, hasKitchenDisplay, orderTypeLabels, orderTypeTags } = useBusinessType();
+  const { skipKitchenStep, isStore, isSupermarket, isServices, isRestaurant, hasKitchenDisplay, hasDigitalServices, orderTypeLabels, orderTypeTags } = useBusinessType();
   const recipeAvailability = useRecipeAvailability();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
@@ -2277,7 +2277,7 @@ const POSContent: React.FC = () => {
 
     if (profile?.role === 'staff' || profile?.role === 'cashier') {
       return [
-        { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
+        ...(hasDigitalServices ? [{ name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone }] : []),
         { name: 'Clientes', href: '/customers', icon: Users },
       ];
     }
@@ -2289,10 +2289,10 @@ const POSContent: React.FC = () => {
     }
 
     return [
-      { name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone },
+      ...(hasDigitalServices ? [{ name: 'Servicios Digitales', href: '/servicios-digitales', icon: Smartphone }] : []),
       { name: 'Administración', href: '/dashboard', icon: Home }
     ];
-  }, [profile, hasKitchenDisplay]);
+  }, [profile, hasKitchenDisplay, hasDigitalServices]);
 
   const handleShowDailySales = useCallback(() => setShowDailySalesDialog(true), []);
   const handleShowRefund = useCallback(() => setShowRefundDialog(true), []);
@@ -2471,9 +2471,9 @@ const POSContent: React.FC = () => {
       onClearTable={handleClearTable}
       onOpenPendingInvoices={() => setShowPendingInvoicesDialog(true)}
       pendingInvoicesCount={pendingSalesCount}
-      onOpenDigitalServices={handleOpenDigitalServices}
+      onOpenDigitalServices={hasDigitalServices ? handleOpenDigitalServices : undefined}
     />
-  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, pendingSalesCount, handleOpenDigitalServices]);
+  ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, hasDigitalServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, pendingSalesCount, handleOpenDigitalServices]);
 
   // Treat as loading if profile/store data is still missing or dummy
   const hasValidProfile = !!(rawProfile && rawProfile.store_id && rawProfile.store_id !== '00000000-0000-0000-0000-000000000000');
