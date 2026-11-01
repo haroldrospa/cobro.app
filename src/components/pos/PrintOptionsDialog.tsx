@@ -62,12 +62,27 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   onClose,
   saleData: propSaleData,
 }) => {
-  const [liveSaleData, setLiveSaleData] = useState<any>(null);
+  const [liveSaleData, setLiveSaleData] = useState<any>(propSaleData);
 
   useEffect(() => {
-    if (!propSaleData?.id) return;
+    if (propSaleData?.id && propSaleData.id !== liveSaleData?.id) {
+      setLiveSaleData(propSaleData);
+    }
+  }, [propSaleData?.id]);
 
-    setLiveSaleData(propSaleData);
+  useEffect(() => {
+    if (!isOpen || !propSaleData?.id) return;
+
+    // Start polling / real-time ONLY if this is an electronic invoice without a QR code yet
+    const invoiceNum = propSaleData.encf || propSaleData.invoice_number || propSaleData.invoiceNumber || '';
+    const isInternal = propSaleData.invoiceType === 'FAC' || invoiceNum.startsWith('FAC');
+    const isElec = !isInternal && (invoiceNum.startsWith('E') || propSaleData.is_electronic || !!propSaleData.encf);
+    const isAlreadyFinished = !!propSaleData.qrcode_url || propSaleData.estado_fiscal === 'RECHAZADO' || propSaleData.estado_fiscal === 'ERROR_CONEXION';
+
+    // Para facturas no electrónicas (B02, B01, etc.) o ventas ya finalizadas, no se hace polling ni se crean canales innecesarios
+    if (!isElec || isAlreadyFinished) {
+      return;
+    }
 
     let pollInterval: any = null;
 
@@ -95,7 +110,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         if (data) {
           console.log("🔄 Polling sale status, received:", data.estado_fiscal, !!data.qrcode_url);
           const hasDbItems = Array.isArray(data.sale_items) && data.sale_items.length > 0;
-          setLiveSaleData(prev => {
+          setLiveSaleData((prev: any) => {
             const preservedItems = (prev?.items && prev.items.length > 0)
               ? prev.items
               : (propSaleData?.items && propSaleData.items.length > 0)
@@ -152,22 +167,17 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     };
     window.addEventListener('alanube-signature-update', handleDirectSignature);
 
-    // Start a 1.5 second safety polling interval if this is an electronic invoice without a QR code yet
-    const invoiceNum = propSaleData.encf || propSaleData.invoice_number || propSaleData.invoiceNumber || '';
-    const isInternal = propSaleData.invoiceType === 'FAC' || invoiceNum.startsWith('FAC');
-    const isElec = !isInternal && (invoiceNum.startsWith('E') || propSaleData.is_electronic || !!propSaleData.encf);
-    const isAlreadyFinished = !!propSaleData.qrcode_url || propSaleData.estado_fiscal === 'RECHAZADO' || propSaleData.estado_fiscal === 'ERROR_CONEXION';
-    if (isElec && !isAlreadyFinished) {
-      import('@/services/alanube/AlanubeService')
-        .then(({ AlanubeService }) => {
-          AlanubeService.emitirFacturaElectronica(propSaleData.id, true);
-        })
-        .catch(err => console.warn("Error starting Alanube emission from dialog:", err));
-      console.log("⏱️ e-NCF signature is pending. Starting polling safety loop...");
-      let pollCount = 0;
-      pollInterval = setInterval(async () => {
-        pollCount++;
-        if (pollCount > 8) { // Máximo 8 reintentos (12s) para no saturar Supabase
+    import('@/services/alanube/AlanubeService')
+      .then(({ AlanubeService }) => {
+        AlanubeService.emitirFacturaElectronica(propSaleData.id, true);
+      })
+      .catch(err => console.warn("Error starting Alanube emission from dialog:", err));
+
+    console.log("⏱️ e-NCF signature is pending. Starting polling safety loop...");
+    let pollCount = 0;
+    pollInterval = setInterval(async () => {
+      pollCount++;
+      if (pollCount > 8) { // Máximo 8 reintentos (12s) para no saturar Supabase
           if (pollInterval) {
             clearInterval(pollInterval);
             pollInterval = null;
@@ -176,7 +186,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         }
         await fetchLatestSale();
       }, 1500);
-    }
 
     // Subscribe to changes in real-time as a second layer of reactivity
     const channel = supabase
@@ -1664,20 +1673,20 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       <Dialog open={isOpen && !!saleData} onOpenChange={onClose}>
         <DialogContent 
           centerVertically
-          className="max-w-[95vw] sm:max-w-[480px] p-4"
+          className="w-[calc(100%-1.5rem)] sm:w-full max-w-[460px] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-border/80 dark:border-white/10 shadow-2xl bg-card"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader className="space-y-1 pb-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-full bg-green-500/10">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <DialogHeader className="space-y-1 pb-1.5 pr-8 sm:pr-9 text-left">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-full bg-emerald-500/15 border border-emerald-500/25 shrink-0">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               </div>
-              <div>
-                <DialogTitle className="text-base font-bold">
-                  {isQuote ? '¡Cotización generada exitosamente!' : '¡Venta procesada exitosamente!'}
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
+                  {isQuote ? '¡Cotización generada!' : '¡Venta procesada exitosamente!'}
                 </DialogTitle>
-                <DialogDescription className="text-xs">
+                <DialogDescription className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                   Total: ${(saleData?.total || 0).toFixed(2)}
                 </DialogDescription>
               </div>
@@ -1686,9 +1695,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
           {/* Cambio destacado */}
           {saleData?.change !== undefined && saleData.change > 0 && !isQuote && (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Cambio a entregar</p>
-              <p className="text-4xl font-bold text-green-500">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center my-0.5">
+              <p className="text-xs text-muted-foreground font-medium mb-0.5">Cambio a entregar</p>
+              <p className="text-3xl font-black text-emerald-500">
                 ${(saleData?.change || 0).toFixed(2)}
               </p>
             </div>
@@ -1696,10 +1705,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
           <div className="space-y-2">
             {/* Invoice Info Card */}
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 p-2">
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 p-2.5 rounded-xl shadow-xs">
               <div className="text-center">
-                <p className="text-xs text-muted-foreground">{isQuote ? 'Cotización' : `Factura ${displayInvoiceType}`}</p>
-                <p className="text-lg font-bold font-mono tracking-wider">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{isQuote ? 'Cotización' : `Factura ${displayInvoiceType}`}</p>
+                <p className="text-lg sm:text-xl font-bold font-mono tracking-wider text-foreground">
                   {invoiceNumber}
                 </p>
               </div>
@@ -2038,7 +2047,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             <Button
               variant="outline"
               onClick={onClose}
-              className="w-full h-8 text-sm mt-1"
+              className="w-full h-9 text-sm font-semibold mt-1.5 rounded-xl border-border/80 hover:bg-accent cursor-pointer"
             >
               Cerrar
             </Button>

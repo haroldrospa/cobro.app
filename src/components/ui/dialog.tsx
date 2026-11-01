@@ -19,7 +19,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-[100] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-[99] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -49,7 +49,7 @@ const DialogContent = React.forwardRef<
         "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
         // ── Layout (Centrado horizontal robusto con inset-x-0 mx-auto; anclado arriba en móviles/tablets para no tapar con teclado virtual si no es centerVertically) ──
         centerVertically ? (
-          "inset-x-0 mx-auto top-1/2 -translate-y-1/2 w-[calc(100%-1rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] overflow-y-auto overflow-x-hidden overscroll-contain"
+          "inset-0 m-auto h-fit w-[calc(100%-1.25rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] overflow-y-auto overflow-x-hidden overscroll-contain shadow-2xl"
         ) : centerOnMobile ? (
           "inset-x-0 mx-auto top-2 sm:top-3 md:top-4 landscape:top-2 landscape:translate-y-0 lg:[@media(min-height:600px)_and_(pointer:fine)]:top-1/2 lg:[@media(min-height:600px)_and_(pointer:fine)]:-translate-y-1/2 landscape:lg:top-2 landscape:lg:translate-y-0 w-[calc(100%-1rem)] max-w-lg rounded-2xl p-4 sm:p-5 max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] lg:[@media(min-height:600px)_and_(pointer:fine)]:max-h-[85vh] landscape:lg:max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] overflow-y-auto overflow-x-hidden overscroll-contain"
         ) : (

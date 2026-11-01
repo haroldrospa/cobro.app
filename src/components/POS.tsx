@@ -2600,7 +2600,10 @@ const POSContent: React.FC = () => {
             <Suspense fallback={null}>
               <PrintOptionsDialog
                 isOpen={showPrintOptionsDialog}
-                onClose={() => setShowPrintOptionsDialog(false)}
+                onClose={() => {
+                  setShowPrintOptionsDialog(false);
+                  setSaleData(null);
+                }}
                 saleData={saleData}
               />
             </Suspense>
@@ -2768,7 +2771,10 @@ const POSContent: React.FC = () => {
           <Suspense fallback={null}>
             <PrintOptionsDialog
               isOpen={showPrintOptionsDialog}
-              onClose={() => setShowPrintOptionsDialog(false)}
+              onClose={() => {
+                setShowPrintOptionsDialog(false);
+                setSaleData(null);
+              }}
               saleData={saleData}
             />
           </Suspense>
@@ -3357,7 +3363,10 @@ const POSContent: React.FC = () => {
             <Suspense fallback={null}>
               <PrintOptionsDialog
                 isOpen={showPrintOptionsDialog}
-                onClose={() => setShowPrintOptionsDialog(false)}
+                onClose={() => {
+                  setShowPrintOptionsDialog(false);
+                  setSaleData(null);
+                }}
                 saleData={saleData}
               />
             </Suspense>
