@@ -53,7 +53,7 @@ export const usePrintSettings = () => {
       resolvedPaperSize = 'carta';
     }
   } else {
-    resolvedPaperSize = resolvedPaperSize || '80mm';
+    resolvedPaperSize = resolvedPaperSize || 'carta';
   }
 
   const printSettings: PrintSettings = {

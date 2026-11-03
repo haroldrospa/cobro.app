@@ -69,7 +69,7 @@ export const generateCleanInvoiceHTML = (
   companyData: CompanyData,
   invoiceData: InvoiceData
 ): string => {
-  const paperSizeNorm = (companyData.paperSize || '80mm').toLowerCase();
+  const paperSizeNorm = (companyData.paperSize || 'carta').toLowerCase();
   const is58mm = paperSizeNorm === '58mm';
   const isA4 = paperSizeNorm === 'a4';
   const isCarta = paperSizeNorm === 'carta' || paperSizeNorm === 'letter';

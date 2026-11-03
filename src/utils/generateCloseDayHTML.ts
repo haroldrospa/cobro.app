@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale';
 export const generateCloseDayHTML = (
     companyInfo: CompanyInfoForPrint,
     data: CloseDayData,
-    paperSize: PaperSize = '80mm'
+    paperSize: PaperSize = 'carta'
 ): string => {
     const isThermal = paperSize === '80mm' || paperSize === '58mm';
     const paperWidth = paperSize === '58mm' ? '58mm' : paperSize === '80mm' ? '80mm' : '100%';

@@ -29,7 +29,7 @@ export const CloseDayPreviewDialog: React.FC<CloseDayPreviewDialogProps> = ({
 }) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const { printSettings } = usePrintSettings();
-    const defaultPaper = (printSettings?.paperSize === 'A4' || printSettings?.paperSize === 'carta') ? 'carta' : '80mm';
+    const defaultPaper = (printSettings?.paperSize === '80mm' || printSettings?.paperSize === '58mm') ? printSettings.paperSize : 'carta';
     const [selectedPaper, setSelectedPaper] = useState<PaperSize>(defaultPaper);
     const [isDownloading, setIsDownloading] = useState(false);
 

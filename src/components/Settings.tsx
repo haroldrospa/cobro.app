@@ -387,7 +387,7 @@ const Settings = () => {
 
   // Print Settings State - synced with storeSettings
   const [printSettings, setPrintSettings] = useState({
-    paperSize: '80mm',
+    paperSize: 'carta',
     useThermalPrinter: false,
     thermalPrinterConnected: false,
     thermalPrinterName: '',
@@ -421,7 +421,7 @@ const Settings = () => {
 
         return {
           ...prev,
-          paperSize: storeSettings.paper_size || '80mm',
+          paperSize: storeSettings.paper_size || 'carta',
           useThermalPrinter: storeSettings.use_thermal_printer ?? false,
           thermalPrinterName: storeSettings.thermal_printer_name || '',
           thermalPrinterConnected: hasPrinterSaved,

@@ -365,7 +365,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const isServicesMode = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
   const effectivePaperSize = isServicesMode
     ? (printSettings.paperSize === 'A4' ? 'A4' : 'carta')
-    : (printSettings.paperSize || '80mm');
+    : (printSettings.paperSize || 'carta');
 
   const customerPhoneToSend = useMemo(() => {
     return (
@@ -646,7 +646,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const logoSize = companyInfo.logoInvoiceSize || companyInfo.logoSize || 120;
 
     // Get print settings from database hook
-    const paperSize = printSettings.paperSize || '80mm';
+    const paperSize = printSettings.paperSize || 'carta';
 
     // Define styles based on paper size
     const paperStyles = {
@@ -684,7 +684,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       }
     };
 
-    const styles = paperStyles[paperSize as keyof typeof paperStyles] || paperStyles['80mm'];
+    const styles = paperStyles[paperSize as keyof typeof paperStyles] || paperStyles['carta'];
 
     // Calculate Tax and Subtotal
     const items = saleData.items || [];

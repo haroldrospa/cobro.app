@@ -262,7 +262,7 @@ export const useStoreSettings = () => {
         theme: 'light',
         language: 'es',
         timezone: 'America/Santo_Domingo',
-        paper_size: '80mm',
+        paper_size: 'carta',
         use_kitchen: false,
         use_thermal_printer: false,
         thermal_printer_name: null,

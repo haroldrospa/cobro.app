@@ -87,7 +87,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
 
     const isServices = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
     const rawPaper = storeSettings?.paper_size || printSettings?.paperSize;
-    const activePaper = isServices ? (rawPaper === 'A4' ? 'A4' : 'carta') : (rawPaper || '80mm');
+    const activePaper = isServices ? (rawPaper === 'A4' ? 'A4' : 'carta') : (rawPaper || 'carta');
 
     return generateCleanInvoiceHTML(
       {
@@ -304,7 +304,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
               ) : (() => {
                 const isServices = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
                 const rawPaper = storeSettings?.paper_size || printSettings?.paperSize;
-                const activePaper = isServices ? (rawPaper === 'A4' ? 'A4' : 'carta') : (rawPaper || '80mm');
+                const activePaper = isServices ? (rawPaper === 'A4' ? 'A4' : 'carta') : (rawPaper || 'carta');
                 const isFullPage = activePaper === 'A4' || activePaper === 'carta' || activePaper === 'letter';
                 const is58mm = activePaper === '58mm';
                 const containerWidth = isFullPage ? '100%' : is58mm ? '58mm' : '80mm';
