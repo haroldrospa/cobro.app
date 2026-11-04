@@ -529,6 +529,15 @@ const LandingPage = () => {
                                 href="https://wa.me/18099175744?text=Hola,%20me%20interesa%20Cobro%20App"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => {
+                                    if (typeof window !== 'undefined' && (window as any).gtag) {
+                                        (window as any).gtag('event', 'conversion', {
+                                            'send_to': 'AW-18436359745/XzMKCJmNx_AcEMGMktdE',
+                                            'value': 1.0,
+                                            'currency': 'USD'
+                                        });
+                                    }
+                                }}
                                 className="hover:text-emerald-500 transition-colors flex items-center gap-1"
                             >
                                 Contacto
