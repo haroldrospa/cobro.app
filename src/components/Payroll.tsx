@@ -18,7 +18,8 @@ import { useEmployees, Employee } from '@/hooks/useEmployees';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
-import { Plus, Users, CheckCircle, Settings, Calculator, Percent, DollarSign, Trash2, Search, Printer, Mail, RefreshCcw, TrendingUp, TrendingDown, ArrowRight, Calendar, X, Save, Wallet, Gift, Receipt, Sparkles, Eye, Download, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Users, CheckCircle, Settings, Calculator, Percent, DollarSign, Trash2, Search, Printer, Mail, RefreshCcw, TrendingUp, TrendingDown, ArrowRight, Calendar, X, Save, Wallet, Gift, Receipt, Sparkles, Eye, Download, FileText, ChevronDown, ChevronUp, UserMinus, UserPlus, Loader2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,7 +37,13 @@ const getInitials = (name: string) => {
 };
 
 function PayrollContent() {
-    const { payrolls, loadingPayrolls, createPayroll, deletePayroll, fetchPayrollItems, updatePayrollItem, finalizePayroll, syncPayrollCredits } = usePayroll();
+    const { payrolls, loadingPayrolls, createPayroll, deletePayroll, deletePayrollItem, addEmployeeToPayroll, fetchPayrollItems, updatePayrollItem, finalizePayroll, syncPayrollCredits } = usePayroll();
+    const [itemToRemove, setItemToRemove] = useState<PayrollItem | null>(null);
+    const [excludeFromFuture, setExcludeFromFuture] = useState(false);
+    const [isRemovingItem, setIsRemovingItem] = useState(false);
+    const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+    const [selectedEmployeeToAdd, setSelectedEmployeeToAdd] = useState<string>('');
+    const [isAddingEmployee, setIsAddingEmployee] = useState(false);
     const { data: employees = [] } = useEmployees();
     const { settings, updateSettings } = useStoreSettings();
     const { data: userStore } = useUserStore();
@@ -239,6 +246,51 @@ function PayrollContent() {
             });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const availableEmployeesToAdd = employees.filter(emp =>
+        !items.some(item => item.profile_id === emp.id || item.employee_name.toLowerCase().trim() === emp.full_name.toLowerCase().trim())
+    );
+
+    const handleConfirmRemoveItem = async () => {
+        if (!itemToRemove || !selectedPayroll) return;
+        setIsRemovingItem(true);
+        try {
+            await deletePayrollItem({
+                itemId: itemToRemove.id,
+                profileId: itemToRemove.profile_id,
+                excludeFromFuture
+            });
+            setItems(prev => prev.filter(i => i.id !== itemToRemove.id));
+            setItemToRemove(null);
+        } catch (e) {
+            console.error('Error removing payroll item:', e);
+        } finally {
+            setIsRemovingItem(false);
+        }
+    };
+
+    const handleConfirmAddEmployee = async () => {
+        if (!selectedEmployeeToAdd || !selectedPayroll) return;
+        const emp = employees.find(e => e.id === selectedEmployeeToAdd);
+        if (!emp) return;
+        setIsAddingEmployee(true);
+        try {
+            const newItem = await addEmployeeToPayroll({
+                payrollId: selectedPayroll.id,
+                employee: emp,
+                frequency
+            });
+            if (newItem) {
+                setItems(prev => [...prev, newItem]);
+            }
+            setIsAddEmployeeOpen(false);
+            setSelectedEmployeeToAdd('');
+        } catch (e) {
+            console.error('Error adding employee to payroll:', e);
+        } finally {
+            setIsAddingEmployee(false);
         }
     };
 
@@ -983,9 +1035,25 @@ function PayrollContent() {
                                 </div>
                             </div>
 
-                            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
-                                Mostrando <strong className="text-foreground">{filteredItems.length}</strong> de <strong className="text-foreground">{items.length}</strong> empleados
-                            </span>
+                            <div className="flex items-center gap-2">
+                                {availableEmployeesToAdd.length > 0 && selectedPayroll?.status !== 'paid' && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs font-semibold rounded-xl border-dashed border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500 gap-1.5"
+                                        onClick={() => {
+                                            setSelectedEmployeeToAdd(availableEmployeesToAdd[0].id);
+                                            setIsAddEmployeeOpen(true);
+                                        }}
+                                    >
+                                        <UserPlus className="h-3.5 w-3.5" />
+                                        <span>Agregar Empleado</span>
+                                    </Button>
+                                )}
+                                <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                                    Mostrando <strong className="text-foreground">{filteredItems.length}</strong> de <strong className="text-foreground">{items.length}</strong> empleados
+                                </span>
+                            </div>
                         </div>
 
                         {/* Table Area */}
@@ -1007,7 +1075,7 @@ function PayrollContent() {
 
                                         <TableHead className="text-right pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Deducciones (-)</TableHead>
                                         <TableHead className="text-right font-bold w-[140px] pr-6 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Neto a Pagar</TableHead>
-                                        <TableHead className="text-center font-bold w-[80px] pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">PDF / Recibo</TableHead>
+                                        <TableHead className="text-center font-bold w-[120px] pr-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1166,6 +1234,18 @@ function PayrollContent() {
                                                             >
                                                                 <Printer className="h-4 w-4" />
                                                             </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 rounded-lg text-muted-foreground/60 hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
+                                                                    title={`Sacar a ${item.employee_name} de esta nómina`}
+                                                                    onClick={() => {
+                                                                        setItemToRemove(item);
+                                                                        setExcludeFromFuture(false);
+                                                                    }}
+                                                                >
+                                                                    <UserMinus className="h-4 w-4" />
+                                                                </Button>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -1199,6 +1279,165 @@ function PayrollContent() {
                             </div>
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* REMOVE EMPLOYEE FROM PAYROLL CONFIRMATION DIALOG */}
+            <AlertDialog open={!!itemToRemove} onOpenChange={(open) => { if (!open) setItemToRemove(null); }}>
+                <AlertDialogContent className="sm:max-w-md rounded-3xl border border-border bg-background p-6">
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 shrink-0">
+                                <UserMinus className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <AlertDialogTitle className="text-lg font-black text-foreground">
+                                    ¿Sacar de la nómina?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription className="text-xs text-muted-foreground mt-0.5">
+                                    Estás a punto de remover a <strong className="text-foreground">{itemToRemove?.employee_name}</strong> de este periodo.
+                                </AlertDialogDescription>
+                            </div>
+                        </div>
+                    </AlertDialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/60 text-xs space-y-2">
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>Sueldo Base:</span>
+                                <span className="font-mono font-medium text-foreground">${itemToRemove?.base_salary?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>Neto a Pagar:</span>
+                                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">${itemToRemove?.net_salary?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="h-px bg-border/40 my-1" />
+                            <p className="text-[11px] text-muted-foreground">
+                                Los totales del periodo y el resumen general se recalcularán automáticamente excluyendo a este empleado.
+                            </p>
+                        </div>
+
+                        {itemToRemove?.profile_id && (
+                            <div className="flex items-start space-x-3 p-3.5 rounded-2xl border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors">
+                                <Checkbox
+                                    id="exclude-future"
+                                    checked={excludeFromFuture}
+                                    onCheckedChange={(checked) => setExcludeFromFuture(!!checked)}
+                                    className="mt-0.5"
+                                />
+                                <div className="grid gap-1 leading-none">
+                                    <Label
+                                        htmlFor="exclude-future"
+                                        className="text-xs font-bold cursor-pointer text-foreground"
+                                    >
+                                        Excluir también de nóminas futuras
+                                    </Label>
+                                    <p className="text-[11px] text-muted-foreground leading-snug">
+                                        Se marcará como &ldquo;Sin Nómina&rdquo; en su ficha de empleado para no incluirlo en próximos periodos.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <AlertDialogFooter className="gap-2 sm:gap-2">
+                        <AlertDialogCancel
+                            disabled={isRemovingItem}
+                            onClick={() => setItemToRemove(null)}
+                            className="rounded-xl text-xs font-semibold"
+                        >
+                            Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={isRemovingItem}
+                            onClick={handleConfirmRemoveItem}
+                            className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs gap-1.5"
+                        >
+                            {isRemovingItem ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Removiendo...
+                                </>
+                            ) : (
+                                <>
+                                    <UserMinus className="w-3.5 h-3.5" />
+                                    Sacar de la Nómina
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* ADD EMPLOYEE TO PAYROLL DIALOG */}
+            <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
+                <DialogContent className="sm:max-w-md rounded-3xl border border-border bg-background p-6">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+                                <UserPlus className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg font-black text-foreground">
+                                    Agregar Empleado a la Nómina
+                                </DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                                    Selecciona un empleado registrado para incluirlo en este periodo de nómina.
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-foreground">Empleado</Label>
+                            <Select value={selectedEmployeeToAdd} onValueChange={setSelectedEmployeeToAdd}>
+                                <SelectTrigger className="w-full rounded-xl">
+                                    <SelectValue placeholder="Selecciona un empleado..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableEmployeesToAdd.map(emp => (
+                                        <SelectItem key={emp.id} value={emp.id}>
+                                            <div className="flex items-center justify-between gap-4 w-full">
+                                                <span className="font-medium">{emp.full_name}</span>
+                                                <span className="text-xs text-muted-foreground font-mono">
+                                                    ${(emp.base_salary || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-2">
+                        <Button
+                            variant="outline"
+                            disabled={isAddingEmployee}
+                            onClick={() => setIsAddEmployeeOpen(false)}
+                            className="rounded-xl text-xs font-semibold"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            disabled={!selectedEmployeeToAdd || isAddingEmployee}
+                            onClick={handleConfirmAddEmployee}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs gap-1.5"
+                        >
+                            {isAddingEmployee ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Agregando...
+                                </>
+                            ) : (
+                                <>
+                                    <UserPlus className="w-3.5 h-3.5" />
+                                    Agregar a la Nómina
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

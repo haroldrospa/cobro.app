@@ -331,6 +331,148 @@ export const usePayroll = () => {
         }
     });
 
+    // 5b. Delete Single Payroll Item (remove employee from payroll)
+    const deletePayrollItemMutation = useMutation({
+        mutationFn: async ({ itemId, profileId, excludeFromFuture }: { itemId: string; profileId?: string | null; excludeFromFuture?: boolean }) => {
+            const { error } = await supabase.from('payroll_items').delete().eq('id', itemId);
+            if (error) throw error;
+
+            if (excludeFromFuture && profileId) {
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .update({ include_in_payroll: false } as any)
+                    .eq('id', profileId);
+                if (profileError) {
+                    console.warn('[PAYROLL] Error updating include_in_payroll:', profileError.message);
+                }
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['payroll_items'] });
+            queryClient.invalidateQueries({ queryKey: ['payrolls'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            toast({ title: "Empleado removido", description: "Se ha sacado al empleado de la nómina correctamente." });
+        },
+        onError: (e: any) => {
+            console.error('[PAYROLL] Error deleting payroll item:', e);
+            toast({ title: "Error", description: e.message || "No se pudo sacar al empleado de la nómina.", variant: "destructive" });
+        }
+    });
+
+    // 5c. Add Employee to Existing Payroll
+    const addEmployeeToPayrollMutation = useMutation({
+        mutationFn: async ({ payrollId, employee, frequency = 'monthly' }: { payrollId: string; employee: any; frequency?: 'monthly' | 'biweekly' | 'weekly' }) => {
+            if (!userStore?.id) throw new Error("No store selected");
+
+            const { data: storeData } = await supabase
+                .from('store_settings')
+                .select('*')
+                .eq('store_id', userStore.id)
+                .maybeSingle();
+
+            const sData = storeData as any;
+            const settings = {
+                afp: Number(sData?.afp_rate) > 0 ? Number(sData.afp_rate) : 2.87,
+                sfs: Number(sData?.sfs_rate) > 0 ? Number(sData.sfs_rate) : 3.04,
+                infotep: Number(sData?.infotep_rate) > 0 ? Number(sData.infotep_rate) : 1.0,
+                enable_afp: sData?.enable_afp !== false,
+                enable_sfs: sData?.enable_sfs !== false,
+                enable_infotep: sData?.enable_infotep === true,
+                afp_type: sData?.afp_type ?? 'percentage',
+                sfs_type: sData?.sfs_type ?? 'percentage',
+                infotep_type: sData?.infotep_type ?? 'percentage'
+            };
+
+            const divisor = frequency === 'weekly' ? 4 : frequency === 'biweekly' ? 2 : 1;
+            const base = (employee.base_salary || 0) / divisor;
+
+            let noteContent = employee.default_deduction_note || '';
+            let hasLawDeductions = (employee.apply_law_deductions === true || employee.apply_afp === true || employee.apply_sfs === true);
+            if (typeof noteContent === 'string' && noteContent.includes('__LAW_DEDUCTIONS__:')) {
+                const parts = noteContent.split('__LAW_DEDUCTIONS__:');
+                noteContent = parts[0];
+                hasLawDeductions = parts[1]?.trim() === '1';
+            }
+
+            let empDetails: DeductionDetail[] = [];
+            if (noteContent && noteContent.trim().startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(noteContent);
+                    if (Array.isArray(parsed)) empDetails = parsed;
+                } catch (e) {}
+            } else if ((employee.default_deduction || 0) > 0) {
+                empDetails = [{ amount: employee.default_deduction, reason: noteContent || "Descuento General" }];
+            }
+
+            const dividedDetails = empDetails.map(d => ({ ...d, amount: Math.round((d.amount / divisor) * 100) / 100 }));
+            const totalDeductions = dividedDetails.reduce((s, d) => s + d.amount, 0);
+
+            let afpPart = 0;
+            let sfsPart = 0;
+            let calculatedInfotep = 0;
+
+            if (hasLawDeductions) {
+                if (settings.enable_afp) {
+                    if (settings.afp_type === 'fixed') afpPart = settings.afp;
+                    else afpPart = base * (settings.afp / 100);
+                }
+                if (settings.enable_sfs) {
+                    if (settings.sfs_type === 'fixed') sfsPart = settings.sfs;
+                    else sfsPart = base * (settings.sfs / 100);
+                }
+                if (settings.enable_infotep) {
+                    if (settings.infotep_type === 'fixed') calculatedInfotep = settings.infotep;
+                    else calculatedInfotep = base * (settings.infotep / 100);
+                }
+            }
+
+            const calculatedTss = Math.round((afpPart + sfsPart) * 100) / 100;
+            calculatedInfotep = Math.round(calculatedInfotep * 100) / 100;
+            const net = Math.max(0, base - calculatedTss - calculatedInfotep - totalDeductions);
+
+            const { data, error } = await supabase
+                .from('payroll_items')
+                .insert({
+                    payroll_id: payrollId,
+                    profile_id: employee.id,
+                    employee_name: employee.full_name || 'Desconocido',
+                    base_salary: base,
+                    bonuses: 0,
+                    tss: calculatedTss,
+                    infotep: calculatedInfotep,
+                    regalia: 0,
+                    severance: 0,
+                    deductions: totalDeductions,
+                    net_salary: net,
+                    status: 'pending',
+                    note: JSON.stringify(dividedDetails)
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            if (employee.include_in_payroll === false) {
+                await supabase.from('profiles').update({ include_in_payroll: true } as any).eq('id', employee.id);
+            }
+
+            return {
+                ...data,
+                deductions_details: dividedDetails
+            } as PayrollItem;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['payroll_items'] });
+            queryClient.invalidateQueries({ queryKey: ['payrolls'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            toast({ title: "Empleado agregado", description: "El empleado ha sido incluido en la nómina." });
+        },
+        onError: (e: any) => {
+            console.error('[PAYROLL] Error adding employee to payroll:', e);
+            toast({ title: "Error", description: e.message || "No se pudo agregar el empleado.", variant: "destructive" });
+        }
+    });
+
     // 5. Delete Payroll
     const deletePayrollMutation = useMutation({
         mutationFn: async (id: string) => {
@@ -534,6 +676,8 @@ export const usePayroll = () => {
         loadingPayrolls,
         createPayroll: createPayrollMutation.mutateAsync,
         deletePayroll: deletePayrollMutation.mutateAsync,
+        deletePayrollItem: deletePayrollItemMutation.mutateAsync,
+        addEmployeeToPayroll: addEmployeeToPayrollMutation.mutateAsync,
         fetchPayrollItems,
         updatePayrollItem: updatePayrollItemMutation.mutateAsync,
         finalizePayroll: finalizePayrollMutation.mutateAsync,
