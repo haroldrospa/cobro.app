@@ -24,7 +24,8 @@ export const useWhatsAppReminders = () => {
       !storeSettings?.evolution_enabled ||
       !storeSettings?.evolution_api_url ||
       !storeSettings?.evolution_instance_name ||
-      !storeSettings?.evolution_api_key
+      !storeSettings?.evolution_api_key ||
+      sessionStorage.getItem('evolution_api_offline') === 'true'
     ) {
       return;
     }
@@ -127,16 +128,9 @@ export const useWhatsAppReminders = () => {
             // Add a small delay between messages to avoid rate limiting
             await new Promise(resolve => setTimeout(resolve, 1500));
           } catch (sendError: any) {
-            // Si la instancia no existe o no responde (404, Failed to fetch, etc.), pausar para no saturar la consola
-            const isUnreachable = sendError?.message?.includes('404') || 
-              sendError?.message?.includes('Railway') ||
-              sendError?.message?.includes('CORS') ||
-              sendError?.message?.includes('Failed to fetch') || 
-              sendError?.message?.includes('incompleta');
-            
-            if (isUnreachable) {
-              break;
-            }
+            // Si la instancia no existe o no responde, pausar para no saturar la consola en esta sesión
+            sessionStorage.setItem('evolution_api_offline', 'true');
+            break;
           }
         }
 
