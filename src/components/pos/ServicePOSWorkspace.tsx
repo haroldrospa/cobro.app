@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import {
   Plus,
+  AlertCircle,
   Trash2,
   FileText,
   Briefcase,
@@ -41,6 +42,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { cn } from '@/lib/utils';
 import AddCustomerDialog from './AddCustomerDialog';
+import { validateFiscalCustomer } from '@/utils/fiscalValidation';
 
 export interface ServiceLineItem {
   id: string;
@@ -291,6 +293,11 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   }, [mappedInvoiceTypes, invoiceTypes, selectedInvoiceTypeId]);
 
 
+  const activeInvoiceCode = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
+  const fiscalValidation = useMemo(() => {
+    return validateFiscalCustomer(activeInvoiceCode, selectedCustomer, totals.total);
+  }, [activeInvoiceCode, selectedCustomer, totals.total]);
+
   const isQuote = selectedInvoiceTypeId === 'COT';
 
   const todayDateStr = useMemo(() => {
@@ -436,11 +443,12 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       return null;
     }
 
-    const isB01 = selectedInvoiceType?.code === 'B01';
-    if (isB01 && (!selectedCustomer || !selectedCustomer.rnc)) {
+    const activeCode = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
+    const validation = validateFiscalCustomer(activeCode, selectedCustomer, totals.total);
+    if (!validation.isValid) {
       toast({
-        title: "RNC Requerido para Crédito Fiscal",
-        description: "Para facturas con valor fiscal (B01), debe seleccionar un cliente con RNC/Cédula.",
+        title: "Cliente con RNC Requerido",
+        description: validation.errorMessage || "Debe seleccionar un cliente con RNC o Cédula válido para este comprobante.",
         variant: "destructive"
       });
       return null;
@@ -584,7 +592,10 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                     value={selectedCustomerId || 'none'}
                     onValueChange={val => setSelectedCustomerId(val === 'none' ? '' : val)}
                   >
-                    <SelectTrigger className="h-8 rounded-lg bg-background/60 border-border/50 text-xs font-medium flex-1">
+                    <SelectTrigger className={cn(
+                      "h-8 rounded-lg bg-background/60 border-border/50 text-xs font-medium flex-1",
+                      fiscalValidation.requiresRnc && !fiscalValidation.isValid && "border-amber-500/70 bg-amber-500/10 ring-1 ring-amber-500/40 text-amber-200"
+                    )}>
                       <SelectValue placeholder="Cliente (Consumidor Final)..." />
                     </SelectTrigger>
                     <SelectContent className="max-h-56">
@@ -612,6 +623,15 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                   <span className="hidden sm:inline">Nuevo Cliente</span>
                 </Button>
               </div>
+
+              {fiscalValidation.requiresRnc && !fiscalValidation.isValid && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs animate-in fade-in">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
+                  <span className="leading-tight">
+                    El comprobante <strong>{activeInvoiceCode}</strong> requiere obligatoriamente seleccionar un cliente con RNC o Cédula registrado.
+                  </span>
+                </div>
+              )}
 
               {isQuote && (
                 <p className="text-[10px] text-muted-foreground pt-0.5">
@@ -1014,6 +1034,12 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+              {fiscalValidation.requiresRnc && !fiscalValidation.isValid && (
+                <p className="text-[10px] text-amber-400 font-medium flex items-center gap-1 pt-0.5">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>Requiere cliente con RNC o Cédula (no puede ser Consumidor Final)</span>
+                </p>
+              )}
             </div>
 
             {/* Condición de Pago o Vigencia de Cotización */}

@@ -279,17 +279,16 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
       return false;
     }
 
-    // Si es crédito fiscal (B01 / E31), requiere cliente con RNC
-    const code = selectedInvoiceType?.code || '';
-    if (['B01', 'E31', 'B14', 'B15'].includes(code)) {
-      if (!selectedCustomerId) {
-        toast({
-          title: "Cliente requerido",
-          description: `El comprobante ${code} requiere seleccionar un cliente con RNC/Cédula.`,
-          variant: "destructive"
-        });
-        return false;
-      }
+    // Validación fiscal: Facturas electrónicas (excepto E32) y fiscales tradicionales requieren cliente con RNC
+    const code = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
+    const fiscalVal = validateFiscalCustomer(code, selectedCustomer, total);
+    if (!fiscalVal.isValid) {
+      toast({
+        title: "Cliente con RNC Requerido",
+        description: fiscalVal.errorMessage || "Debe seleccionar un cliente con RNC o Cédula válido.",
+        variant: "destructive"
+      });
+      return false;
     }
 
     return true;

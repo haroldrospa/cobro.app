@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import CartSummary from './pos/CartSummary';
 import PaymentSummary from './pos/PaymentSummary';
 import PaymentDialog from './pos/PaymentDialog';
+import { validateFiscalCustomer } from '@/utils/fiscalValidation';
 // Lazy: arrastra jsPDF + html2canvas, y solo hace falta al terminar una venta
 const PrintOptionsDialog = lazy(() => import('./pos/PrintOptionsDialog'));
 import ProductSearchList from './pos/ProductSearchList';
@@ -927,11 +928,43 @@ const POSContent: React.FC = () => {
       setAmountReceived(totals.total.replace(/,/g, ''));
     }
 
+    // Validar comprobante fiscal (electrónico o tradicional) y requerimiento de cliente con RNC
+    const activeInvoiceCode = selectedInvoiceType === 'FAC' ? 'FAC' : (selectedInvoiceTypeData?.code || '');
+    const customerForValidation = customers.find(c => c.id === selectedCustomer);
+    const currentTotalAmount = parseFloat(totals.total.replace(/,/g, '')) || 0;
+
+    const fiscalValidation = validateFiscalCustomer(activeInvoiceCode, customerForValidation, currentTotalAmount);
+    if (!fiscalValidation.isValid) {
+      toast({
+        title: "Cliente con RNC Requerido",
+        description: fiscalValidation.errorMessage || "Debe seleccionar un cliente con RNC o Cédula válido para este comprobante.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setShowPaymentDialog(true);
   }, [cart.length, selectedInvoiceType, selectedCustomer, cartWithOffers, storeSettings?.currency, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, toast]);
 
   const processPayment = async (includePreviousDebt: boolean = false, splitMethodParam?: string) => {
     if (isProcessingRef.current || createSale.isPending) return;
+
+    // Validación defensiva de comprobante fiscal y cliente antes de procesar el cobro
+    const activeInvoiceCode = selectedInvoiceType === 'FAC' ? 'FAC' : (selectedInvoiceTypeData?.code || '');
+    const customerPreValidation = customers.find(c => c.id === selectedCustomer);
+    const currentTotalsPre = calculateTotals(cartWithOffers, globalDiscount);
+    const totalAmountPre = parseFloat(currentTotalsPre.total) || 0;
+
+    const fiscalValidation = validateFiscalCustomer(activeInvoiceCode, customerPreValidation, totalAmountPre);
+    if (!fiscalValidation.isValid) {
+      toast({
+        title: "Cliente con RNC Requerido",
+        description: fiscalValidation.errorMessage || "Debe seleccionar un cliente con RNC o Cédula válido para este comprobante.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     isProcessingRef.current = true;
 
     // Generar un ID estable para esta venta para prevenir duplicados en caso de reintentos

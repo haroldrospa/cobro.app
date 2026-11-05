@@ -367,8 +367,8 @@ export class AlanubeService {
             companyName: (sale.customer.name || 'Cliente General').slice(0, 150)
           };
         }
-      } else if (alanubeType === '31') {
-        throw new Error('El RNC del comprador es obligatorio para e-Crédito Fiscal');
+      } else if (alanubeType !== '32') {
+        throw new Error(`El RNC del comprador es obligatorio para emitir e-CF (${normalizedEncf || 'E' + alanubeType}). Solo las facturas de consumo (E32) permiten emitir a Consumidor Final sin RNC.`);
       }
 
       // 5. Enviar a Alanube (con auto-recuperación de colisión de secuencia AP3001)
