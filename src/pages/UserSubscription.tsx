@@ -93,10 +93,10 @@ const UserSubscription = () => {
         {
             id: 'basic',
             name: 'Emprendedor',
-            priceDisplay: '$895',
-            price: 895,
-            annualPriceDisplay: '$745',
-            annualPrice: 8940,
+            priceDisplay: '$840',
+            price: 840,
+            annualPriceDisplay: '$700',
+            annualPrice: 8400,
             currency: 'RD',
             period: 'mes',
             description: 'Ideal para empezar con el pie derecho.',
@@ -118,10 +118,10 @@ const UserSubscription = () => {
         {
             id: 'pro',
             name: 'Empresarial',
-            priceDisplay: '$1,495',
-            price: 1495,
-            annualPriceDisplay: '$1,245',
-            annualPrice: 14940,
+            priceDisplay: '$1,440',
+            price: 1440,
+            annualPriceDisplay: '$1,200',
+            annualPrice: 14400,
             currency: 'RD',
             period: 'mes',
             description: 'Todo lo que necesitas para escalar.',
@@ -176,7 +176,7 @@ const UserSubscription = () => {
     const parsedAmount = parseFloat(paymentAmount);
     const displayAmount = !isNaN(parsedAmount) && parsedAmount > 0 
         ? parsedAmount 
-        : (isAnnual ? effectivePlanDetails.annualPrice : effectivePlanDetails.price) || 895;
+        : (isAnnual ? effectivePlanDetails.annualPrice : effectivePlanDetails.price) || 840;
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -788,7 +788,7 @@ const UserSubscription = () => {
                                         setTargetPlan(activePlan);
                                         const defaultAmt = currentPlanDetails.price > 0 
                                             ? (isAnnual ? currentPlanDetails.annualPrice : currentPlanDetails.price).toString() 
-                                            : '895';
+                                            : '840';
                                         setPaymentAmount(defaultAmt);
                                         setIsBankModalOpen(true);
                                     }}

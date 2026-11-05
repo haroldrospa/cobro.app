@@ -89,8 +89,8 @@ import { getDaysRemaining } from "@/lib/utils";
 
 // Precios oficiales actualizados para proyecciones MRR
 const PLAN_PRICES: Record<string, number> = {
-    'basic': 895,
-    'pro': 1495,
+    'basic': 840,
+    'pro': 1440,
     'enterprise': 3500
 };
 
@@ -1281,7 +1281,7 @@ const SuperAdmin = () => {
                             RD$ {mrrTotal.toLocaleString()}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Planes activos (895 / 1,495 RD)
+                            Planes activos (840 / 1,440 RD)
                         </p>
                     </CardContent>
                 </Card>
@@ -2487,8 +2487,8 @@ const SuperAdmin = () => {
                             </CardHeader>
                             <CardContent className="p-5 space-y-6">
                                 {[
-                                    { name: 'Emprendedor', key: 'basic', color: 'bg-emerald-500', price: 895 },
-                                    { name: 'Empresarial', key: 'pro', color: 'bg-blue-600', price: 1495 },
+                                    { name: 'Emprendedor', key: 'basic', color: 'bg-emerald-500', price: 840 },
+                                    { name: 'Empresarial', key: 'pro', color: 'bg-blue-600', price: 1440 },
                                     { name: 'Corporativo', key: 'enterprise', color: 'bg-purple-600', price: 3500 }
                                 ].map((plan) => {
                                     const count = stores?.filter((s: any) => s.is_active && normalizePlanId(s.plan_name) === plan.key).length || 0;
