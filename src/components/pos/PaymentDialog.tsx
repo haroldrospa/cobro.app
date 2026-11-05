@@ -10,6 +10,7 @@ import CreditInfo from './CreditInfo';
 import AddCustomerDialog from './AddCustomerDialog';
 import BankAccountsList from './BankAccountsList';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
+import { toast } from '@/hooks/use-toast';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -153,13 +154,61 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
   }, [isOpen, paymentMethod]);
 
-  const canProcess = 
-    !isProcessing &&
-    !(paymentMethod === 'cash' && currentReceived < fullTotal) &&
-    !(paymentMethod === 'split' && currentReceived <= 0) &&
-    !(paymentMethod === 'split' && currentReceived >= fullTotal) &&
-    !(paymentMethod === 'credit' && !selectedCustomer) &&
-    !(requiresCustomer && (!selectedCustomer || !selectedCustomerData?.rnc));
+  const handleProcessClick = React.useCallback(() => {
+    if (isProcessing) return;
+
+    // 1. Fiscal invoice requirement check
+    if (requiresCustomer && (!selectedCustomer || !selectedCustomerData?.rnc)) {
+      toast({
+        title: "Cliente con RNC Requerido",
+        description: "El tipo de comprobante seleccionado requiere un cliente con RNC o Cédula válido.",
+        variant: "destructive"
+      });
+      setOpenCustomerPopover(true);
+      return;
+    }
+
+    // 2. Credit payment method check
+    if (paymentMethod === 'credit' && !selectedCustomer) {
+      toast({
+        title: "Cliente Requerido",
+        description: "Debe seleccionar un cliente para registrar una venta a crédito.",
+        variant: "destructive"
+      });
+      setOpenCustomerPopover(true);
+      return;
+    }
+
+    // 3. Cash payment check: Auto-fill exact cash if empty or 0
+    if (paymentMethod === 'cash') {
+      if (currentReceived <= 0 || !amountReceived) {
+        onAmountReceivedChange(fullTotal.toFixed(2));
+      } else if (currentReceived + 0.005 < fullTotal) {
+        toast({
+          title: "Monto Insuficiente",
+          description: `El monto recibido (RD$ ${currentReceived.toLocaleString()}) es menor al total a pagar (RD$ ${fullTotal.toLocaleString()}).`,
+          variant: "destructive"
+        });
+        amountInputRef.current?.focus();
+        return;
+      }
+    }
+
+    // 4. Split payment check
+    if (paymentMethod === 'split') {
+      if (currentReceived <= 0 || currentReceived >= fullTotal) {
+        toast({
+          title: "Monto Mixto Inválido",
+          description: `En pago mixto, la parte en efectivo debe ser mayor a 0 y menor al total (RD$ ${fullTotal.toLocaleString()}).`,
+          variant: "destructive"
+        });
+        amountInputRef.current?.focus();
+        return;
+      }
+    }
+
+    onProcessPayment(includeDebt, splitMethod);
+  }, [isProcessing, requiresCustomer, selectedCustomer, selectedCustomerData, paymentMethod, currentReceived, amountReceived, fullTotal, onAmountReceivedChange, includeDebt, splitMethod, onProcessPayment]);
 
   // Global Enter shortcut for PC POS experience
   useEffect(() => {
@@ -173,16 +222,14 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           return;
         }
 
-        if (canProcess) {
-          e.preventDefault();
-          onProcessPayment(includeDebt, splitMethod);
-        }
+        e.preventDefault();
+        handleProcessClick();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, canProcess, includeDebt, splitMethod, onProcessPayment]);
+  }, [isOpen, handleProcessClick]);
 
   const handleCustomerAdded = (newCustomerId: string) => {
     if (onCustomerChange) {
@@ -695,14 +742,14 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               <span className="hidden sm:inline-block ml-1.5 text-[10px] opacity-60 font-mono">[Esc]</span>
             </Button>
             <Button
-              onClick={() => onProcessPayment(includeDebt, splitMethod)}
+              onClick={handleProcessClick}
               className={cn(
                 "h-10 sm:h-11 flex-1 rounded-xl font-black text-xs sm:text-sm shadow-md uppercase tracking-wider transition-all",
                 isProcessing 
-                  ? "bg-muted text-muted-foreground" 
-                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20 active:scale-[0.99]"
+                  ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70" 
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20 active:scale-[0.99] cursor-pointer"
               )}
-              disabled={!canProcess}
+              disabled={isProcessing}
             >
               {isProcessing ? (
                 <div className="flex items-center gap-2">

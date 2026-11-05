@@ -967,67 +967,70 @@ const POSContent: React.FC = () => {
 
     isProcessingRef.current = true;
 
-    // Generar un ID estable para esta venta para prevenir duplicados en caso de reintentos
-    const saleId = crypto.randomUUID();
-    // Recalculate totals to ensure freshness
-    const currentTotals = calculateTotals(cartWithOffers, globalDiscount);
-    const baseTotal = parseFloat(currentTotals.total) || 0;
-
-    // Validate baseTotal to prevent NaN
-    if (isNaN(baseTotal) || baseTotal < 0) {
-      console.error('Error: Total inválido', { currentTotals, baseTotal });
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo calcular el total de la venta' });
-      return;
-    }
-
-    // Calculate surcharge logic
-    const cardMethod = storeSettings?.payment_methods?.find(m => m.id === 'card');
-    const surchargePercentage = (paymentMethod === 'card' && cardMethod?.enabled) ? (cardMethod.surcharge_percentage || 0) : 0;
-    const surchargeAmount = surchargePercentage > 0 ? (baseTotal * surchargePercentage / 100) : 0;
-    const previousDebtAmount = includePreviousDebt ? (customerBalance?.totalDebt || 0) : 0;
-    const finalTotal = baseTotal + surchargeAmount + previousDebtAmount;
-
-    const received = parseFloat(amountReceived) || 0;
-    const change = received - finalTotal;
-
-    let dueDate = null;
-    let paymentStatus = 'paid';
-    if (paymentMethod === 'credit') {
-      const dueDateObj = new Date();
-      const days = Number(creditDays) || 15;
-      dueDateObj.setDate(dueDateObj.getDate() + days);
-      dueDate = isNaN(dueDateObj.getTime()) ? new Date().toISOString() : dueDateObj.toISOString();
-      paymentStatus = 'pending';
-    }
-
-    // Prepare items including surcharge
-    const saleItems = [...cartWithOffers];
-    if (surchargeAmount > 0) {
-      saleItems.push({
-        id: 'surcharge-card',
-        name: `Recargo Tarjeta (${surchargePercentage}%)`,
-        price: surchargeAmount,
-        quantity: 1,
-        tax: 0,
-        cost_includes_tax: false
-      } as CartItem);
-    }
-
-    if (includePreviousDebt && previousDebtAmount > 0) {
-      saleItems.push({
-        id: 'previous-debt-payment',
-        name: `Pago de Deuda Anterior`,
-        price: previousDebtAmount,
-        quantity: 1,
-        tax: 0,
-        cost_includes_tax: false
-      } as CartItem);
-    }
-
-    const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
-    const selectedInvoiceTypeData = invoiceTypes.find(t => t.id === selectedInvoiceType);
-
     try {
+      // Generar un ID estable para esta venta para prevenir duplicados en caso de reintentos
+      const saleId = crypto.randomUUID();
+      // Recalculate totals to ensure freshness
+      const currentTotals = calculateTotals(cartWithOffers, globalDiscount);
+      const baseTotal = parseFloat(currentTotals.total) || 0;
+
+      // Validate baseTotal to prevent NaN
+      if (isNaN(baseTotal) || baseTotal < 0) {
+        console.error('Error: Total inválido', { currentTotals, baseTotal });
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo calcular el total de la venta' });
+        return;
+      }
+
+      // Calculate surcharge logic
+      const cardMethod = storeSettings?.payment_methods?.find(m => m.id === 'card');
+      const surchargePercentage = (paymentMethod === 'card' && cardMethod?.enabled) ? (cardMethod.surcharge_percentage || 0) : 0;
+      const surchargeAmount = surchargePercentage > 0 ? (baseTotal * surchargePercentage / 100) : 0;
+      const previousDebtAmount = includePreviousDebt ? (customerBalance?.totalDebt || 0) : 0;
+      const finalTotal = baseTotal + surchargeAmount + previousDebtAmount;
+
+      // En efectivo, si no se especificó o es <= 0, asumir efectivo exacto
+      const parsedReceived = parseFloat(amountReceived);
+      const received = (paymentMethod === 'cash' && (!amountReceived || isNaN(parsedReceived) || parsedReceived <= 0))
+        ? finalTotal
+        : (parsedReceived || 0);
+      const change = received - finalTotal;
+
+      let dueDate = null;
+      let paymentStatus = 'paid';
+      if (paymentMethod === 'credit') {
+        const dueDateObj = new Date();
+        const days = Number(creditDays) || 15;
+        dueDateObj.setDate(dueDateObj.getDate() + days);
+        dueDate = isNaN(dueDateObj.getTime()) ? new Date().toISOString() : dueDateObj.toISOString();
+        paymentStatus = 'pending';
+      }
+
+      // Prepare items including surcharge
+      const saleItems = [...cartWithOffers];
+      if (surchargeAmount > 0) {
+        saleItems.push({
+          id: 'surcharge-card',
+          name: `Recargo Tarjeta (${surchargePercentage}%)`,
+          price: surchargeAmount,
+          quantity: 1,
+          tax: 0,
+          cost_includes_tax: false
+        } as CartItem);
+      }
+
+      if (includePreviousDebt && previousDebtAmount > 0) {
+        saleItems.push({
+          id: 'previous-debt-payment',
+          name: `Pago de Deuda Anterior`,
+          price: previousDebtAmount,
+          quantity: 1,
+          tax: 0,
+          cost_includes_tax: false
+        } as CartItem);
+      }
+
+      const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
+      const selectedInvoiceTypeData = invoiceTypes.find(t => t.id === selectedInvoiceType);
       // Create sale and wait for completion to get the real invoice number
       const saleResult = await createSale.mutateAsync({
         id: saleId, // Pasar el ID generado para asegurar idempotencia
