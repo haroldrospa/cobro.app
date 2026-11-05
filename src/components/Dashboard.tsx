@@ -923,22 +923,17 @@ const Dashboard: React.FC = () => {
           </div>
 
           {showWelcomeBanner && (
-            <div className="w-full max-w-2xl mx-auto p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-slate-950 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-fade-in mt-2 relative group">
-              <div className="flex items-center gap-3.5 text-left pr-6 sm:pr-0">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">¡Bienvenido a Cobro App!</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">Te preparamos una guía rápida minimalista en 4 pasos para comenzar a vender y configurar tu negocio.</p>
-                </div>
+            <div className="w-full max-w-2xl mx-auto px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-left relative mt-2 animate-fade-in shadow-sm">
+              <div className="flex-1 pr-6 sm:pr-0">
+                <h4 className="text-sm font-semibold text-white">¡Bienvenido a Cobro App!</h4>
+                <p className="text-xs text-slate-400 mt-0.5">Guía rápida de 4 pasos para comenzar a vender y configurar tu negocio.</p>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
                 <Button
                   type="button"
                   size="sm"
                   onClick={triggerQuickGuide}
-                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-5 rounded-xl shrink-0 cursor-pointer shadow-md transition-all active:scale-95"
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs h-8 px-4 rounded-lg shrink-0 cursor-pointer transition-colors"
                 >
                   Ver Guía Rápida
                 </Button>
@@ -947,10 +942,10 @@ const Dashboard: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   onClick={handleDismissBanner}
-                  className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg absolute top-2 right-2 sm:static shrink-0"
+                  className="h-7 w-7 text-slate-400 hover:text-white hover:bg-white/10 rounded-md absolute top-2 right-2 sm:static shrink-0"
                   title="Cerrar"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
