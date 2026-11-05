@@ -192,6 +192,8 @@ const App = () => {
             <Routes>
               {/* Public routes - no auth required */}
               <Route path="/" element={<RootRoute />} />
+              <Route path="/inicio" element={<RootRoute />} />
+              <Route path="/landing" element={<RootRoute />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/store-suspended" element={<StoreSuspended />} />
               <Route path="/tienda/:slug" element={<Tienda />} />

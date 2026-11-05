@@ -24,14 +24,26 @@ const Landing = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Redirigir automáticamente si ya hay sesión activa
+  const [hasSession, setHasSession] = useState(false);
+
+  // Comprobar si ya hay una sesión activa para adaptar los botones
   useEffect(() => {
     getSessionSafe().then((session) => {
-      if (session) {
-        navigate('/app', { replace: true });
-      }
+      setHasSession(!!session);
     }).catch(() => {});
-  }, [navigate]);
+  }, []);
+
+  const handleWhatsAppClick = (text = "Hola! Me interesa Cobroapp") => {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'conversion', {
+        'send_to': 'AW-18436359745/XzMKCJmNx_AcEMGMktdE',
+        'value': 1.0,
+        'currency': 'USD'
+      });
+    }
+    const url = `https://wa.me/18099175744?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -55,29 +67,49 @@ const Landing = () => {
             <a href="#casos" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Para tu negocio</a>
             <a href="#precios" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Precios</a>
             <div className="flex items-center gap-3 ml-4">
-              <Link to="/auth">
-                <Button variant="ghost" className="font-semibold">
-                  Iniciar sesión
-                </Button>
-              </Link>
-              <Link to="/auth?signup=true">
-                <Button>
-                  Probar gratis
-                </Button>
-              </Link>
+              <a href="#modulos" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden lg:inline-block">Módulos</a>
+              {hasSession ? (
+                <Link to="/app">
+                  <Button className="font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20">
+                    Ir a mi Negocio →
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/auth">
+                    <Button variant="ghost" className="font-semibold">
+                      Iniciar sesión
+                    </Button>
+                  </Link>
+                  <Link to="/auth?signup=true">
+                    <Button className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold">
+                      Probar gratis
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
           {/* Mobile: Login button + hamburger */}
           <div className="flex items-center gap-2 md:hidden">
-            <Link to="/auth">
-              <Button variant="ghost" size="sm" className="font-semibold text-sm px-3">
-                Iniciar sesión
-              </Button>
-            </Link>
+            {hasSession ? (
+              <Link to="/app">
+                <Button size="sm" className="font-bold text-xs px-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950">
+                  Mi Negocio →
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button variant="ghost" size="sm" className="font-semibold text-sm px-3">
+                  Iniciar sesión
+                </Button>
+              </Link>
+            )}
             <button 
               className="p-2 text-foreground"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Abrir menú"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -88,19 +120,30 @@ const Landing = () => {
         {isMenuOpen && (
           <div className="md:hidden absolute top-16 left-0 right-0 border-b border-white/10 shadow-lg p-4 flex flex-col gap-4 z-50" style={{ backgroundColor: '#1f262d' }}>
             <a href="#beneficios" className="text-sm font-medium p-2 text-slate-300 hover:text-white" onClick={() => setIsMenuOpen(false)}>Beneficios</a>
+            <a href="#modulos" className="text-sm font-medium p-2 text-slate-300 hover:text-white" onClick={() => setIsMenuOpen(false)}>Módulos</a>
             <a href="#casos" className="text-sm font-medium p-2 text-slate-300 hover:text-white" onClick={() => setIsMenuOpen(false)}>Para tu negocio</a>
             <a href="#precios" className="text-sm font-medium p-2 text-slate-300 hover:text-white" onClick={() => setIsMenuOpen(false)}>Precios</a>
             <hr className="my-2 border-white/10" />
-            <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-              <Button variant="outline" className="w-full justify-center">
-                Iniciar sesión
-              </Button>
-            </Link>
-            <Link to="/auth?signup=true" onClick={() => setIsMenuOpen(false)}>
-              <Button className="w-full justify-center">
-                Probar gratis
-              </Button>
-            </Link>
+            {hasSession ? (
+              <Link to="/app" onClick={() => setIsMenuOpen(false)}>
+                <Button className="w-full justify-center bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold">
+                  Ir a mi Negocio / POS
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                  <Button variant="outline" className="w-full justify-center">
+                    Iniciar sesión
+                  </Button>
+                </Link>
+                <Link to="/auth?signup=true" onClick={() => setIsMenuOpen(false)}>
+                  <Button className="w-full justify-center bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold">
+                    Probar gratis 15 días
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         )}
       </nav>
@@ -167,21 +210,43 @@ const Landing = () => {
                   transition={{ duration: 0.5, delay: 0.3 }}
                   className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-8"
                 >
-                  <Link to="/auth?signup=true" className="w-full sm:w-auto">
-                    <Button size="lg" className="h-14 px-9 text-base font-bold w-full sm:w-auto rounded-xl transition-all duration-300 hover:scale-105"
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981, #059669)',
-                        boxShadow: '0 0 30px rgba(16,185,129,0.45), 0 4px 20px rgba(0,0,0,0.3)'
-                      }}
-                    >
-                      Prueba gratis 15 días <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/auth" className="w-full sm:w-auto">
-                    <Button variant="ghost" size="lg" className="h-14 px-7 text-base w-full sm:w-auto text-slate-300 hover:text-white rounded-xl border border-white/10 hover:border-white/25 transition-all">
-                      Iniciar sesión
-                    </Button>
-                  </Link>
+                  {hasSession ? (
+                    <>
+                      <Link to="/app" className="w-full sm:w-auto">
+                        <Button size="lg" className="h-14 px-9 text-base font-bold w-full sm:w-auto rounded-xl transition-all duration-300 hover:scale-105"
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            boxShadow: '0 0 30px rgba(16,185,129,0.45), 0 4px 20px rgba(0,0,0,0.3)'
+                          }}
+                        >
+                          Ir a mi Panel / POS <ArrowRight className="ml-2 h-5 w-5" />
+                        </Button>
+                      </Link>
+                      <a href="#modulos" className="w-full sm:w-auto">
+                        <Button variant="ghost" size="lg" className="h-14 px-7 text-base w-full sm:w-auto text-slate-300 hover:text-white rounded-xl border border-white/10 hover:border-white/25 transition-all">
+                          Ver todo de Cobroapp
+                        </Button>
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/auth?signup=true" className="w-full sm:w-auto">
+                        <Button size="lg" className="h-14 px-9 text-base font-bold w-full sm:w-auto rounded-xl transition-all duration-300 hover:scale-105"
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            boxShadow: '0 0 30px rgba(16,185,129,0.45), 0 4px 20px rgba(0,0,0,0.3)'
+                          }}
+                        >
+                          Prueba gratis 15 días <ArrowRight className="ml-2 h-5 w-5" />
+                        </Button>
+                      </Link>
+                      <Link to="/auth" className="w-full sm:w-auto">
+                        <Button variant="ghost" size="lg" className="h-14 px-7 text-base w-full sm:w-auto text-slate-300 hover:text-white rounded-xl border border-white/10 hover:border-white/25 transition-all">
+                          Iniciar sesión
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </motion.div>
 
                 {/* Trust line */}
@@ -319,6 +384,101 @@ const Landing = () => {
                   </div>
                   <h3 className="text-xl font-bold mb-3 text-white">{item.title}</h3>
                   <p className="text-slate-400">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Módulos completos: Todo acerca de Cobroapp */}
+        <section id="modulos" className="py-24 border-t border-b border-white/5 bg-black/10">
+          <div className="container px-4 mx-auto">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
+                Ecosistema Integral
+              </span>
+              <h2 className="text-3xl md:text-5xl font-black mb-4 text-white">
+                Todo lo que incluye Cobroapp
+              </h2>
+              <p className="text-base sm:text-lg text-slate-400 leading-relaxed">
+                Cada herramienta que necesitas para facturar, controlar inventario, vender online y hacer crecer tu negocio desde cualquier lugar.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {[
+                {
+                  icon: Zap,
+                  tag: "Punto de Venta",
+                  title: "POS Táctil & Rápido",
+                  desc: "Vende en segundos por nombre, código de barras o categorías. Aplica descuentos, calcula cambio y divide cuentas al instante."
+                },
+                {
+                  icon: Package,
+                  tag: "Sin Internet",
+                  title: "Modo 100% Offline",
+                  desc: "¿Sin luz o sin internet? Sigue facturando y cobrando con normalidad. Tus ventas se guardan localmente y se sincronizan solas."
+                },
+                {
+                  icon: FileText,
+                  tag: "DGII / Fiscal",
+                  title: "Facturación Legal & NCF",
+                  desc: "Emite facturas con valor fiscal (B01, B02, B14, B15 y e-CF) cumpliendo con todas las normas dominicanas sin dolores de cabeza."
+                },
+                {
+                  icon: Store,
+                  tag: "E-Commerce",
+                  title: "Mi Tienda Web Online",
+                  desc: "Ten tu propio catálogo virtual con link público para recibir pedidos directo a tu WhatsApp y a tu pantalla de ventas en el POS."
+                },
+                {
+                  icon: Utensils,
+                  tag: "Gastronomía",
+                  title: "Mesas, KDS & Cocina",
+                  desc: "Control de mesas en tiempo real, comandas digitales enviadas a la pantalla de cocina y gestión de entregas a domicilio (Delivery)."
+                },
+                {
+                  icon: ShoppingCart,
+                  tag: "Inventario",
+                  title: "Control de Stock & Lotes",
+                  desc: "Múltiples almacenes, alertas de stock bajo, fechas de vencimiento e historial detallado de movimientos de mercancía."
+                },
+                {
+                  icon: CheckCircle2,
+                  tag: "Finanzas",
+                  title: "Arqueo & Cierre de Caja",
+                  desc: "Aperturas con fondo de caja, arqueos ciegos para cajeros, control de faltantes/sobrantes y reportes diarios X y Z."
+                },
+                {
+                  icon: CheckCircle2,
+                  tag: "Pagos",
+                  title: "Múltiples Métodos de Pago",
+                  desc: "Efectivo, tarjetas de débito/crédito, transferencias y ventas a crédito con seguimiento de cuentas por cobrar."
+                },
+                {
+                  icon: Zap,
+                  tag: "Hardware",
+                  title: "Impresoras & Escáneres",
+                  desc: "Compatible con impresoras térmicas de 58mm y 80mm vía Bluetooth, USB o Red, y con cualquier lector de código de barras."
+                }
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-7 rounded-2xl border border-white/10 hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between group"
+                  style={{ backgroundColor: '#262f38' }}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-11 h-11 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
+                        <item.icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/5 text-slate-300 border border-white/10">
+                        {item.tag}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">{item.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -467,14 +627,17 @@ const Landing = () => {
                   ))}
                 </ul>
                 <div className="flex flex-col gap-2">
-                  <a href="https://wa.me/18099175744?text=Hola!%20Estoy%20interesado%20en%20el%20Plan%20Corporativo%20de%20Cobroapp" target="_blank" rel="noopener noreferrer" className="w-full">
-                    <Button className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-emerald-950 font-bold flex items-center justify-center gap-2 rounded-xl">
+                  <button 
+                    onClick={() => handleWhatsAppClick("Hola! Estoy interesado en el Plan Corporativo de Cobroapp")}
+                    className="w-full"
+                  >
+                    <Button type="button" className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-emerald-950 font-bold flex items-center justify-center gap-2 rounded-xl">
                       <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                         <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.835-4.321c1.8.107 3.53.626 5.2.629 5.485 0 9.948-4.414 9.95-9.847.002-2.63-1.018-5.101-2.871-6.958C17.258 1.643 14.778.641 12.01.64c-5.483 0-9.948 4.414-9.95 9.848-.001 2.228.616 4.4 1.783 6.285l-1.013 3.697 3.784-1.026c1.2.68 2.24.966 3.443.992zm12.01-6.126c-.322-.16-.1.897-.483-1.057-.1-.22-.26-.3-.48-.41s-1.48-.73-1.72-.82-.5-.14-.72.19-.84 1.05-1.03 1.27-.38.24-.7.08-1.36-.5-2.58-1.6c-.95-.85-1.59-1.89-1.78-2.21-.19-.32-.02-.5.14-.66.15-.14.32-.38.48-.57.16-.19.22-.32.33-.54.11-.22.05-.41-.03-.57-.08-.16-.72-1.74-.99-2.39-.26-.64-.52-.55-.72-.56l-.61-.01c-.22 0-.58.08-.88.41-.3.33-1.15 1.13-1.15 2.75s1.18 3.19 1.34 3.41c.16.22 2.32 3.54 5.62 4.97 3.3.1.2.33.66.5.9.15.54.49 1.34.81.33.32.33.56.33.74v.02c0 .18-.08.38-.24.54z"/>
                       </svg>
                       Contactar por WhatsApp
                     </Button>
-                  </a>
+                  </button>
                   <a href="https://mail.google.com/mail/?view=cm&fs=1&to=Haroldrospa@gmail.com&su=Plan%20Corporativo%20-%20Cobroapp" target="_blank" rel="noopener noreferrer" className="w-full">
                     <Button variant="outline" className="w-full h-12 border-white/20 text-white hover:bg-white/10 flex items-center justify-center gap-2 rounded-xl">
                       ✉️ Escribir por Correo
@@ -614,7 +777,24 @@ const Landing = () => {
               </div>
             </div>
             
-            <div className="w-full max-w-xs h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent my-10 mx-auto" />
+            <div className="flex flex-wrap justify-center items-center gap-6 text-xs text-zinc-400 mt-10 mb-4">
+              <Link to="/terminos" className="hover:text-emerald-400 transition-colors">Términos y Condiciones</Link>
+              <span className="text-zinc-700">·</span>
+              <Link to="/privacidad" className="hover:text-emerald-400 transition-colors">Política de Privacidad</Link>
+              <span className="text-zinc-700">·</span>
+              <Link to="/reembolsos" className="hover:text-emerald-400 transition-colors">Política de Reembolsos</Link>
+              <span className="text-zinc-700">·</span>
+              <Link to="/buscar-tienda" className="hover:text-emerald-400 transition-colors">Directorio de Tiendas</Link>
+              <span className="text-zinc-700">·</span>
+              <button 
+                onClick={() => handleWhatsAppClick("Hola Harold! Quiero comunicarme con soporte de Cobroapp")}
+                className="hover:text-emerald-400 transition-colors inline-flex items-center gap-1 font-semibold text-emerald-400"
+              >
+                Contacto Directo 📱
+              </button>
+            </div>
+            
+            <div className="w-full max-w-xs h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent my-6 mx-auto" />
             
             <div className="text-center">
               <p className="text-xs text-zinc-600 font-medium tracking-wide">
@@ -627,6 +807,17 @@ const Landing = () => {
           </div>
         </div>
       </footer>
+      {/* Botón Flotante de WhatsApp con Conversión de Google Ads */}
+      <button
+        onClick={() => handleWhatsAppClick("Hola! Estoy viendo la página de Cobroapp y quiero más información.")}
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-extrabold px-4 py-3 rounded-full shadow-[0_10px_30px_rgba(16,185,129,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 border border-emerald-300/40"
+        aria-label="Contactar por WhatsApp"
+      >
+        <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.835-4.321c1.8.107 3.53.626 5.2.629 5.485 0 9.948-4.414 9.95-9.847.002-2.63-1.018-5.101-2.871-6.958C17.258 1.643 14.778.641 12.01.64c-5.483 0-9.948 4.414-9.95 9.848-.001 2.228.616 4.4 1.783 6.285l-1.013 3.697 3.784-1.026c1.2.68 2.24.966 3.443.992zm12.01-6.126c-.322-.16-.1.897-.483-1.057-.1-.22-.26-.3-.48-.41s-1.48-.73-1.72-.82-.5-.14-.72.19-.84 1.05-1.03 1.27-.38.24-.7.08-1.36-.5-2.58-1.6c-.95-.85-1.59-1.89-1.78-2.21-.19-.32-.02-.5.14-.66.15-.14.32-.38.48-.57.16-.19.22-.32.33-.54.11-.22.05-.41-.03-.57-.08-.16-.72-1.74-.99-2.39-.26-.64-.52-.55-.72-.56l-.61-.01c-.22 0-.58.08-.88.41-.3.33-1.15 1.13-1.15 2.75s1.18 3.19 1.34 3.41c.16.22 2.32 3.54 5.62 4.97 3.3.1.2.33.66.5.9.15.54.49 1.34.81.33.32.33.56.33.74v.02c0 .18-.08.38-.24.54z"/>
+        </svg>
+        <span className="text-sm font-black hidden sm:inline tracking-wide">WhatsApp</span>
+      </button>
     </div>
   );
 };

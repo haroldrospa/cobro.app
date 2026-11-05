@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
+const Landing = lazy(() => import('@/pages/Landing'));
+
 /**
- * Elemento de la ruta "/". Revisa la sesión con un componente mínimo sin
- * dependencias pesadas y redirige siempre: a /app si hay sesión, a /auth
- * si no la hay. Si vienen parámetros de autenticación (code, recovery),
- * los transfiere a /auth para que no se pierda el flujo de recuperación.
+ * Elemento de la ruta raíz "/".
+ * Muestra la página de inicio (Landing) de Cobroapp para que todos los usuarios
+ * y visitantes conozcan la plataforma, sus módulos, precios y beneficios.
+ * Si vienen parámetros de autenticación/recuperación (code, recovery, reset),
+ * se transfieren directamente a /auth para que no se pierda el flujo de recuperación.
  */
 const RootRoute: React.FC = () => {
-    const [checked, setChecked] = useState(false);
-    const [hasSession, setHasSession] = useState(false);
     const location = useLocation();
 
     // Si viene un código de recuperación o autenticación en la URL raíz, pasarlo directamente a /auth
@@ -25,25 +25,15 @@ const RootRoute: React.FC = () => {
         return <Navigate to={`/auth${location.search}${location.hash}`} replace />;
     }
 
-    useEffect(() => {
-        let cancelled = false;
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (cancelled) return;
-            setHasSession(!!session);
-            setChecked(true);
-        });
-        return () => { cancelled = true; };
-    }, []);
-
-    if (!checked) {
-        return (
+    return (
+        <Suspense fallback={
             <div className="fixed inset-0 flex items-center justify-center bg-background z-[9999]">
                 <LoadingLogo />
             </div>
-        );
-    }
-
-    return <Navigate to={hasSession ? '/app' : '/auth'} replace />;
+        }>
+            <Landing />
+        </Suspense>
+    );
 };
 
 export default RootRoute;
