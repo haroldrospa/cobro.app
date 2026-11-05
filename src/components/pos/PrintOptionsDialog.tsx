@@ -552,13 +552,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const isQuote = saleData?.invoiceType === 'COT' || (saleData as any)?.is_quote || invoiceNumber.startsWith('COT');
   const isInternalInvoice = saleData?.invoiceType === 'FAC' || (saleData as any)?.invoice_type_id === 'FAC' || invoiceNumber.startsWith('FAC');
   const isElectronic = !isQuote && !isInternalInvoice && (invoiceNumber.startsWith('E') || Boolean(saleData?.is_electronic) || !!saleData?.encf);
-  const isBlockedBySign = Boolean(
-    isElectronic &&
-    !saleData?.qrcode_url &&
-    !allowEmergencyPrint &&
-    saleData?.estado_fiscal !== 'RECHAZADO' &&
-    saleData?.estado_fiscal !== 'ERROR_CONEXION'
-  );
+  const isBlockedBySign = false;
   const displayInvoiceType = isQuote
     ? 'COT'
     : (isElectronic 
@@ -1745,104 +1739,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               </Card>
             )}
 
-            {isElectronic && !saleData.qrcode_url && (
-              saleData.estado_fiscal === 'RECHAZADO' ? (
-                <Card className="p-3 flex flex-col items-center justify-center border-red-500/30 bg-red-500/10 text-center">
-                  <div className="flex items-center gap-1.5 mb-1 text-red-500">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Firma Rechazada por DGII / Alanube</p>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-center mb-2.5">
-                    El comprobante fiscal no fue validado. Verifica tus credenciales de Alanube o RNC en Configuración.
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-7 px-2.5 text-xs font-semibold gap-1"
-                      onClick={handleRetrySign} 
-                      disabled={isRetryingSign}
-                    >
-                      {isRetryingSign ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                      Reintentar Firma
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="secondary" 
-                      className="h-7 px-2.5 text-xs font-semibold"
-                      onClick={() => setAllowEmergencyPrint(true)}
-                    >
-                      Imprimir sin QR
-                    </Button>
-                  </div>
-                </Card>
-              ) : saleData.estado_fiscal === 'ERROR_CONEXION' ? (
-                <Card className="p-3 flex flex-col items-center justify-center border-amber-500/30 bg-amber-500/10 text-center">
-                  <div className="flex items-center gap-1.5 mb-1 text-amber-500">
-                    <WifiOff className="h-4 w-4 shrink-0" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Sin Conexión con Alanube</p>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-center mb-2.5">
-                    No se pudo contactar el servidor fiscal en la nube. La venta está registrada localmente.
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-7 px-2.5 text-xs font-semibold gap-1"
-                      onClick={handleRetrySign} 
-                      disabled={isRetryingSign}
-                    >
-                      {isRetryingSign ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                      Reintentar
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="secondary" 
-                      className="h-7 px-2.5 text-xs font-semibold"
-                      onClick={() => setAllowEmergencyPrint(true)}
-                    >
-                      Imprimir Comprobante
-                    </Button>
-                  </div>
-                </Card>
-              ) : (
-                <Card className="p-3 flex flex-col items-center justify-center border-amber-500/20 bg-amber-500/5">
-                  <div className="flex items-center gap-1.5 mb-1 text-amber-600">
-                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Firmando con la DGII...</p>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground text-center">
-                    Por favor espere a que se genere el comprobante fiscal electrónico y su código QR.
-                  </p>
-                  {signTimedOut && (
-                    <div className="mt-2.5 pt-2 border-t border-amber-500/20 flex items-center justify-center gap-2 w-full">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="h-6 px-2 text-[10px] font-semibold gap-1 border-amber-500/30"
-                        onClick={handleRetrySign} 
-                        disabled={isRetryingSign}
-                      >
-                        {isRetryingSign ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <RefreshCw className="h-2.5 w-2.5" />}
-                        Reintentar
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-6 px-2 text-[10px] text-amber-500 hover:text-amber-400 font-semibold"
-                        onClick={() => setAllowEmergencyPrint(true)}
-                      >
-                        Permitir Imprimir sin QR
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-              )
-            )}
-
-
-
             {/* Print Options */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
@@ -1851,16 +1747,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
               <Card className="group hover:shadow-sm transition-all duration-200 hover:border-primary/50 cursor-pointer">
                 <Button
-                  onClick={isBlockedBySign ? () => {
-                    toast({
-                      title: "Firma digital pendiente",
-                      description: "Por favor espere a que se genere el código QR fiscal antes de imprimir.",
-                      variant: "destructive"
-                    });
-                  } : handlePrintDirect}
+                  onClick={handlePrintDirect}
                   className="w-full justify-start h-auto py-2 px-3 hover:bg-transparent"
                   variant="ghost"
-                  disabled={isBlockedBySign || printStatus === 'printing'}
+                  disabled={printStatus === 'printing'}
                 >
                   <div className="p-1.5 rounded-md bg-green-500/10 group-hover:bg-green-500/20 transition-colors shrink-0">
                     {printStatus === 'printing' ? (
@@ -1870,29 +1760,20 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                     )}
                   </div>
                   <span className="ml-2 font-semibold text-sm">
-                    {isBlockedBySign
-                      ? 'Firmando con DGII...'
-                      : printStatus === 'printing'
-                        ? 'Imprimiendo...'
-                        : (effectivePaperSize === 'carta' || effectivePaperSize === 'A4')
-                          ? 'Imprimir Factura (Formato Carta)'
-                          : isAndroidNative() ? 'Imprimir en impresora térmica' : 'Imprimir directamente (Navegador)'}
+                    {printStatus === 'printing'
+                      ? 'Imprimiendo...'
+                      : (effectivePaperSize === 'carta' || effectivePaperSize === 'A4')
+                        ? 'Imprimir Factura (Formato Carta)'
+                        : isAndroidNative() ? 'Imprimir en impresora térmica' : 'Imprimir directamente (Navegador)'}
                   </span>
                 </Button>
               </Card>
 
               <Card className="group hover:shadow-sm transition-all duration-200 hover:border-primary/50 cursor-pointer">
                 <Button
-                  onClick={isElectronic && !saleData.qrcode_url ? () => {
-                    toast({
-                      title: "Firma digital pendiente",
-                      description: "Por favor espere a que se genere el código QR fiscal antes de exportar.",
-                      variant: "destructive"
-                    });
-                  } : handleGeneratePDF}
+                  onClick={handleGeneratePDF}
                   className="w-full justify-start h-auto py-2 px-3 hover:bg-transparent"
                   variant="ghost"
-                  disabled={isBlockedBySign}
                 >
                   <div className="p-1.5 rounded-md bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors shrink-0">
                     <FileText className="h-4 w-4 text-blue-500" />
@@ -1905,16 +1786,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
               <Card className="group hover:shadow-sm transition-all duration-200 hover:border-primary/50 cursor-pointer">
                 <Button
-                  onClick={isElectronic && !saleData.qrcode_url ? () => {
-                    toast({
-                      title: "Firma digital pendiente",
-                      description: "Por favor espere a que se genere el código QR fiscal antes de enviar por correo.",
-                      variant: "destructive"
-                    });
-                  } : () => setShowEmailInput(!showEmailInput)}
+                  onClick={() => setShowEmailInput(!showEmailInput)}
                   className="w-full justify-start h-auto py-2 px-3 hover:bg-transparent"
                   variant="ghost"
-                  disabled={isBlockedBySign}
                 >
                   <div className="p-1.5 rounded-md bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors shrink-0">
                     <Mail className="h-4 w-4 text-purple-500" />

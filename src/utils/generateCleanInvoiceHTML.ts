@@ -132,23 +132,21 @@ export const generateCleanInvoiceHTML = (
   const hasTax = Boolean(invoiceData.taxRate > 0 && (invoiceData.tax || 0) > 0.005);
   const isPendingPayment = invoiceData.isPendingPayment ?? (invoiceData.paymentStatus === 'pending' || isCreditSale);
 
+  const isApprovedByDgii = Boolean(
+    hasElectronicStyle &&
+    invoiceData.qrCodeUrl &&
+    typeof invoiceData.qrCodeUrl === 'string' &&
+    invoiceData.qrCodeUrl.startsWith('http')
+  );
+
   const effectiveSecurityCode = (() => {
+    if (!isApprovedByDgii) return '';
     if (invoiceData.securityCode && invoiceData.securityCode !== 'undefined') return invoiceData.securityCode;
-    const seed = invoiceData.encf || rawInvoiceNum || 'FAC0000000001';
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let fallbackCode = '';
-    for (let i = 0; i < 6; i++) {
-      const index = Math.abs((hash + i * 13) % chars.length);
-      fallbackCode += chars[index];
-    }
-    return fallbackCode;
+    return '';
   })();
 
   const effectiveSignatureDate = (() => {
+    if (!isApprovedByDgii) return '';
     const raw = invoiceData.signatureDate || invoiceData.date;
     try {
       const d = raw instanceof Date ? raw : new Date(raw);
@@ -166,13 +164,8 @@ export const generateCleanInvoiceHTML = (
   })();
 
   const effectiveQrCodeUrl = (() => {
-    if (isInternalInvoice || isQuotation) return '';
-    if (invoiceData.qrCodeUrl) return invoiceData.qrCodeUrl;
-    if (!hasElectronicStyle) return '';
-    const emisorRnc = (companyData.rnc || '').replace(/[^0-9]/g, '');
-    const receptorRnc = (invoiceData.customerRnc || '').replace(/[^0-9]/g, '');
-    const docCode = invoiceData.encf || rawInvoiceNum;
-    return `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${docCode}&MontoTotal=${invoiceData.total}&CodigoSeguridad=${effectiveSecurityCode}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}`;
+    if (!isApprovedByDgii) return '';
+    return invoiceData.qrCodeUrl || '';
   })();
   const displayNCF = isQuotation
     ? rawInvoiceNum
@@ -866,12 +859,6 @@ export const generateCleanInvoiceHTML = (
             ${effectiveSignatureDate ? `<div>Firma: ${effectiveSignatureDate}</div>` : ''}
           </div>
           <div style="font-size: ${is58mm ? '10px' : '8px'}; font-weight: 900; margin-top: 2px; text-transform: uppercase;">Comprobante Autorizado por la DGII</div>
-        </div>
-      ` : ''}
-      ${false && invoiceData.isElectronic && invoiceData.qrCodeUrl ? `
-        <div style="text-align: center; margin-bottom: 6px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceData.qrCodeUrl)}" alt="Código QR Fiscal" style="width: ${is58mm ? '75px' : '90px'}; height: ${is58mm ? '75px' : '90px'}; display: block; margin: 0 auto;" />
-          <div style="font-size: ${is58mm ? '10px' : '8px'}; font-weight: 900; margin-top: 3px; text-transform: uppercase;">Comprobante Autorizado por la DGII</div>
         </div>
       ` : ''}
       
