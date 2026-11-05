@@ -7,9 +7,8 @@ export interface EvolutionApiConfig {
 }
 
 /**
- * Formats a phone number for Evolution API.
- * This is kept for local reference only — the actual formatting
- * now happens server-side inside the send-whatsapp Edge Function.
+ * Sends a WhatsApp message via Evolution API using the Supabase Edge Function as a secure proxy.
+ * This completely avoids browser CORS restrictions and keeps credentials safe.
  */
 export const sendEvolutionWhatsAppMessage = async (
   phone: string,
@@ -21,8 +20,6 @@ export const sendEvolutionWhatsAppMessage = async (
     throw new Error('Configuración de Evolution API incompleta.');
   }
 
-  // Use Supabase Edge Function as proxy to avoid CORS restrictions when
-  // calling the Evolution API directly from the browser.
   try {
     const { data, error } = await supabase.functions.invoke('send-whatsapp', {
       body: {
@@ -36,65 +33,17 @@ export const sendEvolutionWhatsAppMessage = async (
     });
 
     if (error) {
-      // Si la Edge Function no está disponible (404), intentar envío directo
-      const is404 = error.message?.includes('404') || error.message?.includes('non-2xx') || (error as any).status === 404;
-      if (is404) {
-        return await sendDirectEvolutionMessage(phone, message, config);
-      }
-      throw new Error(error.message || 'Error enviando mensaje de WhatsApp');
+      throw new Error(error.message || 'Error comunicándose con el servicio de WhatsApp');
     }
 
     if (!data?.success) {
-      const errMsg = data?.error || 'Respuesta inesperada del servidor';
+      const errMsg = data?.error || 'No se pudo enviar el mensaje por WhatsApp.';
       throw new Error(errMsg);
     }
 
     return true;
   } catch (err: any) {
-    if (err.message?.includes('404') || err.message?.includes('non-2xx')) {
-      return await sendDirectEvolutionMessage(phone, message, config);
-    }
+    console.warn('[Evolution API Proxy]', err.message || err);
     throw err;
-  }
-};
-
-const sendDirectEvolutionMessage = async (
-  phone: string,
-  message: string,
-  config: EvolutionApiConfig
-): Promise<boolean> => {
-  const cleanPhone = phone.replace(/\D/g, '');
-  const formattedPhone = cleanPhone.startsWith('1') ? cleanPhone : `1${cleanPhone}`;
-  let baseUrl = config.url.replace(/\/+$/, '');
-  if (!/^https?:\/\//i.test(baseUrl)) {
-    baseUrl = `https://${baseUrl}`;
-  }
-  const endpoint = `${baseUrl}/message/sendText/${config.instanceName}`;
-
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.apiKey,
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message,
-        delay: 1200,
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Evolution API (${res.status}): ${errText || 'Instancia no disponible'}`);
-    }
-
-    return true;
-  } catch (networkErr: any) {
-    if (networkErr.message?.includes('Failed to fetch') || networkErr.name === 'TypeError') {
-      throw new Error('No se pudo conectar con el servidor de Evolution API (Railway). Verifica que el servicio esté activo y no esté suspendido o apagado.');
-    }
-    throw networkErr;
   }
 };

@@ -43,7 +43,7 @@ serve(async (req: Request) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -57,7 +57,7 @@ serve(async (req: Request) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -67,7 +67,7 @@ serve(async (req: Request) => {
 
     if (!phone || !message || !evolutionUrl || !instanceName || !apiKey) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: phone, message, evolutionUrl, instanceName, apiKey" }),
+        JSON.stringify({ success: false, error: "Missing required fields: phone, message, evolutionUrl, instanceName, apiKey" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -86,36 +86,47 @@ serve(async (req: Request) => {
 
     console.log(`[send-whatsapp] Proxying to ${endpoint}, phone=${formattedPhone}`);
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": apiKey,
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": apiKey,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    const responseText = await response.text();
+      const responseText = await response.text();
 
-    if (!response.ok) {
-      console.error(`[send-whatsapp] Evolution API error ${response.status}:`, responseText);
+      if (!response.ok) {
+        console.warn(`[send-whatsapp] Upstream Evolution API returned ${response.status}:`, responseText);
+        let errorMsg = `Evolution API (${response.status}): ${responseText.slice(0, 160)}`;
+        if (response.status === 404) {
+          errorMsg = `El servidor de Evolution API o la instancia "${instanceName}" no fue encontrada en Railway (404: Application / Instance not found).`;
+        }
+        return new Response(
+          JSON.stringify({ success: false, error: errorMsg }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log(`[send-whatsapp] Success`);
       return new Response(
-        JSON.stringify({ error: `Evolution API (${response.status}): ${responseText.slice(0, 200)}` }),
-        { status: response.status, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({ success: true, response: responseText }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    } catch (fetchErr: any) {
+      console.warn(`[send-whatsapp] Error connecting to upstream Evolution API:`, fetchErr);
+      return new Response(
+        JSON.stringify({ success: false, error: `No se pudo conectar al servidor de Evolution API: ${fetchErr?.message || 'Error de red'}` }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    console.log(`[send-whatsapp] Success:`, responseText);
-
-    return new Response(
-      JSON.stringify({ success: true, response: responseText }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
 
   } catch (error: any) {
     console.error("[send-whatsapp] Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
+      JSON.stringify({ success: false, error: error.message || "Internal server error" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
