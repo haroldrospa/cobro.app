@@ -12,7 +12,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Menu,
-  X
+  X,
+  QrCode,
+  ShieldCheck,
+  Sparkles
 } from "lucide-react";
 import cobroLogo from '@/assets/cobro-logo-dark.png';
 import heroBg from '@/assets/hero-bg-uploaded.jpg';
@@ -166,15 +169,22 @@ const Landing = () => {
               
               {/* Left: Text content */}
               <div className="flex-1 text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
-                {/* Badge */}
+                {/* Badge e-CF Homologado Super Llamativo */}
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 }}
-                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-sm font-semibold mb-6"
+                  className="inline-flex items-center gap-2 sm:gap-2.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-teal-500/20 border border-emerald-400/50 text-emerald-300 text-xs sm:text-sm font-semibold mb-6 shadow-[0_0_30px_rgba(16,185,129,0.3)] backdrop-blur-md"
                 >
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                  POS · Facturación · Inventario
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-white font-extrabold tracking-wide uppercase text-[10px] sm:text-xs bg-emerald-500/35 px-2.5 py-0.5 rounded-full border border-emerald-400/50 flex items-center gap-1 shadow-sm">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                    DGII Homologado
+                  </span>
+                  <span className="font-bold text-emerald-200 truncate">Facturación Electrónica e-CF Activa</span>
                 </motion.div>
 
                 {/* Headline */}
@@ -182,7 +192,7 @@ const Landing = () => {
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.1 }}
-                  className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.05] mb-6"
+                  className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.05] mb-5"
                 >
                   Vende más.<br />
                   <span style={{
@@ -193,15 +203,58 @@ const Landing = () => {
                   }}>Sin caos.</span>
                 </motion.h1>
 
-                {/* Subline — SHORT */}
+                {/* Subline */}
                 <motion.p
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
-                  className="text-lg sm:text-xl text-slate-400 mb-8 max-w-lg mx-auto lg:mx-0"
+                  className="text-lg sm:text-xl text-slate-300 mb-6 max-w-lg mx-auto lg:mx-0 leading-relaxed"
                 >
-                  Tu tienda, restaurante o supermercado con POS, inventario y facturación electrónica en un solo lugar.
+                  Tu tienda, restaurante o supermercado con POS, inventario y <strong className="text-white font-extrabold underline decoration-emerald-400 decoration-2 underline-offset-4">facturación electrónica DGII con QR oficial</strong>. Cumple con la Ley 32-23 al instante.
                 </motion.p>
+
+                {/* Spotlight Box: e-CF DGII Ready */}
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.25 }}
+                  className="mb-8 p-4 sm:p-4.5 rounded-2xl bg-gradient-to-br from-[#1a2d25] via-[#15241e] to-[#0f1b16] border-2 border-emerald-400/50 shadow-[0_12px_36px_rgba(0,0,0,0.5),0_0_35px_rgba(16,185,129,0.22)] relative overflow-hidden group hover:border-emerald-400/80 transition-all text-left"
+                >
+                  <div className="absolute top-0 right-0 w-36 h-36 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+                  
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.5)] shrink-0 mt-0.5">
+                      <QrCode className="w-6 h-6 text-slate-950" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-white font-black text-sm sm:text-base tracking-tight flex items-center gap-1.5">
+                          ⚡ Emite Facturas Electrónicas e-CF con la DGII
+                        </span>
+                        <span className="bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Ley 32-23
+                        </span>
+                      </div>
+                      
+                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        Cobroapp ya está 100% homologado. Emite comprobantes fiscales <strong className="text-emerald-300">E31, E32, E34, E44</strong> con <strong>código QR oficial</strong> y firma digital instantánea. ¡Sin pagar miles de dólares en integración!
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2.5 pt-2 border-t border-white/10 text-[11px] text-emerald-400 font-bold">
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Código QR DGII Automático
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Firma Digital Incluida
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Listo en 5 Minutos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
 
                 {/* CTA */}
                 <motion.div
@@ -268,8 +321,8 @@ const Landing = () => {
                 >
                   {[
                     { value: '+500', label: 'Negocios activos' },
-                    { value: '15 días', label: 'Prueba gratuita' },
-                    { value: '100%', label: 'Legal y fiscal' },
+                    { value: '100% DGII', label: 'e-CF Homologado' },
+                    { value: '15 días', label: 'Prueba gratuita sin costo' },
                   ].map((s, i) => (
                     <div key={i} className="text-center lg:text-left">
                       <div className="text-2xl font-extrabold text-emerald-400">{s.value}</div>
@@ -314,6 +367,37 @@ const Landing = () => {
                   <div>
                     <div className="text-xs text-slate-400">Stock actualizado</div>
                     <div className="text-sm font-bold text-white">Automático ✓</div>
+                  </div>
+                </motion.div>
+                {/* Floating card 3: e-CF DGII Homologado con QR Super Llamativo */}
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                  className="absolute -bottom-6 left-2 lg:-left-6 z-20 flex items-center gap-3.5 bg-gradient-to-r from-[#14261f] via-[#1a332a] to-[#14261f] border-2 border-emerald-400/80 rounded-2xl p-3 sm:p-3.5 shadow-[0_16px_45px_rgba(0,0,0,0.7),0_0_35px_rgba(16,185,129,0.4)] backdrop-blur-md"
+                >
+                  <div className="w-12 h-12 bg-white p-1 rounded-xl shadow-md shrink-0 flex items-center justify-center border border-emerald-500/30">
+                    <div className="relative w-full h-full flex items-center justify-center bg-slate-950 rounded-lg overflow-hidden">
+                      <QrCode className="w-7 h-7 text-emerald-400" />
+                      <div className="absolute inset-x-0 h-0.5 bg-emerald-400 shadow-[0_0_8px_#34d399] animate-[bounce_2s_infinite]" />
+                    </div>
+                  </div>
+                  <div className="pr-1 text-left">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+                        Comprobante Autorizado DGII
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono font-black text-white flex items-center gap-1.5">
+                      <span>e-CF: E3100000042</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 inline" />
+                    </div>
+                    <div className="text-[10px] text-slate-300 font-medium mt-0.5">
+                      QR Fiscal & Firma Digital Válida
+                    </div>
                   </div>
                 </motion.div>
                 {/* Businessman image */}
