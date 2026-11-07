@@ -39,7 +39,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
     rnc_emisor: '',
     razon_social: '',
     company_id: '01M0TYPKJ0JGVM53K56D7X9P7Z',
-    sequence_due_date: '2026-12-31',
+    sequence_due_date: '2027-12-31',
     certificado_digital: '',
     certificado_password: ''
   });
@@ -60,7 +60,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
         company_id: effectiveCompanyId,
-        sequence_due_date: (config as any)?.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : '') || '2026-12-31',
+        sequence_due_date: (config as any)?.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : '') || '2027-12-31',
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
       });
@@ -168,7 +168,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         localStorage.setItem('alanube_rnc_emisor', formData.rnc_emisor.trim());
         localStorage.setItem('alanube_razon_social', formData.razon_social.trim());
         localStorage.setItem('alanube_environment', formData.environment);
-        localStorage.setItem('alanube_sequence_due_date', (formData.sequence_due_date || '2026-12-31').trim());
+        localStorage.setItem('alanube_sequence_due_date', (formData.sequence_due_date || '2027-12-31').trim());
       }
 
       toast({

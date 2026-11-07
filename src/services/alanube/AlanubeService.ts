@@ -107,7 +107,7 @@ export class AlanubeService {
     const rncEmisor = localRnc || (data.rnc_emisor && data.rnc_emisor !== '133280824' ? data.rnc_emisor : '40218246656');
     const razonSocial = localRazonSocial || (data.razon_social && data.razon_social !== 'Romar Group' ? data.razon_social : 'Harold Rosado Pacheco');
     const environment = (localEnv as any) || (data.environment === 'SANDBOX' ? 'PRODUCTION' : data.environment);
-    const sequenceDueDate = (data as any)?.sequence_due_date || localSequenceDueDate || '2026-12-31';
+    const sequenceDueDate = (data as any)?.sequence_due_date || localSequenceDueDate || '2027-12-31';
 
     const resolvedConfig: AlanubeConfig = {
       api_token: data.api_token,
@@ -430,12 +430,23 @@ export class AlanubeService {
         ? (sale.split_method || 'cash')
         : (sale.payment_method || 'cash');
 
+      const rawDueDate = config.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null) || '2027-12-31';
+      let formattedDueDate = '2027-12-31';
+      if (rawDueDate) {
+        const dmyMatch = rawDueDate.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+        if (dmyMatch) {
+          formattedDueDate = `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`;
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(rawDueDate.trim())) {
+          formattedDueDate = rawDueDate.trim();
+        }
+      }
+
       const idDoc: Record<string, any> = {
         encf: normalizedEncf,
         incomeType: 1,
         paymentType: sale.payment_method === 'credit' ? 2 : 1,
         ...(totalTaxedAmount > 0 ? { taxAmountIndicator: 0 } : {}),
-        ...(alanubeType !== '32' ? { sequenceDueDate: config.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null) || '2026-12-31' } : {}),
+        ...(alanubeType !== '32' ? { sequenceDueDate: formattedDueDate } : {}),
         ...(sale.payment_method === 'credit' ? {
           paymentDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         } : {}),

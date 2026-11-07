@@ -32,7 +32,7 @@ export const useAlanubeConfig = () => {
         rnc_emisor: localRnc || '',
         razon_social: localRazon || '',
         company_id: localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
-        sequence_due_date: localSequenceDueDate || '2026-12-31',
+        sequence_due_date: localSequenceDueDate || '2027-12-31',
         is_active: localMode ? localMode === 'e-ncf' : false,
       } as AlanubeConfig & { is_active: boolean };
     }
@@ -64,7 +64,7 @@ export const useAlanubeConfig = () => {
       rnc_emisor: (data as any)?.rnc_emisor || localRnc || '',
       razon_social: (data as any)?.razon_social || localRazon || '',
       company_id: (data as any)?.company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
-      sequence_due_date: (data as any)?.sequence_due_date || localSequenceDueDate || '2026-12-31',
+      sequence_due_date: (data as any)?.sequence_due_date || localSequenceDueDate || '2027-12-31',
       is_active: resolvedIsActive,
     } as AlanubeConfig & { is_active: boolean };
   };
