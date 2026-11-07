@@ -185,11 +185,30 @@ export const generateCleanInvoiceHTML = (
       return invoiceData.qrCodeUrl;
     }
     if (!hasElectronicStyle) return '';
-    // Generar URL oficial de consulta DGII del comprobante electrónico
-    const emisorRnc = (companyData.rnc || '').replace(/[^0-9]/g, '');
+
+    // Obtener RNC del Emisor (con fallback a Alanube)
+    let emisorRnc = (companyData.rnc || '').replace(/[^0-9]/g, '');
+    if (!emisorRnc && typeof window !== 'undefined') {
+      emisorRnc = (localStorage.getItem('alanube_rnc_emisor') || '').replace(/[^0-9]/g, '');
+    }
+
     const receptorRnc = (invoiceData.customerRnc || '').replace(/[^0-9]/g, '');
     const totalMonto = Number(invoiceData.total || 0).toFixed(2);
-    return `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${displayNCF}&MontoTotal=${totalMonto}&CodigoSeguridad=${effectiveSecurityCode}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}`;
+
+    // Formato oficial DGII:
+    // Para Facturas de Consumo Electrónicas (E32) sin RNC de comprador:
+    if (displayNCF.startsWith('E32') && !receptorRnc) {
+      return `https://fc.dgii.gov.do/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${displayNCF}&MontoTotal=${totalMonto}&CodigoSeguridad=${effectiveSecurityCode}`;
+    }
+
+    // Para Crédito Fiscal (E31), Compras (E41), Gubernamental (E45) o con RNC de comprador:
+    const fechaEmisionD = invoiceData.date || new Date();
+    const day = String(fechaEmisionD.getDate()).padStart(2, '0');
+    const month = String(fechaEmisionD.getMonth() + 1).padStart(2, '0');
+    const year = fechaEmisionD.getFullYear();
+    const fechaEmisionFormatted = `${day}-${month}-${year}`;
+
+    return `https://ecf.dgii.gov.do/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${displayNCF}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}&CodigoSeguridad=${effectiveSecurityCode}`;
   })();
 
   const displayPrefix = invoiceData.invoicePrefix || 'FAC-';
@@ -356,7 +375,7 @@ export const generateCleanInvoiceHTML = (
           </div>
         </div>
 
-        <div style="text-align: right; margin-top: 2px; display: flex; flex-direction: column; align-items: flex-end; max-width: 48%;">
+        <div style="text-align: right; margin-top: 2px; display: flex; flex-direction: column; align-items: flex-end; max-width: 52%;">
           <h1 style="font-size: 24px; font-weight: 900; color: #18181b; letter-spacing: -0.02em; margin: 0 0 6px 0; line-height: 1.15; text-transform: uppercase;">
             ${isQuotation ? 'Presupuesto' : (isInternalInvoice ? 'Factura Interna' : (invoiceData.isElectronic ? 'Factura Electrónica' : 'Factura Fiscal'))}
           </h1>
@@ -366,16 +385,16 @@ export const generateCleanInvoiceHTML = (
             </span>
           </div>
 
-          <!-- Si es Fiscal (NO interna): Código QR DGII debajo del título de Factura Electrónica -->
+          <!-- Si es Fiscal (NO interna): Código QR DGII debajo del título de Factura Electrónica (Grande y de fácil escaneo) -->
           ${hasElectronicStyle && effectiveQrCodeUrl ? `
-            <div style="display: flex; align-items: center; gap: 10px; background: #fbfbfc; border: 1px solid #ebecee; border-radius: 8px; padding: 6px 10px; margin-top: 8px; text-align: left; box-sizing: border-box;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR DGII" style="width: 52px; height: 52px; border-radius: 5px; background: #ffffff; padding: 2px; border: 1px solid #e4e4e7; flex-shrink: 0;" />
-              <div style="font-size: 9.5px; line-height: 1.35; color: #52525b;">
-                <div style="font-weight: 800; color: #0284c7; text-transform: uppercase; font-size: 8px; letter-spacing: 0.04em; margin-bottom: 2px;">
+            <div style="display: flex; align-items: center; gap: 12px; background: #fbfbfc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; margin-top: 10px; text-align: left; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=1&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR DGII" style="width: 86px; height: 86px; border-radius: 6px; background: #ffffff; padding: 2px; border: 1px solid #cbd5e1; flex-shrink: 0; display: block;" />
+              <div style="font-size: 10px; line-height: 1.4; color: #475569;">
+                <div style="font-weight: 800; color: #0284c7; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.04em; margin-bottom: 3px;">
                   Comprobante Autorizado por la DGII
                 </div>
-                ${effectiveSecurityCode ? `<div><strong style="color: #18181b;">Cód. Seguridad:</strong> <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace;">${effectiveSecurityCode}</span></div>` : ''}
-                ${effectiveSignatureDate ? `<div><strong style="color: #18181b;">Firma Digital:</strong> <span class="tabular-numbers">${effectiveSignatureDate}</span></div>` : ''}
+                ${effectiveSecurityCode ? `<div style="margin-bottom: 2px;"><strong style="color: #0f172a;">Cód. Seguridad:</strong> <span class="tabular-numbers" style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #0f172a; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">${effectiveSecurityCode}</span></div>` : ''}
+                ${effectiveSignatureDate ? `<div><strong style="color: #0f172a;">Firma Digital:</strong> <span class="tabular-numbers" style="font-size: 9.5px;">${effectiveSignatureDate}</span></div>` : ''}
               </div>
             </div>
           ` : ''}
@@ -872,7 +891,7 @@ export const generateCleanInvoiceHTML = (
 
       ${hasElectronicStyle && effectiveQrCodeUrl ? `
         <div style="text-align: center; margin-bottom: 6px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR Fiscal" style="width: ${is58mm ? '75px' : '90px'}; height: ${is58mm ? '75px' : '90px'}; display: block; margin: 0 auto;" />
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=1&data=${encodeURIComponent(effectiveQrCodeUrl)}" alt="Código QR Fiscal" style="width: ${is58mm ? '85px' : '110px'}; height: ${is58mm ? '85px' : '110px'}; display: block; margin: 0 auto;" />
           <div style="font-size: ${is58mm ? '9.5px' : '8.5px'}; font-weight: 800; margin-top: 3px; font-family: monospace;">
             ${effectiveSecurityCode ? `<div>Cód. Seguridad: ${effectiveSecurityCode}</div>` : ''}
             ${effectiveSignatureDate ? `<div>Firma: ${effectiveSignatureDate}</div>` : ''}

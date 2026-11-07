@@ -320,7 +320,10 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     let secCode = rawSaleData.codigo_seguridad || '';
 
     if (!isInternal && isElec && !qrUrl) {
-      const emisorRnc = dbCompanyInfo?.rnc?.replace(/[^0-9]/g, '') || '';
+      let emisorRnc = dbCompanyInfo?.rnc?.replace(/[^0-9]/g, '') || '';
+      if (!emisorRnc && typeof window !== 'undefined') {
+        emisorRnc = (localStorage.getItem('alanube_rnc_emisor') || '').replace(/[^0-9]/g, '');
+      }
       const receptorRnc = rawSaleData.customer?.rnc?.replace(/[^0-9]/g, '') || '';
       const rawDate = rawSaleData.fecha_firma || new Date().toISOString();
       let formattedDate = rawDate;
@@ -345,7 +348,19 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
           secCode += chars[Math.abs((hash + i * 13) % chars.length)];
         }
       }
-      qrUrl = `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&MontoTotal=${rawSaleData.total}&CodigoSeguridad=${secCode}&FechaFirma=${encodeURIComponent(formattedDate)}`;
+
+      const totalMonto = Number(rawSaleData.total || 0).toFixed(2);
+      if (invNum.startsWith('E32') && !receptorRnc) {
+        qrUrl = `https://fc.dgii.gov.do/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${invNum}&MontoTotal=${totalMonto}&CodigoSeguridad=${secCode}`;
+      } else {
+        const fechaEmisionD = new Date(rawSaleData.created_at || rawDate);
+        const day = String(fechaEmisionD.getDate()).padStart(2, '0');
+        const month = String(fechaEmisionD.getMonth() + 1).padStart(2, '0');
+        const year = fechaEmisionD.getFullYear();
+        const fechaEmisionFormatted = `${day}-${month}-${year}`;
+
+        qrUrl = `https://ecf.dgii.gov.do/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(formattedDate)}&CodigoSeguridad=${secCode}`;
+      }
     }
 
     return {
@@ -1433,13 +1448,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       try {
         const qrImg = new Image();
         qrImg.crossOrigin = "anonymous";
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(saleData.qrcode_url)}`;
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=1&data=${encodeURIComponent(saleData.qrcode_url)}`;
         await new Promise((resolve) => {
           qrImg.onload = resolve;
           qrImg.onerror = resolve;
         });
         if (qrImg.complete) {
-          doc.addImage(qrImg, 'PNG', 15, finalY + 2, 30, 30);
+          doc.addImage(qrImg, 'PNG', 15, finalY + 2, 34, 34);
           doc.setFontSize(7);
           doc.setFont("helvetica", "italic");
           doc.text("Comprobante Autorizado por la DGII", 15, finalY + 36);
@@ -1713,8 +1728,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
             {isElectronic && !isInternalInvoice && saleData.qrcode_url && (
               <Card className="p-3 flex flex-col items-center justify-center border-emerald-500/20 bg-emerald-500/5">
                 <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1.5">Comprobante Fiscal Electrónico (e-CF)</p>
-                <div className="bg-white p-1 rounded-lg border shadow-sm flex items-center justify-center w-28 h-28 mb-1.5">
-                  <QRCodeSVG value={saleData.qrcode_url} size={104} />
+                <div className="bg-white p-1.5 rounded-lg border shadow-sm flex items-center justify-center w-36 h-36 mb-2">
+                  <QRCodeSVG value={saleData.qrcode_url} size={132} level="M" />
                 </div>
                 <div className="text-[9px] text-left font-mono text-muted-foreground leading-relaxed w-full border-t pt-1.5 border-dashed border-emerald-500/20 max-w-[200px]">
                   {securityCode && <div><strong>Cód. Seguridad:</strong> {securityCode}</div>}
