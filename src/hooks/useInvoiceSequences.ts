@@ -128,7 +128,7 @@ export const useDgiiSequenceStats = () => {
       const [{ data: acceptedSales }, alanubeAcceptedCounts] = await Promise.all([
         supabase
           .from('sales')
-          .select('invoice_type_id, invoice_number, encf, estado_fiscal, qrcode_url')
+          .select('invoice_type_id, invoice_number, encf, estado_fiscal, qrcode_url, codigo_seguridad')
           .eq('store_id', profile.store_id)
           .eq('estado_fiscal', 'ACEPTADO')
           .order('created_at', { ascending: false })
@@ -146,6 +146,20 @@ export const useDgiiSequenceStats = () => {
             const prefix = rawCode.slice(0, 3).toUpperCase();
             if (statsMap[prefix]) {
               typeId = prefix;
+            }
+
+            // Para comprobantes electrónicos (e-CF), solo considerar válidos los que realmente
+            // fueron firmados y aceptados por la DGII (poseen código de seguridad o timbre oficial)
+            const secCode = (row as any).codigo_seguridad;
+            const hasValidQr = Boolean(
+              row.qrcode_url &&
+              row.qrcode_url.includes('CodigoSeguridad=') &&
+              !row.qrcode_url.includes('CodigoSeguridad=&') &&
+              !row.qrcode_url.endsWith('CodigoSeguridad=')
+            );
+            if (!secCode && !hasValidQr) {
+              // Registro fallido o sin firma real de DGII -> ignorar para no inflar secuencias
+              continue;
             }
           } else if (rawCode.startsWith('B')) {
             const prefix = rawCode.slice(0, 3).toUpperCase();

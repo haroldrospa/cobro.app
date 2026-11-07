@@ -683,8 +683,23 @@ const Settings = () => {
     if (!invoiceSequences || isRepairingSequences) return;
     setIsRepairingSequences(true);
     try {
+      // 1. Limpieza preventiva en base de datos: descartar como 'ACEPTADO' ventas electrónicas sin firma oficial
+      if (profile?.store_id) {
+        try {
+          await supabase
+            .from('sales')
+            .update({ estado_fiscal: 'RECHAZADO' })
+            .eq('store_id', profile.store_id)
+            .eq('estado_fiscal', 'ACEPTADO')
+            .ilike('invoice_number', 'E%')
+            .is('codigo_seguridad', null);
+        } catch (cleanErr) {
+          console.warn('[handleRepairAllSequences] Limpieza de ventas locales desfasadas omitida:', cleanErr);
+        }
+      }
+
       const refreshed = await refetchMaxNumbers();
-      const latestMax = refreshed.data || maxInvoiceNumbers || {};
+      const latestStats: Record<string, any> = (refreshed.data as any) || dgiiStatsMap || {};
       let repairedCount = 0;
       const repairedDetails: string[] = [];
 
@@ -695,15 +710,32 @@ const Settings = () => {
       const activeSequences = invoiceSequences.filter(s => targetTypes.includes(s.invoice_type_id));
 
       for (const seq of activeSequences) {
-        const usedInDgii = latestMax[seq.invoice_type_id] || 0;
-        if (usedInDgii > seq.current_number) {
+        const stats = latestStats[seq.invoice_type_id];
+        const lastAccepted = typeof stats === 'object' ? (stats?.lastAcceptedSeq || 0) : (Number(stats) || 0);
+        const emittedCount = typeof stats === 'object' ? (stats?.emittedCount || 0) : 0;
+
+        // Determinar el número base según la DGII:
+        // Si hay una última secuencia aceptada válida y coincide o es menor o igual al conteo:
+        // O si emittedCount > 0, usar el número adecuado según los comprobantes reales emitidos en DGII.
+        let targetNumber = seq.current_number;
+        if (lastAccepted > 0 && lastAccepted <= emittedCount) {
+          targetNumber = lastAccepted;
+        } else if (emittedCount > 0) {
+          targetNumber = emittedCount;
+        } else if (lastAccepted > 0) {
+          targetNumber = lastAccepted;
+        } else if (seq.current_number > 0 && emittedCount === 0 && lastAccepted === 0) {
+          targetNumber = 0;
+        }
+
+        if (targetNumber !== seq.current_number) {
           await updateSequenceMutation.mutateAsync({
             id: seq.id,
-            current_number: usedInDgii,
+            current_number: targetNumber,
             invoice_type_id: seq.invoice_type_id,
           });
           repairedCount++;
-          repairedDetails.push(`${seq.invoice_type_id} → #${usedInDgii + 1}`);
+          repairedDetails.push(`${seq.invoice_type_id} → Próximo #${targetNumber + 1}`);
         }
       }
 

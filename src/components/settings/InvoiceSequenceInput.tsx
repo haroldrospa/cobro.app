@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle2, Wrench, ShieldCheck, FileCheck2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Wrench, ShieldCheck, FileCheck2, Sparkles } from 'lucide-react';
 
 interface InvoiceSequenceInputProps {
     id: string;
@@ -57,12 +57,6 @@ export const InvoiceSequenceInput = ({
             return;
         }
 
-        // Si el número elegido ya fue aceptado en DGII (ej. el 3 o el 6), avanzar al siguiente libre
-        const usedSet = new Set(acceptedSeqNumbers);
-        while (usedSet.has(numericValue)) {
-            numericValue++;
-        }
-
         const valueToSave = numericValue - 1;
         setValue(String(numericValue));
 
@@ -85,6 +79,19 @@ export const InvoiceSequenceInput = ({
         try {
             await onUpdate(id, maxUsedNumber, invoiceTypeId);
             setValue(String(maxUsedNumber + 1));
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleSyncToEmittedCount = async () => {
+        if (emittedCount < 0) return;
+        setIsUpdating(true);
+        try {
+            await onUpdate(id, emittedCount, invoiceTypeId);
+            setValue(String(emittedCount + 1));
         } catch (e) {
             console.error(e);
         } finally {
@@ -201,9 +208,23 @@ export const InvoiceSequenceInput = ({
                         onClick={handleQuickSyncToNextAfterLast}
                         disabled={isUpdating}
                         className="h-7 px-2.5 text-xs bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25 gap-1"
+                        title="El comprobante actual ya fue emitido en DGII. Haz clic para avanzar al próximo libre."
                     >
                         <Wrench className="h-3 w-3" />
                         Saltar a #{maxUsedNumber + 1}
+                    </Button>
+                ) : (emittedCount > 0 && nextSequenceNumber !== (emittedCount + 1)) ? (
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSyncToEmittedCount}
+                        disabled={isUpdating}
+                        className="h-7 px-2.5 text-xs bg-blue-500/15 border-blue-500/40 text-blue-400 hover:bg-blue-500/25 gap-1"
+                        title={`Alinear secuencia con los ${emittedCount} comprobantes reportados en DGII (Próximo: #${emittedCount + 1})`}
+                    >
+                        <Sparkles className="h-3 w-3" />
+                        Alinear a #{emittedCount + 1}
                     </Button>
                 ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
