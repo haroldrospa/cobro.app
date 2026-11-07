@@ -327,19 +327,37 @@ export class AlanubeService {
 
       const itemDetails: any[] = (sale.sale_items as any[]).map((item, index) => {
         const quantity = Number(item.quantity) || 1;
-        const taxAmount = Number(item.tax_amount) || 0;
-        const roundedTaxPercentage = Math.round(Number(item.tax_percentage) || 0);
+        const rawUnitPrice = Number(item.unit_price ?? item.price ?? 0);
+        const taxPercentage = Math.round(Number(item.tax_percentage ?? item.tax ?? 0));
+        const costIncludesTax = Boolean(item.cost_includes_tax);
 
-        // Monto neto de la línea sin ITBIS (taxAmountIndicator = 0)
-        const lineTotalWithTax = Number(item.total) || 0;
-        const netLineAmount = Math.max(0, lineTotalWithTax - taxAmount);
+        // Calcular lineTotalWithTax y taxAmount soportando tanto CartItem como sale_item
+        let lineTotalWithTax = Number(item.total || 0);
+        let taxAmount = Number(item.tax_amount || 0);
+
+        if (lineTotalWithTax === 0 && rawUnitPrice > 0) {
+          if (costIncludesTax) {
+            lineTotalWithTax = Number((rawUnitPrice * quantity).toFixed(2));
+            if (taxPercentage > 0) {
+              taxAmount = Number((lineTotalWithTax - (lineTotalWithTax / (1 + taxPercentage / 100))).toFixed(2));
+            }
+          } else {
+            const netSubtotal = rawUnitPrice * quantity;
+            taxAmount = taxPercentage > 0 ? Number((netSubtotal * (taxPercentage / 100)).toFixed(2)) : 0;
+            lineTotalWithTax = Number((netSubtotal + taxAmount).toFixed(2));
+          }
+        } else if (taxAmount === 0 && taxPercentage > 0 && lineTotalWithTax > 0) {
+          taxAmount = Number((lineTotalWithTax - (lineTotalWithTax / (1 + taxPercentage / 100))).toFixed(2));
+        }
+
+        const netLineAmount = Math.max(0, Number((lineTotalWithTax - taxAmount).toFixed(2)));
         const unitPriceNet = Number((netLineAmount / quantity).toFixed(4));
         const itemAmount = Number((unitPriceNet * quantity).toFixed(2));
 
         // Indicador de facturación DGII: 1 = ITBIS 18%, 2 = ITBIS 16%, 4 = Exento (E)
         let billingIndicator = 4;
-        if (taxAmount > 0 && roundedTaxPercentage > 0) {
-          billingIndicator = roundedTaxPercentage === 16 ? 2 : 1;
+        if (taxAmount > 0 && taxPercentage > 0) {
+          billingIndicator = taxPercentage === 16 ? 2 : 1;
         }
 
         if (billingIndicator === 1) {
@@ -363,11 +381,26 @@ export class AlanubeService {
         };
       });
 
-      const totalTaxedAmount = Number((i1AmountTaxed + i2AmountTaxed).toFixed(2));
-      const itbis1Total = Number((i1AmountTaxed * 0.18).toFixed(2));
-      const itbis2Total = Number((i2AmountTaxed * 0.16).toFixed(2));
-      const itbisTotal = Number((itbis1Total + itbis2Total).toFixed(2));
-      const totalAmount = Number((totalTaxedAmount + exemptAmount + itbisTotal).toFixed(2));
+      let totalTaxedAmount = Number((i1AmountTaxed + i2AmountTaxed).toFixed(2));
+      let itbis1Total = Number((i1AmountTaxed * 0.18).toFixed(2));
+      let itbis2Total = Number((i2AmountTaxed * 0.16).toFixed(2));
+      let itbisTotal = Number((itbis1Total + itbis2Total).toFixed(2));
+      let totalAmount = Number((totalTaxedAmount + exemptAmount + itbisTotal).toFixed(2));
+
+      // Respaldo de coherencia: Si el total calculado da 0 o difiere de sale.total, sincronizar
+      const saleTotalNum = Number(sale.total) || 0;
+      if (totalAmount === 0 && saleTotalNum > 0) {
+        totalAmount = saleTotalNum;
+        const saleTaxNum = Number(sale.tax_total) || 0;
+        if (saleTaxNum > 0) {
+          totalTaxedAmount = Number((saleTotalNum - saleTaxNum).toFixed(2));
+          itbis1Total = saleTaxNum;
+          itbisTotal = saleTaxNum;
+          i1AmountTaxed = totalTaxedAmount;
+        } else {
+          exemptAmount = saleTotalNum;
+        }
+      }
 
       const totals: Record<string, any> = {
         totalAmount
@@ -532,18 +565,28 @@ export class AlanubeService {
 
         // Construct standard DGII verification URL if missing
         const isSandbox = config.environment === 'SANDBOX';
-        const dgiiDomain = isSandbox ? 'testecf.dgii.gov.do' : 'ecf.dgii.gov.do';
-        const dgiiFcDomain = isSandbox ? 'testfc.dgii.gov.do' : 'fc.dgii.gov.do';
+        const ecfPath = isSandbox ? 'testecf' : 'ecf';
+        const fcPath = isSandbox ? 'testfc' : 'ecf';
 
         let calculatedFallbackUrl = '';
         if (finalEncf.startsWith('E32') && !receptorRnc) {
-          calculatedFallbackUrl = `https://${dgiiFcDomain}/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${finalEncf}&MontoTotal=${totalAmount}&CodigoSeguridad=${finalSecCode}`;
+          calculatedFallbackUrl = `https://fc.dgii.gov.do/${fcPath}/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${finalEncf}&MontoTotal=${totalAmount.toFixed(2)}&CodigoSeguridad=${finalSecCode}`;
         } else {
           const dgiiFecha = dgiiFormatted ? dgiiFormatted.split(' ')[0] : '';
-          calculatedFallbackUrl = `https://${dgiiDomain}/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${finalEncf}&FechaEmision=${dgiiFecha}&MontoTotal=${totalAmount}&FechaFirma=${encodeURIComponent(dgiiFormatted)}&CodigoSeguridad=${finalSecCode}`;
+          calculatedFallbackUrl = `https://ecf.dgii.gov.do/${ecfPath}/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${finalEncf}&FechaEmision=${dgiiFecha}&MontoTotal=${totalAmount.toFixed(2)}&FechaFirma=${encodeURIComponent(dgiiFormatted)}&CodigoSeguridad=${finalSecCode}`;
         }
 
-        const qrUrl = response.qrcode_url || (response as any).qrCodeUrl || calculatedFallbackUrl;
+        let qrUrl = response.qrcode_url || (response as any).qrCodeUrl || calculatedFallbackUrl;
+
+        // Si la URL recibida de Alanube vino con MontoTotal=0 pero la venta tiene total mayor a 0, corregirlo
+        if (qrUrl && totalAmount > 0) {
+          qrUrl = qrUrl.replace(/([?&]MontoTotal=)0(?:\.00)?(&|$)/, `$1${totalAmount.toFixed(2)}$2`);
+        }
+        // Corregir subdominios de prueba de DGII en caso de venir con testecf.dgii o testfc.dgii
+        if (qrUrl) {
+          qrUrl = qrUrl.replace('testecf.dgii.gov.do', 'ecf.dgii.gov.do/testecf')
+                       .replace('testfc.dgii.gov.do', 'fc.dgii.gov.do/testfc');
+        }
 
         const signaturePayload = {
           saleId,

@@ -312,12 +312,30 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       };
     });
 
-    const invNum = rawSaleData.encf || rawSaleData.invoice_number || rawSaleData.invoiceNumber || '000001';
-    const isInternal = rawSaleData.invoiceType === 'FAC' || rawSaleData.invoice_type_id === 'FAC' || invNum.startsWith('FAC');
-    const isElec = !isInternal && (invNum.startsWith('E') || rawSaleData.is_electronic || !!rawSaleData.encf);
+    const rawInvNum = rawSaleData.encf || rawSaleData.invoice_number || rawSaleData.invoiceNumber || '000001';
+    const isInternal = rawSaleData.invoiceType === 'FAC' || rawSaleData.invoice_type_id === 'FAC' || rawInvNum.startsWith('FAC');
+    const isElec = !isInternal && (rawInvNum.startsWith('E') || rawSaleData.is_electronic || !!rawSaleData.encf);
     
+    // Normalizar a 13 caracteres estándar DGII para comprobantes electrónicos (ej: E310000000001)
+    let invNum = rawInvNum;
+    if (isElec && rawInvNum.startsWith('E') && rawInvNum.length < 13) {
+      const typePart = rawInvNum.substring(0, 3);
+      const digitsPart = rawInvNum.substring(3).replace(/\D/g, '');
+      invNum = `${typePart}${digitsPart.padStart(10, '0')}`;
+    }
+
     let qrUrl = isInternal ? undefined : rawSaleData.qrcode_url;
     let secCode = rawSaleData.codigo_seguridad || '';
+
+    // Sanitizar QR existente en caso de traer MontoTotal=0 o dominios viejos
+    if (qrUrl) {
+      const saleTotalNum = Number(rawSaleData.total || 0);
+      if (saleTotalNum > 0) {
+        qrUrl = qrUrl.replace(/([?&]MontoTotal=)0(?:\.00)?(&|$)/, `$1${saleTotalNum.toFixed(2)}$2`);
+      }
+      qrUrl = qrUrl.replace('testecf.dgii.gov.do', 'ecf.dgii.gov.do/testecf')
+                   .replace('testfc.dgii.gov.do', 'fc.dgii.gov.do/testfc');
+    }
 
     if (!isInternal && isElec && !qrUrl) {
       let emisorRnc = dbCompanyInfo?.rnc?.replace(/[^0-9]/g, '') || '';
@@ -349,9 +367,13 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         }
       }
 
+      const isSandbox = typeof window !== 'undefined' && localStorage.getItem('alanube_environment') === 'SANDBOX';
+      const ecfPath = isSandbox ? 'testecf' : 'ecf';
+      const fcPath = isSandbox ? 'testfc' : 'ecf';
+
       const totalMonto = Number(rawSaleData.total || 0).toFixed(2);
       if (invNum.startsWith('E32') && !receptorRnc) {
-        qrUrl = `https://fc.dgii.gov.do/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${invNum}&MontoTotal=${totalMonto}&CodigoSeguridad=${secCode}`;
+        qrUrl = `https://fc.dgii.gov.do/${fcPath}/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${invNum}&MontoTotal=${totalMonto}&CodigoSeguridad=${secCode}`;
       } else {
         const fechaEmisionD = new Date(rawSaleData.created_at || rawDate);
         const day = String(fechaEmisionD.getDate()).padStart(2, '0');
@@ -359,12 +381,14 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         const year = fechaEmisionD.getFullYear();
         const fechaEmisionFormatted = `${day}-${month}-${year}`;
 
-        qrUrl = `https://ecf.dgii.gov.do/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(formattedDate)}&CodigoSeguridad=${secCode}`;
+        qrUrl = `https://ecf.dgii.gov.do/${ecfPath}/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${invNum}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(formattedDate)}&CodigoSeguridad=${secCode}`;
       }
     }
 
     return {
       ...rawSaleData,
+      encf: invNum.startsWith('E') ? invNum : rawSaleData.encf,
+      invoice_number: invNum.startsWith('E') ? invNum : rawSaleData.invoice_number,
       items: normalizedItems,
       codigo_seguridad: isInternal ? undefined : (rawSaleData.codigo_seguridad || secCode || undefined),
       qrcode_url: isInternal ? undefined : qrUrl,

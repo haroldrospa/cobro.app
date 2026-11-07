@@ -139,12 +139,13 @@ export class AlanubeClient {
         };
       }
 
-      // Si Alanube encoló o está firmando el documento (status REGISTERED / TO_SEND / WAITING_RESPONSE)
-      // y aún no devuelve documentStampUrl ni securityCode, consultamos rápidamente el estado por ID
-      if (data?.id && !data.documentStampUrl && !data.securityCode && data.legalStatus !== 'REJECTED') {
+      // Si Alanube está procesando el documento ante la DGII, consultar su estado
+      // hasta obtener el documentStampUrl oficial o legalStatus definitivo (ACCEPTED/REJECTED)
+      const isPendingStatus = !data?.legalStatus || ['REGISTERED', 'TO_SEND', 'WAITING_RESPONSE', 'IN_PROCESS', 'PENDING'].includes(data.legalStatus);
+      if (data?.id && (!data.documentStampUrl || isPendingStatus) && data.legalStatus !== 'REJECTED') {
         const checkUrl = `${url}/${encodeURIComponent(data.id)}${companyId ? `/idCompany/${encodeURIComponent(companyId)}` : ''}`;
-        for (let attempt = 0; attempt < 6; attempt++) {
-          await new Promise(r => setTimeout(r, 600));
+        for (let attempt = 0; attempt < 8; attempt++) {
+          await new Promise(r => setTimeout(r, 800));
           try {
             const checkRes = await fetch(checkUrl, {
               method: 'GET',
@@ -158,7 +159,7 @@ export class AlanubeClient {
               console.log(`[ALANUBE] Check attempt ${attempt + 1}:`, checkData);
               if (checkData) {
                 data = { ...data, ...checkData };
-                if (data.documentStampUrl || data.securityCode || data.legalStatus === 'REJECTED') {
+                if (data.documentStampUrl || data.legalStatus === 'ACCEPTED' || data.legalStatus === 'REJECTED') {
                   break;
                 }
               }
@@ -188,7 +189,7 @@ export class AlanubeClient {
         };
       }
 
-      const stampUrl: string | undefined = data.documentStampUrl || data.qrcode_url || data.qrCodeUrl;
+      const stampUrl: string | undefined = data.documentStampUrl || data.stampUrl || data.urlQr || data.qrUrl || data.qrcode_url || data.qrCodeUrl;
       let extractedSecCode: string | undefined = data.securityCode || data.codigo_seguridad || data.codigoSeguridad;
       if (!extractedSecCode && stampUrl) {
         const match = stampUrl.match(/[?&]CodigoSeguridad=([^&]+)/i);

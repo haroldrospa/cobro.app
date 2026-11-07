@@ -170,7 +170,13 @@ export const generateCleanInvoiceHTML = (
 
   const effectiveQrCodeUrl = (() => {
     if (invoiceData.qrCodeUrl && typeof invoiceData.qrCodeUrl === 'string' && invoiceData.qrCodeUrl.startsWith('http')) {
-      return invoiceData.qrCodeUrl;
+      let sanitizedUrl = invoiceData.qrCodeUrl;
+      const numTotal = Number(invoiceData.total || 0);
+      if (numTotal > 0) {
+        sanitizedUrl = sanitizedUrl.replace(/([?&]MontoTotal=)0(?:\.00)?(&|$)/, `$1${numTotal.toFixed(2)}$2`);
+      }
+      return sanitizedUrl.replace('testecf.dgii.gov.do', 'ecf.dgii.gov.do/testecf')
+                         .replace('testfc.dgii.gov.do', 'fc.dgii.gov.do/testfc');
     }
     // No generar un código QR si el comprobante no tiene código de seguridad oficial emitido por DGII/Alanube
     if (!hasElectronicStyle || !effectiveSecurityCode) return '';
@@ -185,13 +191,13 @@ export const generateCleanInvoiceHTML = (
     const totalMonto = Number(invoiceData.total || 0).toFixed(2);
 
     const isSandbox = typeof window !== 'undefined' && localStorage.getItem('alanube_environment') === 'SANDBOX';
-    const dgiiDomain = isSandbox ? 'testecf.dgii.gov.do' : 'ecf.dgii.gov.do';
-    const dgiiFcDomain = isSandbox ? 'testfc.dgii.gov.do' : 'fc.dgii.gov.do';
+    const ecfPath = isSandbox ? 'testecf' : 'ecf';
+    const fcPath = isSandbox ? 'testfc' : 'ecf';
 
     // Formato oficial DGII:
     // Para Facturas de Consumo Electrónicas (E32) sin RNC de comprador:
     if (displayNCF.startsWith('E32') && !receptorRnc) {
-      return `https://${dgiiFcDomain}/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${displayNCF}&MontoTotal=${totalMonto}&CodigoSeguridad=${effectiveSecurityCode}`;
+      return `https://fc.dgii.gov.do/${fcPath}/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${displayNCF}&MontoTotal=${totalMonto}&CodigoSeguridad=${effectiveSecurityCode}`;
     }
 
     // Para Crédito Fiscal (E31), Compras (E41), Gubernamental (E45) o con RNC de comprador:
@@ -201,7 +207,7 @@ export const generateCleanInvoiceHTML = (
     const year = fechaEmisionD.getFullYear();
     const fechaEmisionFormatted = `${day}-${month}-${year}`;
 
-    return `https://${dgiiDomain}/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${displayNCF}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}&CodigoSeguridad=${effectiveSecurityCode}`;
+    return `https://ecf.dgii.gov.do/${ecfPath}/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${displayNCF}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}&CodigoSeguridad=${effectiveSecurityCode}`;
   })();
 
   const displayPrefix = invoiceData.invoicePrefix || 'FAC-';
