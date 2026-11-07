@@ -95,12 +95,22 @@ export const useCreateSaleOffline = () => {
                     console.log('✅ Venta completada y sincronizada:', result.encf || result.invoice_number);
                     return completeSale;
                 } catch (error: any) {
-                    console.error('❌ Error en facturación online directa, pasando a cola offline:', error);
-                    // Si falla la conexión durante la subida, se continúa con el modo offline abajo
+                    console.error('❌ Error en facturación:', error);
+                    // Si es una factura electrónica rechazada o con error, relanzar para detener la venta y proteger la secuencia
+                    const isInternal = saleData.invoice_type_id === 'FAC' || saleData.invoice_type_code === 'FAC';
+                    if (!isInternal && (saleData.is_electronic || isElectronicActive)) {
+                        throw error;
+                    }
+                    // Si falla la conexión durante la subida en facturas tradicionales no electrónicas, continuar con cola offline
                 }
             }
 
             // Modo OFFLINE (o fallback de red): Guardar localmente y encolar
+            const isInternal = saleData.invoice_type_id === 'FAC' || saleData.invoice_type_code === 'FAC';
+            if (!isInternal && (saleData.is_electronic || isElectronicActive) && saleData.invoice_type_id !== 'COT') {
+                throw new Error("Se requiere conexión a internet para certificar y firmar comprobantes electrónicos (e-CF) con la DGII. La venta no fue procesada para proteger la secuencia fiscal.");
+            }
+
             console.warn('🔌 Guardando venta localmente en IndexedDB...');
             const localInvoiceNumber = await generateLocalInvoiceNumber(saleData.invoice_type_id);
 
@@ -444,18 +454,36 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 console.warn('[useSalesOffline] Could not cache sale in offlineDB:', cacheErr);
             }
 
-            // Emisión de Alanube en segundo plano (asíncrona)
+            // Emisión y validación sincrónica de Alanube con reversión automática en caso de rechazo
             const isInternalInvoice = saleData.invoice_type_id === 'FAC' || saleData.invoice_type_code === 'FAC';
+            const isElectronic = !isInternalInvoice && saleData.invoice_type_id !== 'COT' && Boolean(
+                rpcResult.is_electronic_active || rpcResult.is_electronic || saleData.is_electronic || (typeof rpcResult.invoice_number === "string" && rpcResult.invoice_number.startsWith("E"))
+            );
+
             if (isInternalInvoice) {
                 rpcResult.is_electronic = false;
                 rpcResult.is_electronic_active = false;
-            } else if (rpcResult.is_electronic_active || rpcResult.is_electronic || saleData.is_electronic || (typeof rpcResult.invoice_number === "string" && rpcResult.invoice_number.startsWith("E"))) {
-                console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
-                import('@/services/alanube/AlanubeService')
-                    .then(({ AlanubeService }) => {
-                        AlanubeService.emitirFacturaElectronica(rpcResult.id, true, fullSalePayload);
-                    })
-                    .catch(err => console.error('⚠️ Error al cargar AlanubeService para emisión en segundo plano:', err));
+            } else if (isElectronic) {
+                console.log('🔌 Alanube e-NCF está activo. Validando y firmando comprobante fiscal en la DGII...');
+                const { AlanubeService } = await import('@/services/alanube/AlanubeService');
+                const isSigned = await AlanubeService.emitirFacturaElectronica(rpcResult.id, false, fullSalePayload);
+                if (!isSigned) {
+                    const errorReason = AlanubeService.getLastError(rpcResult.id) || "El comprobante electrónico fue rechazado o no pudo ser firmado por la DGII.";
+                    console.warn(`[useSalesOffline] Factura electrónica rechazada. Revertiendo venta para no malutilizar e-NCF: ${errorReason}`);
+                    await AlanubeService.rollbackFailedSale(rpcResult.id, errorReason);
+                    throw new Error(`Comprobante fiscal rechazado por la DGII: ${errorReason}`);
+                }
+
+                // Sincronizar datos oficiales devueltos por la DGII
+                const signatureData = AlanubeService.getLatestSignature(rpcResult.id);
+                if (signatureData) {
+                    rpcResult.encf = signatureData.encf;
+                    rpcResult.invoice_number = signatureData.invoice_number || signatureData.encf;
+                    rpcResult.codigo_seguridad = signatureData.codigo_seguridad;
+                    rpcResult.fecha_firma = signatureData.fecha_firma;
+                    rpcResult.qrcode_url = signatureData.qrcode_url;
+                    rpcResult.estado_fiscal = signatureData.estado_fiscal;
+                }
             }
 
             return rpcResult;
@@ -741,9 +769,11 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         await Promise.all(updateAndRecipePromises);
     }));
 
-    // Emisión de Alanube en segundo plano (asíncrona)
-    if (isElectronicActive && storeId) {
-        console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
+    // Emisión de Alanube sincrónica con reversión en caso de rechazo
+    const isInternalFallback = saleData.invoice_type_id === 'FAC' || saleData.invoice_type_code === 'FAC';
+    const isElectronicFallback = !isInternalFallback && saleData.invoice_type_id !== 'COT' && isElectronicActive && Boolean(storeId);
+    if (isElectronicFallback) {
+        console.log('🔌 Alanube e-NCF está activo (fallback). Validando y firmando comprobante fiscal en la DGII...');
         const fullFallbackSale = {
             ...finalSale,
             items: saleData.items,
@@ -753,11 +783,24 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
             customer_rnc: (saleData as any).customer_rnc,
             store_id: storeId,
         };
-        import('@/services/alanube/AlanubeService')
-            .then(({ AlanubeService }) => {
-                AlanubeService.emitirFacturaElectronica(finalSale.id, true, fullFallbackSale);
-            })
-            .catch(err => console.error('⚠️ Error cargando AlanubeService para emisión en segundo plano:', err));
+        const { AlanubeService } = await import('@/services/alanube/AlanubeService');
+        const isSigned = await AlanubeService.emitirFacturaElectronica(finalSale.id, false, fullFallbackSale);
+        if (!isSigned) {
+            const errorReason = AlanubeService.getLastError(finalSale.id) || "El comprobante electrónico fue rechazado o no pudo ser firmado por la DGII.";
+            console.warn(`[useSalesOffline] Factura electrónica rechazada en fallback. Revirtiendo: ${errorReason}`);
+            await AlanubeService.rollbackFailedSale(finalSale.id, errorReason);
+            throw new Error(`Comprobante fiscal rechazado por la DGII: ${errorReason}`);
+        }
+
+        const signatureData = AlanubeService.getLatestSignature(finalSale.id);
+        if (signatureData) {
+            finalSale.encf = signatureData.encf;
+            finalSale.invoice_number = signatureData.invoice_number || signatureData.encf;
+            finalSale.codigo_seguridad = signatureData.codigo_seguridad;
+            finalSale.fecha_firma = signatureData.fecha_firma;
+            finalSale.qrcode_url = signatureData.qrcode_url;
+            finalSale.estado_fiscal = signatureData.estado_fiscal;
+        }
     }
 
     return finalSale;

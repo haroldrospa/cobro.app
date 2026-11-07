@@ -7,9 +7,14 @@ export class AlanubeService {
   private static configCache = new Map<string, { config: AlanubeConfig; timestamp: number }>();
   private static inFlightEmissions = new Map<string, Promise<boolean>>();
   private static latestSignatures = new Map<string, any>();
+  private static lastErrors = new Map<string, string>();
 
   static getLatestSignature(saleId: string) {
     return this.latestSignatures.get(saleId);
+  }
+
+  static getLastError(saleId: string): string | undefined {
+    return this.lastErrors.get(saleId);
   }
 
   private static notifySignatureUpdate(detail: {
@@ -460,6 +465,9 @@ export class AlanubeService {
         }
 
         if (response.errores && response.errores.length > 0) {
+          const errorMsg = response.errores.map(e => `${e.codigo ? `[${e.codigo}] ` : ''}${e.mensaje}`).join('\n');
+          this.lastErrors.set(saleId, errorMsg);
+
           this.notifySignatureUpdate({
             saleId,
             estado_fiscal: 'RECHAZADO'
@@ -476,7 +484,6 @@ export class AlanubeService {
           console.error('[Alanube] Error de validación fiscal:', response.errores);
 
           // Mostrar al usuario el motivo del rechazo fiscal (DGII) en un Toast descriptivo si no es silencioso
-          const errorMsg = response.errores.map(e => `${e.codigo ? `[${e.codigo}] ` : ''}${e.mensaje}`).join('\n');
           if (!silent) {
             import('@/hooks/use-toast').then(({ toast }) => {
               toast({
@@ -584,6 +591,9 @@ export class AlanubeService {
         return true;
 
       } catch (error: any) {
+        const errorMessage = error?.message || 'Error de conexión con Alanube / DGII';
+        this.lastErrors.set(saleId, errorMessage);
+
         this.notifySignatureUpdate({
           saleId,
           estado_fiscal: 'ERROR_CONEXION'
@@ -596,26 +606,26 @@ export class AlanubeService {
             estado_fiscal: 'ERROR_CONEXION'
           })
           .eq('id', saleId);
-          
-        const errorMessage = error?.message || 'Error de conexión con Alanube';
+
         console.error('[Alanube] Connection/Infrastructure Error:', error);
-        
+
         if (!silent) {
           import('@/hooks/use-toast').then(({ toast }) => {
             toast({
               title: "Error de Conexión Fiscal",
-              description: `No se pudo conectar con el servidor de facturación electrónica. Detalle: ${errorMessage}. La venta se guardó localmente y se sincronizará automáticamente al restablecer el servicio.`,
+              description: `No se pudo conectar con el servidor de facturación electrónica. Detalle: ${errorMessage}.`,
               variant: "destructive",
               duration: 10000
             });
           });
         }
-          
+
         return false;
       }
     } catch (err: any) {
       console.error('[Alanube] Error general emitiendo factura:', err);
       const generalMessage = err?.message || 'Error general en el módulo e-NCF';
+      this.lastErrors.set(saleId, generalMessage);
       if (!silent) {
         import('@/hooks/use-toast').then(({ toast }) => {
           toast({
@@ -626,6 +636,116 @@ export class AlanubeService {
           });
         });
       }
+      return false;
+    }
+  }
+
+  /**
+   * Revierte por completo una venta que no se pudo firmar en la DGII:
+   * 1. Restaura el stock de los productos descontados en inventario
+   * 2. Revierte la secuencia (current_number - 1) para no quemar/malutilizar el e-NCF
+   * 3. Elimina la venta de public.sale_items y public.sales
+   * 4. Limpia la venta de offlineDB
+   */
+  static async rollbackFailedSale(saleId: string, reason: string): Promise<boolean> {
+    try {
+      console.warn(`[Alanube] Revirtiendo venta no firmada ${saleId}. Motivo: ${reason}`);
+
+      // 1. Intentar RPC atómica si está instalada en la base de datos
+      const { error: rpcErr } = await supabase.rpc('rollback_failed_sale_transaction', {
+        p_sale_id: saleId,
+        p_reason: reason
+      });
+
+      if (!rpcErr) {
+        console.log(`✅ [Alanube] Rollback vía RPC completado para venta ${saleId}`);
+        try {
+          const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
+          await offlineDB.delete(OfflineStore.SALES, saleId);
+        } catch (_) {}
+        return true;
+      }
+
+      // 2. Fallback manual directo por cliente Supabase
+      const { data: sale } = await supabase
+        .from('sales')
+        .select('id, invoice_number, invoice_type_id, store_id, sale_items (product_id, quantity)')
+        .eq('id', saleId)
+        .maybeSingle();
+
+      if (!sale) return true;
+
+      // 2a. Restaurar stock de productos
+      if (Array.isArray(sale.sale_items)) {
+        for (const item of sale.sale_items) {
+          if (item.product_id && item.quantity > 0) {
+            try {
+              const { data: prod } = await supabase
+                .from('products')
+                .select('stock')
+                .eq('id', item.product_id)
+                .maybeSingle();
+              if (prod) {
+                await supabase
+                  .from('products')
+                  .update({ stock: (prod.stock || 0) + item.quantity })
+                  .eq('id', item.product_id);
+              }
+            } catch (stockErr) {
+              console.warn('[Alanube] Error restaurando stock en rollback:', stockErr);
+            }
+          }
+        }
+      }
+
+      // 2b. Revertir número de secuencia si este comprobante fue el último utilizado
+      if (sale.invoice_number && sale.invoice_type_id && sale.store_id) {
+        const numMatch = sale.invoice_number.match(/(\d+)$/);
+        if (numMatch) {
+          const usedSeq = parseInt(numMatch[1], 10);
+          try {
+            const { data: seqRow } = await supabase
+              .from('invoice_sequences')
+              .select('id, current_number')
+              .eq('store_id', sale.store_id)
+              .eq('invoice_type_id', sale.invoice_type_id)
+              .maybeSingle();
+
+            if (seqRow && Number(seqRow.current_number) === usedSeq) {
+              const newCurrent = Math.max(0, usedSeq - 1);
+              await supabase
+                .from('invoice_sequences')
+                .update({ current_number: newCurrent, updated_at: new Date().toISOString() })
+                .eq('id', seqRow.id);
+
+              const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
+              const settings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'invoice_sequences') || { key: 'invoice_sequences' };
+              if (settings[sale.invoice_type_id]) {
+                settings[sale.invoice_type_id].current = newCurrent;
+                await offlineDB.put(OfflineStore.SETTINGS, settings);
+              }
+              console.log(`🔄 [Alanube] Secuencia ${sale.invoice_type_id} revertida exitosamente a #${newCurrent}`);
+            }
+          } catch (seqErr) {
+            console.warn('[Alanube] Error revirtiendo secuencia:', seqErr);
+          }
+        }
+      }
+
+      // 2c. Eliminar items y venta
+      await supabase.from('sale_items').delete().eq('sale_id', saleId);
+      await supabase.from('sales').delete().eq('id', saleId);
+
+      // 2d. Limpiar de offlineDB
+      try {
+        const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
+        await offlineDB.delete(OfflineStore.SALES, saleId);
+      } catch (_) {}
+
+      console.log(`✅ [Alanube] Venta ${saleId} eliminada limpiamente tras fallo de firma.`);
+      return true;
+    } catch (err) {
+      console.error('[Alanube] Error ejecutando rollback de venta:', err);
       return false;
     }
   }
