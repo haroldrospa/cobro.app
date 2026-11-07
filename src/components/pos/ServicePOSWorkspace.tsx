@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +33,11 @@ import {
   ArrowLeftRight,
   Coins,
   Percent,
-  Clock
+  Clock,
+  ChevronRight,
+  ChevronLeft,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 import { CartItem } from '@/types/pos';
 import { Customer } from '@/hooks/useCustomers';
@@ -267,6 +272,15 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
     return parseInt(localStorage.getItem('cobro_quote_validity_days') || '30', 10) || 30;
   });
   const [notes, setNotes] = useState<string>('');
+  const [mobileStep, setMobileStep] = useState<1 | 2>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleStepChange = (step: 1 | 2) => {
+    setMobileStep(step);
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const [serviceLines, setServiceLines] = useState<ServiceLineItem[]>([
     {
@@ -400,6 +414,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   };
 
   const handleReset = () => {
+    setMobileStep(1);
     setSelectedCustomerId('');
     setNotes('');
     setPaymentCondition('contado');
@@ -575,11 +590,99 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
         </div>
       </header>
 
+      {/* Mobile Animated Stepper Header (visible on mobile < lg) */}
+      <div className="lg:hidden shrink-0 px-3 py-2 bg-card/85 backdrop-blur-md border-b border-border/50">
+        <div className="flex items-center justify-between gap-2 max-w-md mx-auto">
+          {/* Step 1 Button */}
+          <button
+            type="button"
+            onClick={() => handleStepChange(1)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all relative overflow-hidden cursor-pointer active:scale-98",
+              mobileStep === 1
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 shadow-xs shadow-emerald-500/10"
+                : "bg-muted/30 text-muted-foreground hover:text-foreground border border-border/40"
+            )}
+          >
+            <span className={cn(
+              "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-transform",
+              mobileStep === 1
+                ? "bg-emerald-500 text-slate-950 scale-105 shadow-xs"
+                : "bg-muted text-muted-foreground"
+            )}>
+              1
+            </span>
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="truncate">Servicios</span>
+              <span className="text-[9px] font-mono opacity-70 truncate">
+                {serviceLines.length} {serviceLines.length === 1 ? 'concepto' : 'conceptos'}
+              </span>
+            </div>
+            {mobileStep === 1 && (
+              <motion.div
+                layoutId="activeStepGlow"
+                className="absolute inset-0 bg-emerald-400/5 pointer-events-none"
+                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              />
+            )}
+          </button>
+
+          {/* Progress Indicator */}
+          <div className="w-8 flex items-center justify-center shrink-0">
+            <div className="h-1 w-full bg-border/60 relative overflow-hidden rounded-full">
+              <motion.div
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                initial={false}
+                animate={{ width: mobileStep === 2 ? '100%' : '15%' }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              />
+            </div>
+          </div>
+
+          {/* Step 2 Button */}
+          <button
+            type="button"
+            onClick={() => handleStepChange(2)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all relative overflow-hidden cursor-pointer active:scale-98",
+              mobileStep === 2
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 shadow-xs shadow-emerald-500/10"
+                : "bg-muted/30 text-muted-foreground hover:text-foreground border border-border/40"
+            )}
+          >
+            <span className={cn(
+              "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-transform",
+              mobileStep === 2
+                ? "bg-emerald-500 text-slate-950 scale-105 shadow-xs"
+                : "bg-muted text-muted-foreground"
+            )}>
+              2
+            </span>
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="truncate">Cobro & Fiscal</span>
+              <span className="text-[9px] font-mono text-emerald-400 font-bold truncate">
+                {activeCurrencySymbol} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            {mobileStep === 2 && (
+              <motion.div
+                layoutId="activeStepGlow"
+                className="absolute inset-0 bg-emerald-400/5 pointer-events-none"
+                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              />
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Main Content: On desktop fixed 2-column, on mobile fluid vertical scrolling */}
-      <div className="flex-1 min-h-0 p-2 sm:p-3 overflow-y-auto lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-3 pb-24 lg:pb-2.5">
+      <div ref={containerRef} className="flex-1 min-h-0 p-2 sm:p-3 overflow-y-auto lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-12 gap-2.5 sm:gap-3 pb-24 lg:pb-2.5">
         
-        {/* Left Column: Customer & Service Line Items */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col min-h-0 lg:h-full gap-2 shrink-0 lg:shrink lg:overflow-hidden">
+        {/* Left Column: Customer & Service Line Items (Paso 1 en móvil, col-span-7 en desktop) */}
+        <div className={cn(
+          "lg:col-span-7 xl:col-span-8 flex flex-col min-h-0 lg:h-full gap-2.5 shrink-0 lg:shrink lg:overflow-hidden animate-in fade-in duration-200",
+          mobileStep === 1 ? "flex" : "hidden lg:flex"
+        )}>
           
           {/* Top Bar: Customer Selector & Preset Service Pills */}
           <div className="p-2 sm:p-2.5 rounded-xl bg-card/60 border border-border/50 shrink-0 space-y-2 shadow-xs">
@@ -666,205 +769,212 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
 
             {/* Table Rows / Cards */}
             <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/20 p-1 sm:p-1.5 space-y-2 sm:space-y-0">
-              {serviceLines.map((line, idx) => {
-                const lineTotal = (Number(line.quantity) || 1) * (Number(line.unitPrice) || 0);
+              <AnimatePresence initial={false}>
+                {serviceLines.map((line, idx) => {
+                  const lineTotal = (Number(line.quantity) || 1) * (Number(line.unitPrice) || 0);
 
-                return (
-                  <div
-                    key={line.id}
-                    className="p-2 sm:px-2 sm:py-1.5 hover:bg-muted/10 transition-colors rounded-lg group bg-card/60 sm:bg-transparent border sm:border-0 border-border/50 shadow-2xs sm:shadow-none w-full max-w-full overflow-hidden"
-                  >
-                    {/* MOBILE CARD VIEW (< sm) - 100% responsivo, sin desbordamiento horizontal */}
-                    <div className="sm:hidden space-y-2 p-0.5 w-full max-w-full">
-                      {/* Fila 1: Numerador + Input concepto + Eliminar */}
-                      <div className="flex items-center gap-1.5 w-full">
-                        <span className="w-5 h-5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-black flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <Input
-                          placeholder="Concepto o descripción..."
-                          value={line.description}
-                          onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
-                          className="h-8 rounded-lg text-xs bg-background/90 border-border/50 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1 min-w-0"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLine(line.id)}
-                          className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
-                          title="Eliminar fila"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Fila 2: Cantidad y Precio en cuadrícula responsiva que nunca se desborda */}
-                      <div className="grid grid-cols-12 gap-2 items-center w-full">
-                        {/* Stepper Cantidad (5 cols) */}
-                        <div className="col-span-5 flex items-center bg-background/90 border border-border/50 rounded-lg p-0.5 h-8">
+                  return (
+                    <motion.div
+                      key={line.id}
+                      layout
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                      transition={{ duration: 0.2 }}
+                      className="p-2 sm:px-2 sm:py-1.5 hover:bg-muted/10 transition-colors rounded-lg group bg-card/60 sm:bg-transparent border sm:border-0 border-border/50 shadow-2xs sm:shadow-none w-full max-w-full overflow-hidden"
+                    >
+                      {/* MOBILE CARD VIEW (< sm) - 100% responsivo, sin desbordamiento horizontal */}
+                      <div className="sm:hidden space-y-2 p-0.5 w-full max-w-full">
+                        {/* Fila 1: Numerador + Input concepto + Eliminar */}
+                        <div className="flex items-center gap-1.5 w-full">
+                          <span className="w-5 h-5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-black flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <Input
+                            placeholder="Concepto o descripción..."
+                            value={line.description}
+                            onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
+                            className="h-8 rounded-lg text-xs bg-background/90 border-border/50 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1 min-w-0"
+                          />
                           <button
                             type="button"
-                            onClick={() => handleUpdateLine(line.id, 'quantity', Math.max(1, (Number(line.quantity) || 1) - 1))}
-                            className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                            onClick={() => handleRemoveLine(line.id)}
+                            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
+                            title="Eliminar fila"
                           >
-                            -
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
-                          <input
+                        </div>
+
+                        {/* Fila 2: Cantidad y Precio en cuadrícula responsiva que nunca se desborda */}
+                        <div className="grid grid-cols-12 gap-2 items-center w-full">
+                          {/* Stepper Cantidad (5 cols) */}
+                          <div className="col-span-5 flex items-center bg-background/90 border border-border/50 rounded-lg p-0.5 h-8">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateLine(line.id, 'quantity', Math.max(1, (Number(line.quantity) || 1) - 1))}
+                              className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="1"
+                              step="any"
+                              value={line.quantity}
+                              onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
+                              onFocus={e => e.target.select()}
+                              className="flex-1 text-center text-xs font-mono font-bold bg-transparent outline-none text-foreground min-w-0"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateLine(line.id, 'quantity', (Number(line.quantity) || 1) + 1)}
+                              className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Input de Precio con Moneda (7 cols) */}
+                          <div className="col-span-7 relative h-8">
+                            <span className="absolute left-2.5 top-2 text-[10px] font-bold text-muted-foreground/60 pointer-events-none select-none">
+                              {activeCurrencySymbol}
+                            </span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="any"
+                              placeholder="0.00"
+                              value={line.unitPrice === 0 ? '' : line.unitPrice}
+                              onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              onFocus={e => e.target.select()}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddLine();
+                                }
+                              }}
+                              className="h-8 pl-8 pr-2 text-right font-mono font-bold text-xs text-emerald-400 bg-background/90 border-border/50 rounded-lg focus-visible:border-emerald-500 w-full"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Fila 3: ITBIS a la izquierda y Total a la derecha */}
+                        <div className="flex items-center justify-between pt-0.5 px-0.5 text-xs w-full">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTaxRate(line.id, line.taxRate)}
+                            className={cn(
+                              "px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer active:scale-95",
+                              line.taxRate > 0
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                : "bg-muted/40 text-muted-foreground border-border/40"
+                            )}
+                            title="Alternar ITBIS"
+                          >
+                            ITBIS: {line.taxRate > 0 ? `${line.taxRate}%` : 'Exento'}
+                          </button>
+
+                          <div className="text-right">
+                            <span className="text-[10px] text-muted-foreground mr-1 font-medium">Subtotal:</span>
+                            <span className="font-mono font-bold text-xs text-foreground">
+                              {activeCurrencySymbol} {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DESKTOP TABLE ROW (>= sm) */}
+                      <div className="hidden sm:grid grid-cols-12 gap-2 items-center">
+                        {/* Description */}
+                        <div className="col-span-5 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <Input
+                            placeholder="Concepto o servicio (ej. Asesoría fiscal)..."
+                            value={line.description}
+                            onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
+                            className="h-8 rounded-lg text-xs bg-background/60 border-border/40 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1"
+                          />
+                        </div>
+
+                        {/* Quantity */}
+                        <div className="col-span-2">
+                          <Input
                             type="number"
                             min="1"
                             step="any"
                             value={line.quantity}
                             onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
                             onFocus={e => e.target.select()}
-                            className="flex-1 text-center text-xs font-mono font-bold bg-transparent outline-none text-foreground min-w-0"
+                            className="h-8 w-full text-center font-mono font-bold rounded-lg text-xs bg-background/60 border-border/40"
                           />
+                        </div>
+
+                        {/* Unit Price */}
+                        <div className="col-span-2">
+                          <div className="relative">
+                            <span className="absolute left-2 top-2 text-[10px] font-bold text-muted-foreground/60 pointer-events-none select-none">
+                              {activeCurrencySymbol}
+                            </span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={line.unitPrice === 0 ? '' : line.unitPrice}
+                              onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              onFocus={e => e.target.select()}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddLine();
+                                }
+                              }}
+                              placeholder="0.00"
+                              className="h-8 w-full pl-7 text-right font-mono font-bold text-emerald-400 rounded-lg text-xs bg-background/60 border-border/40"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Tax Toggle */}
+                        <div className="col-span-1 flex justify-center">
                           <button
                             type="button"
-                            onClick={() => handleUpdateLine(line.id, 'quantity', (Number(line.quantity) || 1) + 1)}
-                            className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                            onClick={() => handleToggleTaxRate(line.id, line.taxRate)}
+                            className={cn(
+                              "h-7.5 px-2 rounded-lg text-[10px] font-bold border transition-all cursor-pointer active:scale-95",
+                              line.taxRate > 0
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                : "bg-muted/40 text-muted-foreground border-border/40"
+                            )}
+                            title="Alternar ITBIS (18% o Exento)"
                           >
-                            +
+                            {line.taxRate > 0 ? `${line.taxRate}%` : '0%'}
                           </button>
                         </div>
 
-                        {/* Input de Precio con Moneda (7 cols) */}
-                        <div className="col-span-7 relative h-8">
-                          <span className="absolute left-2.5 top-2 text-[10px] font-bold text-muted-foreground/60 pointer-events-none select-none">
-                            {activeCurrencySymbol}
-                          </span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="any"
-                            placeholder="0.00"
-                            value={line.unitPrice === 0 ? '' : line.unitPrice}
-                            onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            onFocus={e => e.target.select()}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddLine();
-                              }
-                            }}
-                            className="h-8 pl-8 pr-2 text-right font-mono font-bold text-xs text-emerald-400 bg-background/90 border-border/50 rounded-lg focus-visible:border-emerald-500 w-full"
-                          />
+                        {/* Total */}
+                        <div className="col-span-1 text-right font-mono font-bold text-xs text-foreground truncate" title={lineTotal.toFixed(2)}>
+                          {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+
+                        {/* Delete Action */}
+                        <div className="col-span-1 flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLine(line.id)}
+                            className="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            title="Eliminar fila"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </div>
-
-                      {/* Fila 3: ITBIS a la izquierda y Total a la derecha */}
-                      <div className="flex items-center justify-between pt-0.5 px-0.5 text-xs w-full">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleTaxRate(line.id, line.taxRate)}
-                          className={cn(
-                            "px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer active:scale-95",
-                            line.taxRate > 0
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                              : "bg-muted/40 text-muted-foreground border-border/40"
-                          )}
-                          title="Alternar ITBIS"
-                        >
-                          ITBIS: {line.taxRate > 0 ? `${line.taxRate}%` : 'Exento'}
-                        </button>
-
-                        <div className="text-right">
-                          <span className="text-[10px] text-muted-foreground mr-1 font-medium">Subtotal:</span>
-                          <span className="font-mono font-bold text-xs text-foreground">
-                            {activeCurrencySymbol} {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* DESKTOP TABLE ROW (>= sm) */}
-                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center">
-                      {/* Description */}
-                      <div className="col-span-5 flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <Input
-                          placeholder="Concepto o servicio (ej. Asesoría fiscal)..."
-                          value={line.description}
-                          onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
-                          className="h-8 rounded-lg text-xs bg-background/60 border-border/40 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1"
-                        />
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          min="1"
-                          step="any"
-                          value={line.quantity}
-                          onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
-                          onFocus={e => e.target.select()}
-                          className="h-8 w-full text-center font-mono font-bold rounded-lg text-xs bg-background/60 border-border/40"
-                        />
-                      </div>
-
-                      {/* Unit Price */}
-                      <div className="col-span-2">
-                        <div className="relative">
-                          <span className="absolute left-2 top-2 text-[10px] font-bold text-muted-foreground/60 pointer-events-none select-none">
-                            {activeCurrencySymbol}
-                          </span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={line.unitPrice === 0 ? '' : line.unitPrice}
-                            onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            onFocus={e => e.target.select()}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddLine();
-                              }
-                            }}
-                            placeholder="0.00"
-                            className="h-8 w-full pl-7 text-right font-mono font-bold text-emerald-400 rounded-lg text-xs bg-background/60 border-border/40"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Tax Toggle */}
-                      <div className="col-span-1 flex justify-center">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleTaxRate(line.id, line.taxRate)}
-                          className={cn(
-                            "h-7.5 px-2 rounded-lg text-[10px] font-bold border transition-all cursor-pointer active:scale-95",
-                            line.taxRate > 0
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                              : "bg-muted/40 text-muted-foreground border-border/40"
-                          )}
-                          title="Alternar ITBIS (18% o Exento)"
-                        >
-                          {line.taxRate > 0 ? `${line.taxRate}%` : '0%'}
-                        </button>
-                      </div>
-
-                      {/* Total */}
-                      <div className="col-span-1 text-right font-mono font-bold text-xs text-foreground truncate" title={lineTotal.toFixed(2)}>
-                        {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-
-                      {/* Delete Action */}
-                      <div className="col-span-1 flex items-center justify-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLine(line.id)}
-                          className="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                          title="Eliminar fila"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
 
             {/* Table Footer: Add Line Button */}
@@ -886,10 +996,40 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             </div>
           </div>
 
+          {/* Mobile Step 1 Footer: Clean summary card + Continuar al Pago button */}
+          <div className="lg:hidden p-3 bg-card/90 backdrop-blur-md border border-border/60 rounded-2xl shadow-lg mt-1 space-y-2.5 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider flex items-center gap-1">
+                  <span>Subtotal actual</span>
+                  <span className="text-muted-foreground/60">({serviceLines.length} {serviceLines.length === 1 ? 'concepto' : 'conceptos'})</span>
+                </span>
+                <span className={cn(
+                  "text-lg font-black font-mono leading-tight",
+                  currency === 'USD' ? "text-blue-400" : "text-emerald-400"
+                )}>
+                  {activeCurrencySymbol} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => handleStepChange(2)}
+                className="h-10 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+              >
+                <span>Continuar al Pago</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
         </div>
 
-        {/* Right Column: Invoicing Config, Notes, Totals & Emit Button */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col min-h-0 lg:h-full justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl border border-border/60 bg-card/60 shadow-xs shrink-0 lg:shrink lg:overflow-hidden">
+        {/* Right Column: Invoicing Config, Notes, Totals & Emit Button (Paso 2 en móvil, col-span-5 en desktop) */}
+        <div className={cn(
+          "lg:col-span-5 xl:col-span-4 flex flex-col min-h-0 lg:h-full justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl border border-border/60 bg-card/60 shadow-xs shrink-0 lg:shrink lg:overflow-hidden animate-in fade-in duration-200",
+          mobileStep === 2 ? "flex" : "hidden lg:flex"
+        )}>
           
           {/* Top Form Controls: Scrollable internally on laptops so Totals & Action buttons are ALWAYS visible! */}
           <div className="space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1.5">
@@ -1287,32 +1427,75 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                 </div>
               )}
 
-              <Button
-                type="button"
-                size="default"
-                disabled={isEmitting}
-                onClick={handleEmitDirect}
-                className={cn(
-                  "h-10 w-full font-bold text-xs sm:text-sm text-white rounded-xl shadow-md gap-2 transition-all cursor-pointer active:scale-95",
-                  isQuote 
-                    ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20" 
-                    : isPendingPayment
-                      ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20"
-                      : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
-                )}
-              >
-                {isEmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{isQuote ? 'Generando Cotización...' : (isPendingPayment ? 'Emitiendo Factura Pendiente...' : 'Emitiendo Factura Carta...')}</span>
-                  </>
-                ) : (
-                  <>
-                    {isPendingPayment ? <Clock className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                    <span>{isQuote ? 'Guardar Cotización en POS' : (isPendingPayment ? 'Emitir Factura (Pendiente de Pago)' : 'Emitir Factura (Carta)')}</span>
-                  </>
-                )}
-              </Button>
+              {/* Mobile Actions: Back to Step 1 + Emit button */}
+              <div className="lg:hidden flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleStepChange(1)}
+                  className="h-11 px-3 rounded-xl text-xs font-bold border-border/60 text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer shrink-0 active:scale-95 transition-all"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Conceptos</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  size="default"
+                  disabled={isEmitting}
+                  onClick={handleEmitDirect}
+                  className={cn(
+                    "h-11 flex-1 font-bold text-xs sm:text-sm text-white rounded-xl shadow-md gap-2 transition-all cursor-pointer active:scale-95",
+                    isQuote 
+                      ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20" 
+                      : isPendingPayment
+                        ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20"
+                        : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
+                  )}
+                >
+                  {isEmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{isQuote ? 'Generando...' : (isPendingPayment ? 'Emitiendo...' : 'Emitiendo...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      {isPendingPayment ? <Clock className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                      <span className="truncate">{isQuote ? 'Guardar Cotización' : (isPendingPayment ? 'Factura Pendiente' : 'Emitir Factura (Carta)')}</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Desktop Full-Width Emit Button */}
+              <div className="hidden lg:block">
+                <Button
+                  type="button"
+                  size="default"
+                  disabled={isEmitting}
+                  onClick={handleEmitDirect}
+                  className={cn(
+                    "h-10 w-full font-bold text-xs sm:text-sm text-white rounded-xl shadow-md gap-2 transition-all cursor-pointer active:scale-95",
+                    isQuote 
+                      ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20" 
+                      : isPendingPayment
+                        ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20"
+                        : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
+                  )}
+                >
+                  {isEmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{isQuote ? 'Generando Cotización...' : (isPendingPayment ? 'Emitiendo Factura Pendiente...' : 'Emitiendo Factura Carta...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      {isPendingPayment ? <Clock className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                      <span>{isQuote ? 'Guardar Cotización en POS' : (isPendingPayment ? 'Emitir Factura (Pendiente de Pago)' : 'Emitir Factura (Carta)')}</span>
+                    </>
+                  )}
+                </Button>
+              </div>
 
               <Button
                 type="button"
