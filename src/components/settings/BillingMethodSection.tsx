@@ -331,37 +331,6 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                 <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID de 26 caracteres) de tu empresa en el portal de Alanube (ej: 01M0TYPKJ0JGVM53K56D7X9P7Z). Necesario para enrutar los e-CF de cuentas Reseller.</p>
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="certificado_digital">Certificado Digital (Opcional - Firma Delegada)</Label>
-                <div className="relative">
-                  <FileText className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="certificado_digital"
-                    type="password"
-                    className="pl-9"
-                    placeholder="Contenido del certificado (.p12 / .pfx) en base64..."
-                    value={formData.certificado_digital}
-                    onChange={(e) => setFormData({ ...formData, certificado_digital: e.target.value })}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Opcional. Alanube realiza la firma delegada en la nube utilizando el Token de Autenticación. Déjalo en blanco a menos que requieras firmar localmente.</p>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="certificado_password">Contraseña del Certificado (Opcional)</Label>
-                <div className="relative">
-                  <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="certificado_password"
-                    type="password"
-                    className="pl-9"
-                    placeholder="••••••••"
-                    value={formData.certificado_password}
-                    onChange={(e) => setFormData({ ...formData, certificado_password: e.target.value })}
-                  />
-                </div>
-              </div>
-
               {connectionStatus && (
                 <div className={`md:col-span-2 p-3 rounded-lg border flex items-center gap-2 text-sm ${connectionStatus.success ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
                   {connectionStatus.success ? (
