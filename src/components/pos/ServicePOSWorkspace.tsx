@@ -174,6 +174,16 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   const [applyTax, setApplyTax] = useState<boolean>(true);
   const [priceIncludesTax, setPriceIncludesTax] = useState<boolean>(false);
 
+  const [serviceLines, setServiceLines] = useState<ServiceLineItem[]>([
+    {
+      id: crypto.randomUUID(),
+      description: '',
+      quantity: 1,
+      unitPrice: 0,
+      taxRate: defaultTaxRate,
+    }
+  ]);
+
   const handleToggleApplyTax = (enabled: boolean) => {
     setApplyTax(enabled);
     setServiceLines(prev => prev.map(line => ({
@@ -262,8 +272,6 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       });
     }
   }, [effectiveIsElectronic, invoiceTypes]);
-  (() => {
-  });
 
   const [paymentCondition, setPaymentCondition] = useState<'contado' | 'credito'>('contado');
   const [isPendingPayment, setIsPendingPayment] = useState<boolean>(false);
@@ -281,16 +289,6 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-
-  const [serviceLines, setServiceLines] = useState<ServiceLineItem[]>([
-    {
-      id: crypto.randomUUID(),
-      description: '',
-      quantity: 1,
-      unitPrice: 0,
-      taxRate: defaultTaxRate,
-    }
-  ]);
 
   const selectedCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId);

@@ -318,6 +318,15 @@ const POSContent: React.FC = () => {
     is_active: true,
   };
 
+  const { data: rawStore, isLoading: isLoadingStore, isPending: isPendingStore } = useUserStore();
+  const store = rawStore || {
+    id: profile?.store_id || '00000000-0000-0000-0000-000000000000',
+    store_code: 'STORE',
+    store_name: 'Mi Tienda',
+    slug: 'mi-tienda',
+    is_active: true,
+  };
+
   const isWaiter = profile?.role === 'waiter' || profile?.role === 'mesero';
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [showTableSelectorDialog, setShowTableSelectorDialog] = useState(false);
@@ -421,7 +430,7 @@ const POSContent: React.FC = () => {
     });
   }, [currentWebOrderId, queryClient, toast]);
 
-  const storeId = (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000') ? profile.store_id : undefined;
+  const storeId = (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000') ? profile.store_id : store?.id;
 
   const { products: allProducts, customers = [], refreshMasterData, isLoading: isMasterDataLoading } = useMasterData();
   const updateCustomerMutation = useUpdateCustomer();
@@ -492,14 +501,6 @@ const POSContent: React.FC = () => {
       setNoPhoneCustomer(null);
     }
   }, [selectedCustomer, customers]);
-  const { data: rawStore, isLoading: isLoadingStore, isPending: isPendingStore } = useUserStore();
-  const store = rawStore || {
-    id: profile?.store_id || '00000000-0000-0000-0000-000000000000',
-    store_code: 'STORE',
-    store_name: 'Mi Tienda',
-    slug: 'mi-tienda',
-    is_active: true,
-  };
   const { settings: rawStoreSettings, loadingSettings, updateSettings } = useStoreSettings();
   const storeSettings = {
     invoice_prefix: 'FAC-',
