@@ -2101,6 +2101,24 @@ const POSContent: React.FC = () => {
       };
 
       const result = await createSale.mutateAsync(salePayload as any);
+      let signedInfo: any = null;
+
+      // Si es factura electrónica (e-NCF), esperar la firma de Alanube/DGII para tener el QR y código de seguridad real
+      if (isElectronicActive && code !== 'FAC' && code !== 'COT') {
+        try {
+          const { AlanubeService } = await import('@/services/alanube/AlanubeService');
+          await AlanubeService.emitirFacturaElectronica(result?.id || salePayload.id, false, {
+            ...salePayload,
+            id: result?.id || salePayload.id,
+            invoice_number: result?.invoice_number || (result as any)?.encf,
+            encf: (result as any)?.encf || result?.invoice_number,
+            customer: selectedCustomerData,
+          });
+          signedInfo = AlanubeService.getLatestSignature(result?.id || salePayload.id);
+        } catch (signErr) {
+          console.warn('[POS] Error al emitir en Alanube síncronamente:', signErr);
+        }
+      }
 
       const printSaleData = {
         id: result?.id || salePayload.id,
@@ -2132,15 +2150,15 @@ const POSContent: React.FC = () => {
         payment_status: paymentStatus,
         is_pending_payment: isPending,
         customer: selectedCustomerData,
-        invoice_number: result?.invoice_number || (result as any)?.encf || '',
+        invoice_number: signedInfo?.encf || result?.invoice_number || (result as any)?.encf || '',
         invoiceType: code,
         currency: data.currency || (storeSettings?.currency === 'USD' ? 'USD' : 'DOP'),
-        is_electronic: (result as any)?.is_electronic,
-        encf: (result as any)?.encf,
-        codigo_seguridad: (result as any)?.codigo_seguridad,
-        fecha_firma: (result as any)?.fecha_firma,
-        qrcode_url: (result as any)?.qrcode_url,
-        estado_fiscal: (result as any)?.estado_fiscal,
+        is_electronic: (isElectronicActive && code !== 'FAC' && code !== 'COT') || Boolean((result as any)?.is_electronic),
+        encf: signedInfo?.encf || (result as any)?.encf,
+        codigo_seguridad: signedInfo?.codigo_seguridad || (result as any)?.codigo_seguridad,
+        fecha_firma: signedInfo?.fecha_firma || (result as any)?.fecha_firma,
+        qrcode_url: signedInfo?.qrcode_url || (result as any)?.qrcode_url,
+        estado_fiscal: signedInfo?.estado_fiscal || (result as any)?.estado_fiscal || ((isElectronicActive && code !== 'FAC' && code !== 'COT') ? 'PENDIENTE' : null),
         profile: {
           full_name: profile?.full_name || 'Cajero'
         },

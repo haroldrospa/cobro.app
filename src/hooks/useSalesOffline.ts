@@ -391,6 +391,59 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
         if (rpcResult) {
             console.log('✅ Facturación rápida via RPC completada con éxito:', rpcResult.invoice_number);
 
+            // Si habían items que no son de inventario (servicios o conceptos directos), insertarlos en sale_items
+            const customItems = saleData.items.filter(item => !VIRTUAL_ITEM_IDS.includes(item.id) && !isValidUuid(item.id));
+            if (customItems.length > 0) {
+                try {
+                    const customSaleItems = customItems.map(item => {
+                        const taxRate = Number(item.tax) || 0;
+                        const qty = Number(item.quantity) || 1;
+                        const price = Number(item.price) || 0;
+                        const gross = price * qty;
+                        let subtotal = gross;
+                        let taxAmount = 0;
+                        if (item.cost_includes_tax && taxRate > 0) {
+                            subtotal = gross / (1 + taxRate);
+                            taxAmount = gross - subtotal;
+                        } else {
+                            taxAmount = gross * taxRate;
+                        }
+                        return {
+                            sale_id: rpcResult.id,
+                            product_id: null,
+                            quantity: qty,
+                            unit_price: price,
+                            discount_percentage: 0,
+                            tax_percentage: taxRate * 100,
+                            subtotal: Number(subtotal.toFixed(2)),
+                            discount_amount: 0,
+                            tax_amount: Number(taxAmount.toFixed(2)),
+                            total: Number(gross.toFixed(2)),
+                            store_id: storeId
+                        };
+                    });
+                    await supabase.from('sale_items').insert(customSaleItems);
+                } catch (customErr) {
+                    console.warn('[useSalesOffline] Error inserting non-inventory items to sale_items:', customErr);
+                }
+            }
+
+            const fullSalePayload = {
+                ...rpcResult,
+                items: saleData.items,
+                sale_items: saleData.items,
+                customer: (saleData as any).customer,
+                customer_name: (saleData as any).customer_name,
+                customer_rnc: (saleData as any).customer_rnc,
+                store_id: storeId,
+            };
+            try {
+                const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
+                await offlineDB.put(OfflineStore.SALES, fullSalePayload);
+            } catch (cacheErr) {
+                console.warn('[useSalesOffline] Could not cache sale in offlineDB:', cacheErr);
+            }
+
             // Emisión de Alanube en segundo plano (asíncrona)
             const isInternalInvoice = saleData.invoice_type_id === 'FAC' || saleData.invoice_type_code === 'FAC';
             if (isInternalInvoice) {
@@ -400,7 +453,7 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
                 console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
                 import('@/services/alanube/AlanubeService')
                     .then(({ AlanubeService }) => {
-                        AlanubeService.emitirFacturaElectronica(rpcResult.id, true);
+                        AlanubeService.emitirFacturaElectronica(rpcResult.id, true, fullSalePayload);
                     })
                     .catch(err => console.error('⚠️ Error al cargar AlanubeService para emisión en segundo plano:', err));
             }
@@ -691,9 +744,18 @@ async function saveSaleToSupabase(saleData: CreateSaleData) {
     // Emisión de Alanube en segundo plano (asíncrona)
     if (isElectronicActive && storeId) {
         console.log('🔌 Alanube e-NCF está activo. Emitiendo comprobante electrónico en segundo plano...');
+        const fullFallbackSale = {
+            ...finalSale,
+            items: saleData.items,
+            sale_items: saleData.items,
+            customer: (saleData as any).customer,
+            customer_name: (saleData as any).customer_name,
+            customer_rnc: (saleData as any).customer_rnc,
+            store_id: storeId,
+        };
         import('@/services/alanube/AlanubeService')
             .then(({ AlanubeService }) => {
-                AlanubeService.emitirFacturaElectronica(finalSale.id, true);
+                AlanubeService.emitirFacturaElectronica(finalSale.id, true, fullFallbackSale);
             })
             .catch(err => console.error('⚠️ Error cargando AlanubeService para emisión en segundo plano:', err));
     }

@@ -125,20 +125,7 @@ export const generateProfessionalPDF = async (companyInfo: CompanyInfo, saleData
                 }
             }
         }
-        if (!code || code === 'undefined') {
-            const seed = saleData.encf || saleData.invoiceNumber || invoiceNumber || 'E32000000001';
-            let hash = 0;
-            for (let i = 0; i < seed.length; i++) {
-                hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let fallbackCode = '';
-            for (let i = 0; i < 6; i++) {
-                const index = Math.abs((hash + i * 13) % chars.length);
-                fallbackCode += chars[index];
-            }
-            code = fallbackCode;
-        }
+        if (code === 'undefined' || code === 'null') code = '';
         return code;
     })();
 

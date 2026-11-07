@@ -143,7 +143,7 @@ export class AlanubeClient {
       // y aún no devuelve documentStampUrl ni securityCode, consultamos rápidamente el estado por ID
       if (data?.id && !data.documentStampUrl && !data.securityCode && data.legalStatus !== 'REJECTED') {
         const checkUrl = `${url}/${encodeURIComponent(data.id)}${companyId ? `/idCompany/${encodeURIComponent(companyId)}` : ''}`;
-        for (let attempt = 0; attempt < 3; attempt++) {
+        for (let attempt = 0; attempt < 6; attempt++) {
           await new Promise(r => setTimeout(r, 600));
           try {
             const checkRes = await fetch(checkUrl, {

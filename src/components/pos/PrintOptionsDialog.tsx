@@ -576,7 +576,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       ? (saleData.invoiceType === 'B01' ? 'E31' : saleData.invoiceType === 'B02' ? 'E32' : (saleData.invoiceType?.replace('B', 'E') || 'E32'))
       : (saleData.invoiceType || 'B02'));
 
-  // Robust Security Code extraction & fallback generation
+  // Robust Security Code extraction from DGII/Alanube official response
   const securityCode = (() => {
     let code = saleData.codigo_seguridad;
     if (!code || code === 'undefined') {
@@ -591,22 +591,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         }
       }
     }
-    // If still missing or invalid, generate a deterministic 6-character DGII security code from the ENCF number
-    if (!code || code === 'undefined') {
-      const seed = saleData.encf || invoiceNumber || 'E32000000001';
-      let hash = 0;
-      for (let i = 0; i < seed.length; i++) {
-        hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let fallbackCode = '';
-      for (let i = 0; i < 6; i++) {
-        const index = Math.abs((hash + i * 13) % chars.length);
-        fallbackCode += chars[index];
-      }
-      code = fallbackCode;
-    }
-    return code;
+    return (code && code !== 'undefined' && code !== 'null') ? code : '';
   })();
 
   const translatePaymentMethod = (method?: string) => {
@@ -1753,6 +1738,31 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                   )}
                 </div>
                 <p className="text-[9px] text-muted-foreground mt-1.5 text-center font-semibold">Autorizado por la DGII</p>
+              </Card>
+            )}
+
+            {isElectronic && !isInternalInvoice && !saleData.qrcode_url && (
+              <Card className="p-3 flex flex-col items-center justify-center border-amber-500/20 bg-amber-500/5 text-center">
+                <div className="flex items-center gap-2 text-amber-600 mb-1 font-semibold text-xs">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Obteniendo timbre digital de DGII...</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground max-w-[240px] leading-relaxed">
+                  El comprobante está siendo firmado electrónicamente con la DGII. El código QR aparecerá automáticamente al completarse la firma.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 text-[10px] h-7 border-amber-500/30 text-amber-700 hover:bg-amber-500/10"
+                  onClick={() => {
+                    import('@/services/alanube/AlanubeService').then(({ AlanubeService }) => {
+                      AlanubeService.emitirFacturaElectronica(propSaleData.id, false, propSaleData);
+                    });
+                  }}
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Consultar timbre ahora
+                </Button>
               </Card>
             )}
 

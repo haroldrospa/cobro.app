@@ -147,19 +147,7 @@ export const generateCleanInvoiceHTML = (
     if (invoiceData.securityCode && invoiceData.securityCode !== 'undefined' && invoiceData.securityCode !== 'null') {
       return String(invoiceData.securityCode).trim();
     }
-    if (!hasElectronicStyle) return '';
-    // Generar código de seguridad determinista DGII de 6 caracteres si aún no ha retornado de Alanube
-    const seed = displayNCF || 'E32000000001';
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let fallback = '';
-    for (let i = 0; i < 6; i++) {
-      fallback += chars[Math.abs((hash + i * 13) % chars.length)];
-    }
-    return fallback;
+    return '';
   })();
 
   const effectiveSignatureDate = (() => {
@@ -184,7 +172,8 @@ export const generateCleanInvoiceHTML = (
     if (invoiceData.qrCodeUrl && typeof invoiceData.qrCodeUrl === 'string' && invoiceData.qrCodeUrl.startsWith('http')) {
       return invoiceData.qrCodeUrl;
     }
-    if (!hasElectronicStyle) return '';
+    // No generar un código QR si el comprobante no tiene código de seguridad oficial emitido por DGII/Alanube
+    if (!hasElectronicStyle || !effectiveSecurityCode) return '';
 
     // Obtener RNC del Emisor (con fallback a Alanube)
     let emisorRnc = (companyData.rnc || '').replace(/[^0-9]/g, '');
@@ -195,10 +184,14 @@ export const generateCleanInvoiceHTML = (
     const receptorRnc = (invoiceData.customerRnc || '').replace(/[^0-9]/g, '');
     const totalMonto = Number(invoiceData.total || 0).toFixed(2);
 
+    const isSandbox = typeof window !== 'undefined' && localStorage.getItem('alanube_environment') === 'SANDBOX';
+    const dgiiDomain = isSandbox ? 'testecf.dgii.gov.do' : 'ecf.dgii.gov.do';
+    const dgiiFcDomain = isSandbox ? 'testfc.dgii.gov.do' : 'fc.dgii.gov.do';
+
     // Formato oficial DGII:
     // Para Facturas de Consumo Electrónicas (E32) sin RNC de comprador:
     if (displayNCF.startsWith('E32') && !receptorRnc) {
-      return `https://fc.dgii.gov.do/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${displayNCF}&MontoTotal=${totalMonto}&CodigoSeguridad=${effectiveSecurityCode}`;
+      return `https://${dgiiFcDomain}/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${displayNCF}&MontoTotal=${totalMonto}&CodigoSeguridad=${effectiveSecurityCode}`;
     }
 
     // Para Crédito Fiscal (E31), Compras (E41), Gubernamental (E45) o con RNC de comprador:
@@ -208,7 +201,7 @@ export const generateCleanInvoiceHTML = (
     const year = fechaEmisionD.getFullYear();
     const fechaEmisionFormatted = `${day}-${month}-${year}`;
 
-    return `https://ecf.dgii.gov.do/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${displayNCF}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}&CodigoSeguridad=${effectiveSecurityCode}`;
+    return `https://${dgiiDomain}/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${displayNCF}&FechaEmision=${fechaEmisionFormatted}&MontoTotal=${totalMonto}&FechaFirma=${encodeURIComponent(effectiveSignatureDate)}&CodigoSeguridad=${effectiveSecurityCode}`;
   })();
 
   const displayPrefix = invoiceData.invoicePrefix || 'FAC-';

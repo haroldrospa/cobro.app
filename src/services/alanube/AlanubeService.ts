@@ -6,6 +6,11 @@ import { AlanubeConfig, AlanubeDocument, AlanubeDocumentItem } from './types';
 export class AlanubeService {
   private static configCache = new Map<string, { config: AlanubeConfig; timestamp: number }>();
   private static inFlightEmissions = new Map<string, Promise<boolean>>();
+  private static latestSignatures = new Map<string, any>();
+
+  static getLatestSignature(saleId: string) {
+    return this.latestSignatures.get(saleId);
+  }
 
   private static notifySignatureUpdate(detail: {
     saleId: string;
@@ -128,13 +133,13 @@ export class AlanubeService {
   /**
    * Procesa la emisión electrónica de una factura existente (deduplicando llamadas concurrentes)
    */
-  static async emitirFacturaElectronica(saleId: string, silent: boolean = false): Promise<boolean> {
+  static async emitirFacturaElectronica(saleId: string, silent: boolean = false, initialSaleData?: any): Promise<boolean> {
     const existingPromise = this.inFlightEmissions.get(saleId);
     if (existingPromise) {
       return existingPromise;
     }
 
-    const emissionPromise = this._executeEmision(saleId, silent).finally(() => {
+    const emissionPromise = this._executeEmision(saleId, silent, initialSaleData).finally(() => {
       this.inFlightEmissions.delete(saleId);
     });
 
@@ -142,7 +147,7 @@ export class AlanubeService {
     return emissionPromise;
   }
 
-  private static async _executeEmision(saleId: string, silent: boolean = false): Promise<boolean> {
+  private static async _executeEmision(saleId: string, silent: boolean = false, initialSaleData?: any): Promise<boolean> {
     try {
       // 1. Obtener la factura, sus items y el cliente (con fallback si invoice_types no tiene FK directa)
       let sale: any = null;
@@ -170,49 +175,109 @@ export class AlanubeService {
           .eq('id', saleId)
           .single();
         if (basicErr || !saleBasic) {
-          throw new Error('Factura no encontrada');
+          if (initialSaleData) {
+            sale = initialSaleData;
+          } else {
+            throw new Error('Factura no encontrada');
+          }
+        } else {
+          sale = saleBasic;
         }
-        sale = saleBasic;
       }
 
-      if (!sale.store_id) {
+      if (initialSaleData && sale) {
+        sale = {
+          ...sale,
+          ...initialSaleData,
+          customer: sale.customer || initialSaleData.customer,
+          customer_name: sale.customer_name || initialSaleData.customer_name,
+          customer_rnc: sale.customer_rnc || initialSaleData.customer_rnc,
+        };
+      }
+
+      const storeId = sale.store_id || initialSaleData?.store_id;
+      if (!storeId) {
         throw new Error('Factura no tiene tienda asociada');
       }
+      sale.store_id = storeId;
 
-      // Si no tiene sale_items en DB (ej: servicios emitidos sin producto de inventario), recuperar desde offlineDB
+      // Si no tiene sale_items en DB (ej: servicios emitidos sin producto de inventario), recuperar desde initialSaleData o offlineDB
       if (!sale.sale_items || sale.sale_items.length === 0) {
-        try {
-          const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
-          const localSale = await offlineDB.get<any>(OfflineStore.SALES, saleId);
-          if (localSale && (localSale.items?.length > 0 || localSale.sale_items?.length > 0)) {
-            const fallbackItems = localSale.items || localSale.sale_items || [];
-            sale.sale_items = fallbackItems.map((it: any) => ({
-              product: { name: it.name || it.product_name || it.description || 'Servicio' },
-              product_name: it.name || it.product_name || it.description,
-              quantity: Number(it.quantity) || 1,
-              unit_price: Number(it.price ?? it.unit_price ?? 0),
-              total: Number(it.total ?? ((it.quantity || 1) * (it.price ?? it.unit_price ?? 0))),
-              tax_amount: Number(it.tax_amount ?? 0),
-              tax_percentage: Number(it.tax_percentage ?? ((it.tax || 0.18) * 100)),
-              is_service: true,
-            }));
+        if (initialSaleData?.items?.length > 0 || initialSaleData?.sale_items?.length > 0) {
+          const rawList = initialSaleData.items || initialSaleData.sale_items || [];
+          sale.sale_items = rawList.map((it: any) => ({
+            product: { name: it.name || it.product_name || it.description || 'Servicio' },
+            product_name: it.name || it.product_name || it.description,
+            name: it.name || it.product_name || it.description,
+            description: it.description || it.name,
+            quantity: Number(it.quantity) || 1,
+            unit_price: Number(it.price ?? it.unit_price ?? 0),
+            price: Number(it.price ?? it.unit_price ?? 0),
+            total: Number(it.total ?? ((it.quantity || 1) * (it.price ?? it.unit_price ?? 0))),
+            tax_amount: Number(it.tax_amount ?? 0),
+            tax: it.tax,
+            tax_percentage: Number(it.tax_percentage ?? ((it.tax || 0.18) * 100)),
+            cost_includes_tax: it.cost_includes_tax,
+            is_service: true,
+          }));
+        } else {
+          try {
+            const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
+            const localSale = await offlineDB.get<any>(OfflineStore.SALES, saleId);
+            if (localSale && (localSale.items?.length > 0 || localSale.sale_items?.length > 0)) {
+              const fallbackItems = localSale.items || localSale.sale_items || [];
+              sale.sale_items = fallbackItems.map((it: any) => ({
+                product: { name: it.name || it.product_name || it.description || 'Servicio' },
+                product_name: it.name || it.product_name || it.description,
+                name: it.name || it.product_name || it.description,
+                description: it.description || it.name,
+                quantity: Number(it.quantity) || 1,
+                unit_price: Number(it.price ?? it.unit_price ?? 0),
+                price: Number(it.price ?? it.unit_price ?? 0),
+                total: Number(it.total ?? ((it.quantity || 1) * (it.price ?? it.unit_price ?? 0))),
+                tax_amount: Number(it.tax_amount ?? 0),
+                tax: it.tax,
+                tax_percentage: Number(it.tax_percentage ?? ((it.tax || 0.18) * 100)),
+                cost_includes_tax: it.cost_includes_tax,
+                is_service: true,
+              }));
+            }
+          } catch (e) {
+            console.warn('Could not read offline items in AlanubeService', e);
           }
-        } catch (e) {
-          console.warn('Could not read offline items in AlanubeService', e);
         }
+      }
+
+      // Si aún no tiene items pero la factura tiene total, garantizar al menos 1 item para cumplir el esquema DGII
+      if ((!sale.sale_items || sale.sale_items.length === 0) && Number(sale.total) > 0) {
+        sale.sale_items = [{
+          product: { name: sale.notes || 'Servicios Generales' },
+          product_name: sale.notes || 'Servicios Generales',
+          name: sale.notes || 'Servicios Generales',
+          quantity: 1,
+          unit_price: Number(sale.subtotal || sale.total),
+          price: Number(sale.subtotal || sale.total),
+          total: Number(sale.total),
+          tax_amount: Number(sale.tax_total || 0),
+          tax_percentage: Number(sale.tax_total) > 0 ? 18 : 0,
+          is_service: true
+        }];
       }
 
       // Si ya fue aceptada previamente y tiene QR, notificar de inmediato sin reenviar
       if (sale.estado_fiscal === 'ACEPTADO' && sale.qrcode_url) {
-        this.notifySignatureUpdate({
+        const payload = {
           saleId,
-          estado_fiscal: 'ACEPTADO',
+          estado_fiscal: 'ACEPTADO' as const,
           encf: sale.encf || sale.invoice_number,
+          invoice_number: sale.encf || sale.invoice_number,
           codigo_seguridad: sale.codigo_seguridad,
           fecha_firma: sale.fecha_firma,
           qrcode_url: sale.qrcode_url,
           alanube_id: sale.alanube_id
-        });
+        };
+        this.latestSignatures.set(saleId, payload);
+        this.notifySignatureUpdate(payload);
         return true;
       }
 
@@ -359,14 +424,14 @@ export class AlanubeService {
       };
 
       // Manejo de RNC de Comprador
-      if (sale.customer?.rnc) {
-        const cleanRNC = sale.customer.rnc.replace(/[^0-9]/g, '');
-        if (cleanRNC) {
-          document.buyer = {
-            rnc: cleanRNC,
-            companyName: (sale.customer.name || 'Cliente General').slice(0, 150)
-          };
-        }
+      const customerRnc = (sale.customer?.rnc || initialSaleData?.customer?.rnc || initialSaleData?.customer_rnc || (initialSaleData as any)?.customerRnc || '').replace(/[^0-9]/g, '');
+      const customerName = sale.customer?.name || initialSaleData?.customer?.name || initialSaleData?.customer_name || (initialSaleData as any)?.customerName || 'Cliente General';
+
+      if (customerRnc) {
+        document.buyer = {
+          rnc: customerRnc,
+          companyName: customerName.slice(0, 150)
+        };
       } else if (alanubeType !== '32') {
         throw new Error(`El RNC del comprador es obligatorio para emitir e-CF (${normalizedEncf || 'E' + alanubeType}). Solo las facturas de consumo (E32) permiten emitir a Consumidor Final sin RNC.`);
       }
@@ -459,19 +524,35 @@ export class AlanubeService {
         }
 
         // Construct standard DGII verification URL if missing
-        const qrUrl = response.qrcode_url || (response as any).qrCodeUrl || `https://ecf.dgii.gov.do/EstadoseCF/ConsultaeCF?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${finalEncf}&MontoTotal=${totalAmount}&CodigoSeguridad=${finalSecCode}&FechaFirma=${encodeURIComponent(dgiiFormatted)}`;
+        const isSandbox = config.environment === 'SANDBOX';
+        const dgiiDomain = isSandbox ? 'testecf.dgii.gov.do' : 'ecf.dgii.gov.do';
+        const dgiiFcDomain = isSandbox ? 'testfc.dgii.gov.do' : 'fc.dgii.gov.do';
 
-        // Notificar de inmediato a la UI en memoria (0ms de espera para PrintOptionsDialog)
-        this.notifySignatureUpdate({
+        let calculatedFallbackUrl = '';
+        if (finalEncf.startsWith('E32') && !receptorRnc) {
+          calculatedFallbackUrl = `https://${dgiiFcDomain}/ecf/ConsultaTimbreFC?RncEmisor=${emisorRnc}&ENCF=${finalEncf}&MontoTotal=${totalAmount}&CodigoSeguridad=${finalSecCode}`;
+        } else {
+          const dgiiFecha = dgiiFormatted ? dgiiFormatted.split(' ')[0] : '';
+          calculatedFallbackUrl = `https://${dgiiDomain}/ecf/ConsultaTimbre?RncEmisor=${emisorRnc}&RncComprador=${receptorRnc}&ENCF=${finalEncf}&FechaEmision=${dgiiFecha}&MontoTotal=${totalAmount}&FechaFirma=${encodeURIComponent(dgiiFormatted)}&CodigoSeguridad=${finalSecCode}`;
+        }
+
+        const qrUrl = response.qrcode_url || (response as any).qrCodeUrl || calculatedFallbackUrl;
+
+        const signaturePayload = {
           saleId,
-          estado_fiscal: 'ACEPTADO',
+          estado_fiscal: 'ACEPTADO' as const,
           encf: finalEncf,
           invoice_number: finalEncf,
           codigo_seguridad: finalSecCode,
           fecha_firma: isoDate,
           qrcode_url: qrUrl,
           alanube_id: response.alanube_id
-        });
+        };
+
+        this.latestSignatures.set(saleId, signaturePayload);
+
+        // Notificar de inmediato a la UI en memoria (0ms de espera para PrintOptionsDialog)
+        this.notifySignatureUpdate(signaturePayload);
 
         const { error: updateErr } = await supabase
           .from('sales')
