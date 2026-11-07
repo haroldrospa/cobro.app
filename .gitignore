@@ -29,3 +29,4 @@ apk/
 *.njsproj
 *.sln
 *.sw?
+vite.config.ts.timestamp*
