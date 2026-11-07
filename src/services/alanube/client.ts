@@ -144,22 +144,32 @@ export class AlanubeClient {
       const isPendingStatus = !data?.legalStatus || ['REGISTERED', 'TO_SEND', 'WAITING_RESPONSE', 'IN_PROCESS', 'PENDING'].includes(data.legalStatus);
       if (data?.id && (!data.documentStampUrl || isPendingStatus) && data.legalStatus !== 'REJECTED') {
         const checkUrl = `${url}/${encodeURIComponent(data.id)}${companyId ? `/idCompany/${encodeURIComponent(companyId)}` : ''}`;
-        for (let attempt = 0; attempt < 8; attempt++) {
-          await new Promise(r => setTimeout(r, 800));
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await new Promise(r => setTimeout(r, 900));
           try {
-            const checkRes = await fetch(checkUrl, {
+            let checkRes = await fetch(checkUrl, {
               method: 'GET',
               headers: {
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${token}`
               }
             });
+            if (!checkRes.ok && companyId) {
+              const altCheckUrl = `${url}/${encodeURIComponent(data.id)}`;
+              checkRes = await fetch(altCheckUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+            }
             if (checkRes.ok) {
               const checkData = await checkRes.json();
               console.log(`[ALANUBE] Check attempt ${attempt + 1}:`, checkData);
               if (checkData) {
                 data = { ...data, ...checkData };
-                if (data.documentStampUrl || data.legalStatus === 'ACCEPTED' || data.legalStatus === 'REJECTED') {
+                if (data.documentStampUrl || data.legalStatus === 'ACCEPTED' || data.legalStatus === 'ACCEPTED_WITH_OBSERVATIONS' || data.legalStatus === 'REJECTED') {
                   break;
                 }
               }
@@ -170,22 +180,41 @@ export class AlanubeClient {
         }
       }
 
-      // Verificar si la DGII rechazó el documento síncronamente dentro de un HTTP 200/201
-      if (data.legalStatus === 'REJECTED') {
-        const govErrors = data.governmentResponse?.value;
-        if (Array.isArray(govErrors) && govErrors.length > 0) {
-          return {
-            errores: govErrors.map((g: any) => ({
-              codigo: String(g.codigo || 'DGII'),
-              mensaje: g.valor || JSON.stringify(g)
-            }))
-          };
+      // Validación estricta: NO emitir la factura si la DGII rechazó o no confirmó la aceptación
+      const isAccepted = data.legalStatus === 'ACCEPTED' || data.legalStatus === 'ACCEPTED_WITH_OBSERVATIONS' || !!data.documentStampUrl;
+      if (!isAccepted || data.legalStatus === 'REJECTED') {
+        const govVal = data.governmentResponse?.value || data.governmentResponse?.messages || data.governmentResponse;
+        let errorMessages: string[] = [];
+
+        if (Array.isArray(govVal) && govVal.length > 0) {
+          govVal.forEach((g: any) => {
+            const cod = g.codigo || g.code || '';
+            const msg = g.valor || g.mensaje || g.message || JSON.stringify(g);
+            errorMessages.push(cod ? `Código ${cod} - ${msg}` : msg);
+          });
+        } else if (typeof govVal === 'string') {
+          errorMessages.push(govVal);
+        } else if (data.legalStatusReason) {
+          errorMessages.push(data.legalStatusReason);
+        } else if (data.rejectionReason) {
+          errorMessages.push(data.rejectionReason);
+        } else if (Array.isArray(data.errors) && data.errors.length > 0) {
+          errorMessages = data.errors.map((e: any) => e.message || e.mensaje || JSON.stringify(e));
         }
+
+        if (errorMessages.length === 0) {
+          if (data.legalStatus === 'REJECTED') {
+            errorMessages.push('El comprobante fue rechazado por la DGII.');
+          } else {
+            errorMessages.push(`La DGII no ha confirmado la aceptación del comprobante (Estado: ${data.legalStatus || 'PENDIENTE'}). La venta fue revertida para no malutilizar la secuencia.`);
+          }
+        }
+
         return {
-          errores: [{
-            codigo: 'DGII_REJECTED',
-            mensaje: 'El comprobante fue rechazado por la DGII.'
-          }]
+          errores: errorMessages.map(msg => ({
+            codigo: 'DGII_RECHAZO',
+            mensaje: msg
+          }))
         };
       }
 

@@ -39,6 +39,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
     rnc_emisor: '',
     razon_social: '',
     company_id: '01M0TYPKJ0JGVM53K56D7X9P7Z',
+    sequence_due_date: '2026-12-31',
     certificado_digital: '',
     certificado_password: ''
   });
@@ -59,6 +60,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
         company_id: effectiveCompanyId,
+        sequence_due_date: (config as any)?.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : '') || '2026-12-31',
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
       });
@@ -166,6 +168,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         localStorage.setItem('alanube_rnc_emisor', formData.rnc_emisor.trim());
         localStorage.setItem('alanube_razon_social', formData.razon_social.trim());
         localStorage.setItem('alanube_environment', formData.environment);
+        localStorage.setItem('alanube_sequence_due_date', (formData.sequence_due_date || '2026-12-31').trim());
       }
 
       toast({
@@ -329,6 +332,21 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID de 26 caracteres) de tu empresa en el portal de Alanube (ej: 01M0TYPKJ0JGVM53K56D7X9P7Z). Necesario para enrutar los e-CF de cuentas Reseller.</p>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="sequence_due_date">Fecha de Vencimiento de Secuencia DGII (e-CF)</Label>
+                <div className="relative">
+                  <FileText className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="sequence_due_date"
+                    className="pl-9 font-mono"
+                    placeholder="2026-12-31"
+                    value={formData.sequence_due_date}
+                    onChange={(e) => setFormData({ ...formData, sequence_due_date: e.target.value })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Fecha límite autorizada por la DGII para tus secuencias e-CF (Crédito Fiscal E31, etc.) en formato YYYY-MM-DD (ej: 2026-12-31 o 2025-12-31). Debe coincidir con la autorización oficial para evitar el rechazo con Código 145.</p>
               </div>
 
               {connectionStatus && (

@@ -22,6 +22,7 @@ export const useAlanubeConfig = () => {
     const localRazon = typeof window !== 'undefined' ? localStorage.getItem('alanube_razon_social') : null;
     const localEnv = (typeof window !== 'undefined' ? localStorage.getItem('alanube_environment') : null) as 'SANDBOX' | 'PRODUCTION' | null;
     const localBaseUrl = typeof window !== 'undefined' ? localStorage.getItem('alanube_base_url') : null;
+    const localSequenceDueDate = typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null;
 
     if (!storeId) {
       return {
@@ -31,6 +32,7 @@ export const useAlanubeConfig = () => {
         rnc_emisor: localRnc || '',
         razon_social: localRazon || '',
         company_id: localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
+        sequence_due_date: localSequenceDueDate || '2026-12-31',
         is_active: localMode ? localMode === 'e-ncf' : false,
       } as AlanubeConfig & { is_active: boolean };
     }
@@ -62,6 +64,7 @@ export const useAlanubeConfig = () => {
       rnc_emisor: (data as any)?.rnc_emisor || localRnc || '',
       razon_social: (data as any)?.razon_social || localRazon || '',
       company_id: (data as any)?.company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
+      sequence_due_date: (data as any)?.sequence_due_date || localSequenceDueDate || '2026-12-31',
       is_active: resolvedIsActive,
     } as AlanubeConfig & { is_active: boolean };
   };
@@ -91,6 +94,7 @@ export const useAlanubeConfig = () => {
         if (supabasePayload.razon_social !== undefined) localStorage.setItem('alanube_razon_social', supabasePayload.razon_social);
         if (supabasePayload.environment !== undefined) localStorage.setItem('alanube_environment', supabasePayload.environment);
         if (supabasePayload.base_url !== undefined) localStorage.setItem('alanube_base_url', supabasePayload.base_url);
+        if ((newConfig as any).sequence_due_date !== undefined) localStorage.setItem('alanube_sequence_due_date', (newConfig as any).sequence_due_date);
       }
 
       if (storeId) {

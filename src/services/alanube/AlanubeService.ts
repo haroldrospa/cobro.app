@@ -101,11 +101,13 @@ export class AlanubeService {
     const localRnc = typeof window !== 'undefined' ? localStorage.getItem('alanube_rnc_emisor') : null;
     const localRazonSocial = typeof window !== 'undefined' ? localStorage.getItem('alanube_razon_social') : null;
     const localEnv = typeof window !== 'undefined' ? localStorage.getItem('alanube_environment') : null;
+    const localSequenceDueDate = typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null;
 
     // Si en base de datos aún tiene Romar Group o RNC viejo, priorizar el actualizado de Harold
     const rncEmisor = localRnc || (data.rnc_emisor && data.rnc_emisor !== '133280824' ? data.rnc_emisor : '40218246656');
     const razonSocial = localRazonSocial || (data.razon_social && data.razon_social !== 'Romar Group' ? data.razon_social : 'Harold Rosado Pacheco');
     const environment = (localEnv as any) || (data.environment === 'SANDBOX' ? 'PRODUCTION' : data.environment);
+    const sequenceDueDate = (data as any)?.sequence_due_date || localSequenceDueDate || '2026-12-31';
 
     const resolvedConfig: AlanubeConfig = {
       api_token: data.api_token,
@@ -113,7 +115,8 @@ export class AlanubeService {
       base_url: environment === 'PRODUCTION' ? 'https://api.alanube.co' : data.base_url,
       rnc_emisor: rncEmisor,
       razon_social: razonSocial,
-      company_id: (data as any).company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z'
+      company_id: (data as any).company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
+      sequence_due_date: sequenceDueDate
     };
 
     this.configCache.set(storeId, { config: resolvedConfig, timestamp: Date.now() });
@@ -432,7 +435,7 @@ export class AlanubeService {
         incomeType: 1,
         paymentType: sale.payment_method === 'credit' ? 2 : 1,
         ...(totalTaxedAmount > 0 ? { taxAmountIndicator: 0 } : {}),
-        ...(alanubeType !== '32' ? { sequenceDueDate: '2028-12-31' } : {}),
+        ...(alanubeType !== '32' ? { sequenceDueDate: config.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null) || '2026-12-31' } : {}),
         ...(sale.payment_method === 'credit' ? {
           paymentDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         } : {}),
@@ -742,32 +745,41 @@ export class AlanubeService {
       }
 
       // 2b. Revertir número de secuencia si este comprobante fue el último utilizado
-      if (sale.invoice_number && sale.invoice_type_id && sale.store_id) {
+      if (sale.invoice_number && sale.store_id) {
         const numMatch = sale.invoice_number.match(/(\d+)$/);
         if (numMatch) {
           const usedSeq = parseInt(numMatch[1], 10);
           try {
-            const { data: seqRow } = await supabase
-              .from('invoice_sequences')
-              .select('id, current_number')
-              .eq('store_id', sale.store_id)
-              .eq('invoice_type_id', sale.invoice_type_id)
-              .maybeSingle();
+            const possibleTypeIds = [
+              sale.invoice_type_id,
+              sale.invoice_number?.substring(0, 3),
+              sale.invoice_type_id ? 'E' + sale.invoice_type_id.replace(/^B/, '') : null,
+              sale.invoice_type_id ? 'B' + sale.invoice_type_id.replace(/^E/, '') : null
+            ].filter(Boolean) as string[];
 
-            if (seqRow && Number(seqRow.current_number) === usedSeq) {
+            const { data: seqRows } = await supabase
+              .from('invoice_sequences')
+              .select('id, invoice_type_id, current_number')
+              .eq('store_id', sale.store_id)
+              .in('invoice_type_id', possibleTypeIds);
+
+            const matchingRow = (seqRows || []).find(r => Number(r.current_number) === usedSeq);
+            if (matchingRow) {
               const newCurrent = Math.max(0, usedSeq - 1);
               await supabase
                 .from('invoice_sequences')
                 .update({ current_number: newCurrent, updated_at: new Date().toISOString() })
-                .eq('id', seqRow.id);
+                .eq('id', matchingRow.id);
 
               const { offlineDB, OfflineStore } = await import('@/lib/offlineDB');
               const settings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'invoice_sequences') || { key: 'invoice_sequences' };
-              if (settings[sale.invoice_type_id]) {
-                settings[sale.invoice_type_id].current = newCurrent;
-                await offlineDB.put(OfflineStore.SETTINGS, settings);
+              for (const tid of possibleTypeIds) {
+                if (settings[tid]) {
+                  settings[tid].current = newCurrent;
+                }
               }
-              console.log(`🔄 [Alanube] Secuencia ${sale.invoice_type_id} revertida exitosamente a #${newCurrent}`);
+              await offlineDB.put(OfflineStore.SETTINGS, settings);
+              console.log(`🔄 [Alanube] Secuencia ${matchingRow.invoice_type_id} revertida exitosamente a #${newCurrent}`);
             }
           } catch (seqErr) {
             console.warn('[Alanube] Error revirtiendo secuencia:', seqErr);
