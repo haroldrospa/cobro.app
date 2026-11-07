@@ -293,11 +293,6 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   }, [mappedInvoiceTypes, invoiceTypes, selectedInvoiceTypeId]);
 
 
-  const activeInvoiceCode = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
-  const fiscalValidation = useMemo(() => {
-    return validateFiscalCustomer(activeInvoiceCode, selectedCustomer, totals.total);
-  }, [activeInvoiceCode, selectedCustomer, totals.total]);
-
   const isQuote = selectedInvoiceTypeId === 'COT';
 
   const todayDateStr = useMemo(() => {
@@ -359,6 +354,11 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       total
     };
   }, [serviceLines, applyTax, priceIncludesTax]);
+
+  const activeInvoiceCode = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
+  const fiscalValidation = useMemo(() => {
+    return validateFiscalCustomer(activeInvoiceCode, selectedCustomer, totals.total);
+  }, [activeInvoiceCode, selectedCustomer, totals.total]);
 
   const handleAddLine = () => {
     setServiceLines(prev => [
