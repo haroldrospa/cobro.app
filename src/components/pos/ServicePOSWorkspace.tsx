@@ -781,106 +781,131 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
                       transition={{ duration: 0.2 }}
-                      className="p-2 sm:px-2 sm:py-1.5 hover:bg-muted/10 transition-colors rounded-lg group bg-card/60 sm:bg-transparent border sm:border-0 border-border/50 shadow-2xs sm:shadow-none w-full max-w-full overflow-hidden"
+                      className="p-1 sm:px-2 sm:py-1.5 transition-colors rounded-xl group sm:hover:bg-muted/10 w-full max-w-full overflow-hidden"
                     >
-                      {/* MOBILE CARD VIEW (< sm) - 100% responsivo, sin desbordamiento horizontal */}
-                      <div className="sm:hidden space-y-2 p-0.5 w-full max-w-full">
-                        {/* Fila 1: Numerador + Input concepto + Eliminar */}
-                        <div className="flex items-center gap-1.5 w-full">
-                          <span className="w-5 h-5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-black flex items-center justify-center shrink-0">
-                            {idx + 1}
-                          </span>
+                      {/* MOBILE CARD VIEW (< sm) - Tarjeta limpia, moderna y visualmente intuitiva */}
+                      <div className="sm:hidden p-3 rounded-2xl bg-gradient-to-b from-card/90 to-card/60 border border-border/70 shadow-xs space-y-2.5 transition-all focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/20">
+                        {/* Fila 1: Encabezado de la tarjeta con número, subtotal en vivo y botón eliminar */}
+                        <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-black flex items-center justify-center border border-emerald-500/20">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-bold text-foreground">
+                              Servicio #{idx + 1}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-mono font-bold text-emerald-400 bg-background/80 px-2 py-0.5 rounded-md border border-border/40">
+                              {activeCurrencySymbol} {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLine(line.id)}
+                              className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                              title="Eliminar este servicio"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Fila 2: Descripción del concepto */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                            Descripción del Servicio
+                          </label>
                           <Input
-                            placeholder="Concepto o descripción..."
+                            placeholder="Ej. Mano de obra, Instalación, Asesoría..."
                             value={line.description}
                             onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
-                            className="h-8 rounded-lg text-xs bg-background/90 border-border/50 placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 font-medium flex-1 min-w-0"
+                            className="h-9 rounded-xl text-xs bg-background/90 border-border/60 placeholder:text-muted-foreground/40 focus-visible:border-emerald-500 font-medium px-3 w-full"
                           />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveLine(line.id)}
-                            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
-                            title="Eliminar fila"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
                         </div>
 
-                        {/* Fila 2: Cantidad y Precio en cuadrícula responsiva que nunca se desborda */}
-                        <div className="grid grid-cols-12 gap-2 items-center w-full">
-                          {/* Stepper Cantidad (5 cols) */}
-                          <div className="col-span-5 flex items-center bg-background/90 border border-border/50 rounded-lg p-0.5 h-8">
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateLine(line.id, 'quantity', Math.max(1, (Number(line.quantity) || 1) - 1))}
-                              className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min="1"
-                              step="any"
-                              value={line.quantity}
-                              onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
-                              onFocus={e => e.target.select()}
-                              className="flex-1 text-center text-xs font-mono font-bold bg-transparent outline-none text-foreground min-w-0"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateLine(line.id, 'quantity', (Number(line.quantity) || 1) + 1)}
-                              className="w-7 h-full flex items-center justify-center rounded text-muted-foreground hover:text-foreground text-xs font-bold active:scale-95 transition-all cursor-pointer"
-                            >
-                              +
-                            </button>
+                        {/* Fila 3: Cantidad y Precio en 2 columnas claras con etiquetas legibles */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Columna Cantidad con Stepper */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                              Cantidad
+                            </label>
+                            <div className="flex items-center bg-background/90 border border-border/60 rounded-xl h-9 p-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateLine(line.id, 'quantity', Math.max(1, (Number(line.quantity) || 1) - 1))}
+                                className="w-8 h-full flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 text-sm font-black active:scale-90 transition-all cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                step="any"
+                                value={line.quantity}
+                                onChange={e => handleUpdateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
+                                onFocus={e => e.target.select()}
+                                className="flex-1 text-center text-xs font-mono font-bold bg-transparent outline-none text-foreground min-w-0"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateLine(line.id, 'quantity', (Number(line.quantity) || 1) + 1)}
+                                className="w-8 h-full flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 text-sm font-black active:scale-90 transition-all cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
 
-                          {/* Input de Precio con Moneda (7 cols) */}
-                          <div className="col-span-7 relative h-8">
-                            <span className="absolute left-2.5 top-2 text-[10px] font-bold text-muted-foreground/60 pointer-events-none select-none">
-                              {activeCurrencySymbol}
-                            </span>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="any"
-                              placeholder="0.00"
-                              value={line.unitPrice === 0 ? '' : line.unitPrice}
-                              onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                              onFocus={e => e.target.select()}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleAddLine();
-                                }
-                              }}
-                              className="h-8 pl-8 pr-2 text-right font-mono font-bold text-xs text-emerald-400 bg-background/90 border-border/50 rounded-lg focus-visible:border-emerald-500 w-full"
-                            />
+                          {/* Columna Precio Unitario */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                              Precio ({activeCurrencySymbol})
+                            </label>
+                            <div className="relative h-9">
+                              <span className="absolute left-2.5 top-2.5 text-[10px] font-bold text-muted-foreground/60 pointer-events-none select-none">
+                                {activeCurrencySymbol}
+                              </span>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="any"
+                                placeholder="0.00"
+                                value={line.unitPrice === 0 ? '' : line.unitPrice}
+                                onChange={e => handleUpdateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                onFocus={e => e.target.select()}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddLine();
+                                  }
+                                }}
+                                className="h-9 pl-8 pr-2.5 text-right font-mono font-bold text-xs text-emerald-400 bg-background/90 border-border/60 rounded-xl focus-visible:border-emerald-500 w-full"
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        {/* Fila 3: ITBIS a la izquierda y Total a la derecha */}
-                        <div className="flex items-center justify-between pt-0.5 px-0.5 text-xs w-full">
+                        {/* Fila 4: Toggle de ITBIS del ítem */}
+                        <div className="flex items-center justify-between pt-1 border-t border-border/30 text-xs">
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            Impuesto ITBIS:
+                          </span>
                           <button
                             type="button"
                             onClick={() => handleToggleTaxRate(line.id, line.taxRate)}
                             className={cn(
-                              "px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer active:scale-95",
+                              "px-2.5 py-1 rounded-lg text-[10.5px] font-bold border transition-all cursor-pointer flex items-center gap-1 active:scale-95",
                               line.taxRate > 0
-                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                                 : "bg-muted/40 text-muted-foreground border-border/40"
                             )}
                             title="Alternar ITBIS"
                           >
-                            ITBIS: {line.taxRate > 0 ? `${line.taxRate}%` : 'Exento'}
+                            <Percent className="h-3 w-3" />
+                            <span>{line.taxRate > 0 ? `${line.taxRate}% ITBIS` : 'Exento (0%)'}</span>
                           </button>
-
-                          <div className="text-right">
-                            <span className="text-[10px] text-muted-foreground mr-1 font-medium">Subtotal:</span>
-                            <span className="font-mono font-bold text-xs text-foreground">
-                              {activeCurrencySymbol} {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
                         </div>
                       </div>
 
@@ -978,20 +1003,18 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
             </div>
 
             {/* Table Footer: Add Line Button */}
-            <div className="shrink-0 px-3 py-1.5 bg-muted/20 border-t border-border/40 flex items-center justify-between">
-              <Button
+            <div className="shrink-0 p-2 sm:px-3 sm:py-1.5 bg-muted/20 border-t border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={() => handleAddLine()}
-                className="h-7 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 gap-1.5 cursor-pointer px-2"
+                className="w-full sm:w-auto h-10 sm:h-7 px-3 rounded-xl sm:rounded-lg text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 sm:bg-transparent hover:bg-emerald-500/20 sm:hover:bg-emerald-500/10 border border-emerald-500/30 sm:border-0 gap-2 flex items-center justify-center cursor-pointer transition-all active:scale-98 shadow-2xs"
               >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Agregar concepto</span>
+                <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <span>+ Agregar otro servicio</span>
                 <span className="hidden sm:inline text-[10px] text-muted-foreground/60 font-normal">(o pulsa Enter en precio)</span>
-              </Button>
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {serviceLines.length} {serviceLines.length === 1 ? 'concepto' : 'conceptos'}
+              </button>
+              <span className="text-[10px] font-mono text-muted-foreground text-center sm:text-right">
+                {serviceLines.length} {serviceLines.length === 1 ? 'servicio' : 'servicios en total'}
               </span>
             </div>
           </div>
