@@ -101,6 +101,8 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
       invoiceType: resolvedType,
       profile: sale.profile,
       qrcode_url: sale.qrcode_url,
+      codigo_seguridad: (sale as any).codigo_seguridad,
+      fecha_firma: (sale as any).fecha_firma,
       is_electronic: sale.is_electronic || resolvedType.startsWith('E'),
       encf: sale.encf || (resolvedType.startsWith('E') ? sale.invoice_number : undefined),
       estado_fiscal: sale.estado_fiscal,

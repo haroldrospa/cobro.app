@@ -122,7 +122,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
         amountPaid: (saleData as any).cash_received || (saleData as any).amountPaid || saleData.total,
         change: (saleData as any).change || 0,
         isElectronic: isElec,
-        encf: (saleData as any).encf,
+        encf: (saleData as any).encf || (isElec ? (saleData.invoice_number || '') : undefined),
         securityCode: (saleData as any).codigo_seguridad,
         signatureDate: (saleData as any).fecha_firma,
         qrCodeUrl: (saleData as any).qrcode_url,

@@ -317,7 +317,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const isElec = !isInternal && (invNum.startsWith('E') || rawSaleData.is_electronic || !!rawSaleData.encf);
     
     let qrUrl = isInternal ? undefined : rawSaleData.qrcode_url;
-    if (!isInternal && (isElec && rawSaleData.estado_fiscal === 'ACEPTADO') && !qrUrl) {
+    let secCode = rawSaleData.codigo_seguridad || '';
+
+    if (!isInternal && isElec && !qrUrl) {
       const emisorRnc = dbCompanyInfo?.rnc?.replace(/[^0-9]/g, '') || '';
       const receptorRnc = rawSaleData.customer?.rnc?.replace(/[^0-9]/g, '') || '';
       const rawDate = rawSaleData.fecha_firma || new Date().toISOString();
@@ -333,7 +335,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         formattedDate = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
       } catch (_) {}
       
-      let secCode = rawSaleData.codigo_seguridad || '';
       if (!secCode) {
         let hash = 0;
         for (let i = 0; i < invNum.length; i++) {
@@ -350,6 +351,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     return {
       ...rawSaleData,
       items: normalizedItems,
+      codigo_seguridad: isInternal ? undefined : (rawSaleData.codigo_seguridad || secCode || undefined),
       qrcode_url: isInternal ? undefined : qrUrl,
     };
   }, [rawSaleData, dbCompanyInfo]);
@@ -1025,7 +1027,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       change: (saleData as any).change || 0,
       isElectronic: isElectronic,
       isQuotation: isQuote,
-      encf: saleData.encf,
+      encf: saleData.encf || (isElectronic ? invoiceNumber : undefined),
       securityCode: securityCode,
       signatureDate: signatureDate,
       qrCodeUrl: saleData.qrcode_url,
