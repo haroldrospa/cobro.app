@@ -86,7 +86,7 @@ export default defineConfig(({ mode }) => ({
     }
   },
   plugins: [
-    basicSsl(),
+    ...(mode === 'http' || process.env.NO_SSL === 'true' || process.env.VITE_SSL === 'false' ? [] : [basicSsl()]),
     directThermalPrinterPlugin(),
     react(),
     legacy({

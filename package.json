@@ -14,6 +14,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
+    "dev:http": "vite --mode http",
     "build": "vite build",
     "electron:build": "vite build && electron-builder",
     "build:dev": "vite build --mode development",
