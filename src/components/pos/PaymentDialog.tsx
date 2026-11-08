@@ -291,6 +291,38 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
           {/* Body Section */}
           <div className="p-3 sm:p-4 pt-2.5 sm:pt-3 space-y-3 flex-1 min-h-0 flex flex-col overflow-y-auto">
+          {/* Selector de Método de Pago (Ancho Completo Siempre) */}
+          <div className="shrink-0 space-y-1">
+            <label className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground block px-0.5">
+              Método de Pago
+            </label>
+            <div className="grid grid-cols-5 gap-1.5 sm:gap-2 w-full">
+              {paymentMethodsList.map((method) => {
+                const isSelected = paymentMethod === method.id;
+                const displayName = method.id === 'transfer' ? 'Transf.' : method.name;
+                return (
+                  <Button
+                    key={method.id}
+                    type="button"
+                    variant={isSelected ? "default" : "outline"}
+                    className={cn(
+                      "h-10 sm:h-11 px-1 rounded-xl transition-all flex flex-col items-center justify-center gap-0.5 sm:gap-1 min-w-0 font-bold shadow-xs",
+                      isSelected 
+                        ? (method.id === 'split' 
+                            ? "bg-blue-600 text-white shadow-md hover:bg-blue-500" 
+                            : "bg-primary text-primary-foreground shadow-md hover:bg-primary/90")
+                        : "bg-background border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    )}
+                    onClick={() => handlePaymentMethodChange(method.id)}
+                  >
+                    <span className="shrink-0">{getMethodIcon(method.id)}</span>
+                    <span className="text-[10px] sm:text-xs leading-none truncate max-w-full text-center px-0.5">{displayName}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
             {/* Contenedor adaptativo: 1 columna en PC y móvil vertical / 2 columnas solo en teléfonos horizontales pequeños */}
             <div className="space-y-3 mobile-landscape:grid mobile-landscape:grid-cols-2 mobile-landscape:gap-3 mobile-landscape:space-y-0 items-start">
               {/* Sección Izquierda en mobile-landscape / Superior en PC y móvil vertical */}
@@ -453,37 +485,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   )}
                 </div>
 
-                {/* Selector de Método de Pago */}
-                <div className="shrink-0 space-y-1">
-                  <label className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground block px-0.5">
-                    Método de Pago
-                  </label>
-                  <div className="grid grid-cols-5 gap-1.5 sm:gap-2 w-full">
-                    {paymentMethodsList.map((method) => {
-                      const isSelected = paymentMethod === method.id;
-                      const displayName = method.id === 'transfer' ? 'Transf.' : method.name;
-                      return (
-                        <Button
-                          key={method.id}
-                          type="button"
-                          variant={isSelected ? "default" : "outline"}
-                          className={cn(
-                            "h-9 sm:h-10 px-1 rounded-xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 min-w-0 font-bold shadow-xs",
-                            isSelected 
-                              ? (method.id === 'split' 
-                                  ? "bg-blue-600 text-white shadow-md hover:bg-blue-500" 
-                                  : "bg-primary text-primary-foreground shadow-md hover:bg-primary/90")
-                              : "bg-background border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground"
-                          )}
-                          onClick={() => handlePaymentMethodChange(method.id)}
-                        >
-                          <span className="shrink-0">{getMethodIcon(method.id)}</span>
-                          <span className="text-[10px] sm:text-xs leading-none whitespace-nowrap">{displayName}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
+
 
                 {/* En modo mobile-landscape: CreditInfo y BankAccountsList */}
                 <div className="hidden mobile-landscape:block space-y-2">
@@ -757,10 +759,10 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   <span>Procesando...</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Printer className="h-4 w-4" />
-                  <span>Facturar Pago</span>
-                  <span className="hidden sm:inline-block ml-1 text-[10px] opacity-75 font-mono lowercase tracking-normal">[enter]</span>
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2 truncate max-w-full">
+                  <Printer className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap">Facturar Pago</span>
+                  <span className="hidden md:inline-block ml-1 text-[10px] opacity-75 font-mono lowercase tracking-normal">[enter]</span>
                 </div>
               )}
             </Button>
