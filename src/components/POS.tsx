@@ -3251,7 +3251,7 @@ const POSContent: React.FC = () => {
                   )}
                 </div>
 
-                <div id="pos-cart-area" className="flex-1 min-h-[140px] md:min-h-[250px] overflow-hidden rounded-xl border bg-card shadow-sm z-10">
+                <div id="pos-cart-area" className="flex-1 min-h-[90px] sm:min-h-[120px] md:min-h-[160px] overflow-hidden rounded-xl border bg-card shadow-sm z-10">
                   <CartSummary
                     cart={cartWithOffers}
                     onUpdateQuantity={updateQuantity}
@@ -3391,7 +3391,7 @@ const POSContent: React.FC = () => {
                 className="flex flex-col gap-2 flex-shrink-0 min-w-[240px] max-w-[85vw] min-h-0 overflow-y-auto pl-1"
               >
                 {/* Carrito */}
-                <div id="pos-cart-area" className="flex-1 min-h-[140px] md:min-h-[200px] overflow-hidden rounded-xl shadow-sm border bg-card">
+                <div id="pos-cart-area" className="flex-1 min-h-[90px] sm:min-h-[120px] md:min-h-[140px] overflow-hidden rounded-xl shadow-sm border bg-card">
                   <CartSummary
                     cart={cartWithOffers}
                     onUpdateQuantity={updateQuantity}

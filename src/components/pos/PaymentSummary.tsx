@@ -541,24 +541,24 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
 
       case 'totals':
         return (
-          <div className="border border-border rounded-lg p-3 space-y-2 w-full bg-card/40">
-            <div className="flex justify-between text-base md:text-lg font-medium">
+          <div className="border border-border rounded-lg p-2 sm:p-2.5 md:p-3 space-y-1 sm:space-y-1.5 md:space-y-2 w-full bg-card/40">
+            <div className="flex justify-between text-xs sm:text-sm md:text-base font-medium">
               <span>Subtotal:</span>
               <span className="font-semibold">${totals.subtotal}</span>
             </div>
 
             {parseFloat(totals.discount) > 0 && (
-              <div className="flex justify-between text-base md:text-lg font-medium text-destructive">
+              <div className="flex justify-between text-xs sm:text-sm md:text-base font-medium text-destructive">
                 <span>Desc.:</span>
                 <span className="font-semibold">-${totals.discount}</span>
               </div>
             )}
 
-            <div className="flex justify-between text-base md:text-lg font-medium">
+            <div className="flex justify-between text-xs sm:text-sm md:text-base font-medium">
               <span>ITBIS:</span>
               <span className="font-semibold">${totals.tax}</span>
             </div>
-            <div className="flex justify-between text-xl md:text-3xl font-bold border-t border-border pt-2 mt-2">
+            <div className="flex justify-between text-base sm:text-xl md:text-2xl font-bold border-t border-border pt-1.5 mt-1 sm:pt-2 sm:mt-2">
               <span>Total:</span>
               <span>${totals.total}</span>
             </div>
@@ -608,7 +608,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-2 md:p-4 h-fit md:h-full flex flex-col transition-all">
+    <div className="bg-card border border-border rounded-lg p-2 sm:p-2.5 md:p-4 h-fit md:h-full flex flex-col transition-all">
       {/* Header con herramientas */}
       <div className="flex flex-col items-center gap-1 mb-2 flex-shrink-0">
         <div className="flex items-center gap-1 w-full justify-between">
@@ -655,7 +655,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
 
       {/* Contenido expandido con bloques reorganizables */}
       {(!shouldCollapseMobile || isExpanded) && (
-        <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-2 space-y-2.5 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-1.5 space-y-1.5 sm:space-y-2 md:space-y-2.5 scrollbar-thin">
           {blockOrder.map((blockId, index) => (
             <div
               key={blockId}
@@ -784,7 +784,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
 
       {/* Botón de procesar venta - FUERA del scroll para que siempre sea visible */}
       {(!shouldCollapseMobile || isExpanded) && (
-        <div className="mt-auto flex-shrink-0 pt-1 border-t border-transparent space-y-2">
+        <div className="mt-auto flex-shrink-0 pt-1 border-t border-transparent space-y-1.5 sm:space-y-2">
           {isInvoiceLimitReached && (
             <div className="text-xs text-destructive font-medium text-center bg-destructive/10 p-1.5 rounded border border-destructive/20">
               Límite de facturas alcanzado

@@ -13,6 +13,7 @@ import VariablePriceDialog from './VariablePriceDialog';
 import QuantityDialog from './QuantityDialog';
 import BarcodeScannerPanel, { ScanDetectResult } from './BarcodeScannerPanel';
 import { usePOSSearch } from '@/contexts/POSSearchContext';
+import { useIsLandscape } from '@/hooks/use-mobile';
 
 interface ProductSearchListProps {
   products: Product[];
@@ -33,10 +34,12 @@ interface ProductSearchListProps {
   userName?: string;
 }
 
-const ProductSkeleton = ({ viewMode }: { viewMode: 'grid' | 'list' }) => (
+const ProductSkeleton = ({ viewMode, isAdaptive }: { viewMode: 'grid' | 'list'; isAdaptive?: boolean }) => (
   <Card className={cn(
     "animate-pulse bg-muted/20 border-border/10",
-    viewMode === 'grid' ? "aspect-[4/3] w-full" : "h-20 w-full"
+    viewMode === 'grid' 
+      ? isAdaptive ? "aspect-[16/10] max-h-24 w-full" : "aspect-[4/3] w-full" 
+      : "h-20 w-full"
   )}>
     <div className="h-full w-full flex items-center justify-center">
       <div className="bg-muted/40 h-8 w-8 rounded-full" />
@@ -54,6 +57,7 @@ interface ProductItemProps {
   onSelect: (product: Product, bundle?: any) => void;
   isFocused?: boolean;
   matchedBundle?: any;
+  isAdaptive?: boolean;
 }
 
 const ProductItem = React.memo<ProductItemProps>(({ 
@@ -63,7 +67,8 @@ const ProductItem = React.memo<ProductItemProps>(({
   recipeAvailability, 
   onSelect,
   isFocused = false,
-  matchedBundle
+  matchedBundle,
+  isAdaptive = false
 }) => {
   const hasRecipeStock = recipeAvailability?.has(product.id);
   const avail = hasRecipeStock ? recipeAvailability.get(product.id)! : 0;
@@ -89,7 +94,11 @@ const ProductItem = React.memo<ProductItemProps>(({
       className={cn(
         "group cursor-pointer relative overflow-hidden border-border/40 bg-card/40 transition-all duration-150 hover:border-primary/40 hover:bg-card hover:shadow-sm",
         isOutOfStock ? "opacity-70 grayscale-[0.3]" : "",
-        viewMode === 'list' ? "flex flex-row items-center p-2.5 sm:p-3 min-h-[72px] gap-3 rounded-xl" : "rounded-xl",
+        viewMode === 'list' 
+          ? "flex flex-row items-center p-2.5 sm:p-3 min-h-[64px] sm:min-h-[72px] gap-2.5 sm:gap-3 rounded-xl" 
+          : isAdaptive 
+            ? "flex flex-col rounded-lg h-full" 
+            : "flex flex-col rounded-xl",
         isFocused && "ring-2 ring-primary border-primary bg-primary/5 shadow-md z-10"
       )}
       onClick={handleClick}
@@ -99,8 +108,10 @@ const ProductItem = React.memo<ProductItemProps>(({
       <div className={cn(
         "relative flex items-center justify-center overflow-hidden shrink-0",
         viewMode === 'list' 
-          ? "w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-secondary/30 border border-border/40" 
-          : "aspect-[4/3] w-full bg-secondary/20",
+          ? "w-11 h-11 sm:w-14 sm:h-14 rounded-lg bg-secondary/30 border border-border/40" 
+          : isAdaptive
+            ? "aspect-[16/10] max-h-16 sm:max-h-20 w-full bg-secondary/20"
+            : "aspect-[4/3] w-full bg-secondary/20",
         !product.image_url && "bg-muted/15"
       )}>
         {product.image_url ? (
@@ -112,46 +123,55 @@ const ProductItem = React.memo<ProductItemProps>(({
           />
         ) : (
           <div className="flex items-center justify-center text-muted-foreground/30">
-            <Package className={cn(viewMode === 'list' ? "h-6 w-6" : "h-8 w-8")} strokeWidth={1.5} />
+            <Package className={cn(
+              viewMode === 'list' 
+                ? "h-5 w-5 sm:h-6 sm:w-6" 
+                : isAdaptive 
+                  ? "h-5 w-5 sm:h-6 sm:w-6" 
+                  : "h-8 w-8"
+            )} strokeWidth={1.5} />
           </div>
         )}
 
         {/* Stock Badges (Overlay on Image) - ONLY in Grid Mode */}
         {viewMode === 'grid' && (
-          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+          <div className={cn("absolute flex flex-col gap-0.5 items-end", isAdaptive ? "top-1 right-1" : "top-2 right-2")}>
             {(() => {
+              const badgeClasses = isAdaptive 
+                ? "shadow-sm px-1.5 h-4 text-[9px] font-semibold" 
+                : "shadow-sm px-2 h-5 text-[10px] font-semibold";
               if (hasRecipeStock) {
                 if (avail <= 0) {
                   return (
-                    <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-destructive/90">
+                    <Badge variant="destructive" className={cn(badgeClasses, "bg-destructive/90")}>
                       Agotado
                     </Badge>
                   );
                 }
                 if (avail <= 5) {
                   return (
-                    <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 text-white border-0">
+                    <Badge className={cn(badgeClasses, "bg-amber-500/90 text-white border-0")}>
                       {avail} disp.
                     </Badge>
                   );
                 }
                 return (
-                  <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-emerald-600/90 text-white border-0">
+                  <Badge className={cn(badgeClasses, "bg-emerald-600/90 text-white border-0")}>
                     {avail} disp.
                   </Badge>
                 );
               }
               if (product.track_inventory !== false && product.stock <= 0) {
                 return (
-                  <Badge variant="destructive" className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-destructive/90">
+                  <Badge variant="destructive" className={cn(badgeClasses, "bg-destructive/90")}>
                     Agotado
                   </Badge>
                 );
               }
               if (product.track_inventory !== false && product.stock < 10) {
                 return (
-                  <Badge className="shadow-sm px-2 h-5 text-[10px] font-semibold bg-amber-500/90 text-white border-0">
-                    Quedan {product.stock}
+                  <Badge className={cn(badgeClasses, "bg-amber-500/90 text-white border-0")}>
+                    {isAdaptive ? `${product.stock} un.` : `Quedan ${product.stock}`}
                   </Badge>
                 );
               }
@@ -162,8 +182,11 @@ const ProductItem = React.memo<ProductItemProps>(({
 
         {/* Category Badge overlay (bottom left of image) - Only in Grid */}
         {viewMode === 'grid' && product.category?.name && (
-          <div className="absolute bottom-2 left-2 max-w-[80%]">
-            <Badge variant="secondary" className="shadow-sm px-1.5 h-4 text-[9px] font-medium bg-background/70 text-foreground/80 border-0 truncate max-w-full">
+          <div className={cn("absolute max-w-[85%]", isAdaptive ? "bottom-1 left-1" : "bottom-2 left-2")}>
+            <Badge variant="secondary" className={cn(
+              "shadow-sm bg-background/80 text-foreground/80 border-0 truncate max-w-full font-medium",
+              isAdaptive ? "px-1 h-3.5 text-[8px]" : "px-1.5 h-4 text-[9px]"
+            )}>
               {product.category.name}
             </Badge>
           </div>
@@ -175,13 +198,19 @@ const ProductItem = React.memo<ProductItemProps>(({
         "flex min-w-0",
         viewMode === 'list' 
           ? "flex-1 items-center justify-between gap-3" 
-          : "flex-col p-2 sm:p-2.5 md:p-3 gap-1 sm:gap-1.5 md:gap-2 justify-between"
+          : isAdaptive
+            ? "flex-col p-1.5 sm:p-2 gap-0.5 justify-between flex-1"
+            : "flex-col p-2 sm:p-2.5 md:p-3 gap-1 sm:gap-1.5 md:gap-2 justify-between flex-1"
       )}>
         {/* Left/Top: Name & Details */}
-        <div className="space-y-1 min-w-0 flex-1">
+        <div className="space-y-0.5 min-w-0 flex-1">
           <h4 className={cn(
             "font-medium tracking-tight text-foreground transition-colors group-hover:text-primary break-words min-w-0",
-            viewMode === 'list' ? "text-sm line-clamp-1" : "text-xs sm:text-sm leading-tight line-clamp-2"
+            viewMode === 'list' 
+              ? "text-sm line-clamp-1" 
+              : isAdaptive 
+                ? "text-[11px] sm:text-xs leading-tight line-clamp-1 sm:line-clamp-2" 
+                : "text-xs sm:text-sm leading-tight line-clamp-2"
           )}>
             {product.name}
           </h4>
@@ -205,15 +234,25 @@ const ProductItem = React.memo<ProductItemProps>(({
         {/* Right/Bottom: Price & Stock Badge */}
         <div className={cn(
           "flex items-center shrink-0",
-          viewMode === 'list' ? "flex-col items-end gap-1" : "justify-between mt-auto pt-1"
+          viewMode === 'list' 
+            ? "flex-col items-end gap-1" 
+            : isAdaptive 
+              ? "justify-between mt-auto pt-0.5" 
+              : "justify-between mt-auto pt-1"
         )}>
           {viewMode === 'grid' && (
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider opacity-60">
-              {matchedBundle ? 'Precio Paquete' : 'Precio'}
+            <span className={cn(
+              "text-muted-foreground font-medium uppercase tracking-wider opacity-60",
+              isAdaptive ? "text-[8px] sm:text-[9px]" : "text-[10px]"
+            )}>
+              {matchedBundle ? 'Paquete' : 'Precio'}
             </span>
           )}
 
-          <div className="font-bold text-xs sm:text-sm md:text-base text-primary leading-none flex items-center gap-1">
+          <div className={cn(
+            "font-bold text-primary leading-none flex items-center gap-1",
+            isAdaptive ? "text-xs sm:text-sm" : "text-xs sm:text-sm md:text-base"
+          )}>
             {(() => {
               let displayPrice = product.price || 0;
               if (matchedBundle) {
@@ -286,7 +325,10 @@ const ProductItem = React.memo<ProductItemProps>(({
           })()}
 
           {viewMode === 'grid' && product.internal_code && (
-            <span className="text-[10px] text-muted-foreground/60">
+            <span className={cn(
+              "text-muted-foreground/60",
+              isAdaptive ? "text-[8px] sm:text-[9px]" : "text-[10px]"
+            )}>
               {product.internal_code}
             </span>
           )}
@@ -303,6 +345,7 @@ const ProductItem = React.memo<ProductItemProps>(({
     prev.minCardWidth === next.minCardWidth &&
     prev.isFocused === next.isFocused &&
     prev.matchedBundle === next.matchedBundle &&
+    prev.isAdaptive === next.isAdaptive &&
     // Shallow check on recipeAvailability since it's a stable Map reference
     prev.recipeAvailability === next.recipeAvailability
   );
@@ -803,15 +846,29 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     }
   };
 
-  const isTablet = typeof window !== 'undefined' && window.innerWidth < 1100;
+  const isLandscape = useIsLandscape();
+  const [isShortHeight, setIsShortHeight] = useState(() => 
+    typeof window !== 'undefined' && window.innerHeight < 650
+  );
 
-  const minCardWidth = (isTablet ? {
+  useEffect(() => {
+    const checkHeight = () => {
+      setIsShortHeight(window.innerHeight < 650);
+    };
+    window.addEventListener('resize', checkHeight);
+    return () => window.removeEventListener('resize', checkHeight);
+  }, []);
+
+  const isTablet = typeof window !== 'undefined' && window.innerWidth < 1100;
+  const isAdaptiveScreen = isLandscape || isShortHeight;
+
+  const minCardWidth = (isAdaptiveScreen || isTablet ? {
     1: '100%',
-    2: '130px',
-    3: '105px',
-    4: '92px',
-    5: '82px',
-    6: '72px'
+    2: '120px',
+    3: '96px',
+    4: '82px',
+    5: '72px',
+    6: '62px'
   } : {
     1: '100%',
     2: '180px',
@@ -819,7 +876,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     4: '130px',
     5: '115px',
     6: '100px'
-  })[gridCols] || (isTablet ? '92px' : '130px');
+  })[gridCols] || ((isAdaptiveScreen || isTablet) ? '82px' : '130px');
 
   const isClassic = mode === 'classic';
 
@@ -829,8 +886,11 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       isClassic ? "relative w-full" : "relative h-full overflow-hidden"
     )}>
       {/* Search Header - Unified for both modes */}
-      <div className="p-3 border-b space-y-3 bg-card rounded-t-lg">
-        <div className="flex items-center gap-2">
+      <div className={cn(
+        "border-b bg-card rounded-t-lg",
+        isAdaptiveScreen ? "p-1.5 sm:p-2 space-y-1.5 sm:space-y-2" : "p-3 space-y-3"
+      )}>
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {menuButton}
 
           {/* Search Type Buttons */}
@@ -842,14 +902,15 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
                 size="sm"
                 onClick={() => handleSearchTypeChange(type)}
                 className={cn(
-                  "h-7 px-2 lg:px-2.5 text-xs gap-1.5 shrink-0 whitespace-nowrap rounded-md font-medium transition-all shadow-none",
+                  isAdaptiveScreen ? "h-6.5 px-1.5 sm:px-2 text-[11px]" : "h-7 px-2 lg:px-2.5 text-xs",
+                  "gap-1.5 shrink-0 whitespace-nowrap rounded-md font-medium transition-all shadow-none",
                   searchType === type 
                     ? "bg-card text-foreground font-semibold shadow-xs border border-border/50" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
                 title={label}
               >
-                <Icon className="h-3 w-3 opacity-70" />
+                <Icon className={cn(isAdaptiveScreen ? "h-2.5 w-2.5" : "h-3 w-3", "opacity-70")} />
                 <span className={cn(
                   "transition-all duration-200",
                   searchType === type ? "inline-block" : "hidden xl:inline-block"
@@ -866,9 +927,12 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="h-8 px-2.5 gap-1.5 shrink-0 rounded-lg border-border/40 bg-background hover:bg-accent text-xs font-medium text-muted-foreground hover:text-foreground shadow-none"
+                className={cn(
+                  isAdaptiveScreen ? "h-7 px-2 text-[11px]" : "h-8 px-2.5 text-xs",
+                  "gap-1.5 shrink-0 rounded-lg border-border/40 bg-background hover:bg-accent font-medium text-muted-foreground hover:text-foreground shadow-none"
+                )}
               >
-                <Settings2 className="h-3.5 w-3.5" />
+                <Settings2 className={cn(isAdaptiveScreen ? "h-3 w-3" : "h-3.5 w-3.5")} />
                 <span className="hidden sm:inline">Vista</span>
               </Button>
             </DropdownMenuTrigger>
@@ -936,7 +1000,10 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
         </div>
 
         <div className="relative flex-1 group">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+          <Search className={cn(
+            "absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary",
+            isAdaptiveScreen ? "h-3.5 w-3.5" : "h-4 w-4"
+          )} />
           <Input
             ref={searchInputRef}
             type="text"
@@ -947,7 +1014,10 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
               searchType === 'id' ? 'Buscar por código interno...' :
               'Buscar por categoría...'
             }
-            className="pl-10 pr-28 h-11 bg-background border-border/40 focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
+            className={cn(
+              "pl-9 bg-background border-border/40 focus:ring-2 focus:ring-primary/20 transition-all rounded-xl",
+              isAdaptiveScreen ? "h-8.5 sm:h-9 text-xs pr-24" : "h-11 text-sm pr-28"
+            )}
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -1002,7 +1072,8 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       {/* Product List/Grid */}
       <div 
         className={cn(
-          "bg-muted/10 p-2 sm:p-3 md:p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
+          "bg-muted/10 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
+          isAdaptiveScreen ? "p-1.5 sm:p-2" : "p-2 sm:p-3 md:p-4",
           isClassic ? "absolute top-full left-0 right-0 z-50 mt-1 shadow-lg rounded-b-lg border bg-background max-h-[60vh]" : "flex-1 min-h-0",
           (!filteredProducts.length && isClassic && !searchTerm) ? "hidden" : ""
         )}
@@ -1010,15 +1081,15 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       >
         {isLoading && filteredProducts.length === 0 ? (
           <div
-            className={cn(viewMode === 'list' && "flex flex-col gap-3")}
+            className={cn(viewMode === 'list' && (isAdaptiveScreen ? "flex flex-col gap-2" : "flex flex-col gap-3"))}
             style={viewMode === 'grid' ? {
               display: 'grid',
               gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}, 1fr))`,
-              gap: (typeof window !== 'undefined' && window.innerWidth < 1100) ? '8px' : '12px'
+              gap: (isAdaptiveScreen || isTablet) ? '6px' : '12px'
             } : undefined}
           >
             {Array.from({ length: 8 }).map((_, i) => (
-              <ProductSkeleton key={i} viewMode={viewMode} />
+              <ProductSkeleton key={i} viewMode={viewMode} isAdaptive={isAdaptiveScreen} />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
@@ -1029,11 +1100,11 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
           </div>
         ) : (
           <div
-            className={cn(viewMode === 'list' && "flex flex-col gap-3")}
+            className={cn(viewMode === 'list' && (isAdaptiveScreen ? "flex flex-col gap-2" : "flex flex-col gap-3"))}
             style={viewMode === 'grid' ? {
               display: 'grid',
               gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}, 1fr))`,
-              gap: (typeof window !== 'undefined' && window.innerWidth < 1100) ? '8px' : '12px'
+              gap: (isAdaptiveScreen || isTablet) ? '6px' : '12px'
             } : undefined}
           >
             {filteredProducts.slice(0, visibleCount).map((product, index) => {
@@ -1050,6 +1121,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
                   onSelect={handleProductSelect}
                   isFocused={focusedIndex === index}
                   matchedBundle={matchedBundle}
+                  isAdaptive={isAdaptiveScreen}
                 />
               );
             })}
