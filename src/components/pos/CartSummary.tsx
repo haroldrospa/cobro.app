@@ -241,7 +241,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
           className="h-full overflow-y-auto space-y-1.5 relative z-10 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent pr-1 py-2"
         >
           {cart.length === 0 ? (
-            <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full p-4">
+            <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full p-2">
               {selectedTable ? (
                 <div className="space-y-2.5 animate-in fade-in duration-300">
                   <div className="relative inline-flex mx-auto">
@@ -264,8 +264,8 @@ const CartSummary: React.FC<CartSummaryProps> = ({
                 </div>
               ) : (
                 <>
-                  {!companyLogo && <ShoppingCart className="h-20 w-20 mx-auto mb-3 opacity-15" />}
-                  <p className="text-sm text-muted-foreground/60">Agrega productos al carrito</p>
+                  {!companyLogo && <ShoppingCart className="h-10 w-10 sm:h-16 sm:w-16 mx-auto mb-1.5 opacity-15" />}
+                  <p className="text-xs sm:text-sm text-muted-foreground/60">Agrega productos al carrito</p>
                 </>
               )}
             </div>

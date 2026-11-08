@@ -3388,10 +3388,10 @@ const POSContent: React.FC = () => {
               <div 
                 id="pos-right-sidebar"
                 style={{ width: `${rightPanelWidth}px` }} 
-                className="flex flex-col gap-2 flex-shrink-0 min-w-[240px] max-w-[85vw] min-h-0 overflow-y-auto pl-1"
+                className="flex flex-col gap-1.5 flex-shrink-0 min-w-[240px] max-w-[85vw] min-h-0 overflow-hidden pl-1"
               >
                 {/* Carrito */}
-                <div id="pos-cart-area" className="flex-1 min-h-[90px] sm:min-h-[120px] md:min-h-[140px] overflow-hidden rounded-xl shadow-sm border bg-card">
+                <div id="pos-cart-area" className="flex-1 min-h-[60px] overflow-hidden rounded-xl shadow-sm border bg-card flex flex-col">
                   <CartSummary
                     cart={cartWithOffers}
                     onUpdateQuantity={updateQuantity}
@@ -3914,11 +3914,11 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
           title="Generar Factura de Servicios (Formato Carta)"
         >
           <FileText className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Generar Factura</span>
+          <span className="hidden xl:inline">Generar Factura</span>
         </Button>
       )}
 
-      <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/40 border border-border/40 mr-1">
+      <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/40 border border-border/40 mr-1">
         <User className="h-3 w-3 text-muted-foreground" />
         <div className="flex flex-col text-left">
           <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-wider leading-none">Cajero</span>

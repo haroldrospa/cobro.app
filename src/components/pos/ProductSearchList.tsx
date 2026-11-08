@@ -110,7 +110,7 @@ const ProductItem = React.memo<ProductItemProps>(({
         viewMode === 'list' 
           ? "w-11 h-11 sm:w-14 sm:h-14 rounded-lg bg-secondary/30 border border-border/40" 
           : isAdaptive
-            ? "aspect-[16/10] max-h-16 sm:max-h-20 w-full bg-secondary/20"
+            ? "aspect-[16/9] max-h-12 sm:max-h-14 w-full bg-secondary/20"
             : "aspect-[4/3] w-full bg-secondary/20",
         !product.image_url && "bg-muted/15"
       )}>
@@ -199,7 +199,7 @@ const ProductItem = React.memo<ProductItemProps>(({
         viewMode === 'list' 
           ? "flex-1 items-center justify-between gap-3" 
           : isAdaptive
-            ? "flex-col p-1.5 sm:p-2 gap-0.5 justify-between flex-1"
+            ? "flex-col p-1 sm:p-1.5 gap-0.5 justify-between flex-1"
             : "flex-col p-2 sm:p-2.5 md:p-3 gap-1 sm:gap-1.5 md:gap-2 justify-between flex-1"
       )}>
         {/* Left/Top: Name & Details */}
@@ -1081,11 +1081,11 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       >
         {isLoading && filteredProducts.length === 0 ? (
           <div
-            className={cn(viewMode === 'list' && (isAdaptiveScreen ? "flex flex-col gap-2" : "flex flex-col gap-3"))}
+            className={cn(viewMode === 'list' && (isAdaptiveScreen ? "flex flex-col gap-1.5" : "flex flex-col gap-3"))}
             style={viewMode === 'grid' ? {
               display: 'grid',
               gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}, 1fr))`,
-              gap: (isAdaptiveScreen || isTablet) ? '6px' : '12px'
+              gap: (isAdaptiveScreen || isTablet) ? '5px' : '12px'
             } : undefined}
           >
             {Array.from({ length: 8 }).map((_, i) => (
@@ -1100,11 +1100,11 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
           </div>
         ) : (
           <div
-            className={cn(viewMode === 'list' && (isAdaptiveScreen ? "flex flex-col gap-2" : "flex flex-col gap-3"))}
+            className={cn(viewMode === 'list' && (isAdaptiveScreen ? "flex flex-col gap-1.5" : "flex flex-col gap-3"))}
             style={viewMode === 'grid' ? {
               display: 'grid',
               gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}, 1fr))`,
-              gap: (isAdaptiveScreen || isTablet) ? '6px' : '12px'
+              gap: (isAdaptiveScreen || isTablet) ? '5px' : '12px'
             } : undefined}
           >
             {filteredProducts.slice(0, visibleCount).map((product, index) => {

@@ -43,8 +43,8 @@ import { useActiveSession } from '@/hooks/useCashSession';
 import LoyaltyPanel from './LoyaltyPanel';
 import QuickNotesSection, { useQuickNotes } from './QuickNotes';
 
-const DEFAULT_BLOCK_ORDER = ['invoice', 'loyalty', 'totals', 'notes'];
-const STORAGE_KEY = 'cobro_pos_payment_blocks_order';
+const DEFAULT_BLOCK_ORDER = ['totals', 'invoice', 'loyalty', 'notes'];
+const STORAGE_KEY = 'cobro_pos_payment_blocks_order_v2';
 
 interface PaymentSummaryProps {
   totals: {
@@ -115,8 +115,9 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const isMobile = useIsMobile();
   // En tablets y pantallas landscape/desktop, el resumen debe mostrarse SIEMPRE completo por defecto
   // Solo se colapsa si es móvil vertical estricto (< 640px ancho y < 500px alto)
-  const isLandscapeOrTablet = typeof window !== 'undefined' && (window.innerWidth >= 640 || window.innerHeight >= 500);
-  const shouldCollapseMobile = isMobile && !isLandscapeOrTablet;
+  const isShortHeight = typeof window !== 'undefined' && window.innerHeight < 600;
+  const isLandscapeOrTablet = typeof window !== 'undefined' && (window.innerWidth >= 640 && window.innerHeight >= 600);
+  const shouldCollapseMobile = (isMobile && !isLandscapeOrTablet) || isShortHeight;
   const [isExpanded, setIsExpanded] = useState(!shouldCollapseMobile);
   const [showNotesDialog, setShowNotesDialog] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
@@ -342,7 +343,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                 className="w-full justify-between p-1 h-6 lg:pointer-events-none hover:bg-accent/50"
               >
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <CreditCard className="h-3 w-3" /> Factura
+                  <CreditCard className="h-3 w-3" /> Factura {selectedType?.code && <span className="text-[10px] font-bold text-foreground opacity-80">({selectedType.code})</span>}
                 </label>
                 {shouldCollapseMobile && <ChevronDown className={`h-3 w-3 transition-transform ${isInvoiceTypeOpen ? 'rotate-180' : ''}`} />}
               </Button>
@@ -541,26 +542,26 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
 
       case 'totals':
         return (
-          <div className="border border-border rounded-lg p-2 sm:p-2.5 md:p-3 space-y-1 sm:space-y-1.5 md:space-y-2 w-full bg-card/40">
-            <div className="flex justify-between text-xs sm:text-sm md:text-base font-medium">
+          <div className="border border-border/80 rounded-xl p-2 sm:p-2.5 w-full bg-card/60 shadow-xs space-y-0.5 sm:space-y-1">
+            <div className="flex justify-between text-[11px] sm:text-xs font-medium text-muted-foreground">
               <span>Subtotal:</span>
-              <span className="font-semibold">${totals.subtotal}</span>
+              <span className="font-semibold text-foreground">${totals.subtotal}</span>
             </div>
 
             {parseFloat(totals.discount) > 0 && (
-              <div className="flex justify-between text-xs sm:text-sm md:text-base font-medium text-destructive">
+              <div className="flex justify-between text-[11px] sm:text-xs font-medium text-destructive">
                 <span>Desc.:</span>
                 <span className="font-semibold">-${totals.discount}</span>
               </div>
             )}
 
-            <div className="flex justify-between text-xs sm:text-sm md:text-base font-medium">
+            <div className="flex justify-between text-[11px] sm:text-xs font-medium text-muted-foreground">
               <span>ITBIS:</span>
-              <span className="font-semibold">${totals.tax}</span>
+              <span className="font-semibold text-foreground">${totals.tax}</span>
             </div>
-            <div className="flex justify-between text-base sm:text-xl md:text-2xl font-bold border-t border-border pt-1.5 mt-1 sm:pt-2 sm:mt-2">
+            <div className="flex justify-between text-sm sm:text-base md:text-lg font-black text-foreground border-t border-border/60 pt-1 mt-0.5">
               <span>Total:</span>
-              <span>${totals.total}</span>
+              <span className="text-emerald-600 dark:text-emerald-400">${totals.total}</span>
             </div>
           </div>
         );
