@@ -2654,11 +2654,78 @@ const POSContent: React.FC = () => {
             </Suspense>
           )}
 
+          {showPendingInvoicesDialog && (
+            <Suspense fallback={null}>
+              <PendingInvoicesDialog
+                isOpen={showPendingInvoicesDialog}
+                onClose={() => setShowPendingInvoicesDialog(false)}
+                storeId={storeId || store?.id}
+                onSelectSaleForPrint={(sale) => {
+                  setSaleData(sale);
+                  setShowPendingInvoicesDialog(false);
+                  setShowPrintOptionsDialog(true);
+                }}
+              />
+            </Suspense>
+          )}
+
+          {showOpenAccountsDialog && (
+            <Suspense fallback={null}>
+              <OpenAccountsDialog
+                isOpen={showOpenAccountsDialog}
+                initialTab={openAccountsInitialTab}
+                onClose={() => setShowOpenAccountsDialog(false)}
+                onLoadToCart={handleLoadWebOrder}
+                currentLoadedOrderId={cart.length > 0 ? currentWebOrderId : null}
+                onSelectTable={(tbl) => handleSelectTableWithPerson(tbl)}
+              />
+            </Suspense>
+          )}
+
+          {showWebSalesDialog && (
+            <Suspense fallback={null}>
+              <WebSalesDialog
+                isOpen={showWebSalesDialog}
+                onClose={() => setShowWebSalesDialog(false)}
+                onLoadToCart={handleLoadWebOrder}
+                currentLoadedOrderId={currentWebOrderId}
+              />
+            </Suspense>
+          )}
+
           {showDailySalesDialog && (
             <Suspense fallback={null}>
               <DailySalesDialog
                 isOpen={showDailySalesDialog}
                 onClose={() => setShowDailySalesDialog(false)}
+              />
+            </Suspense>
+          )}
+
+          {showRefundDialog && (
+            <Suspense fallback={null}>
+              <RefundDialog
+                isOpen={showRefundDialog}
+                onClose={() => setShowRefundDialog(false)}
+              />
+            </Suspense>
+          )}
+
+          {showCashMovementsDialog && (
+            <Suspense fallback={null}>
+              <CashMovementsDialog
+                isOpen={showCashMovementsDialog}
+                onClose={() => setShowCashMovementsDialog(false)}
+              />
+            </Suspense>
+          )}
+
+          {showCloseDayDialog && (
+            <Suspense fallback={null}>
+              <CloseDayDialog
+                isOpen={showCloseDayDialog}
+                onClose={() => setShowCloseDayDialog(false)}
+                onGoToPOS={handleGoToPOSFromCloseDay}
               />
             </Suspense>
           )}
