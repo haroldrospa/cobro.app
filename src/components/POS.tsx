@@ -173,7 +173,7 @@ const POSContent: React.FC = () => {
           return parsed;
         }
       }
-      return window.innerWidth < 1024 ? 340 : 410;
+      return window.innerWidth < 900 ? Math.max(280, Math.min(320, Math.round(window.innerWidth * 0.35))) : (window.innerWidth < 1100 ? 330 : 410);
     }
     return 410;
   });
@@ -190,7 +190,7 @@ const POSContent: React.FC = () => {
   }, []);
 
   const handleSplitterReset = useCallback(() => {
-    const defaultWidth = window.innerWidth < 1024 ? 340 : 410;
+    const defaultWidth = window.innerWidth < 900 ? Math.max(280, Math.min(320, Math.round(window.innerWidth * 0.35))) : (window.innerWidth < 1100 ? 330 : 410);
     setRightPanelWidth(defaultWidth);
     try {
       localStorage.setItem('pos_right_panel_width', defaultWidth.toString());
@@ -3918,7 +3918,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         </Button>
       )}
 
-      <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/40 border border-border/40 mr-1">
+      <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/40 border border-border/40 mr-1">
         <User className="h-3 w-3 text-muted-foreground" />
         <div className="flex flex-col text-left">
           <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-wider leading-none">Cajero</span>
@@ -3936,7 +3936,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
           title="Guardar Pedido (F9)"
         >
           <Save className="h-3.5 w-3.5 text-primary" />
-          <span className="hidden lg:inline">
+          <span className="hidden sm:inline">
             {selectedTable ? `Guardar (${selectedTable})` : (currentWebOrderId ? 'Actualizar' : 'Guardar')}
           </span>
         </Button>
@@ -3950,7 +3950,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         title="Ver Cuentas en Espera (F8)"
       >
         <ClipboardList className="h-3.5 w-3.5 text-primary" />
-        <span className="hidden lg:inline">Cuentas</span>
+        <span className="hidden sm:inline">Cuentas</span>
       </Button>
 
       {/* Para servicios: botón Pendiente de Pago en barra superior (abre el modal con las facturas pendientes) */}

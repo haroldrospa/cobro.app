@@ -112,13 +112,17 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [isInvoiceTypeOpen, setIsInvoiceTypeOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const isMobile = useIsMobile();
+  // En tablets y pantallas landscape/desktop, el resumen debe mostrarse SIEMPRE completo por defecto
+  // Solo se colapsa si es móvil vertical estricto (< 640px ancho y < 500px alto)
+  const isLandscapeOrTablet = typeof window !== 'undefined' && (window.innerWidth >= 640 || window.innerHeight >= 500);
+  const shouldCollapseMobile = isMobile && !isLandscapeOrTablet;
+  const [isExpanded, setIsExpanded] = useState(!shouldCollapseMobile);
   const [showNotesDialog, setShowNotesDialog] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [blockOrder, setBlockOrder] = useState<string[]>(DEFAULT_BLOCK_ORDER);
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
   const [dragOverBlock, setDragOverBlock] = useState<string | null>(null);
-  const isMobile = useIsMobile();
   const { isServices } = useBusinessType();
   const [quoteValidityDays, setQuoteValidityDays] = useState<number>(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('cobro_quote_validity_days') : null;
@@ -331,7 +335,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
     switch (blockId) {
       case 'invoice':
         return (
-          <Collapsible open={!isMobile || isInvoiceTypeOpen} onOpenChange={setIsInvoiceTypeOpen} className="w-full">
+          <Collapsible open={!shouldCollapseMobile || isInvoiceTypeOpen} onOpenChange={setIsInvoiceTypeOpen} className="w-full">
             <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"
@@ -340,7 +344,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <CreditCard className="h-3 w-3" /> Factura
                 </label>
-                {isMobile && <ChevronDown className={`h-3 w-3 transition-transform ${isInvoiceTypeOpen ? 'rotate-180' : ''}`} />}
+                {shouldCollapseMobile && <ChevronDown className={`h-3 w-3 transition-transform ${isInvoiceTypeOpen ? 'rotate-180' : ''}`} />}
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-1 px-1">
@@ -634,7 +638,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
             </Button>
           </div>
           <div className="flex items-center gap-1">
-            {isMobile && (
+            {shouldCollapseMobile && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -650,7 +654,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
       </div>
 
       {/* Contenido expandido con bloques reorganizables */}
-      {(!isMobile || isExpanded) && (
+      {(!shouldCollapseMobile || isExpanded) && (
         <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-2 space-y-2.5 scrollbar-thin">
           {blockOrder.map((blockId, index) => (
             <div
@@ -779,7 +783,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
       </Dialog>
 
       {/* Botón de procesar venta - FUERA del scroll para que siempre sea visible */}
-      {(!isMobile || isExpanded) && (
+      {(!shouldCollapseMobile || isExpanded) && (
         <div className="mt-auto flex-shrink-0 pt-1 border-t border-transparent space-y-2">
           {isInvoiceLimitReached && (
             <div className="text-xs text-destructive font-medium text-center bg-destructive/10 p-1.5 rounded border border-destructive/20">
@@ -882,7 +886,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
       )}
 
       {/* Versión compacta cuando está colapsado en móvil */}
-      {isMobile && !isExpanded && (
+      {shouldCollapseMobile && !isExpanded && (
         <div className="flex items-center justify-between py-2 border-t border-border mt-1 gap-2">
           <div className="flex flex-col">
             <div className="text-[10px] text-muted-foreground">Total a Pagar</div>

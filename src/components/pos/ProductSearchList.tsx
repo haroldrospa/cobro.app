@@ -175,13 +175,13 @@ const ProductItem = React.memo<ProductItemProps>(({
         "flex min-w-0",
         viewMode === 'list' 
           ? "flex-1 items-center justify-between gap-3" 
-          : "flex-col p-3 gap-2 justify-between"
+          : "flex-col p-2 sm:p-2.5 md:p-3 gap-1 sm:gap-1.5 md:gap-2 justify-between"
       )}>
         {/* Left/Top: Name & Details */}
         <div className="space-y-1 min-w-0 flex-1">
           <h4 className={cn(
             "font-medium tracking-tight text-foreground transition-colors group-hover:text-primary break-words min-w-0",
-            viewMode === 'list' ? "text-sm line-clamp-1" : "text-sm leading-tight line-clamp-2"
+            viewMode === 'list' ? "text-sm line-clamp-1" : "text-xs sm:text-sm leading-tight line-clamp-2"
           )}>
             {product.name}
           </h4>
@@ -213,7 +213,7 @@ const ProductItem = React.memo<ProductItemProps>(({
             </span>
           )}
 
-          <div className="font-bold text-base md:text-lg text-primary leading-none flex items-center gap-1.5">
+          <div className="font-bold text-xs sm:text-sm md:text-base text-primary leading-none flex items-center gap-1">
             {(() => {
               let displayPrice = product.price || 0;
               if (matchedBundle) {
@@ -803,14 +803,23 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
     }
   };
 
-  const minCardWidth = {
+  const isTablet = typeof window !== 'undefined' && window.innerWidth < 1100;
+
+  const minCardWidth = (isTablet ? {
+    1: '100%',
+    2: '130px',
+    3: '105px',
+    4: '92px',
+    5: '82px',
+    6: '72px'
+  } : {
     1: '100%',
     2: '180px',
     3: '150px',
     4: '130px',
     5: '115px',
     6: '100px'
-  }[gridCols] || '150px';
+  })[gridCols] || (isTablet ? '92px' : '130px');
 
   const isClassic = mode === 'classic';
 
@@ -993,7 +1002,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
       {/* Product List/Grid */}
       <div 
         className={cn(
-          "bg-muted/10 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
+          "bg-muted/10 p-2 sm:p-3 md:p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
           isClassic ? "absolute top-full left-0 right-0 z-50 mt-1 shadow-lg rounded-b-lg border bg-background max-h-[60vh]" : "flex-1 min-h-0",
           (!filteredProducts.length && isClassic && !searchTerm) ? "hidden" : ""
         )}
@@ -1005,7 +1014,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
             style={viewMode === 'grid' ? {
               display: 'grid',
               gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}, 1fr))`,
-              gap: '12px'
+              gap: (typeof window !== 'undefined' && window.innerWidth < 1100) ? '8px' : '12px'
             } : undefined}
           >
             {Array.from({ length: 8 }).map((_, i) => (
@@ -1024,7 +1033,7 @@ const ProductSearchList = React.memo(React.forwardRef<ProductSearchListHandle, P
             style={viewMode === 'grid' ? {
               display: 'grid',
               gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}, 1fr))`,
-              gap: '12px'
+              gap: (typeof window !== 'undefined' && window.innerWidth < 1100) ? '8px' : '12px'
             } : undefined}
           >
             {filteredProducts.slice(0, visibleCount).map((product, index) => {
