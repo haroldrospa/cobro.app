@@ -16,6 +16,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { generateCleanInvoiceHTML } from '@/utils/generateCleanInvoiceHTML';
+import { generateCleanInvoicePDF } from '@/utils/generateCleanInvoicePDF';
 import {
   isAndroidNative,
   thermalPaperWidthMm,
@@ -232,6 +233,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   }, [propSaleData?.id, isOpen]);
   const [emailAddress, setEmailAddress] = useState('');
   const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [whatsAppPhone, setWhatsAppPhone] = useState('');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
@@ -1491,37 +1493,39 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   };
 
   const handleGeneratePDF = async () => {
+    if (isPdfGenerating) return;
+    setIsPdfGenerating(true);
     try {
+      const paperName = (effectivePaperSize === 'carta' || effectivePaperSize === 'letter')
+        ? 'Carta'
+        : (effectivePaperSize === 'A4' ? 'A4' : effectivePaperSize);
+
       toast({
-        title: "Generando Factura A4",
-        description: "Creando PDF en formato de oficina profesional...",
+        title: `Generando Factura (${paperName})`,
+        description: "Creando PDF idéntico al formato de impresión...",
       });
 
-      const doc = await generateProfessionalPDF(dbCompanyInfo);
+      // Generar el mismo HTML exacto que se usa para imprimir
+      const htmlContent = generateCleanInvoiceHTMLWrapper();
+      const doc = await generateCleanInvoicePDF(htmlContent, effectivePaperSize);
 
-      // Save PDF via explicit blob download
-      const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${invoiceNumber}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Guardar PDF directamente con el nombre de la factura
+      const fileName = `${invoiceNumber || 'Factura'}.pdf`;
+      doc.save(fileName);
 
       toast({
-        title: "Factura Generada",
-        description: `La factura profesional ${invoiceNumber} se ha descargado correctamente en formato A4.`,
+        title: "Factura Descargada",
+        description: `La factura ${invoiceNumber} se ha descargado correctamente en formato ${paperName}.`,
       });
     } catch (error: any) {
       console.error('CRITICAL Error generating PDF:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: `No se pudo generar el formato A4: ${error.message || "Error desconocido"} `,
+        title: "Error al generar PDF",
+        description: `No se pudo generar el PDF: ${error.message || "Error desconocido"}`,
       });
+    } finally {
+      setIsPdfGenerating(false);
     }
   };
 
@@ -1538,14 +1542,15 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     setIsEmailLoading(true);
     toast({
       title: "Generando factura para envío",
-      description: "Preparando el PDF profesional y convirtiendo...",
+      description: "Preparando el PDF oficial con el formato de impresión...",
     });
 
     try {
       const companyInfo = dbCompanyInfo;
 
-      // 1. Generate the same professional PDF
-      const doc = await generateProfessionalPDF(companyInfo);
+      // 1. Generar el PDF idéntico al formato de impresión
+      const htmlContent = generateCleanInvoiceHTMLWrapper();
+      const doc = await generateCleanInvoicePDF(htmlContent, effectivePaperSize);
       const pdfBlob = doc.output('blob');
 
       // 2. Convert Blob to base64 using FileReader
@@ -1825,12 +1830,21 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                   onClick={handleGeneratePDF}
                   className="w-full justify-start h-auto py-2 px-3 hover:bg-transparent"
                   variant="ghost"
+                  disabled={isPdfGenerating}
                 >
                   <div className="p-1.5 rounded-md bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors shrink-0">
-                    <FileText className="h-4 w-4 text-blue-500" />
+                    {isPdfGenerating ? (
+                      <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-blue-500" />
+                    )}
                   </div>
                   <span className="ml-2 font-semibold text-sm">
-                    {(effectivePaperSize === 'carta' || effectivePaperSize === 'A4') ? 'Descargar PDF (Formato Carta)' : 'Generar PDF'}
+                    {isPdfGenerating
+                      ? 'Generando PDF...'
+                      : (effectivePaperSize === 'carta' || effectivePaperSize === 'A4')
+                        ? 'Descargar PDF (Formato Carta)'
+                        : 'Descargar PDF'}
                   </span>
                 </Button>
               </Card>
