@@ -509,15 +509,18 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 w-full overflow-hidden bg-background text-foreground">
       {/* Top Header Bar */}
-      <header className="h-11 px-3 sm:px-4 border-b border-border/50 bg-card/70 backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
+      <header className="h-11 px-2.5 sm:px-4 border-b border-border/50 bg-card/70 backdrop-blur-md flex items-center justify-between gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-hidden">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
           {menuButton}
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <div className="p-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
               <Briefcase className="h-3.5 w-3.5" />
             </div>
-            <span className="font-semibold text-xs sm:text-sm truncate">Facturación de Servicios</span>
+            <span className="font-semibold text-xs sm:text-sm truncate">
+              <span className="sm:hidden">Servicios</span>
+              <span className="hidden sm:inline">Facturación de Servicios</span>
+            </span>
             <span className="hidden sm:inline-block text-[10px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Carta
             </span>
@@ -545,16 +548,16 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
         </div>
 
         {/* Top Header Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={handleReset}
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+            className="h-7 w-7 sm:w-auto p-0 sm:px-2 text-xs text-muted-foreground hover:text-foreground shrink-0 rounded-lg flex items-center justify-center gap-1"
             title="Limpiar formulario"
           >
-            <RotateCcw className="h-3 w-3" />
+            <RotateCcw className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Limpiar</span>
           </Button>
 
@@ -566,8 +569,8 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
               size="sm"
               onClick={onOpenPendingInvoices}
               className={cn(
-                "h-7 px-2 text-xs font-bold gap-1 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs",
-                actionButton ? "sm:hidden" : "flex"
+                "h-7 px-2 text-xs font-bold gap-1 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-lg cursor-pointer shadow-xs shrink-0",
+                actionButton ? "sm:hidden flex" : "flex"
               )}
               title="Ver facturas pendientes de pago"
             >
@@ -589,7 +592,7 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       </header>
 
       {/* Mobile Animated Stepper Header (visible on mobile < lg) */}
-      <div className="lg:hidden shrink-0 px-3 py-2 bg-card/85 backdrop-blur-md border-b border-border/50">
+      <div className="lg:hidden shrink-0 px-3 py-2 bg-card/85 backdrop-blur-md border-b border-border/50 relative z-10">
         <div className="flex items-center justify-between gap-2 max-w-md mx-auto">
           {/* Step 1 Button */}
           <button
