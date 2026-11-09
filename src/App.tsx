@@ -40,6 +40,7 @@ const SuperAdmin = lazy(() => import("./pages/admin/SuperAdmin"));
 const StoreSuspended = lazy(() => import("./pages/StoreSuspended"));
 const Delivery = lazy(() => import("./components/Delivery"));
 const Kitchen = lazy(() => import("./components/KitchenDisplay"));
+const CustomerDisplay = lazy(() => import("./pages/CustomerDisplay"));
 const DigitalServicesDashboard = lazy(() => import("./components/DigitalServicesDashboard"));
 // Landing ya no se importa acá directo — ver RootRoute, que revisa la sesión
 // antes de decidir si hace falta cargarla (evita bajar la landing completa
@@ -202,6 +203,10 @@ const App = () => {
               <Route path="/privacidad" element={<Privacy />} />
               <Route path="/reembolsos" element={<Refunds />} />
               <Route path="/eliminar-cuenta" element={<AccountDeletion />} />
+
+              {/* Visor de Clientes (Customer-Facing Display Kiosk para Tablets) */}
+              <Route path="/customer-display" element={<Suspense fallback={<PageLoader />}><CustomerDisplay /></Suspense>} />
+              <Route path="/visor" element={<Suspense fallback={<PageLoader />}><CustomerDisplay /></Suspense>} />
 
               {/* Full-screen protected routes - NO Layout header */}
               <Route

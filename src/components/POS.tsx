@@ -16,8 +16,15 @@ import {
   Maximize, Minimize, Menu, Home, Package, Users, FileText, BarChart,
   Settings as SettingsIcon, Store, LogOut, Save, ClipboardList, Receipt,
   RefreshCcw, HandCoins, Lock, Unlock, AlertCircle, Crown, DollarSign, ChefHat, Bike,
-  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils, X, Clock, CheckCircle2, Smartphone
+  Menu as MenuIcon, User, Info, HelpCircle, Search, Briefcase, Utensils, X, Clock, CheckCircle2, Smartphone, Tv
 } from 'lucide-react';
+import CustomerDisplayDialog from './pos/CustomerDisplayDialog';
+import {
+  broadcastCustomerDisplay,
+  getStoredRegisterId,
+  getStoredRegisterName,
+} from '@/services/customerDisplayService';
+import { DisplayCartItem, LastScannedItem } from '@/types/customerDisplay';
 import { LoadingLogo } from '@/components/ui/loading-logo';
 
 import { useNavigate } from 'react-router-dom';
@@ -758,6 +765,141 @@ const POSContent: React.FC = () => {
       setCurrentOrderInfo(null);
     }
   }, [cart.length, currentWebOrderId, cartLoaded]);
+
+  // ── Sincronización en Tiempo Real con el Visor de Clientes (Customer Display) ──
+  const [showCustomerDisplayDialog, setShowCustomerDisplayDialog] = useState(false);
+  const [lastScannedItem, setLastScannedItem] = useState<LastScannedItem | undefined>(undefined);
+  const prevCartLengthRef = useRef(0);
+
+  // Detectar cuando se agrega un nuevo producto al carrito para animarlo en el visor
+  useEffect(() => {
+    if (cart.length > prevCartLengthRef.current) {
+      const added = cart[cart.length - 1];
+      if (added) {
+        setLastScannedItem({
+          id: added.id,
+          name: added.name,
+          price: added.price,
+          quantity: added.quantity,
+          total: calculateItemTotal(added),
+          image_url: added.image_url,
+          timestamp: Date.now(),
+        });
+      }
+    }
+    prevCartLengthRef.current = cart.length;
+  }, [cart]);
+
+  // Transmitir estado del carrito al Visor de Clientes
+  useEffect(() => {
+    const currentStoreId = profile?.store_id || (storeSettings as any)?.store_id || 'default';
+    if (!currentStoreId || currentStoreId === 'default') return;
+
+    const regId = getStoredRegisterId();
+    const regName = getStoredRegisterName();
+
+    const displayCart: DisplayCartItem[] = cartWithOffers.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      total: calculateItemTotal(item),
+      image_url: item.image_url,
+      extras: item.selectedExtras?.map(e => ({ name: e.name, price: e.price, quantity: e.quantity })),
+      discount: item.discount,
+    }));
+
+    if (cartWithOffers.length === 0 && !showPaymentDialog && !saleData) {
+      // Estado de espera (Idle)
+      broadcastCustomerDisplay({
+        status: 'idle',
+        storeId: currentStoreId,
+        storeName: storeSettings?.name || companyInfo?.name || 'Supermercado',
+        storeLogo: (storeSettings as any)?.logo_url || companyInfo?.logo,
+        registerId: regId,
+        registerName: regName,
+        cart: [],
+        subtotal: 0,
+        tax: 0,
+        discount: 0,
+        total: 0,
+        itemsCount: 0,
+        updatedAt: Date.now(),
+      });
+      return;
+    }
+
+    if (cartWithOffers.length > 0) {
+      broadcastCustomerDisplay({
+        status: showPaymentDialog ? 'payment' : 'scanning',
+        storeId: currentStoreId,
+        storeName: storeSettings?.name || companyInfo?.name || 'Supermercado',
+        storeLogo: (storeSettings as any)?.logo_url || companyInfo?.logo,
+        registerId: regId,
+        registerName: regName,
+        cart: displayCart,
+        lastItem: lastScannedItem,
+        subtotal: totals.subtotal,
+        tax: totals.tax,
+        discount: totals.discount,
+        total: totals.total,
+        itemsCount: cartWithOffers.reduce((sum, item) => sum + (item.quantity || 1), 0),
+        payment: showPaymentDialog ? {
+          paymentMethod,
+          total: totals.total,
+          amountPaid: parseFloat(amountReceived) || undefined,
+          change: (parseFloat(amountReceived) || 0) > totals.total ? (parseFloat(amountReceived) || 0) - totals.total : 0,
+        } : undefined,
+        updatedAt: Date.now(),
+      });
+    }
+  }, [
+    cartWithOffers,
+    totals,
+    showPaymentDialog,
+    paymentMethod,
+    amountReceived,
+    lastScannedItem,
+    profile?.store_id,
+    storeSettings,
+    companyInfo,
+    saleData
+  ]);
+
+  // Transmitir venta finalizada con QR al Visor
+  useEffect(() => {
+    if (saleData && showPrintOptionsDialog) {
+      const currentStoreId = profile?.store_id || (storeSettings as any)?.store_id;
+      if (!currentStoreId) return;
+
+      const regId = getStoredRegisterId();
+      const regName = getStoredRegisterName();
+
+      broadcastCustomerDisplay({
+        status: 'completed',
+        storeId: currentStoreId,
+        storeName: storeSettings?.name || companyInfo?.name || 'Supermercado',
+        storeLogo: (storeSettings as any)?.logo_url || companyInfo?.logo,
+        registerId: regId,
+        registerName: regName,
+        cart: [],
+        subtotal: saleData.subtotal || saleData.total,
+        tax: saleData.tax || 0,
+        discount: saleData.discount || 0,
+        total: saleData.total,
+        itemsCount: saleData.items?.length || 0,
+        completed: {
+          invoiceNumber: saleData.invoiceNumber || saleData.invoice_number || '',
+          total: saleData.total,
+          amountPaid: saleData.amountReceived || saleData.amount_paid,
+          change: saleData.change,
+          qrCodeUrl: saleData.qrcode_url,
+          customerName: saleData.customer?.name,
+        },
+        updatedAt: Date.now(),
+      });
+    }
+  }, [saleData, showPrintOptionsDialog, profile?.store_id, storeSettings, companyInfo]);
 
   // Set default invoice type
   useEffect(() => {
@@ -2470,6 +2612,7 @@ const POSContent: React.FC = () => {
           onOpenRegister={handleOpenRegister}
           isWaiter={isWaiter}
           onShowTables={() => setShowTableSelectorDialog(true)}
+          onCustomerDisplay={() => setShowCustomerDisplayDialog(true)}
         />
       );
     }
@@ -2489,6 +2632,7 @@ const POSContent: React.FC = () => {
         onOpenRegister={handleOpenRegister}
         isWaiter={isWaiter}
         onShowTables={() => setShowTableSelectorDialog(true)}
+        onCustomerDisplay={() => setShowCustomerDisplayDialog(true)}
       />
     );
   }, [isMobile, navigationItems, handleShowDailySales, handleShowRefund, handleShowCashMovements, handleShowCloseDay, handleShowDebtSelect, handleLogout, navigate, storeSettings, updateSettings, profile, activeSession, handleOpenRegister, isWaiter]);
@@ -2517,6 +2661,7 @@ const POSContent: React.FC = () => {
       onOpenPendingInvoices={() => setShowPendingInvoicesDialog(true)}
       pendingInvoicesCount={pendingSalesCount}
       onOpenDigitalServices={hasDigitalServices ? handleOpenDigitalServices : undefined}
+      onOpenCustomerDisplay={() => setShowCustomerDisplayDialog(true)}
     />
   ), [profile?.full_name, hasCartItems, isSavingOrder, currentWebOrderId, webOrdersCount, isFullscreen, isServices, hasDigitalServices, memoHandleSaveOrder, memoHandleShowOpenAccounts, memoHandleShowWebSales, memoHandleToggleFullscreen, displayTableLabel, effectiveSelectedTable, handleClearTable, handleShowQuotes, liveQuotesCount, pendingSalesCount, handleOpenDigitalServices]);
 
@@ -2653,6 +2798,14 @@ const POSContent: React.FC = () => {
               />
             </Suspense>
           )}
+
+          <CustomerDisplayDialog
+            isOpen={showCustomerDisplayDialog}
+            onClose={() => setShowCustomerDisplayDialog(false)}
+            storeId={profile?.store_id || (storeSettings as any)?.store_id || ''}
+            storeName={storeSettings?.name || companyInfo?.name || 'Supermercado'}
+            storeLogo={(storeSettings as any)?.logo_url || companyInfo?.logo}
+          />
 
           {showPendingInvoicesDialog && (
             <Suspense fallback={null}>
@@ -2891,6 +3044,14 @@ const POSContent: React.FC = () => {
             />
           </Suspense>
         )}
+
+        <CustomerDisplayDialog
+          isOpen={showCustomerDisplayDialog}
+          onClose={() => setShowCustomerDisplayDialog(false)}
+          storeId={profile?.store_id || (storeSettings as any)?.store_id || ''}
+          storeName={storeSettings?.name || companyInfo?.name || 'Supermercado'}
+          storeLogo={(storeSettings as any)?.logo_url || companyInfo?.logo}
+        />
 
         {showWebSalesDialog && (
           <Suspense fallback={null}>
@@ -3485,6 +3646,14 @@ const POSContent: React.FC = () => {
           )
         }
 
+        <CustomerDisplayDialog
+          isOpen={showCustomerDisplayDialog}
+          onClose={() => setShowCustomerDisplayDialog(false)}
+          storeId={profile?.store_id || (storeSettings as any)?.store_id || ''}
+          storeName={storeSettings?.name || companyInfo?.name || 'Supermercado'}
+          storeLogo={(storeSettings as any)?.logo_url || companyInfo?.logo}
+        />
+
         {showWebSalesDialog && (
           <Suspense fallback={null}>
             <WebSalesDialog
@@ -3849,6 +4018,7 @@ interface POSActionButtonsProps {
   onOpenPendingInvoices?: () => void;
   pendingInvoicesCount?: number;
   onOpenDigitalServices?: () => void;
+  onOpenCustomerDisplay?: () => void;
 }
 
 const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionButtons({
@@ -3866,6 +4036,7 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
   onShowWebSales,
   onToggleFullscreen,
   onOpenDigitalServices,
+  onOpenCustomerDisplay,
   onGenerateServiceInvoice,
   selectedTable,
   onOpenTableSelector,
@@ -4022,6 +4193,19 @@ const POSActionButtons = React.memo<POSActionButtonsProps>(function POSActionBut
         </Button>
       )}
 
+      {onOpenCustomerDisplay && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onOpenCustomerDisplay}
+          className="h-8 px-2.5 gap-1.5 rounded-lg border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-xs transition-all cursor-pointer"
+          title="Vincular Visor de Clientes para Tablet"
+        >
+          <Tv className="h-3.5 w-3.5 text-emerald-500" />
+          <span className="hidden sm:inline">Visor</span>
+        </Button>
+      )}
+
       <Button
         variant="outline"
         size="icon"
@@ -4055,6 +4239,7 @@ interface POSMenuButtonProps {
   onOpenRegister: () => void;
   isWaiter?: boolean;
   onShowTables?: () => void;
+  onCustomerDisplay?: () => void;
 }
 
 const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
@@ -4076,6 +4261,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
   onOpenRegister,
   isWaiter,
   onShowTables,
+  onCustomerDisplay,
 }) {
   if (isMobile) {
     return (
@@ -4171,6 +4357,7 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                   activeSession
                     ? { icon: Lock, label: 'Cierre de Caja', action: onCloseDay }
                     : { icon: Unlock, label: 'Abrir Caja', action: onOpenRegister },
+                  ...(onCustomerDisplay ? [{ icon: Tv, label: 'Visor Clientes', action: onCustomerDisplay, accent: true }] : []),
                 ]),
               ].map((item, idx) => (
                 <DrawerClose asChild key={idx}>
@@ -4246,6 +4433,12 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
               <DropdownMenuItem onSelect={onOpenRegister} className="cursor-pointer"><Unlock className="h-4 w-4 mr-2" />Abrir Caja (Iniciar Turno)</DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={onDebtSelect} className="cursor-pointer"><DollarSign className="h-4 w-4 mr-2" />Cobros a Clientes (Deudas)</DropdownMenuItem>
+            {onCustomerDisplay && (
+              <DropdownMenuItem onSelect={onCustomerDisplay} className="cursor-pointer font-bold text-emerald-600 dark:text-emerald-400">
+                <Tv className="h-4 w-4 mr-2 text-emerald-500" />
+                Visor de Clientes (Tablet)
+              </DropdownMenuItem>
+            )}
           </>
         )}
         <DropdownMenuSeparator />
