@@ -23,6 +23,10 @@ export const OfflineIndicator: React.FC = () => {
     // This prevents AuthSessionMissingError when user is not logged in
     const isPublicPage = location.pathname.startsWith('/tienda/') ||
         location.pathname.startsWith('/buscar-tienda') ||
+        location.pathname.startsWith('/customer-display') ||
+        location.pathname.startsWith('/visor') ||
+        location.pathname.startsWith('/display') ||
+        location.pathname.startsWith('/cfd') ||
         location.pathname === '/auth' ||
         location.pathname === '/';
 

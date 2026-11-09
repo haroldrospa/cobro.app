@@ -44,42 +44,52 @@ export const getChannelName = (storeId: string, registerId: string): string => {
 };
 
 export const broadcastCustomerDisplay = async (payload: CustomerDisplayPayload) => {
-  const channelKey = getChannelName(payload.storeId, payload.registerId);
-
-  // 1. Local browser BroadcastChannel for same-device or multi-window immediate sync
-  try {
-    if (typeof BroadcastChannel !== 'undefined') {
-      let bc = localBroadcastChannels.get(channelKey);
-      if (!bc) {
-        bc = new BroadcastChannel(channelKey);
-        localBroadcastChannels.set(channelKey, bc);
-      }
-      bc.postMessage(payload);
-    }
-  } catch (e) {
-    // Non-critical
+  const primaryChannelKey = getChannelName(payload.storeId, payload.registerId);
+  const defaultChannelKey = getChannelName('default', payload.registerId);
+  
+  const targetChannelKeys = [primaryChannelKey];
+  if (primaryChannelKey !== defaultChannelKey) {
+    targetChannelKeys.push(defaultChannelKey);
   }
 
-  // 2. Supabase Realtime Broadcast (WebSockets across separate tablets/devices)
-  try {
-    let channel = activeChannels.get(channelKey);
-    if (!channel) {
-      channel = supabase.channel(channelKey, {
-        config: {
-          broadcast: { self: false, ack: false },
-        },
-      });
-      channel.subscribe();
-      activeChannels.set(channelKey, channel);
+  // 1. Local browser BroadcastChannel for same-device or multi-window immediate sync
+  for (const channelKey of targetChannelKeys) {
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        let bc = localBroadcastChannels.get(channelKey);
+        if (!bc) {
+          bc = new BroadcastChannel(channelKey);
+          localBroadcastChannels.set(channelKey, bc);
+        }
+        bc.postMessage(payload);
+      }
+    } catch (e) {
+      // Non-critical
     }
+  }
 
-    await channel.send({
-      type: 'broadcast',
-      event: 'display_update',
-      payload,
-    });
-  } catch (err) {
-    console.warn('[CustomerDisplay] Error broadcasting update:', err);
+  // 2. Supabase Realtime Broadcast (WebSockets across separate tablets/devices without auth)
+  for (const channelKey of targetChannelKeys) {
+    try {
+      let channel = activeChannels.get(channelKey);
+      if (!channel) {
+        channel = supabase.channel(channelKey, {
+          config: {
+            broadcast: { self: false, ack: false },
+          },
+        });
+        channel.subscribe();
+        activeChannels.set(channelKey, channel);
+      }
+
+      await channel.send({
+        type: 'broadcast',
+        event: 'display_update',
+        payload,
+      });
+    } catch (err) {
+      console.warn('[CustomerDisplay] Error broadcasting update:', err);
+    }
   }
 };
 
@@ -88,50 +98,67 @@ export const subscribeCustomerDisplay = (
   registerId: string,
   onUpdate: (payload: CustomerDisplayPayload) => void
 ): (() => void) => {
-  const channelKey = getChannelName(storeId, registerId);
-
-  // 1. Local BroadcastChannel subscription
-  let localBc: BroadcastChannel | null = null;
-  try {
-    if (typeof BroadcastChannel !== 'undefined') {
-      localBc = new BroadcastChannel(channelKey);
-      localBc.onmessage = (event) => {
-        if (event.data && typeof event.data === 'object') {
-          onUpdate(event.data as CustomerDisplayPayload);
-        }
-      };
-    }
-  } catch (e) {
-    // Non-critical
+  const primaryKey = getChannelName(storeId, registerId);
+  const defaultKey = getChannelName('default', registerId);
+  const keysToSubscribe = [primaryKey];
+  if (primaryKey !== defaultKey) {
+    keysToSubscribe.push(defaultKey);
   }
 
-  // 2. Supabase Realtime Broadcast subscription
-  const realtimeChannel = supabase
-    .channel(channelKey, {
-      config: {
-        broadcast: { self: false },
-      },
-    })
-    .on('broadcast', { event: 'display_update' }, (response) => {
-      if (response.payload) {
-        onUpdate(response.payload as CustomerDisplayPayload);
+  const localBcs: BroadcastChannel[] = [];
+  const realtimeChannels: any[] = [];
+
+  for (const channelKey of keysToSubscribe) {
+    // 1. Local BroadcastChannel subscription
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const localBc = new BroadcastChannel(channelKey);
+        localBc.onmessage = (event) => {
+          if (event.data && typeof event.data === 'object') {
+            onUpdate(event.data as CustomerDisplayPayload);
+          }
+        };
+        localBcs.push(localBc);
       }
-    })
-    .subscribe();
+    } catch (e) {
+      // Non-critical
+    }
+
+    // 2. Supabase Realtime Broadcast subscription (Works anonymously without session)
+    try {
+      const realtimeChannel = supabase
+        .channel(channelKey, {
+          config: {
+            broadcast: { self: false },
+          },
+        })
+        .on('broadcast', { event: 'display_update' }, (response) => {
+          if (response.payload) {
+            onUpdate(response.payload as CustomerDisplayPayload);
+          }
+        })
+        .subscribe();
+      realtimeChannels.push(realtimeChannel);
+    } catch (e) {
+      // Non-critical
+    }
+  }
 
   // Cleanup handler
   return () => {
-    try {
-      if (localBc) {
-        localBc.close();
+    for (const bc of localBcs) {
+      try {
+        bc.close();
+      } catch (e) {
+        // Ignore
       }
-    } catch (e) {
-      // Ignore
     }
-    try {
-      supabase.removeChannel(realtimeChannel);
-    } catch (e) {
-      // Ignore
+    for (const ch of realtimeChannels) {
+      try {
+        supabase.removeChannel(ch);
+      } catch (e) {
+        // Ignore
+      }
     }
   };
 };

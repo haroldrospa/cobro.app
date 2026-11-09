@@ -796,10 +796,13 @@ const POSContent: React.FC = () => {
     });
   }, [cart]);
 
-  // Transmitir estado del carrito al Visor de Clientes
+  // Transmitir estado del carrito al Visor de Clientes (100% público, sin requerir sesión)
   useEffect(() => {
-    const currentStoreId = profile?.store_id || (storeSettings as any)?.store_id || 'default';
-    if (!currentStoreId || currentStoreId === 'default') return;
+    const currentStoreId = (storeId && storeId !== '00000000-0000-0000-0000-000000000000')
+      ? storeId
+      : (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000'
+          ? profile.store_id
+          : (storeSettings as any)?.store_id || 'default');
 
     const regId = getStoredRegisterId();
     const regName = getStoredRegisterName();
@@ -905,8 +908,11 @@ const POSContent: React.FC = () => {
   // Transmitir venta finalizada con QR al Visor
   useEffect(() => {
     if (saleData && showPrintOptionsDialog) {
-      const currentStoreId = profile?.store_id || (storeSettings as any)?.store_id;
-      if (!currentStoreId) return;
+      const currentStoreId = (storeId && storeId !== '00000000-0000-0000-0000-000000000000')
+        ? storeId
+        : (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000'
+            ? profile.store_id
+            : (storeSettings as any)?.store_id || 'default');
 
       const regId = getStoredRegisterId();
       const regName = getStoredRegisterName();
@@ -2874,7 +2880,7 @@ const POSContent: React.FC = () => {
           <CustomerDisplayDialog
             isOpen={showCustomerDisplayDialog}
             onClose={() => setShowCustomerDisplayDialog(false)}
-            storeId={profile?.store_id || (storeSettings as any)?.store_id || ''}
+            storeId={(storeId && storeId !== '00000000-0000-0000-0000-000000000000') ? storeId : (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000' ? profile.store_id : (storeSettings as any)?.store_id || 'default')}
             storeName={storeSettings?.name || companyInfo?.name || 'Supermercado'}
             storeLogo={(storeSettings as any)?.logo_url || companyInfo?.logo}
           />
@@ -3120,7 +3126,7 @@ const POSContent: React.FC = () => {
         <CustomerDisplayDialog
           isOpen={showCustomerDisplayDialog}
           onClose={() => setShowCustomerDisplayDialog(false)}
-          storeId={profile?.store_id || (storeSettings as any)?.store_id || ''}
+          storeId={(storeId && storeId !== '00000000-0000-0000-0000-000000000000') ? storeId : (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000' ? profile.store_id : (storeSettings as any)?.store_id || 'default')}
           storeName={storeSettings?.name || companyInfo?.name || 'Supermercado'}
           storeLogo={(storeSettings as any)?.logo_url || companyInfo?.logo}
         />
@@ -3721,7 +3727,7 @@ const POSContent: React.FC = () => {
         <CustomerDisplayDialog
           isOpen={showCustomerDisplayDialog}
           onClose={() => setShowCustomerDisplayDialog(false)}
-          storeId={profile?.store_id || (storeSettings as any)?.store_id || ''}
+          storeId={(storeId && storeId !== '00000000-0000-0000-0000-000000000000') ? storeId : (profile?.store_id && profile.store_id !== '00000000-0000-0000-0000-000000000000' ? profile.store_id : (storeSettings as any)?.store_id || 'default')}
           storeName={storeSettings?.name || companyInfo?.name || 'Supermercado'}
           storeLogo={(storeSettings as any)?.logo_url || companyInfo?.logo}
         />

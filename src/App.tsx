@@ -204,9 +204,11 @@ const App = () => {
               <Route path="/reembolsos" element={<Refunds />} />
               <Route path="/eliminar-cuenta" element={<AccountDeletion />} />
 
-              {/* Visor de Clientes (Customer-Facing Display Kiosk para Tablets) */}
+              {/* Visor de Clientes (Customer-Facing Display Kiosk para Tablets) - 100% Público y sin sesión */}
               <Route path="/customer-display" element={<Suspense fallback={<PageLoader />}><CustomerDisplay /></Suspense>} />
               <Route path="/visor" element={<Suspense fallback={<PageLoader />}><CustomerDisplay /></Suspense>} />
+              <Route path="/display" element={<Suspense fallback={<PageLoader />}><CustomerDisplay /></Suspense>} />
+              <Route path="/cfd" element={<Suspense fallback={<PageLoader />}><CustomerDisplay /></Suspense>} />
 
               {/* Full-screen protected routes - NO Layout header */}
               <Route

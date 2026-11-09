@@ -34,18 +34,18 @@ import appLogo from '@/assets/cobro-logo.png';
 export const CustomerDisplay: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Store & Register identifiers (URL first, then localStorage fallback)
-  const initialStoreId = searchParams.get('store') || localStorage.getItem('cobro_cd_store_id') || '';
+  // Store & Register identifiers (URL first, then localStorage fallback, then 'default')
+  const initialStoreId = searchParams.get('store') || localStorage.getItem('cobro_cd_store_id') || 'default';
   const initialRegisterId = searchParams.get('caja') || localStorage.getItem('cobro_cd_register_id') || 'caja_1';
-  const initialStoreName = searchParams.get('name') || localStorage.getItem('cobro_cd_store_name') || 'Cobro App Supermercado';
+  const initialStoreName = searchParams.get('name') || localStorage.getItem('cobro_cd_store_name') || 'Visor de Clientes';
 
   const [storeId, setStoreId] = useState<string>(initialStoreId);
   const [registerId, setRegisterId] = useState<string>(initialRegisterId);
   const [storeName, setStoreName] = useState<string>(initialStoreName);
   const [storeLogo, setStoreLogo] = useState<string>('');
 
-  // Config modal
-  const [isConfigOpen, setIsConfigOpen] = useState<boolean>(!initialStoreId);
+  // Config modal: NEVER open automatically - visor operates 100% session-free and standalone
+  const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
   const [tempStoreId, setTempStoreId] = useState<string>(initialStoreId);
   const [tempRegisterId, setTempRegisterId] = useState<string>(initialRegisterId);
   const [tempStoreName, setTempStoreName] = useState<string>(initialStoreName);
@@ -120,11 +120,12 @@ export const CustomerDisplay: React.FC = () => {
     setIsConfigOpen(false);
   };
 
-  // Realtime subscription to POS Broadcasts
+  // Realtime subscription to POS Broadcasts (100% public, works without login or session)
   useEffect(() => {
-    if (!storeId || !registerId) return;
+    const activeStore = storeId || 'default';
+    const activeRegister = registerId || 'caja_1';
 
-    const unsubscribe = subscribeCustomerDisplay(storeId, registerId, (payload) => {
+    const unsubscribe = subscribeCustomerDisplay(activeStore, activeRegister, (payload) => {
       setDisplayData((prev) => {
         // If an item was added, play a subtle pleasant beep
         if (payload.lastItem && (!prev.lastItem || prev.lastItem.timestamp !== payload.lastItem.timestamp)) {
@@ -133,7 +134,14 @@ export const CustomerDisplay: React.FC = () => {
         return payload;
       });
 
-      if (payload.storeName) setStoreName(payload.storeName);
+      if (payload.storeId && payload.storeId !== 'default') {
+        setStoreId(payload.storeId);
+        localStorage.setItem('cobro_cd_store_id', payload.storeId);
+      }
+      if (payload.storeName) {
+        setStoreName(payload.storeName);
+        localStorage.setItem('cobro_cd_store_name', payload.storeName);
+      }
       if (payload.storeLogo) setStoreLogo(payload.storeLogo);
     });
 
@@ -595,38 +603,28 @@ export const CustomerDisplay: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-3 text-xs">
+          <div className="space-y-3.5 py-3 text-xs">
             <div className="space-y-1.5">
-              <label className="font-bold text-zinc-300">ID de la Tienda (Store ID):</label>
+              <label className="font-bold text-zinc-300">Caja a Vincular:</label>
               <Input
-                value={tempStoreId}
-                onChange={(e) => setTempStoreId(e.target.value)}
-                placeholder="ID de la tienda o negocio..."
-                className="bg-zinc-800 border-zinc-700 text-xs text-white"
+                value={tempRegisterId}
+                onChange={(e) => setTempRegisterId(e.target.value)}
+                placeholder="Ej. caja_1, caja_2, caja_rapida..."
+                className="bg-zinc-800 border-zinc-700 text-xs text-white font-mono"
               />
+              <p className="text-[10px] text-zinc-500">
+                Identificador de la caja del POS a la que responderá esta pantalla (ej: caja_1).
+              </p>
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-bold text-zinc-300">Nombre de la Tienda:</label>
+              <label className="font-bold text-zinc-300">Nombre de la Tienda (opcional):</label>
               <Input
                 value={tempStoreName}
                 onChange={(e) => setTempStoreName(e.target.value)}
                 placeholder="Nombre de tu negocio..."
                 className="bg-zinc-800 border-zinc-700 text-xs text-white"
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-bold text-zinc-300">Identificador de la Caja:</label>
-              <Input
-                value={tempRegisterId}
-                onChange={(e) => setTempRegisterId(e.target.value)}
-                placeholder="caja_1, caja_2, caja_rapida..."
-                className="bg-zinc-800 border-zinc-700 text-xs text-white font-mono"
-              />
-              <p className="text-[10px] text-zinc-500">
-                Debe coincidir con el identificador de la caja en el POS (ej: caja_1).
-              </p>
             </div>
           </div>
 
