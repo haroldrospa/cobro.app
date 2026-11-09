@@ -352,10 +352,6 @@ export const CustomerDisplay: React.FC = () => {
                 <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
                 <div>
-                  <Badge className="bg-emerald-500 text-zinc-950 font-black text-xs uppercase tracking-wider px-3 py-1 rounded-lg shadow-md mb-4 inline-flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" /> Último Producto Agregado
-                  </Badge>
-
                   {(() => {
                     const heroItem = displayData.lastItem || (displayData.cart && displayData.cart.length > 0 ? {
                       id: displayData.cart[0].id,
