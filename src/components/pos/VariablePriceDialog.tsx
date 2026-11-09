@@ -55,17 +55,17 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-[calc(100%-1rem)] max-w-md p-0 overflow-y-auto max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] rounded-2xl overscroll-contain">
+            <DialogContent className="w-[calc(100%-1rem)] max-w-md mobile-landscape:max-w-xl mobile-landscape:top-1 p-0 overflow-y-auto max-h-[calc(var(--visual-viewport-height,100dvh)-1.5rem)] sm:max-h-[calc(var(--visual-viewport-height,100dvh)-2rem)] mobile-landscape:max-h-[calc(var(--visual-viewport-height,100dvh)-0.5rem)] lg:[@media(min-height:820px)_and_(pointer:fine)]:max-h-[85vh] rounded-2xl overscroll-contain">
                 <div className="flex flex-col">
-                    <div className="p-4 sm:p-5 pb-1 shrink-0">
+                    <div className="p-4 sm:p-5 pb-1 mobile-landscape:p-2.5 mobile-landscape:pb-0 shrink-0">
                         <DialogHeader>
-                            <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-left">
+                            <DialogTitle className="text-base sm:text-lg mobile-landscape:text-xs font-bold tracking-tight text-left">
                                 Precio Variado
                             </DialogTitle>
                         </DialogHeader>
                     </div>
 
-                    <div className="p-4 sm:p-5 pt-1 space-y-4">
+                    <div className="p-4 sm:p-5 pt-1 mobile-landscape:p-2.5 mobile-landscape:pt-1 space-y-4 mobile-landscape:space-y-0 mobile-landscape:grid mobile-landscape:grid-cols-2 mobile-landscape:gap-3">
                         <div className="space-y-1.5 text-left">
                             <Label htmlFor="custom-name" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
                                 Nombre del Producto
@@ -75,18 +75,18 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                                 type="text"
                                 value={customName}
                                 onChange={(e) => setCustomName(e.target.value)}
-                                className="bg-muted/50 border-transparent text-base sm:text-xs rounded-xl h-10 focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10"
+                                className="bg-muted/50 border-transparent text-base sm:text-xs rounded-xl h-10 mobile-landscape:h-8 focus-visible:bg-background focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/10"
                                 placeholder="Nombre del producto"
                                 autoComplete="off"
                             />
                         </div>
 
                         <div className="text-center">
-                            <Label htmlFor="variable-price" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1">
+                            <Label htmlFor="variable-price" className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block mb-1 mobile-landscape:mb-0">
                                 Monto a Cobrar
                             </Label>
                             <div className="flex items-center justify-center gap-1.5 w-full">
-                                <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 shrink-0">$</span>
+                                <span className="text-xl sm:text-2xl mobile-landscape:text-lg font-bold text-emerald-600 dark:text-emerald-400 shrink-0">$</span>
                                 <Input
                                     ref={inputRef}
                                     id="variable-price"
@@ -106,19 +106,19 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                                         });
                                     }}
                                     onKeyDown={handleKeyDown}
-                                    className="text-2xl sm:text-3xl font-black h-12 w-full max-w-[240px] text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/40 tracking-tight"
+                                    className="text-2xl sm:text-3xl mobile-landscape:text-xl font-black h-12 mobile-landscape:h-8 w-full max-w-[240px] text-center bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/40 tracking-tight"
                                     placeholder="0.00"
                                     autoComplete="off"
                                 />
                             </div>
                         </div>
 
-                        <DialogFooter className="flex flex-row gap-2.5 !mt-4 pb-2 sm:pb-0">
+                        <DialogFooter className="flex flex-row gap-2.5 !mt-4 mobile-landscape:!mt-1 pb-2 sm:pb-0 mobile-landscape:col-span-2 mobile-landscape:pb-0">
                             <Button
                                 type="button"
                                 variant="ghost"
                                 onClick={onClose}
-                                className="flex-1 h-11 rounded-xl font-bold text-muted-foreground hover:text-foreground text-xs sm:text-sm"
+                                className="flex-1 h-11 mobile-landscape:h-7 rounded-xl font-bold text-muted-foreground hover:text-foreground text-xs sm:text-sm"
                             >
                                 Cancelar
                             </Button>
@@ -126,9 +126,9 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                                 type="button"
                                 onClick={handleConfirm}
                                 disabled={!price || parseFloat(price) < 0}
-                                className="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm active:scale-95 transition-all text-xs sm:text-sm"
+                                className="flex-1 h-11 mobile-landscape:h-7 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm active:scale-95 transition-all text-xs sm:text-sm"
                             >
-                                Confirmar <ChevronRight className="ml-1 h-4 w-4" />
+                                Confirmar <ChevronRight className="ml-1 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </DialogFooter>
                     </div>
