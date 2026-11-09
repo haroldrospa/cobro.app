@@ -4085,78 +4085,80 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             <MenuIcon className="h-6 w-6" />
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-background border-t border-white/[0.06] p-4 pb-6 rounded-t-3xl">
+        <DrawerContent className="bg-background border-t border-white/[0.06] p-4 pb-6 mobile-landscape:p-2.5 mobile-landscape:px-6 mobile-landscape:pl-[max(1.75rem,env(safe-area-inset-left))] mobile-landscape:pr-[max(1.75rem,env(safe-area-inset-right))] mobile-landscape:pb-[max(0.75rem,env(safe-area-inset-bottom))] rounded-t-3xl">
           <DrawerTitle className="sr-only">Menú</DrawerTitle>
-          <div className="flex flex-col gap-4 overflow-y-auto max-h-[65vh] px-0.5 py-0.5 pt-3 no-scrollbar">
-            {/* Modo del POS — control en vivo, no navegación, se mantiene aparte y compacto */}
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[11px] font-medium text-zinc-500 shrink-0">Modo del POS</span>
-              <div className="grid grid-cols-2 bg-white/[0.04] p-1 rounded-xl gap-1 w-[168px]">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onLayoutModeChange?.('classic')}
-                  className={cn(
-                    "h-7 text-[11px] font-medium rounded-lg transition-colors",
-                    layoutMode === 'classic'
-                      ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
-                      : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                  )}
-                >
-                  Búsqueda
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onLayoutModeChange?.('catalog')}
-                  className={cn(
-                    "h-7 text-[11px] font-medium rounded-lg transition-colors",
-                    layoutMode === 'catalog'
-                      ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
-                      : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                  )}
-                >
-                  Catálogo
-                </Button>
-              </div>
-            </div>
-
-            {layoutMode === 'catalog' && (
-              <div className="flex items-center justify-between gap-3 -mt-2">
-                <span className="text-[11px] font-medium text-zinc-500 shrink-0">Vista de Catálogo</span>
-                <div className="grid grid-cols-2 bg-white/[0.04] p-1 rounded-xl gap-1 w-[168px]">
+          <div className="flex flex-col gap-4 mobile-landscape:gap-2.5 overflow-y-auto max-h-[65vh] mobile-landscape:max-h-[88dvh] px-0.5 py-0.5 pt-3 mobile-landscape:pt-1 no-scrollbar">
+            {/* Modo del POS & Vista de Catálogo */}
+            <div className="flex flex-col mobile-landscape:flex-row mobile-landscape:items-center mobile-landscape:justify-between gap-3 mobile-landscape:gap-4">
+              <div className="flex items-center justify-between mobile-landscape:justify-start gap-3">
+                <span className="text-[11px] font-medium text-zinc-500 shrink-0">Modo del POS</span>
+                <div className="grid grid-cols-2 bg-white/[0.04] p-1 rounded-xl gap-1 w-[168px] mobile-landscape:w-[150px]">
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => onViewModeChange?.('list')}
+                    onClick={() => onLayoutModeChange?.('classic')}
                     className={cn(
-                      "h-7 text-[11px] font-medium rounded-lg transition-colors",
-                      viewMode === 'list'
+                      "h-7 mobile-landscape:h-6 text-[11px] mobile-landscape:text-[10px] font-medium rounded-lg transition-colors",
+                      layoutMode === 'classic'
                         ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
                         : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                     )}
                   >
-                    Lista
+                    Búsqueda
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => onViewModeChange?.('grid')}
+                    onClick={() => onLayoutModeChange?.('catalog')}
                     className={cn(
-                      "h-7 text-[11px] font-medium rounded-lg transition-colors",
-                      viewMode === 'grid'
+                      "h-7 mobile-landscape:h-6 text-[11px] mobile-landscape:text-[10px] font-medium rounded-lg transition-colors",
+                      layoutMode === 'catalog'
                         ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
                         : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                     )}
                   >
-                    Cuadros
+                    Catálogo
                   </Button>
                 </div>
               </div>
-            )}
 
-            {/* Cuadrícula única — mismo lenguaje visual que el menú "Más" de la barra inferior */}
-            <div className="grid grid-cols-3 gap-2.5">
+              {layoutMode === 'catalog' && (
+                <div className="flex items-center justify-between mobile-landscape:justify-start gap-3 -mt-2 mobile-landscape:mt-0">
+                  <span className="text-[11px] font-medium text-zinc-500 shrink-0">Vista de Catálogo</span>
+                  <div className="grid grid-cols-2 bg-white/[0.04] p-1 rounded-xl gap-1 w-[168px] mobile-landscape:w-[150px]">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onViewModeChange?.('list')}
+                      className={cn(
+                        "h-7 mobile-landscape:h-6 text-[11px] mobile-landscape:text-[10px] font-medium rounded-lg transition-colors",
+                        viewMode === 'list'
+                          ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
+                          : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                      )}
+                    >
+                      Lista
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onViewModeChange?.('grid')}
+                      className={cn(
+                        "h-7 mobile-landscape:h-6 text-[11px] mobile-landscape:text-[10px] font-medium rounded-lg transition-colors",
+                        viewMode === 'grid'
+                          ? "bg-emerald-500 text-zinc-950 font-semibold hover:bg-emerald-500 hover:text-zinc-950"
+                          : "text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                      )}
+                    >
+                      Cuadros
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cuadrícula de opciones: 3 cols en portrait, 6 cols en mobile landscape */}
+            <div className="grid grid-cols-3 mobile-landscape:grid-cols-6 gap-2.5 mobile-landscape:gap-1.5">
               {[
                 ...navigationItems.map(item => ({ icon: item.icon, label: item.name, action: () => onNavigate(item.href) })),
                 ...(isWaiter ? [
@@ -4176,14 +4178,14 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
                     variant="ghost"
                     onClick={item.action}
                     className={cn(
-                      "!flex !flex-col items-center justify-center gap-2 rounded-2xl border transition-colors active:scale-[0.96] group h-20 w-full select-none",
+                      "!flex !flex-col items-center justify-center gap-2 mobile-landscape:gap-1 rounded-2xl mobile-landscape:rounded-xl border transition-colors active:scale-[0.96] group h-20 mobile-landscape:h-14 w-full select-none p-1",
                       item.accent
                         ? "bg-emerald-500 hover:bg-emerald-400 border-emerald-500"
                         : "bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.06]"
                     )}
                   >
-                    <item.icon className={cn("h-4.5 w-4.5 transition-colors", item.accent ? "text-zinc-950" : "text-zinc-400 group-hover:text-emerald-400")} />
-                    <span className={cn("font-medium text-[11px] text-center leading-tight transition-colors", item.accent ? "text-zinc-950" : "text-zinc-300 group-hover:text-white")}>
+                    <item.icon className={cn("h-4.5 w-4.5 mobile-landscape:h-4 mobile-landscape:w-4 transition-colors shrink-0", item.accent ? "text-zinc-950" : "text-zinc-400 group-hover:text-emerald-400")} />
+                    <span className={cn("font-medium text-[11px] mobile-landscape:text-[10px] text-center leading-tight transition-colors line-clamp-1 w-full px-0.5", item.accent ? "text-zinc-950" : "text-zinc-300 group-hover:text-white")}>
                       {item.label}
                     </span>
                   </Button>
@@ -4195,9 +4197,9 @@ const POSMenuButton = React.memo<POSMenuButtonProps>(function POSMenuButton({
             <Button
               onClick={onLogout}
               variant="ghost"
-              className="w-full h-12 bg-red-500/10 hover:bg-red-500/15 text-red-400 font-semibold rounded-2xl border border-red-500/20 transition-colors text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="w-full h-12 mobile-landscape:h-8 bg-red-500/10 hover:bg-red-500/15 text-red-400 font-semibold rounded-2xl mobile-landscape:rounded-xl border border-red-500/20 transition-colors text-sm mobile-landscape:text-xs flex items-center justify-center gap-2 active:scale-[0.98]"
             >
-              <LogOut className="h-4.5 w-4.5" />
+              <LogOut className="h-4.5 w-4.5 mobile-landscape:h-3.5 mobile-landscape:w-3.5" />
               Salir
             </Button>
           </div>
