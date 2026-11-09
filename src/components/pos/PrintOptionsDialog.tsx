@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { supabase } from '@/integrations/supabase/client';
@@ -424,31 +425,22 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const handleMainWhatsAppClick = () => {
     const activePhone = (whatsAppPhone || customerPhoneToSend || '').trim();
     if (activePhone) {
-      handleSendWhatsApp(activePhone);
+      handleSendWhatsApp(activePhone, false, 'app');
     } else {
       setShowWhatsAppInput(true);
       toast({
-        title: "Ingresa el WhatsApp",
-        description: "El cliente no tiene un teléfono registrado. Por favor escribe su número.",
+        title: "Sin teléfono registrado",
+        description: "Escribe el número del cliente o presiona 'Abrir app y elegir contacto'.",
       });
     }
   };
 
   const handleSendWhatsApp = async (customPhone?: string, isAutomatic: boolean = false, method: 'app' | 'web' | 'api' = 'app') => {
-    const targetPhone = (customPhone || whatsAppPhone || customerPhoneToSend || '').trim();
-    if (!targetPhone) {
-      setShowWhatsAppInput(true);
-      toast({
-        title: "Número requerido",
-        description: "Por favor ingrese un número de teléfono de WhatsApp.",
-        variant: "destructive"
-      });
-      return;
-    }
+    const targetPhone = (customPhone !== undefined ? customPhone : (whatsAppPhone || customerPhoneToSend || '')).trim();
 
-    // Si es automático y no está habilitado, salir
-    if (isAutomatic && !storeSettings?.evolution_enabled) {
-      return;
+    // Si es automático y no está habilitado o no hay teléfono, salir
+    if (isAutomatic) {
+      if (!targetPhone || !storeSettings?.evolution_enabled) return;
     }
 
     let phone = targetPhone.replace(/\D/g, '');
@@ -456,7 +448,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       phone = `1${phone}`;
     }
 
-    if (phone.length < 8) {
+    if (targetPhone && phone.length < 8) {
       setShowWhatsAppInput(true);
       toast({
         title: "Número inválido",
@@ -557,22 +549,55 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     }
 
     // Direct opening of customer WhatsApp (works globally across Android, iOS, Windows, Mac)
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
-    const win = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-    if (!win || win.closed || typeof win.closed === 'undefined') {
-      const link = document.createElement('a');
-      link.href = whatsappUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    const nativeAppUrl = phone 
+      ? `whatsapp://send?phone=${phone}&text=${encodedMessage}`
+      : `whatsapp://send?text=${encodedMessage}`;
+    const webFallbackUrl = phone
+      ? `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`
+      : `https://web.whatsapp.com/send?text=${encodedMessage}`;
 
-    toast({
-      title: "Abriendo WhatsApp",
-      description: `Conectando con ${saleData?.customer?.name || 'cliente'} (${phone})...`,
-    });
+    if (method === 'web') {
+      const win = window.open(webFallbackUrl, '_blank', 'noopener,noreferrer');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        const link = document.createElement('a');
+        link.href = webFallbackUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      toast({
+        title: "Abriendo WhatsApp Web",
+        description: `Conectando en el navegador con ${saleData?.customer?.name || 'cliente'}${phone ? ` (${phone})` : ''}...`,
+      });
+    } else {
+      // 'app' (predeterminado): Abre directamente la aplicación instalada en PC (WhatsApp Desktop / Windows Store) o en Móvil (Android / iOS)
+      try {
+        const link = document.createElement('a');
+        link.href = nativeAppUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch {
+        window.location.href = nativeAppUrl;
+      }
+
+      toast({
+        title: "Abriendo WhatsApp en la App",
+        description: `Abriendo la aplicación instalada de WhatsApp para ${saleData?.customer?.name || 'cliente'}${phone ? ` (${phone})` : ''}.`,
+        action: (
+          <ToastAction
+            altText="Abrir en Web"
+            onClick={() => {
+              window.open(webFallbackUrl, '_blank', 'noopener,noreferrer');
+            }}
+          >
+            Abrir Web
+          </ToastAction>
+        )
+      });
+    }
   };
 
   useEffect(() => {
@@ -1940,7 +1965,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
 
             {showWhatsAppInput && (
               <Card className="p-2.5 bg-emerald-500/5 border-emerald-500/30">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="text-[11px] text-muted-foreground font-medium flex items-center justify-between">
                     <span>Número de WhatsApp del cliente:</span>
                     <span className="text-[10px] text-muted-foreground">(con código de área, ej: 8091234567)</span>
@@ -1953,16 +1978,16 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       onChange={(e) => setWhatsAppPhone(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          handleSendWhatsApp(whatsAppPhone);
+                          handleSendWhatsApp(whatsAppPhone, false, 'app');
                         }
                       }}
                       className="h-8 text-sm"
                       autoFocus
                     />
                     <Button
-                      onClick={() => handleSendWhatsApp(whatsAppPhone)}
+                      onClick={() => handleSendWhatsApp(whatsAppPhone, false, 'app')}
                       disabled={isSendingWhatsApp}
-                      className="h-8 text-xs px-3.5 bg-[#25D366] hover:bg-[#20ba5a] text-white font-medium shadow-sm"
+                      className="h-8 text-xs px-3.5 bg-[#25D366] hover:bg-[#20ba5a] text-white font-medium shadow-sm gap-1"
                     >
                       {isSendingWhatsApp ? (
                         <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -1977,6 +2002,18 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       className="h-8 text-xs px-2.5"
                     >
                       Cerrar
+                    </Button>
+                  </div>
+                  <div className="pt-1.5 border-t border-border/30 flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground">¿No tienes el número a mano?</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSendWhatsApp('', false, 'app')}
+                      className="h-6 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 p-1"
+                    >
+                      Abrir app y elegir contacto →
                     </Button>
                   </div>
                 </div>

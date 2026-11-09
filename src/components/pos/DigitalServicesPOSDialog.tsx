@@ -440,7 +440,17 @@ export const DigitalServicesPOSDialog: React.FC<DigitalServicesPOSDialogProps> =
     msg += `\n¡Gracias por su compra! ✨`;
 
     const encoded = encodeURIComponent(msg);
-    window.open(`https://wa.me/1${phoneNumber.replace(/\D/g, '')}?text=${encoded}`, '_blank');
+    const cleanNum = `1${phoneNumber.replace(/\D/g, '')}`;
+    const nativeUrl = `whatsapp://send?phone=${cleanNum}&text=${encoded}`;
+    try {
+      const link = document.createElement('a');
+      link.href = nativeUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.open(`https://wa.me/${cleanNum}?text=${encoded}`, '_blank');
+    }
   };
 
   return (

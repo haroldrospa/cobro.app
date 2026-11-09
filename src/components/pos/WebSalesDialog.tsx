@@ -415,7 +415,16 @@ const WebSalesDialog: React.FC<WebSalesDialogProps> = ({ isOpen, onClose, onLoad
     const cleanPhone = phone.replace(/\D/g, '');
     const phoneWithCode = cleanPhone.length === 10 ? `1${cleanPhone}` : cleanPhone;
     const message = encodeURIComponent(`¡Hola! Te contactamos respecto a tu pedido #${orderNumber}.`);
-    window.open(`https://wa.me/${phoneWithCode}?text=${message}`, '_blank');
+    const nativeUrl = `whatsapp://send?phone=${phoneWithCode}&text=${message}`;
+    try {
+      const link = document.createElement('a');
+      link.href = nativeUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.open(`https://wa.me/${phoneWithCode}?text=${message}`, '_blank');
+    }
   };
 
   const renderOrderItemsPreview = (order: any) => {

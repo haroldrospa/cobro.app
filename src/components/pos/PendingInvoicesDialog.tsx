@@ -213,7 +213,16 @@ export const PendingInvoicesDialog: React.FC<PendingInvoicesDialogProps> = ({
     const text = encodeURIComponent(
       `Hola *${sale.customer?.name || 'Estimado/a cliente'}*, le saludamos de *${businessName}*.\n\nLe recordamos que tiene pendiente de pago la factura *#${invCode}* por un monto total de *RD$ ${amountStr}*.\n\nFavor de notificar cuando realice el pago o transferencia. ¡Muchas gracias!`
     );
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    const nativeUrl = `whatsapp://send?phone=${phone}&text=${text}`;
+    try {
+      const link = document.createElement('a');
+      link.href = nativeUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    }
   };
 
   const handlePrintSale = (sale: any, overrideStatus?: 'paid' | 'pending') => {
