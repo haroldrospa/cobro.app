@@ -140,10 +140,10 @@ export const CustomerDisplay: React.FC = () => {
     return () => unsubscribe();
   }, [storeId, registerId]);
 
-  // Auto scroll cart list to bottom when new item arrives
+  // Auto scroll cart list to top when new item arrives
   useEffect(() => {
     if (cartListRef.current) {
-      cartListRef.current.scrollTop = cartListRef.current.scrollHeight;
+      cartListRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [displayData.cart.length, displayData.lastItem]);
 
@@ -348,56 +348,68 @@ export const CustomerDisplay: React.FC = () => {
                     <Sparkles className="h-3.5 w-3.5" /> Último Producto Agregado
                   </Badge>
 
-                  {displayData.lastItem ? (
-                    <motion.div
-                      key={displayData.lastItem.timestamp}
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                      className="space-y-4"
-                    >
-                      <div className="h-44 sm:h-52 w-full rounded-2xl bg-zinc-800/60 border border-zinc-700/50 flex items-center justify-center overflow-hidden p-3 shadow-inner">
-                        {displayData.lastItem.image_url ? (
-                          <img
-                            src={displayData.lastItem.image_url}
-                            alt={displayData.lastItem.name}
-                            className="h-full w-full object-contain"
-                          />
-                        ) : (
-                          <div className="h-24 w-24 rounded-2xl bg-zinc-700/40 flex items-center justify-center text-zinc-500">
-                            <Package className="h-12 w-12 text-emerald-400" />
+                  {(() => {
+                    const heroItem = displayData.lastItem || (displayData.cart && displayData.cart.length > 0 ? {
+                      id: displayData.cart[0].id,
+                      name: displayData.cart[0].name,
+                      price: displayData.cart[0].price,
+                      quantity: displayData.cart[0].quantity,
+                      total: displayData.cart[0].total,
+                      image_url: displayData.cart[0].image_url,
+                      timestamp: 0,
+                    } : undefined);
+
+                    return heroItem ? (
+                      <motion.div
+                        key={heroItem.id + '-' + (heroItem.timestamp || heroItem.quantity)}
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                        className="space-y-4"
+                      >
+                        <div className="h-44 sm:h-52 w-full rounded-2xl bg-zinc-800/60 border border-zinc-700/50 flex items-center justify-center overflow-hidden p-3 shadow-inner">
+                          {heroItem.image_url ? (
+                            <img
+                              src={heroItem.image_url}
+                              alt={heroItem.name}
+                              className="h-full w-full object-contain"
+                            />
+                          ) : (
+                            <div className="h-24 w-24 rounded-2xl bg-zinc-700/40 flex items-center justify-center text-zinc-500">
+                              <Package className="h-12 w-12 text-emerald-400" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <h3 className="text-xl sm:text-2xl font-black text-white leading-tight line-clamp-2">
+                            {heroItem.name}
+                          </h3>
+                          <p className="text-xs text-zinc-400 font-semibold">
+                            Precio Unitario: ${heroItem.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3.5 bg-zinc-800/80 border border-zinc-700/60 rounded-xl">
+                          <div>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Cantidad</span>
+                            <span className="text-xl font-black text-white">{heroItem.quantity} ud</span>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-1">
-                        <h3 className="text-xl sm:text-2xl font-black text-white leading-tight line-clamp-2">
-                          {displayData.lastItem.name}
-                        </h3>
-                        <p className="text-xs text-zinc-400 font-semibold">
-                          Precio Unitario: ${displayData.lastItem.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3.5 bg-zinc-800/80 border border-zinc-700/60 rounded-xl">
-                        <div>
-                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Cantidad</span>
-                          <span className="text-xl font-black text-white">{displayData.lastItem.quantity} ud</span>
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Subtotal</span>
+                            <span className="text-xl font-black text-emerald-400">
+                              ${heroItem.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Subtotal</span>
-                          <span className="text-xl font-black text-emerald-400">
-                            ${displayData.lastItem.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
+                      </motion.div>
+                    ) : (
+                      <div className="h-64 flex flex-col items-center justify-center text-zinc-500 space-y-2 text-center">
+                        <ShoppingBag className="h-12 w-12 text-zinc-600 animate-pulse" />
+                        <p className="text-sm font-semibold">Esperando próximo producto...</p>
                       </div>
-                    </motion.div>
-                  ) : (
-                    <div className="h-64 flex flex-col items-center justify-center text-zinc-500 space-y-2 text-center">
-                      <ShoppingBag className="h-12 w-12 text-zinc-600 animate-pulse" />
-                      <p className="text-sm font-semibold">Esperando próximo producto...</p>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div className="pt-4 border-t border-zinc-800 text-center text-zinc-400 text-xs font-medium">
@@ -422,14 +434,20 @@ export const CustomerDisplay: React.FC = () => {
                   ref={cartListRef}
                   className="flex-1 overflow-y-auto pr-1 my-3 space-y-2 scrollbar-thin scrollbar-thumb-zinc-700"
                 >
-                  {displayData.cart.map((item, idx) => (
-                    <motion.div
-                      key={item.id + idx}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="p-3 bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-800/80 rounded-xl flex items-center justify-between gap-3 transition-colors"
-                    >
+                  {displayData.cart.map((item, idx) => {
+                    const isLatest = idx === 0 || (displayData.lastItem && (item.id === displayData.lastItem.id || item.name === displayData.lastItem.name));
+                    return (
+                      <motion.div
+                        key={item.id + idx}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className={`p-3 rounded-xl flex items-center justify-between gap-3 transition-colors ${
+                          isLatest
+                            ? 'bg-zinc-800/90 border-2 border-emerald-500/50 shadow-md shadow-emerald-500/10'
+                            : 'bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-800/80'
+                        }`}
+                      >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="h-8 w-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0 text-xs font-black text-emerald-400 border border-zinc-600/40">
                           {item.quantity}x
@@ -459,7 +477,8 @@ export const CustomerDisplay: React.FC = () => {
                         </span>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* PANEL FIJO DE TOTALES EN GRANDE */}

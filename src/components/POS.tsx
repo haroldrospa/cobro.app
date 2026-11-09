@@ -769,25 +769,31 @@ const POSContent: React.FC = () => {
   // ── Sincronización en Tiempo Real con el Visor de Clientes (Customer Display) ──
   const [showCustomerDisplayDialog, setShowCustomerDisplayDialog] = useState(false);
   const [lastScannedItem, setLastScannedItem] = useState<LastScannedItem | undefined>(undefined);
-  const prevCartLengthRef = useRef(0);
 
-  // Detectar cuando se agrega un nuevo producto al carrito para animarlo en el visor
+  // Sincronizar el último producto escaneado si el carrito se vacía o se remueven items
   useEffect(() => {
-    if (cart.length > prevCartLengthRef.current) {
-      const added = cart[cart.length - 1];
-      if (added) {
-        setLastScannedItem({
-          id: added.id,
-          name: added.name,
-          price: added.price,
-          quantity: added.quantity,
-          total: calculateItemTotal(added),
-          image_url: added.image_url,
-          timestamp: Date.now(),
-        });
-      }
+    if (cart.length === 0) {
+      setLastScannedItem(undefined);
+      return;
     }
-    prevCartLengthRef.current = cart.length;
+    // En nuestro POS, el item más reciente siempre está en cart[0]
+    setLastScannedItem(prev => {
+      if (!prev || !cart.some(item => item.id === prev.id || (item.cartItemId && item.cartItemId === prev.id))) {
+        const newest = cart[0];
+        if (newest) {
+          return {
+            id: newest.id,
+            name: newest.name,
+            price: newest.price,
+            quantity: newest.quantity,
+            total: calculateItemTotal(newest),
+            image_url: newest.image_url,
+            timestamp: Date.now(),
+          };
+        }
+      }
+      return prev;
+    });
   }, [cart]);
 
   // Transmitir estado del carrito al Visor de Clientes
@@ -830,6 +836,36 @@ const POSContent: React.FC = () => {
     }
 
     if (cartWithOffers.length > 0) {
+      // Sincronizar lastScannedItem con posibles ofertas aplicadas o tomar el primer item (el más reciente)
+      let currentLastItem = lastScannedItem;
+      if (currentLastItem) {
+        const foundInOffers = cartWithOffers.find(
+          item => item.id === currentLastItem?.id || (item.cartItemId && item.cartItemId === currentLastItem?.id)
+        );
+        if (foundInOffers) {
+          currentLastItem = {
+            ...currentLastItem,
+            price: foundInOffers.price,
+            quantity: foundInOffers.quantity,
+            total: calculateItemTotal(foundInOffers),
+            image_url: foundInOffers.image_url || currentLastItem.image_url,
+          };
+        }
+      }
+
+      if (!currentLastItem && cartWithOffers[0]) {
+        const newest = cartWithOffers[0];
+        currentLastItem = {
+          id: newest.id,
+          name: newest.name,
+          price: newest.price,
+          quantity: newest.quantity,
+          total: calculateItemTotal(newest),
+          image_url: newest.image_url,
+          timestamp: Date.now(),
+        };
+      }
+
       broadcastCustomerDisplay({
         status: showPaymentDialog ? 'payment' : 'scanning',
         storeId: currentStoreId,
@@ -838,7 +874,7 @@ const POSContent: React.FC = () => {
         registerId: regId,
         registerName: regName,
         cart: displayCart,
-        lastItem: lastScannedItem,
+        lastItem: currentLastItem,
         subtotal: totals.subtotal,
         tax: totals.tax,
         discount: totals.discount,
@@ -932,13 +968,17 @@ const POSContent: React.FC = () => {
         ? null
         : prevCart.find(item => item.id === product.id && item.price === priceToUse);
 
+      let nextCart: CartItem[];
+      let activeItem: CartItem;
+
       if (existingItem) {
         // Mover el item existente al principio y actualizar cantidad
         const updatedItem = {
           ...existingItem,
           quantity: existingItem.quantity + quantity
         };
-        return [updatedItem, ...prevCart.filter(item => {
+        activeItem = updatedItem;
+        nextCart = [updatedItem, ...prevCart.filter(item => {
           if (existingItem.cartItemId && item.cartItemId) {
             return item.cartItemId !== existingItem.cartItemId;
           }
@@ -947,7 +987,7 @@ const POSContent: React.FC = () => {
       } else {
         // Agregar nuevo item al principio con un ID de carrito único
         const cartItemId = `${product.id}-${Date.now()}-${Math.random()}`;
-        return [{
+        const newItem = {
           id: product.id,
           cartItemId,
           name: product.name,
@@ -956,8 +996,25 @@ const POSContent: React.FC = () => {
           tax: (product.tax_percentage !== undefined ? product.tax_percentage : 18) / 100,
           cost_includes_tax: product.cost_includes_tax || false,
           image_url: product.image_url
-        }, ...prevCart];
+        };
+        activeItem = newItem;
+        nextCart = [newItem, ...prevCart];
       }
+
+      // Actualizar inmediatamente el último producto para el Visor de Clientes
+      setTimeout(() => {
+        setLastScannedItem({
+          id: activeItem.id,
+          name: activeItem.name,
+          price: activeItem.price,
+          quantity: activeItem.quantity,
+          total: calculateItemTotal(activeItem),
+          image_url: activeItem.image_url,
+          timestamp: Date.now(),
+        });
+      }, 0);
+
+      return nextCart;
     });
     // Search is cleared by the individual search components after selection
   }, [activeSession, toast, isWaiter]);
@@ -967,7 +1024,22 @@ const POSContent: React.FC = () => {
       if (quantity <= 0) {
         return prevCart.filter(item => item.cartItemId !== id && item.id !== id);
       }
-      return prevCart.map(item => (item.cartItemId === id || item.id === id) ? { ...item, quantity } : item);
+      const updated = prevCart.map(item => (item.cartItemId === id || item.id === id) ? { ...item, quantity } : item);
+      const changedItem = updated.find(item => item.cartItemId === id || item.id === id);
+      if (changedItem) {
+        setTimeout(() => {
+          setLastScannedItem({
+            id: changedItem.id,
+            name: changedItem.name,
+            price: changedItem.price,
+            quantity: changedItem.quantity,
+            total: calculateItemTotal(changedItem),
+            image_url: changedItem.image_url,
+            timestamp: Date.now(),
+          });
+        }, 0);
+      }
+      return updated;
     });
   }, []);
 
