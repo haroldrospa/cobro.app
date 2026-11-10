@@ -12,7 +12,7 @@ interface InvoicePreviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
   sale: Sale;
-  onPrint?: () => void;
+  onPrint?: (detailedSale?: any) => void;
 }
 
 const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
@@ -136,7 +136,7 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
 
   const handlePrint = async () => {
     if (onPrint) {
-      onPrint();
+      onPrint(saleData);
       return;
     }
     // Fallback: print directly from iframe

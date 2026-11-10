@@ -81,10 +81,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const isElec = !isInternal && (invoiceNum.startsWith('E') || propSaleData.is_electronic || !!propSaleData.encf);
     const isAlreadyFinished = !!propSaleData.qrcode_url || propSaleData.estado_fiscal === 'RECHAZADO' || propSaleData.estado_fiscal === 'ERROR_CONEXION';
 
-    // Para facturas no electrónicas (B02, B01, etc.) o ventas ya finalizadas, no se hace polling ni se crean canales innecesarios
-    if (!isElec || isAlreadyFinished) {
-      return;
-    }
+    const hasExistingItems = (propSaleData.items && propSaleData.items.length > 0) ||
+                             (propSaleData.sale_items && propSaleData.sale_items.length > 0);
 
     let pollInterval: any = null;
 
@@ -103,6 +101,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               unit_price,
               subtotal,
               total,
+              tax_amount,
               product:products(name)
             )
           `)
@@ -140,6 +139,15 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         console.warn("Error fetching latest sale status:", err);
       }
     };
+
+    // Para facturas no electrónicas (B02, B01, etc.) o ventas ya finalizadas:
+    // Solo cargamos la venta si le faltaban los artículos (items)
+    if (!isElec || isAlreadyFinished) {
+      if (!hasExistingItems) {
+        fetchLatestSale();
+      }
+      return;
+    }
 
     fetchLatestSale();
 

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sale } from '@/hooks/useSalesManagement';
+import { supabase } from '@/integrations/supabase/client';
 import PrintOptionsDialog from '../pos/PrintOptionsDialog';
 import InvoicePreviewDialog from './InvoicePreviewDialog';
 
@@ -80,31 +81,71 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
     setPreviewDialogOpen(true);
   };
 
-  const handlePrint = (sale: Sale) => {
+  const handlePrint = async (sale: any) => {
     const resolvedType = getSaleTypeCode(sale);
+    let itemsToUse = (sale.items && sale.items.length > 0) ? sale.items : sale.sale_items;
+    let customerToUse = sale.customer;
+    let profileToUse = sale.profile;
+
+    if (!itemsToUse || itemsToUse.length === 0) {
+      try {
+        const { data } = await supabase
+          .from('sales')
+          .select(`
+            *,
+            customer:customers(name, rnc, phone, email),
+            profile:profiles(full_name),
+            sale_items:sale_items(
+              id,
+              product_id,
+              quantity,
+              unit_price,
+              subtotal,
+              total,
+              tax_amount,
+              product:products(name)
+            )
+          `)
+          .eq('id', sale.id)
+          .maybeSingle();
+
+        if (data && data.sale_items && data.sale_items.length > 0) {
+          itemsToUse = data.sale_items;
+          customerToUse = data.customer || customerToUse;
+          profileToUse = data.profile || profileToUse;
+        }
+      } catch (err) {
+        console.error("Error fetching sale items for print:", err);
+      }
+    }
+
     // Map Sale to the format expected by PrintOptionsDialog
     const saleData = {
+      id: sale.id,
       total: sale.total,
-      items: sale.sale_items?.map(item => ({
-        name: item.product?.name || 'Producto',
-        quantity: item.quantity,
-        price: item.unit_price,
+      subtotal: sale.subtotal,
+      tax_total: sale.tax_total,
+      items: itemsToUse?.map((item: any) => ({
+        name: item.name || item.product?.name || item.product_name || item.description || 'Producto',
+        quantity: Number(item.quantity) || 1,
+        price: Number(item.unit_price ?? item.price ?? 0),
         tax_amount: item.tax_amount,
-        tax: item.tax_amount / (item.quantity * item.unit_price), // approximate rate if needed
-        total: item.total
+        tax: item.tax_amount ? item.tax_amount / ((Number(item.quantity) || 1) * (Number(item.unit_price ?? item.price) || 1)) : 0,
+        total: Number(item.total ?? ((Number(item.quantity) || 1) * (Number(item.unit_price ?? item.price) || 0))),
+        comment: item.comment || item.description || ''
       })) || [],
-      paymentMethod: sale.payment_method,
-      change: sale.change_amount,
-      customer: sale.customer,
-      invoice_number: sale.invoice_number,
-      invoiceNumber: sale.invoice_number,
+      paymentMethod: sale.payment_method || sale.paymentMethod,
+      change: sale.change_amount || sale.change,
+      customer: customerToUse,
+      invoice_number: sale.invoice_number || sale.invoiceNumber,
+      invoiceNumber: sale.invoice_number || sale.invoiceNumber,
       invoiceType: resolvedType,
-      profile: sale.profile,
+      profile: profileToUse,
       qrcode_url: sale.qrcode_url,
       codigo_seguridad: (sale as any).codigo_seguridad,
       fecha_firma: (sale as any).fecha_firma,
       is_electronic: sale.is_electronic || resolvedType.startsWith('E'),
-      encf: sale.encf || (resolvedType.startsWith('E') ? sale.invoice_number : undefined),
+      encf: sale.encf || (resolvedType.startsWith('E') ? (sale.invoice_number || sale.invoiceNumber) : undefined),
       estado_fiscal: sale.estado_fiscal,
     };
     setSelectedSaleForPrint(saleData);
@@ -371,9 +412,9 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
             setSelectedSaleForPreview(null);
           }}
           sale={selectedSaleForPreview}
-          onPrint={() => {
+          onPrint={(detailedSale) => {
             setPreviewDialogOpen(false);
-            handlePrint(selectedSaleForPreview);
+            handlePrint(detailedSale || selectedSaleForPreview);
           }}
         />
       )}

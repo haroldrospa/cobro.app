@@ -90,6 +90,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
   const printSaleData = useMemo(() => {
     if (!sale) return null;
     return {
+      id: sale.id,
       total: sale.total,
       subtotal: sale.subtotal,
       tax_total: sale.tax_total,

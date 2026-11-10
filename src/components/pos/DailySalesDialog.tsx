@@ -18,6 +18,7 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { useCashMovements } from '@/hooks/useCashMovements';
 import { useActiveSession, useSessionHistory, useOpenSessions } from '@/hooks/useCashSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { supabase } from '@/integrations/supabase/client';
 // Lazy: arrastra jsPDF + html2canvas, y solo hace falta al elegir imprimir
 const PrintOptionsDialog = lazy(() => import('./PrintOptionsDialog'));
 import InvoicePreviewDialog from '../invoices/InvoicePreviewDialog';
@@ -47,6 +48,44 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
     const handlePreview = (sale: any) => {
         setSelectedSaleForPreview(sale);
         setPreviewDialogOpen(true);
+    };
+
+    const handleDirectPrint = async (sale: any) => {
+        let itemsToUse = (sale.items && sale.items.length > 0) ? sale.items : sale.sale_items;
+        let target = { ...sale };
+        if (!itemsToUse || itemsToUse.length === 0) {
+            try {
+                const { data } = await supabase
+                    .from('sales')
+                    .select(`
+                        *,
+                        customer:customers(name, rnc, phone, email),
+                        profile:profiles(full_name),
+                        sale_items:sale_items(
+                            id, product_id, quantity, unit_price, subtotal, total, tax_amount, product:products(name)
+                        )
+                    `)
+                    .eq('id', sale.id)
+                    .maybeSingle();
+                if (data && data.sale_items && data.sale_items.length > 0) {
+                    itemsToUse = data.sale_items;
+                    target = { ...target, ...data };
+                }
+            } catch (err) {
+                console.error("Error fetching items for direct print:", err);
+            }
+        }
+        setSelectedActionSale({
+            ...target,
+            id: sale.id,
+            items: itemsToUse?.map((item: any) => ({
+                name: item.name || item.product?.name || item.product_name || item.description || 'Producto',
+                quantity: Number(item.quantity) || 1,
+                price: Number(item.unit_price ?? item.price ?? 0),
+                total: Number(item.total ?? ((Number(item.quantity) || 1) * (Number(item.unit_price ?? item.price) || 0))),
+                tax_amount: item.tax_amount,
+            })) || [],
+        });
     };
     const { data: activeSessionCached } = useActiveSession();
     const { data: openSessionsData } = useOpenSessions();
@@ -423,7 +462,7 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                                                                     <Button
                                                                         size="icon"
                                                                         variant="ghost"
-                                                                        onClick={() => setSelectedActionSale(sale)}
+                                                                        onClick={() => handleDirectPrint(sale)}
                                                                         className="h-8 w-8 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 text-muted-foreground transition-colors"
                                                                         title="Imprimir"
                                                                     >
@@ -510,7 +549,7 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
-                                                            onClick={(e) => { e.stopPropagation(); setSelectedActionSale(sale); }}
+                                                            onClick={(e) => { e.stopPropagation(); handleDirectPrint(sale); }}
                                                             className="h-8 px-2.5 rounded-lg bg-muted/60 hover:bg-emerald-500/10 hover:text-emerald-500 text-muted-foreground font-black text-[9px] uppercase tracking-wider"
                                                         >
                                                             <Printer className="h-3.5 w-3.5 mr-1 text-emerald-500" /> Imprimir
@@ -570,9 +609,9 @@ const DailySalesDialog: React.FC<DailySalesDialogProps> = ({ isOpen, onClose }) 
                         setSelectedSaleForPreview(null);
                     }}
                     sale={selectedSaleForPreview}
-                    onPrint={() => {
+                    onPrint={(detailedSale) => {
                         setPreviewDialogOpen(false);
-                        setSelectedActionSale(selectedSaleForPreview);
+                        handleDirectPrint(detailedSale || selectedSaleForPreview);
                     }}
                 />
             )}
