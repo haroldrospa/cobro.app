@@ -7,7 +7,8 @@ import {
   ChevronUp, 
   Percent, 
   DollarSign, 
-  AlertCircle, 
+  AlertCircle,
+  AlertTriangle, 
   Archive, 
   StickyNote, 
   Check, 
@@ -33,6 +34,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Customer } from '@/hooks/useCustomers';
 import { InvoiceType } from '@/hooks/useInvoiceTypes';
+import { useInvoiceSequences } from '@/hooks/useInvoiceSequences';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { GlobalDiscount } from '@/types/pos';
 import { cn } from '@/lib/utils';
@@ -110,6 +112,13 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
 }) => {
   const { data: sessionData } = useActiveSession();
   const sessionActive = isWaiter ? true : (hasActiveSession !== undefined ? hasActiveSession : !!sessionData);
+  const { data: invoiceSequences = [] } = useInvoiceSequences();
+  const activeTypeCode = selectedType?.code || selectedInvoiceType;
+  const activeSequence = invoiceSequences.find(s => s.invoice_type_id === activeTypeCode || s.invoice_type_id === selectedInvoiceType);
+  const activeEndNumber = activeSequence?.end_number ?? null;
+  const activeRemaining = activeEndNumber !== null && activeEndNumber > 0
+    ? Math.max(0, activeEndNumber - (activeSequence?.current_number || 0))
+    : null;
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -367,6 +376,20 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                     ))}
                 </SelectContent>
               </Select>
+
+              {activeRemaining !== null && (
+                activeRemaining <= 0 ? (
+                  <div className="mt-1.5 p-2 rounded-lg bg-destructive/15 border border-destructive/40 text-destructive text-[11px] flex items-center gap-1.5 font-medium animate-pulse">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    <span>🚨 Secuencia {activeTypeCode} agotada (0 disponibles). Solicita comprobantes a la DGII.</span>
+                  </div>
+                ) : activeRemaining <= 50 ? (
+                  <div className="mt-1.5 p-2 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-500 text-[11px] flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span>⚠️ Quedan solo {activeRemaining} comprobantes ({activeTypeCode}). Solicita comprobantes a la DGII.</span>
+                  </div>
+                ) : null
+              )}
 
               {(requiresCustomer || selectedType?.code === 'COT') && (
                 <div className="mt-2 space-y-1.5 border border-primary/20 bg-primary/5 rounded-lg p-2 animate-in fade-in slide-in-from-top-1 duration-200">

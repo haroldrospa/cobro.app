@@ -8,6 +8,7 @@ export interface InvoiceSequence {
   id: string;
   invoice_type_id: string;
   current_number: number;
+  end_number?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,7 +56,25 @@ export const useInvoiceSequences = () => {
         .order('invoice_type_id');
 
       if (error) throw error;
-      const sequences = (data || []) as InvoiceSequence[];
+
+      let savedEndNumbers: Record<string, number> = {};
+      try {
+        savedEndNumbers = JSON.parse(localStorage.getItem('invoice_sequence_end_numbers') || '{}');
+      } catch (e) {
+        console.error(e);
+      }
+
+      const rawSequences = (data || []) as any[];
+      const sequences: InvoiceSequence[] = rawSequences.map(seq => ({
+        id: seq.id,
+        invoice_type_id: seq.invoice_type_id,
+        current_number: Number(seq.current_number) || 0,
+        end_number: seq.end_number !== undefined && seq.end_number !== null
+          ? Number(seq.end_number)
+          : (savedEndNumbers[seq.invoice_type_id] !== undefined ? Number(savedEndNumbers[seq.invoice_type_id]) : null),
+        created_at: seq.created_at,
+        updated_at: seq.updated_at
+      }));
 
       // Si el usuario está autenticado y tiene una tienda asociada, asegurar que existan secuencias tanto para NCF (B) como para e-CF (E)
       if (session?.user?.id) {
@@ -256,19 +275,80 @@ export const useUpdateInvoiceSequence = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, current_number, invoice_type_id }: { id: string; current_number: number; invoice_type_id: string }) => {
-      const { data, error } = await supabase
-        .from('invoice_sequences')
-        .update({ current_number, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
+    mutationFn: async ({
+      id,
+      current_number,
+      end_number,
+      invoice_type_id
+    }: {
+      id: string;
+      current_number?: number;
+      end_number?: number | null;
+      invoice_type_id: string;
+    }) => {
+      const updatePayload: Record<string, any> = {
+        updated_at: new Date().toISOString()
+      };
+      if (current_number !== undefined) {
+        updatePayload.current_number = current_number;
+      }
+      if (end_number !== undefined) {
+        updatePayload.end_number = end_number;
+      }
 
-      if (error) throw error;
+      let data: any = null;
+      let error: any = null;
+
+      try {
+        const res = await supabase
+          .from('invoice_sequences')
+          .update(updatePayload)
+          .eq('id', id)
+          .select()
+          .single();
+        data = res.data;
+        error = res.error;
+      } catch (err) {
+        error = err;
+      }
+
+      // Si falló por no existir la columna end_number aún en BD, intentar guardar solo current_number si aplica
+      if (error && (error as any).message?.includes('end_number')) {
+        console.warn('[useUpdateInvoiceSequence] Columna end_number no existe aún en BD. Guardando solo current_number:', error);
+        if (current_number !== undefined) {
+          const resFallback = await supabase
+            .from('invoice_sequences')
+            .update({ current_number, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+          if (resFallback.error) throw resFallback.error;
+          data = resFallback.data;
+        }
+      } else if (error) {
+        throw error;
+      }
+
       return data;
     },
-    onSuccess: async (data, variables) => {
+    onSuccess: async (_data, variables) => {
+      // Guardar rango final en cache local
+      if (variables.end_number !== undefined) {
+        try {
+          const saved = JSON.parse(localStorage.getItem('invoice_sequence_end_numbers') || '{}');
+          if (variables.end_number === null) {
+            delete saved[variables.invoice_type_id];
+          } else {
+            saved[variables.invoice_type_id] = variables.end_number;
+          }
+          localStorage.setItem('invoice_sequence_end_numbers', JSON.stringify(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['invoice-sequences'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-sequences-alert'] });
       queryClient.invalidateQueries({ queryKey: ['dgii-sequence-stats'] });
 
       // Actualizar caché offline inmediatamente
@@ -276,11 +356,12 @@ export const useUpdateInvoiceSequence = () => {
         const isElectronic = variables.invoice_type_id.startsWith('E');
         const settings = await offlineDB.get<any>(OfflineStore.SETTINGS, 'invoice_sequences') || { key: 'invoice_sequences' };
         settings[variables.invoice_type_id] = {
-          current: variables.current_number,
+          current: variables.current_number !== undefined ? variables.current_number : (settings[variables.invoice_type_id]?.current || 0),
+          end_number: variables.end_number !== undefined ? variables.end_number : (settings[variables.invoice_type_id]?.end_number ?? null),
           prefix: isElectronic ? variables.invoice_type_id : `${variables.invoice_type_id}-`
         };
         await offlineDB.put(OfflineStore.SETTINGS, settings);
-        console.log(`💾 Secuencia ${variables.invoice_type_id} guardada en offlineDB: #${variables.current_number}`);
+        console.log(`💾 Secuencia ${variables.invoice_type_id} guardada en offlineDB: #${variables.current_number ?? ''} (Hasta: #${variables.end_number ?? 'Sin límite'})`);
       } catch (e) {
         console.error('Error actualizando offlineDB para secuencias:', e);
       }

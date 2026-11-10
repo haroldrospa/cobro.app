@@ -97,45 +97,35 @@ const Settings = () => {
   const { data: maxInvoiceNumbers, statsMap: dgiiStatsMap, refetch: refetchMaxNumbers, isFetching: isFetchingMaxNumbers } = useMaxInvoiceNumbers();
   const [isRepairingSequences, setIsRepairingSequences] = useState(false);
   const [dgiiAuthorizedLimits, setDgiiAuthorizedLimits] = useState<Record<string, number>>(() => {
-    const defaults: Record<string, number> = {
-      B01: 1000,
-      B02: 10000,
-      B03: 500,
-      B04: 500,
-      B11: 500,
-      B14: 500,
-      B15: 500,
-      B16: 500,
-      E31: 1000,
-      E32: 10000,
-      E33: 500,
-      E34: 500,
-      E41: 500,
-      E44: 500,
-      E45: 500,
-      E46: 500,
-    };
     try {
-      const saved = JSON.parse(localStorage.getItem('dgii_authorized_limits') || '{}');
-      return { ...defaults, ...saved };
+      const saved = JSON.parse(localStorage.getItem('invoice_sequence_end_numbers') || localStorage.getItem('dgii_authorized_limits') || '{}');
+      return saved;
     } catch {
-      return defaults;
+      return {};
     }
   });
 
   const handleUpdateDgiiLimit = (invoiceTypeId: string, newLimit: number) => {
     setDgiiAuthorizedLimits(prev => {
-      const next = { ...prev, [invoiceTypeId]: newLimit };
+      const next = { ...prev };
+      if (newLimit > 0) {
+        next[invoiceTypeId] = newLimit;
+      } else {
+        delete next[invoiceTypeId];
+      }
       try {
+        localStorage.setItem('invoice_sequence_end_numbers', JSON.stringify(next));
         localStorage.setItem('dgii_authorized_limits', JSON.stringify(next));
       } catch (e) {
-        console.error('Error guardando dgii_authorized_limits:', e);
+        console.error('Error guardando invoice_sequence_end_numbers:', e);
       }
       return next;
     });
     toast({
-      title: "Límite DGII actualizado",
-      description: `Se actualizó la cantidad autorizada a ${newLimit.toLocaleString()} comprobantes.`,
+      title: "Rango final actualizado",
+      description: newLimit > 0
+        ? `Se configuró el fin de secuencia a ${newLimit.toLocaleString()} comprobantes.`
+        : "Se removió el límite final de la secuencia.",
     });
   };
   const updateSequenceMutation = useUpdateInvoiceSequence();
@@ -674,6 +664,19 @@ const Settings = () => {
       toast({
         title: "Error",
         description: error.message || "No se pudo actualizar la secuencia.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateEndNumber = async (id: string, newEndNumber: number | null, invoiceTypeId: string) => {
+    try {
+      await updateSequenceMutation.mutateAsync({ id, end_number: newEndNumber, invoice_type_id: invoiceTypeId });
+      handleUpdateDgiiLimit(invoiceTypeId, newEndNumber || 0);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el fin de secuencia.",
         variant: "destructive",
       });
     }
@@ -2656,24 +2659,33 @@ const Settings = () => {
                       const displayName = invoiceType?.name || (isElectronic ? `Comprobante ${displayId}` : `Factura ${displayId}`);
 
                       return (
-                        <div key={sequence.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border rounded-xl bg-card">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold font-mono text-sm text-primary">{displayId}</span>
-                            <span className="text-muted-foreground">•</span>
-                            <span className="text-sm font-medium">{displayName}</span>
+                        <div key={sequence.id} className="flex flex-col gap-3 p-4 border rounded-xl bg-card hover:border-primary/30 transition-all shadow-sm">
+                          <div className="flex items-center justify-between gap-2 border-b border-border/50 pb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold font-mono text-base text-primary bg-primary/10 px-2.5 py-0.5 rounded-lg">{displayId}</span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-sm font-semibold text-foreground">{displayName}</span>
+                            </div>
+                            {isElectronic && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full">
+                                Facturación Electrónica e-CF
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="w-full">
                             <InvoiceSequenceInput
                               key={`${sequence.id}-${displayId}`}
                               id={sequence.id}
                               invoiceTypeId={sequence.invoice_type_id}
                               currentNumber={sequence.current_number}
+                              endNumber={sequence.end_number ?? dgiiAuthorizedLimits[sequence.invoice_type_id] ?? null}
                               onUpdate={handleUpdateSequence}
+                              onUpdateEndNumber={handleUpdateEndNumber}
                               emittedCount={dgiiStatsMap?.[sequence.invoice_type_id]?.emittedCount || 0}
                               maxUsedNumber={dgiiStatsMap?.[sequence.invoice_type_id]?.lastAcceptedSeq || maxInvoiceNumbers?.[sequence.invoice_type_id] || 0}
                               lastAcceptedEncf={dgiiStatsMap?.[sequence.invoice_type_id]?.lastAcceptedEncf || null}
                               acceptedSeqNumbers={dgiiStatsMap?.[sequence.invoice_type_id]?.acceptedSeqNumbers || []}
-                              authorizedLimit={dgiiAuthorizedLimits[sequence.invoice_type_id] || 1000}
+                              authorizedLimit={dgiiAuthorizedLimits[sequence.invoice_type_id] || 0}
                               onLimitChange={handleUpdateDgiiLimit}
                               isElectronic={isElectronic}
                             />

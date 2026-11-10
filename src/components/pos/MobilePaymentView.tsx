@@ -13,7 +13,9 @@ import {
   Search,
   Check,
   Unlock,
-  Utensils
+  Utensils,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn } from '@/lib/utils';
 import { useCustomerBalance } from '@/hooks/useCustomerBalance';
 import { useActiveSession } from '@/hooks/useCashSession';
+import { useInvoiceSequences } from '@/hooks/useInvoiceSequences';
 import AddCustomerDialog from './AddCustomerDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -96,6 +99,13 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
 }) => {
   const { data: sessionData } = useActiveSession();
   const sessionActive = isWaiter ? true : (hasActiveSession !== undefined ? hasActiveSession : !!sessionData);
+  const { data: invoiceSequences = [] } = useInvoiceSequences();
+  const activeTypeCode = selectedType?.code || selectedInvoiceType;
+  const activeSequence = invoiceSequences.find(s => s.invoice_type_id === activeTypeCode || s.invoice_type_id === selectedInvoiceType);
+  const activeEndNumber = activeSequence?.end_number ?? null;
+  const activeRemaining = activeEndNumber !== null && activeEndNumber > 0
+    ? Math.max(0, activeEndNumber - (activeSequence?.current_number || 0))
+    : null;
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerSelectOpen, setIsCustomerSelectOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -256,6 +266,20 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                 ))}
             </SelectContent>
           </Select>
+
+          {activeRemaining !== null && (
+            activeRemaining <= 0 ? (
+              <div className="mt-1 p-2 rounded-xl bg-destructive/15 border border-destructive/40 text-destructive text-xs flex items-center gap-1.5 font-medium animate-pulse">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>🚨 Secuencia {activeTypeCode} agotada (0 disponibles). Solicita comprobantes a la DGII.</span>
+              </div>
+            ) : activeRemaining <= 50 ? (
+              <div className="mt-1 p-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-500 text-xs flex items-center gap-1.5 font-medium">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>⚠️ Quedan solo {activeRemaining} comprobantes ({activeTypeCode}). Solicita comprobantes a la DGII.</span>
+              </div>
+            ) : null
+          )}
         </div>
 
         {/* ── CUSTOMER (Comprobante para) ── */}

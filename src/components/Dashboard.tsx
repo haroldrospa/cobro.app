@@ -784,11 +784,28 @@ const Dashboard: React.FC = () => {
 
       if (error) throw error;
 
-      const maxNumber = 99999999;
-      return data?.map(seq => ({
-        ...seq,
-        remaining: maxNumber - seq.current_number
-      })).filter(seq => seq.remaining < 1000) || [];
+      let savedEndNumbers = {};
+      try {
+        savedEndNumbers = JSON.parse(localStorage.getItem("invoice_sequence_end_numbers") || localStorage.getItem("dgii_authorized_limits") || "{}");
+      } catch (e) {
+        console.error(e);
+      }
+
+      return (data || []).map((seq) => {
+        const endNumber = seq.end_number !== undefined && seq.end_number !== null
+          ? Number(seq.end_number)
+          : (savedEndNumbers[seq.invoice_type_id] !== undefined ? Number(savedEndNumbers[seq.invoice_type_id]) : null);
+
+        if (!endNumber || endNumber <= 0) return null;
+        const currentNumber = Number(seq.current_number) || 0;
+        const remaining = Math.max(0, endNumber - currentNumber);
+
+        return {
+          ...seq,
+          end_number: endNumber,
+          remaining
+        };
+      }).filter((seq) => seq !== null && seq.remaining <= 50) || [];
     },
   });
 
@@ -1380,7 +1397,14 @@ const Dashboard: React.FC = () => {
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="hourly">Ventas por Hora</TabsTrigger>
           <TabsTrigger value="clients">Clientes</TabsTrigger>
-          <TabsTrigger value="alerts">Alertas</TabsTrigger>
+          <TabsTrigger value="alerts" className="relative">
+            Alertas
+            {invoiceSequences.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">
+                {invoiceSequences.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products" className="space-y-4">
@@ -1560,12 +1584,39 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                 )}
-                {invoiceSequences.map((seq) => (
-                  <div key={seq.id} className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <AlertCircle className="h-5 w-5 text-blue-500" />
-                    <p className="text-sm">Secuencia {seq.invoice_type_id} próxima a agotarse (quedan {seq.remaining.toLocaleString()} números)</p>
-                  </div>
-                ))}
+                {invoiceSequences.map((seq) => {
+                  const isDepleted = seq.remaining <= 0;
+                  return (
+                    <div
+                      key={seq.id}
+                      className={`flex items-center justify-between p-3.5 border rounded-xl transition-all ${
+                        isDepleted
+                          ? "bg-destructive/15 border-destructive/40 text-destructive"
+                          : "bg-amber-500/15 border-amber-500/40 text-amber-500"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {isDepleted
+                              ? `🚨 ¡Secuencia ${seq.invoice_type_id} agotada (0 disponibles)!`
+                              : `⚠️ Secuencia ${seq.invoice_type_id} próxima a agotarse (Quedan solo ${seq.remaining} disponibles)`}
+                          </p>
+                          <p className="text-xs opacity-90">
+                            Debes solicitar comprobantes a la DGII antes de quedarte sin numeración autorizada.
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        to="/settings?tab=general"
+                        className="px-3 py-1.5 text-xs font-bold rounded-lg bg-background/80 hover:bg-background border border-current transition-all shrink-0 ml-3"
+                      >
+                        Gestionar
+                      </Link>
+                    </div>
+                  );
+                })}
                 {lowStockProducts.length === 0 && overdueCustomers.length === 0 && highCreditCustomers.length === 0 && invoiceSequences.length === 0 && (
                   <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                     <AlertCircle className="h-5 w-5 text-green-500" />
