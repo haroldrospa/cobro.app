@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,17 +9,20 @@ import { useCreateCustomer, useCustomers } from '@/hooks/useCustomers';
 import { useEmployees } from '@/hooks/useEmployees';
 import { Loader2, UserPlus, Phone, Mail, MapPin, CreditCard, ShieldCheck, Search } from 'lucide-react';
 import { lookupRnc } from '@/lib/rncLookup';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AddCustomerDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCustomerAdded: (customerId: string) => void;
+  initialSearch?: string;
 }
 
 const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
   isOpen,
   onClose,
   onCustomerAdded,
+  initialSearch = '',
 }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -38,6 +41,74 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
   const { data: employees = [] } = useEmployees();
   const { data: allCustomers = [] } = useCustomers();
   const [isLookingUpRnc, setIsLookingUpRnc] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialSearch && initialSearch.trim()) {
+        const query = initialSearch.trim();
+        const cleanDigits = query.replace(/[^0-9]/g, '');
+        const isNumeric = cleanDigits.length >= 9 && cleanDigits.length <= 11 && (cleanDigits.length / query.length >= 0.7);
+
+        if (isNumeric) {
+          const detectedType = cleanDigits.length === 9 ? 'business' : 'final';
+          setFormData({
+            name: '',
+            rnc: cleanDigits,
+            phone: '',
+            email: '',
+            address: '',
+            customer_type: detectedType,
+            credit_limit: '',
+            validation_code: '',
+            profile_id: ''
+          });
+
+          // Consulta automática inmediata a DGII para agilizar el registro
+          setIsLookingUpRnc(true);
+          lookupRnc(cleanDigits).then((result) => {
+            if (result.success && result.name) {
+              setFormData(prev => ({
+                ...prev,
+                name: result.name || prev.name,
+              }));
+              toast({
+                title: "Cliente encontrado en DGII",
+                description: `Nombre: ${result.name}`,
+              });
+            }
+          }).catch(err => {
+            console.warn('[AddCustomerDialog] Error en autocompletado DGII:', err);
+          }).finally(() => {
+            setIsLookingUpRnc(false);
+          });
+        } else {
+          setFormData({
+            name: query,
+            rnc: '',
+            phone: '',
+            email: '',
+            address: '',
+            customer_type: 'final',
+            credit_limit: '',
+            validation_code: '',
+            profile_id: ''
+          });
+        }
+      } else {
+        setFormData({
+          name: '',
+          rnc: '',
+          phone: '',
+          email: '',
+          address: '',
+          customer_type: 'final',
+          credit_limit: '',
+          validation_code: '',
+          profile_id: ''
+        });
+      }
+    }
+  }, [isOpen, initialSearch]);
 
   const handleLookupRnc = async () => {
     if (!formData.rnc.trim()) return;
@@ -174,6 +245,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
             </div>
             <DialogTitle className="text-xl font-black text-foreground tracking-tight uppercase">Nuevo Cliente</DialogTitle>
           </div>
+          <DialogDescription className="sr-only">Formulario para registrar un nuevo cliente</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -218,7 +290,7 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
-                <Phone className="h-3 w-3" /> Teléfono *
+                <Phone className="h-3 w-3" /> Teléfono (Opcional)
               </Label>
               <Input
                 id="phone"
@@ -226,7 +298,6 @@ const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="809-..."
                 className="h-12 bg-muted/50 border-border/40 rounded-xl focus:ring-green-500/20 text-foreground font-bold"
-                required
               />
             </div>
 

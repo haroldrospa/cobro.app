@@ -368,7 +368,7 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
                       className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs"
                     >
                       <UserPlus className="h-3.5 w-3.5 mr-1" />
-                      Nuevo Cliente
+                      {customerSearchQuery.trim() ? `Crear "${customerSearchQuery.trim()}"` : 'Nuevo Cliente'}
                     </Button>
                   </div>
                 )}
@@ -508,7 +508,9 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
         onCustomerAdded={(customerId) => {
           onCustomerChange(customerId);
           setShowAddCustomer(false);
+          setCustomerSearchQuery('');
         }}
+        initialSearch={customerSearchQuery}
       />
     </div>
   );

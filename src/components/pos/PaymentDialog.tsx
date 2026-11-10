@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { DollarSign, CreditCard, Printer, Loader2, FileText, Plus, Check, ChevronsUpDown, Search, User, X, ChevronRight, Wallet, Banknote, ArrowRightLeft, AlertCircle } from 'lucide-react';
+import { DollarSign, CreditCard, Printer, Loader2, FileText, Plus, Check, ChevronsUpDown, Search, User, X, ChevronRight, Wallet, Banknote, ArrowRightLeft, AlertCircle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -234,6 +234,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const handleCustomerAdded = (newCustomerId: string) => {
     if (onCustomerChange) {
       onCustomerChange(newCustomerId);
+      setCustomerSearch('');
+      setOpenCustomerPopover(false);
     }
   };
 
@@ -385,11 +387,35 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                               placeholder="Buscar por nombre, RNC o teléfono..." 
                               value={customerSearch}
                               onValueChange={setCustomerSearch}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && filteredCustomers.length === 0 && customerSearch.trim()) {
+                                  e.preventDefault();
+                                  setOpenCustomerPopover(false);
+                                  setIsAddCustomerOpen(true);
+                                }
+                              }}
                               className="h-10 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
                             />
                             <CommandList className="max-h-[220px] overflow-y-auto p-1 scrollbar-thin">
                               <CommandEmpty className="p-4 text-xs text-muted-foreground text-center">
-                                No se encontraron clientes
+                                <p className="text-xs text-muted-foreground font-semibold mb-2">
+                                  No se encontraron clientes
+                                </p>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="w-full h-8 text-xs font-bold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-sm"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setOpenCustomerPopover(false);
+                                    setIsAddCustomerOpen(true);
+                                  }}
+                                >
+                                  <UserPlus className="h-3.5 w-3.5" />
+                                  <span className="truncate">
+                                    {customerSearch.trim() ? `Crear "${customerSearch.trim()}"` : 'Crear nuevo cliente'}
+                                  </span>
+                                </Button>
                               </CommandEmpty>
                               <CommandGroup>
                                 <CommandItem
@@ -433,6 +459,24 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                                 })}
                               </CommandGroup>
                             </CommandList>
+                            <div className="p-1.5 border-t border-border bg-muted/30">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="w-full h-7 text-xs font-bold gap-1 text-primary hover:text-primary hover:bg-primary/10 rounded-lg justify-center"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setOpenCustomerPopover(false);
+                                  setIsAddCustomerOpen(true);
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span className="truncate">
+                                  {customerSearch.trim() ? `Crear cliente "${customerSearch.trim()}"` : 'Crear nuevo cliente'}
+                                </span>
+                              </Button>
+                            </div>
                           </Command>
                         </PopoverContent>
                       </Popover>
@@ -775,6 +819,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         isOpen={isAddCustomerOpen}
         onClose={() => setIsAddCustomerOpen(false)}
         onCustomerAdded={handleCustomerAdded}
+        initialSearch={customerSearch}
       />
     </>
   );

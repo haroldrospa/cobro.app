@@ -125,7 +125,15 @@ export const useCreateCustomer = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      offlineDB.put(OfflineStore.CUSTOMERS, data).catch(console.warn);
+      queryClient.setQueryData<Customer[]>(['customers'], (old) => {
+        if (!old) return [data];
+        if (!old.some(c => c.id === data.id)) {
+          return [data, ...old];
+        }
+        return old;
+      });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
   });
@@ -146,7 +154,12 @@ export const useUpdateCustomer = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      offlineDB.put(OfflineStore.CUSTOMERS, data).catch(console.warn);
+      queryClient.setQueryData<Customer[]>(['customers'], (old) => {
+        if (!old) return [data];
+        return old.map(c => c.id === data.id ? data : c);
+      });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
   });
@@ -168,7 +181,12 @@ export const useDeleteCustomer = () => {
         throw rpcError;
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
+      offlineDB.delete(OfflineStore.CUSTOMERS, id).catch(console.warn);
+      queryClient.setQueryData<Customer[]>(['customers'], (old) => {
+        if (!old) return [];
+        return old.filter(c => c.id !== id);
+      });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
   });

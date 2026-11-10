@@ -19,7 +19,9 @@ import {
   Star,
   Unlock,
   FileText,
-  Utensils
+  Utensils,
+  UserPlus,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBusinessType } from '@/hooks/useBusinessType';
@@ -282,6 +284,8 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
 
   const handleCustomerAdded = (customerId: string) => {
     onCustomerChange(customerId);
+    setCustomerSearch('');
+    setIsCustomerOpen(false);
   };
 
   const handleDiscountTypeChange = (type: 'percentage' | 'amount') => {
@@ -413,11 +417,35 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                           placeholder="Buscar por nombre o RNC..." 
                           value={customerSearch}
                           onValueChange={setCustomerSearch}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && filteredCustomers.length === 0 && customerSearch.trim()) {
+                              e.preventDefault();
+                              setIsCustomerOpen(false);
+                              setShowAddCustomer(true);
+                            }
+                          }}
                           className="h-10 text-xs font-bold text-foreground placeholder:text-muted-foreground bg-muted/30 border-b border-border" 
                         />
                         <CommandList className="max-h-[35vh] sm:max-h-[200px] overflow-y-auto p-1.5 scrollbar-thin">
                           <CommandEmpty className="p-4 text-xs text-center text-muted-foreground font-bold uppercase tracking-widest">
-                            No se encontraron clientes
+                            <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-2">
+                              No se encontraron clientes
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="w-full h-8 text-xs font-bold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-sm"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setIsCustomerOpen(false);
+                                setShowAddCustomer(true);
+                              }}
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                              <span className="truncate">
+                                {customerSearch.trim() ? `Crear "${customerSearch.trim()}"` : 'Crear nuevo cliente'}
+                              </span>
+                            </Button>
                           </CommandEmpty>
                           <CommandGroup>
                             <CommandItem
@@ -472,6 +500,24 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                             })}
                           </CommandGroup>
                         </CommandList>
+                        <div className="p-1.5 border-t border-border bg-muted/30">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full h-7 text-xs font-bold gap-1 text-primary hover:text-primary hover:bg-primary/10 rounded-lg justify-center"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setIsCustomerOpen(false);
+                              setShowAddCustomer(true);
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span className="truncate">
+                              {customerSearch.trim() ? `Crear cliente "${customerSearch.trim()}"` : 'Crear nuevo cliente'}
+                            </span>
+                          </Button>
+                        </div>
                       </Command>
                     </PopoverContent>
                   </Popover>
@@ -513,13 +559,25 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                     </div>
                   )}
                   {selectedCustomerData && (
-                    <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 bg-background/50 p-1.5 rounded border border-border/50">
+                    <div className="text-[10px] text-muted-foreground flex items-center justify-between bg-background/50 p-1.5 rounded border border-border/50">
+                      <div className="flex flex-col gap-0.5 min-w-0 flex-1 pr-1">
                       <span className="font-semibold text-foreground">{selectedCustomerData.name}</span>
                       {selectedCustomerData.rnc ? (
                         <span className="text-primary font-mono font-semibold">RNC: {selectedCustomerData.rnc}</span>
                       ) : (
                         <span className="text-destructive font-semibold">⚠️ Sin RNC registrado</span>
                       )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive rounded-md shrink-0"
+                        onClick={() => onCustomerChange("")}
+                        title="Quitar cliente seleccionado"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -968,6 +1026,7 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
         isOpen={showAddCustomer}
         onClose={() => setShowAddCustomer(false)}
         onCustomerAdded={handleCustomerAdded}
+        initialSearch={customerSearch}
       />
     </div>
   );
