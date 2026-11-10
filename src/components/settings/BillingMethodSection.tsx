@@ -17,25 +17,31 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   const { toast } = useToast();
   const { settings: storeSettings } = useStoreSettings();
 
-  const [billingMode, setBillingMode] = useState<'ncf' | 'e-ncf'>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf') return 'e-ncf';
-    return 'ncf';
-  });
+  const [billingMode, setBillingMode] = useState<'ncf' | 'e-ncf'>('ncf');
 
-  const handleModeSelect = (mode: 'ncf' | 'e-ncf') => {
+  const handleModeSelect = async (mode: 'ncf' | 'e-ncf') => {
     setBillingMode(mode);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('alanube_billing_mode', mode);
+    try {
+      await updateConfig({ is_active: mode === 'e-ncf' });
+      toast({
+        title: mode === 'e-ncf' ? 'Facturación Electrónica activada' : 'Facturación Fiscal activada',
+        description: 'La configuración se actualizó en Supabase para todas las computadoras del negocio.'
+      });
+    } catch (e: any) {
+      toast({
+        title: 'Error al cambiar método',
+        description: e?.message || 'No se pudo guardar el método en Supabase.',
+        variant: 'destructive'
+      });
     }
-    updateConfig({ is_active: mode === 'e-ncf' }).catch(() => {});
   };
   const [isTesting, setIsTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
-    environment: 'SANDBOX' as 'SANDBOX' | 'PRODUCTION',
+    environment: 'PRODUCTION' as 'SANDBOX' | 'PRODUCTION',
     api_token: '',
-    base_url: 'https://sandbox.alanube.co',
+    base_url: 'https://api.alanube.co',
     rnc_emisor: '',
     razon_social: '',
     company_id: '01M0TYPKJ0JGVM53K56D7X9P7Z',
@@ -46,21 +52,21 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
 
   useEffect(() => {
     if (config) {
-      setBillingMode(config.is_active ? 'e-ncf' : 'ncf');
-      let effectiveCompanyId = config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : '') || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+      const mode = config.is_active ? 'e-ncf' : 'ncf';
+      setBillingMode(mode);
+      let effectiveCompanyId = config.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
       if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
         effectiveCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-        if (typeof window !== 'undefined') localStorage.setItem('alanube_company_id', '01M0TYPKJ0JGVM53K56D7X9P7Z');
       }
 
       setFormData({
-        environment: config.environment || 'SANDBOX',
+        environment: config.environment || 'PRODUCTION',
         api_token: config.api_token || '',
         base_url: config.base_url || (config.environment === 'PRODUCTION' ? 'https://api.alanube.co' : 'https://sandbox.alanube.co'),
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
         company_id: effectiveCompanyId,
-        sequence_due_date: (config as any)?.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : '') || '2027-12-31',
+        sequence_due_date: config.sequence_due_date || '2027-12-31',
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
       });
@@ -68,10 +74,10 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   }, [config]);
 
   useEffect(() => {
-    if (onModeChange) {
+    if (onModeChange && config) {
       onModeChange(billingMode);
     }
-  }, [billingMode, onModeChange]);
+  }, [billingMode, onModeChange, config]);
 
   const handleTestConnection = async () => {
     if (!formData.api_token) {

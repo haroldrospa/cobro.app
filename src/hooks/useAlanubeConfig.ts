@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserStore } from '@/hooks/useUserStore';
@@ -10,130 +10,220 @@ export const useAlanubeConfig = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const queryClient = useQueryClient();
 
-  const fetchConfig = async () => {
-    let localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
-    if (localCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-      localCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-      if (typeof window !== 'undefined') localStorage.setItem('alanube_company_id', localCompanyId);
-    }
-    const localMode = typeof window !== 'undefined' ? localStorage.getItem('alanube_billing_mode') : null;
-    const localToken = typeof window !== 'undefined' ? localStorage.getItem('alanube_api_token') : null;
-    const localRnc = typeof window !== 'undefined' ? localStorage.getItem('alanube_rnc_emisor') : null;
-    const localRazon = typeof window !== 'undefined' ? localStorage.getItem('alanube_razon_social') : null;
-    const localEnv = (typeof window !== 'undefined' ? localStorage.getItem('alanube_environment') : null) as 'SANDBOX' | 'PRODUCTION' | null;
-    const localBaseUrl = typeof window !== 'undefined' ? localStorage.getItem('alanube_base_url') : null;
-    const localSequenceDueDate = typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null;
+  // Real-time listener: cuando cualquier dispositivo actualiza alanube_config, todas las PCs se sincronizan en vivo
+  useEffect(() => {
+    if (!storeId) return;
 
-    if (!storeId) {
+    const channel = supabase
+      .channel(`alanube-config-sync-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'alanube_config',
+          filter: `store_id=eq.${storeId}`,
+        },
+        (payload) => {
+          console.log('⚡ [useAlanubeConfig] Sincronización en tiempo real desde Supabase:', payload);
+          queryClient.invalidateQueries({ queryKey: ['alanubeConfig', storeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, queryClient]);
+
+  const fetchConfig = async (): Promise<(AlanubeConfig & { is_active: boolean }) | null> => {
+    if (!storeId) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('alanube_config')
+        .select('*')
+        .eq('store_id', storeId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Error fetching alanube_config from Supabase:', error);
+      }
+
+      if (data) {
+        let effectiveCompanyId = (data as any)?.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+        if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+          effectiveCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+        }
+
+        const resolvedConfig = {
+          api_token: (data as any)?.api_token || '',
+          environment: ((data as any)?.environment as 'SANDBOX' | 'PRODUCTION') || 'PRODUCTION',
+          base_url: (data as any)?.base_url || 'https://api.alanube.co',
+          rnc_emisor: (data as any)?.rnc_emisor || '',
+          razon_social: (data as any)?.razon_social || '',
+          company_id: effectiveCompanyId,
+          sequence_due_date: (data as any)?.sequence_due_date || '2027-12-31',
+          certificado_digital: (data as any)?.certificado_digital || null,
+          certificado_password: (data as any)?.certificado_password || null,
+          is_active: Boolean((data as any)?.is_active),
+        };
+
+        // Guardar copia local de respaldo offline con los datos reales de Supabase
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(`alanube_cache_${storeId}`, JSON.stringify(resolvedConfig));
+            localStorage.setItem('alanube_billing_mode', resolvedConfig.is_active ? 'e-ncf' : 'ncf');
+            localStorage.setItem('alanube_company_id', resolvedConfig.company_id);
+            localStorage.setItem('alanube_rnc_emisor', resolvedConfig.rnc_emisor);
+            localStorage.setItem('alanube_razon_social', resolvedConfig.razon_social);
+            localStorage.setItem('alanube_environment', resolvedConfig.environment);
+            localStorage.setItem('alanube_base_url', resolvedConfig.base_url);
+            localStorage.setItem('alanube_sequence_due_date', resolvedConfig.sequence_due_date);
+          } catch (e) {
+            console.warn('No se pudo guardar cache local de alanube:', e);
+          }
+        }
+
+        return resolvedConfig;
+      }
+
+      // Si no existe fila en Supabase para este store, verificar respaldo offline
+      if (typeof window !== 'undefined') {
+        const cachedStr = localStorage.getItem(`alanube_cache_${storeId}`);
+        if (cachedStr) {
+          try {
+            return JSON.parse(cachedStr);
+          } catch (e) {}
+        }
+      }
+
       return {
-        api_token: localToken || '',
-        environment: localEnv || 'PRODUCTION',
-        base_url: localBaseUrl || 'https://api.alanube.co',
-        rnc_emisor: localRnc || '',
-        razon_social: localRazon || '',
-        company_id: localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
-        sequence_due_date: localSequenceDueDate || '2027-12-31',
-        is_active: localMode ? localMode === 'e-ncf' : false,
-      } as AlanubeConfig & { is_active: boolean };
+        api_token: '',
+        environment: 'PRODUCTION',
+        base_url: 'https://api.alanube.co',
+        rnc_emisor: '',
+        razon_social: '',
+        company_id: '01M0TYPKJ0JGVM53K56D7X9P7Z',
+        sequence_due_date: '2027-12-31',
+        is_active: false,
+      };
+    } catch (err) {
+      console.error('Excepción al consultar alanube_config:', err);
+      // Fallback offline seguro
+      if (typeof window !== 'undefined') {
+        const cachedStr = localStorage.getItem(`alanube_cache_${storeId}`);
+        if (cachedStr) {
+          try {
+            return JSON.parse(cachedStr);
+          } catch (e) {}
+        }
+      }
+      return null;
     }
-
-    const { data, error } = await supabase
-      .from('alanube_config')
-      .select('*')
-      .eq('store_id', storeId)
-      .maybeSingle();
-
-    if (error) {
-      console.warn("Error fetching alanube_config:", error);
-    }
-
-    const dbIsActive = (data as any)?.is_active;
-    const resolvedIsActive = localMode
-      ? localMode === 'e-ncf'
-      : Boolean(dbIsActive);
-
-    if (typeof window !== 'undefined' && !localMode && dbIsActive !== undefined) {
-      localStorage.setItem('alanube_billing_mode', dbIsActive ? 'e-ncf' : 'ncf');
-    }
-
-    return {
-      ...(data as any),
-      api_token: (data as any)?.api_token || localToken || '',
-      environment: (data as any)?.environment || localEnv || 'PRODUCTION',
-      base_url: (data as any)?.base_url || localBaseUrl || 'https://api.alanube.co',
-      rnc_emisor: (data as any)?.rnc_emisor || localRnc || '',
-      razon_social: (data as any)?.razon_social || localRazon || '',
-      company_id: (data as any)?.company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
-      sequence_due_date: (data as any)?.sequence_due_date || localSequenceDueDate || '2027-12-31',
-      is_active: resolvedIsActive,
-    } as AlanubeConfig & { is_active: boolean };
   };
 
   const { data: config, isLoading, refetch } = useQuery({
     queryKey: ['alanubeConfig', storeId],
     queryFn: fetchConfig,
     enabled: !!storeId,
+    staleTime: 1000 * 30, // 30 segundos
+    refetchOnWindowFocus: true,
   });
 
   const updateConfig = async (newConfig: Partial<AlanubeConfig & { is_active: boolean }>) => {
+    if (!storeId) {
+      throw new Error('No se ha encontrado la tienda activa para guardar la configuración.');
+    }
+
     setIsUpdating(true);
 
     try {
-      const { company_id, ...supabasePayload } = newConfig;
-      let effectiveId = company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+      let effectiveId = newConfig.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
       if (effectiveId === '01M0TYPKJGJVM53K56D7X9P7Z') {
         effectiveId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
       }
-      if (typeof window !== 'undefined') {
-        if (company_id !== undefined) localStorage.setItem('alanube_company_id', effectiveId);
-        if (supabasePayload.is_active !== undefined) {
-          localStorage.setItem('alanube_billing_mode', supabasePayload.is_active ? 'e-ncf' : 'ncf');
-        }
-        if (supabasePayload.api_token !== undefined) localStorage.setItem('alanube_api_token', supabasePayload.api_token);
-        if (supabasePayload.rnc_emisor !== undefined) localStorage.setItem('alanube_rnc_emisor', supabasePayload.rnc_emisor);
-        if (supabasePayload.razon_social !== undefined) localStorage.setItem('alanube_razon_social', supabasePayload.razon_social);
-        if (supabasePayload.environment !== undefined) localStorage.setItem('alanube_environment', supabasePayload.environment);
-        if (supabasePayload.base_url !== undefined) localStorage.setItem('alanube_base_url', supabasePayload.base_url);
-        if ((newConfig as any).sequence_due_date !== undefined) localStorage.setItem('alanube_sequence_due_date', (newConfig as any).sequence_due_date);
-      }
 
-      if (storeId) {
-        const { data: existingRow } = await supabase
+      // 1. Verificar si la fila ya existe en Supabase
+      const { data: existingRow } = await supabase
+        .from('alanube_config')
+        .select('id')
+        .eq('store_id', storeId)
+        .maybeSingle();
+
+      const payload: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (newConfig.api_token !== undefined) payload.api_token = newConfig.api_token.trim();
+      if (newConfig.environment !== undefined) payload.environment = newConfig.environment;
+      if (newConfig.base_url !== undefined) payload.base_url = newConfig.base_url.trim();
+      if (newConfig.rnc_emisor !== undefined) payload.rnc_emisor = newConfig.rnc_emisor.trim();
+      if (newConfig.razon_social !== undefined) payload.razon_social = newConfig.razon_social.trim();
+      if (newConfig.company_id !== undefined || !existingRow) payload.company_id = effectiveId.trim();
+      if ((newConfig as any).sequence_due_date !== undefined || !existingRow) {
+        payload.sequence_due_date = ((newConfig as any).sequence_due_date || '2027-12-31').trim();
+      }
+      if (newConfig.certificado_digital !== undefined) payload.certificado_digital = newConfig.certificado_digital;
+      if (newConfig.certificado_password !== undefined) payload.certificado_password = newConfig.certificado_password;
+      if (newConfig.is_active !== undefined) payload.is_active = Boolean(newConfig.is_active);
+
+      if (existingRow) {
+        const { error } = await supabase
           .from('alanube_config')
-          .select('store_id')
-          .eq('store_id', storeId)
-          .maybeSingle();
+          .update(payload)
+          .eq('store_id', storeId);
 
-        if (existingRow) {
-          const { error } = await supabase
-            .from('alanube_config')
-            .update(supabasePayload)
-            .eq('store_id', storeId);
-          
-          if (error) console.warn("Warning updating alanube_config in DB:", error);
-        } else {
-          const { error } = await supabase
-            .from('alanube_config')
-            .insert({
-              store_id: storeId,
-              api_token: supabasePayload.api_token || (typeof window !== 'undefined' ? localStorage.getItem('alanube_api_token') || '' : ''),
-              environment: supabasePayload.environment || 'PRODUCTION',
-              base_url: supabasePayload.base_url || 'https://api.alanube.co',
-              rnc_emisor: supabasePayload.rnc_emisor || (typeof window !== 'undefined' ? localStorage.getItem('alanube_rnc_emisor') || '' : ''),
-              razon_social: supabasePayload.razon_social || (typeof window !== 'undefined' ? localStorage.getItem('alanube_razon_social') || '' : ''),
-              certificado_digital: supabasePayload.certificado_digital || null,
-              certificado_password: supabasePayload.certificado_password || null,
-              is_active: supabasePayload.is_active !== undefined ? supabasePayload.is_active : true
-            });
-          
-          if (error) console.warn("Warning inserting alanube_config in DB:", error);
+        if (error) {
+          console.error('Error al actualizar alanube_config en Supabase:', error);
+          throw error;
         }
+      } else {
+        const { error } = await supabase
+          .from('alanube_config')
+          .insert({
+            store_id: storeId,
+            api_token: payload.api_token || '',
+            environment: payload.environment || 'PRODUCTION',
+            base_url: payload.base_url || 'https://api.alanube.co',
+            rnc_emisor: payload.rnc_emisor || '',
+            razon_social: payload.razon_social || '',
+            company_id: payload.company_id || effectiveId,
+            sequence_due_date: payload.sequence_due_date || '2027-12-31',
+            certificado_digital: payload.certificado_digital || null,
+            certificado_password: payload.certificado_password || null,
+            is_active: payload.is_active !== undefined ? payload.is_active : true,
+          });
 
-        await queryClient.invalidateQueries({ queryKey: ['alanubeConfig'] });
-        await refetch();
+        if (error) {
+          console.error('Error al insertar alanube_config en Supabase:', error);
+          throw error;
+        }
       }
+
+      // 2. Actualizar cache local
+      if (typeof window !== 'undefined') {
+        try {
+          const merged = { ...config, ...payload };
+          localStorage.setItem(`alanube_cache_${storeId}`, JSON.stringify(merged));
+          if (payload.is_active !== undefined) {
+            localStorage.setItem('alanube_billing_mode', payload.is_active ? 'e-ncf' : 'ncf');
+          }
+          if (payload.company_id) localStorage.setItem('alanube_company_id', payload.company_id);
+          if (payload.rnc_emisor) localStorage.setItem('alanube_rnc_emisor', payload.rnc_emisor);
+          if (payload.razon_social) localStorage.setItem('alanube_razon_social', payload.razon_social);
+          if (payload.environment) localStorage.setItem('alanube_environment', payload.environment);
+          if (payload.base_url) localStorage.setItem('alanube_base_url', payload.base_url);
+          if (payload.sequence_due_date) localStorage.setItem('alanube_sequence_due_date', payload.sequence_due_date);
+        } catch (e) {
+          console.warn('Error sincronizando cache local de alanube:', e);
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['alanubeConfig', storeId] });
+      await refetch();
     } catch (err) {
-      console.error("Error updating Alanube config:", err);
+      console.error('Error updating Alanube config:', err);
       throw err;
     } finally {
       setIsUpdating(false);
@@ -144,6 +234,7 @@ export const useAlanubeConfig = () => {
     config,
     isLoading: isLoading || isUserStoreLoading,
     isUpdating,
-    updateConfig
+    updateConfig,
+    refetch
   };
 };

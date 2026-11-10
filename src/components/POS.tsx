@@ -556,7 +556,7 @@ const POSContent: React.FC = () => {
     ...rawStoreSettings
   } as any;
   const { config: alanubeConfig } = useAlanubeConfig();
-  const isElectronicActive = Boolean(alanubeConfig?.is_active) || (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf');
+  const isElectronicActive = alanubeConfig ? Boolean(alanubeConfig.is_active) : (typeof window !== 'undefined' && localStorage.getItem('alanube_billing_mode') === 'e-ncf');
 
   // Cuando la facturación electrónica está activa, seleccionar "Factura Interna" (FAC) por defecto
   useEffect(() => {

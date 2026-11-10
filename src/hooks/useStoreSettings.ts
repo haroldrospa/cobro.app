@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserStore } from '@/hooks/useUserStore';
@@ -318,6 +318,31 @@ export const useStoreSettings = () => {
 
     return mergedSettings as any as StoreSettings;
   };
+
+  // Real-time listener for store_settings changes from other devices
+  useEffect(() => {
+    if (!storeId) return;
+
+    const channel = supabase
+      .channel(`store-settings-sync-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'store_settings',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['storeSettings', storeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, queryClient]);
 
   const { data: settings, isLoading, refetch } = useQuery({
     queryKey: ['storeSettings', storeId, userId],

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { offlineDB, OfflineStore } from '@/lib/offlineDB';
@@ -19,6 +20,30 @@ export interface DgiiTypeStats {
 }
 
 export const useInvoiceSequences = () => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('invoice-sequences-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoice_sequences',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['invoice-sequences'] });
+          queryClient.invalidateQueries({ queryKey: ['dgii-sequence-stats'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['invoice-sequences'],
     queryFn: async () => {
