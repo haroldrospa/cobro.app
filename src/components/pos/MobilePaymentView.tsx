@@ -99,13 +99,6 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
 }) => {
   const { data: sessionData } = useActiveSession();
   const sessionActive = isWaiter ? true : (hasActiveSession !== undefined ? hasActiveSession : !!sessionData);
-  const { data: invoiceSequences = [] } = useInvoiceSequences();
-  const activeTypeCode = selectedType?.code || selectedInvoiceType;
-  const activeSequence = invoiceSequences.find(s => s.invoice_type_id === activeTypeCode || s.invoice_type_id === selectedInvoiceType);
-  const activeEndNumber = activeSequence?.end_number ?? null;
-  const activeRemaining = activeEndNumber !== null && activeEndNumber > 0
-    ? Math.max(0, activeEndNumber - (activeSequence?.current_number || 0))
-    : null;
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [isCustomerSelectOpen, setIsCustomerSelectOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -155,6 +148,13 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   }, [invoiceTypes, isElectronic]);
 
   const selectedType = mappedInvoiceTypes.find(t => t.id === selectedInvoiceType);
+  const { data: invoiceSequences = [] } = useInvoiceSequences();
+  const activeTypeCode = selectedType?.code || selectedInvoiceType;
+  const activeSequence = invoiceSequences.find(s => s.invoice_type_id === activeTypeCode || s.invoice_type_id === selectedInvoiceType);
+  const activeEndNumber = activeSequence?.end_number ?? null;
+  const activeRemaining = activeEndNumber !== null && activeEndNumber > 0
+    ? Math.max(0, activeEndNumber - (activeSequence?.current_number || 0))
+    : null;
   const requiresCustomer = React.useMemo(() => {
     if (!selectedType?.code) return false;
     const code = selectedType.code;
