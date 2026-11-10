@@ -309,7 +309,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     type="button"
                     variant={isSelected ? "default" : "outline"}
                     className={cn(
-                      "h-10 sm:h-11 px-1 rounded-xl transition-all flex flex-col items-center justify-center gap-0.5 sm:gap-1 min-w-0 font-bold shadow-xs",
+                      "h-[54px] sm:h-[58px] py-1.5 sm:py-2 px-1 rounded-xl transition-all flex flex-col items-center justify-center gap-1 min-w-0 font-bold shadow-xs",
                       isSelected 
                         ? (method.id === 'split' 
                             ? "bg-blue-600 text-white shadow-md hover:bg-blue-500" 
@@ -319,7 +319,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     onClick={() => handlePaymentMethodChange(method.id)}
                   >
                     <span className="shrink-0">{getMethodIcon(method.id)}</span>
-                    <span className="text-[10px] sm:text-xs leading-none truncate max-w-full text-center px-0.5">{displayName}</span>
+                    <span className="text-[10px] sm:text-[11px] leading-normal font-bold truncate max-w-full text-center px-0.5">{displayName}</span>
                   </Button>
                 );
               })}
