@@ -834,7 +834,7 @@ export const generateCleanInvoiceHTML = (
       ${!isQuotation ? `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
           <span style="font-weight: 900; font-size: ${sizeXSmall}px; text-transform: uppercase;">ESTADO DE PAGO:</span>
-          <span style="background-color: #000000; color: #ffffff; font-weight: 900; font-size: ${is58mm ? '10px' : '9px'}; padding: 1px 4px; border-radius: 4px; text-transform: uppercase;">
+          <span style="background-color: #ffffff; border: 1.5px solid #000000; color: #000000; font-weight: 900; font-size: ${is58mm ? '10px' : '9px'}; padding: 1px 4px; border-radius: 4px; text-transform: uppercase;">
             ${isPendingPayment ? 'PENDIENTE DE PAGO' : 'PAGADO'}
           </span>
         </div>
