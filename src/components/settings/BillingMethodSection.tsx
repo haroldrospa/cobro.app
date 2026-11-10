@@ -55,13 +55,22 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
       const mode = config.is_active ? 'e-ncf' : 'ncf';
       setBillingMode(mode);
 
+      const oldKnownIds = [
+        '01M731VKCJH3NR7XZPAY8725TE',
+        '01M0TYPKJ0JGVM53K56D7X9P7Z',
+        '01M2RBT1TH2R6NFHSEJH2GB672',
+        '01M0TYPKJGJVM53K56D7X9P7Z'
+      ];
+      const rawCompId = (config.company_id || '').trim();
+      const safeCompId = oldKnownIds.includes(rawCompId) ? '' : rawCompId;
+
       setFormData({
         environment: config.environment || 'PRODUCTION',
         api_token: config.api_token || '',
         base_url: config.base_url || (config.environment === 'PRODUCTION' ? 'https://api.alanube.co' : 'https://sandbox.alanube.co'),
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
-        company_id: config.company_id || '',
+        company_id: safeCompId,
         sequence_due_date: config.sequence_due_date || '',
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
@@ -121,9 +130,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
           if (result.data.identification && result.data.identification !== formData.rnc_emisor) {
             updateFields.rnc_emisor = result.data.identification;
           }
-          if (result.data.id && result.data.id !== formData.company_id) {
-            updateFields.company_id = result.data.id;
-          }
+          // Nota: El company_id se mantiene estrictamente como esté en el formulario y NUNCA se sobreescribe automáticamente
           if (Object.keys(updateFields).length > 0) {
             setFormData(prev => ({ ...prev, ...updateFields }));
           }
@@ -339,18 +346,39 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="company_id">ID de Compañía en Alanube (Portal Reseller)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="company_id">ID de Compañía en Alanube (Portal Reseller)</Label>
+                  {formData.company_id && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, company_id: '' })}
+                      className="text-[11px] text-destructive hover:underline font-medium"
+                    >
+                      Dejar vacío
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Server className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="company_id"
-                    className="pl-9 font-mono"
-                    placeholder="Ej. 01M..."
+                    className="pl-9 pr-9 font-mono"
+                    placeholder="Ej. 01M... (dejar vacío si no has colocado uno nuevo)"
                     value={formData.company_id}
                     onChange={(e) => setFormData({ ...formData, company_id: e.target.value })}
                   />
+                  {formData.company_id && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, company_id: '' })}
+                      className="absolute right-2.5 top-2.5 h-5 w-5 rounded-full flex items-center justify-center text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+                      title="Borrar ID"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID de 26 caracteres) de la empresa en el portal de Alanube. Necesario para enrutar los e-CF de cuentas Reseller.</p>
+                <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID de 26 caracteres) de la empresa en el portal de Alanube. Si no tienes uno asignado todavía, déjalo vacío.</p>
               </div>
 
               <div className="space-y-2 md:col-span-2">

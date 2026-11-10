@@ -67,13 +67,35 @@ export const useAlanubeConfig = () => {
       }
 
       if (data) {
+        const rawCompanyId = ((data as any)?.company_id || '').trim();
+        const oldKnownIds = [
+          '01M731VKCJH3NR7XZPAY8725TE',
+          '01M0TYPKJ0JGVM53K56D7X9P7Z',
+          '01M2RBT1TH2R6NFHSEJH2GB672',
+          '01M0TYPKJGJVM53K56D7X9P7Z'
+        ];
+        const isOldId = oldKnownIds.includes(rawCompanyId);
+        const cleanCompanyId = isOldId ? '' : rawCompanyId;
+
+        // Si la base de datos tenía guardado el ID viejo de pruebas, limpiarlo en Supabase en segundo plano
+        if (isOldId) {
+          supabase
+            .from('alanube_config')
+            .update({ company_id: '', updated_at: new Date().toISOString() })
+            .eq('store_id', storeId)
+            .then(() => {
+              console.log('🧹 [useAlanubeConfig] ID de compañía anterior limpiado en Supabase exitosamente.');
+            })
+            .catch(() => {});
+        }
+
         const resolvedConfig = {
           api_token: (data as any)?.api_token || masterToken || '',
           environment: ((data as any)?.environment as 'SANDBOX' | 'PRODUCTION') || 'PRODUCTION',
           base_url: (data as any)?.base_url || 'https://api.alanube.co',
           rnc_emisor: (data as any)?.rnc_emisor || '',
           razon_social: (data as any)?.razon_social || '',
-          company_id: (data as any)?.company_id || '',
+          company_id: cleanCompanyId,
           sequence_due_date: (data as any)?.sequence_due_date || '',
           certificado_digital: (data as any)?.certificado_digital || null,
           certificado_password: (data as any)?.certificado_password || null,
@@ -121,6 +143,15 @@ export const useAlanubeConfig = () => {
         if (cachedStr) {
           try {
             const parsed = JSON.parse(cachedStr);
+            const oldKnownIds = [
+              '01M731VKCJH3NR7XZPAY8725TE',
+              '01M0TYPKJ0JGVM53K56D7X9P7Z',
+              '01M2RBT1TH2R6NFHSEJH2GB672',
+              '01M0TYPKJGJVM53K56D7X9P7Z'
+            ];
+            if (oldKnownIds.includes(parsed.company_id)) {
+              parsed.company_id = '';
+            }
             if (!parsed.api_token && masterToken) {
               parsed.api_token = masterToken;
             }
