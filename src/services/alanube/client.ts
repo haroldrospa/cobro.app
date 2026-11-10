@@ -33,15 +33,7 @@ export class AlanubeClient {
     else if (tipoDocumento === '46') path = 'export-supports';
 
     const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '');
-    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '';
-    if (cleanRnc === '133695189' && (!companyId || companyId.startsWith('01M0TYPK'))) {
-      companyId = '01M2RBT1TH2R6NFHSEJH2GB672';
-    } else if (cleanRnc === '40218246656' && !companyId) {
-      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    }
-    if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    }
+    let companyId = (this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '').trim();
 
     if (isBrowser && isWebDeployment) {
       // Usar los proxies seguros configurados en Vite/Vercel para evitar problemas de CORS de manera transparente
@@ -263,15 +255,7 @@ export class AlanubeClient {
     const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
     
     const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '');
-    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '';
-    if (cleanRnc === '133695189' && (!companyId || companyId.startsWith('01M0TYPK'))) {
-      companyId = '01M2RBT1TH2R6NFHSEJH2GB672';
-    } else if (cleanRnc === '40218246656' && !companyId) {
-      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    }
-    if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    }
+    let companyId = (this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '').trim();
     
     const baseApi = isBrowser && isWebDeployment 
       ? `${window.location.origin}${proxyPrefix}/dom/v1`
@@ -359,15 +343,7 @@ export class AlanubeClient {
     const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
 
     const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '');
-    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '';
-    if (cleanRnc === '133695189' && (!companyId || companyId.startsWith('01M0TYPK'))) {
-      companyId = '01M2RBT1TH2R6NFHSEJH2GB672';
-    } else if (cleanRnc === '40218246656' && !companyId) {
-      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    }
-    if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    }
+    let companyId = (this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '').trim();
 
     const baseApi = isBrowser && isWebDeployment
       ? `${window.location.origin}${proxyPrefix}/dom/v1`

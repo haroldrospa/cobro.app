@@ -93,29 +93,41 @@ export class AlanubeService {
       return null;
     }
 
-    let localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null;
-    if (localCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z' || !localCompanyId) {
-      localCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    let localCompanyId = typeof window !== 'undefined' ? (localStorage.getItem('alanube_company_id') || '').trim() : '';
+    const localRnc = typeof window !== 'undefined' ? (localStorage.getItem('alanube_rnc_emisor') || '').trim() : '';
+    const localRazonSocial = typeof window !== 'undefined' ? (localStorage.getItem('alanube_razon_social') || '').trim() : '';
+    const localEnv = typeof window !== 'undefined' ? localStorage.getItem('alanube_environment') : null;
+    const localSequenceDueDate = typeof window !== 'undefined' ? (localStorage.getItem('alanube_sequence_due_date') || '').trim() : '';
+
+    let token = data.api_token ? data.api_token.trim() : '';
+    if (!token) {
+      try {
+        const { data: masterRow } = await supabase
+          .from('admin_global_settings')
+          .select('value')
+          .eq('id', 'alanube_master_token')
+          .maybeSingle();
+        if (masterRow?.value) {
+          token = masterRow.value.trim();
+        }
+      } catch (errMaster) {
+        console.warn('[AlanubeService] Error fetching master token:', errMaster);
+      }
     }
 
-    const localRnc = typeof window !== 'undefined' ? localStorage.getItem('alanube_rnc_emisor') : null;
-    const localRazonSocial = typeof window !== 'undefined' ? localStorage.getItem('alanube_razon_social') : null;
-    const localEnv = typeof window !== 'undefined' ? localStorage.getItem('alanube_environment') : null;
-    const localSequenceDueDate = typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null;
-
-    // Si en base de datos aún tiene Romar Group o RNC viejo, priorizar el actualizado de Harold
-    const rncEmisor = localRnc || (data.rnc_emisor && data.rnc_emisor !== '133280824' ? data.rnc_emisor : '40218246656');
-    const razonSocial = localRazonSocial || (data.razon_social && data.razon_social !== 'Romar Group' ? data.razon_social : 'Harold Rosado Pacheco');
-    const environment = (localEnv as any) || (data.environment === 'SANDBOX' ? 'PRODUCTION' : data.environment);
-    const sequenceDueDate = (data as any)?.sequence_due_date || localSequenceDueDate || '2027-12-31';
+    const rncEmisor = (data.rnc_emisor || localRnc || '').trim();
+    const razonSocial = (data.razon_social || localRazonSocial || '').trim();
+    const environment = (localEnv as any) || (data.environment === 'SANDBOX' ? 'SANDBOX' : 'PRODUCTION');
+    const sequenceDueDate = ((data as any)?.sequence_due_date || localSequenceDueDate || '').trim();
+    const companyId = ((data as any)?.company_id || localCompanyId || '').trim();
 
     const resolvedConfig: AlanubeConfig = {
-      api_token: data.api_token,
+      api_token: token,
       environment: environment as 'SANDBOX' | 'PRODUCTION',
-      base_url: environment === 'PRODUCTION' ? 'https://api.alanube.co' : data.base_url,
+      base_url: environment === 'PRODUCTION' ? 'https://api.alanube.co' : (data.base_url || 'https://api.alanube.co'),
       rnc_emisor: rncEmisor,
       razon_social: razonSocial,
-      company_id: (data as any).company_id || localCompanyId || '01M0TYPKJ0JGVM53K56D7X9P7Z',
+      company_id: companyId,
       sequence_due_date: sequenceDueDate
     };
 
@@ -430,8 +442,8 @@ export class AlanubeService {
         ? (sale.split_method || 'cash')
         : (sale.payment_method || 'cash');
 
-      const rawDueDate = config.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null) || '2027-12-31';
-      let formattedDueDate = '2027-12-31';
+      const rawDueDate = config.sequence_due_date || (typeof window !== 'undefined' ? localStorage.getItem('alanube_sequence_due_date') : null) || '';
+      let formattedDueDate = '';
       if (rawDueDate) {
         const dmyMatch = rawDueDate.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
         if (dmyMatch) {
@@ -460,7 +472,7 @@ export class AlanubeService {
 
       const document: any = {
         company: {
-          id: config.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z'
+          id: config.company_id || ''
         },
         idDoc,
         sender: {

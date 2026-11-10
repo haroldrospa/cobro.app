@@ -40,6 +40,22 @@ export const useAlanubeConfig = () => {
     if (!storeId) return null;
 
     try {
+      // 1. Obtener Token Maestro General desde admin_global_settings (Panel Maestro)
+      let masterToken = '';
+      try {
+        const { data: masterRow } = await supabase
+          .from('admin_global_settings')
+          .select('value')
+          .eq('id', 'alanube_master_token')
+          .maybeSingle();
+        if (masterRow?.value) {
+          masterToken = masterRow.value.trim();
+        }
+      } catch (errMaster) {
+        console.warn('[useAlanubeConfig] No se pudo consultar alanube_master_token global:', errMaster);
+      }
+
+      // 2. Obtener configuración específica de la tienda actual
       const { data, error } = await supabase
         .from('alanube_config')
         .select('*')
@@ -51,22 +67,14 @@ export const useAlanubeConfig = () => {
       }
 
       if (data) {
-        const rawRnc = ((data as any)?.rnc_emisor || '').replace(/[^0-9]/g, '');
-        let effectiveCompanyId = (data as any)?.company_id || (rawRnc === '133695189' ? '01M2RBT1TH2R6NFHSEJH2GB672' : '01M0TYPKJ0JGVM53K56D7X9P7Z');
-        if (rawRnc === '133695189' && (!effectiveCompanyId || effectiveCompanyId.startsWith('01M0TYPK'))) {
-          effectiveCompanyId = '01M2RBT1TH2R6NFHSEJH2GB672';
-        } else if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-          effectiveCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-        }
-
         const resolvedConfig = {
-          api_token: (data as any)?.api_token || '',
+          api_token: (data as any)?.api_token || masterToken || '',
           environment: ((data as any)?.environment as 'SANDBOX' | 'PRODUCTION') || 'PRODUCTION',
           base_url: (data as any)?.base_url || 'https://api.alanube.co',
           rnc_emisor: (data as any)?.rnc_emisor || '',
           razon_social: (data as any)?.razon_social || '',
-          company_id: effectiveCompanyId,
-          sequence_due_date: (data as any)?.sequence_due_date || '2027-12-31',
+          company_id: (data as any)?.company_id || '',
+          sequence_due_date: (data as any)?.sequence_due_date || '',
           certificado_digital: (data as any)?.certificado_digital || null,
           certificado_password: (data as any)?.certificado_password || null,
           is_active: Boolean((data as any)?.is_active),
@@ -77,12 +85,28 @@ export const useAlanubeConfig = () => {
           try {
             localStorage.setItem(`alanube_cache_${storeId}`, JSON.stringify(resolvedConfig));
             localStorage.setItem('alanube_billing_mode', resolvedConfig.is_active ? 'e-ncf' : 'ncf');
-            localStorage.setItem('alanube_company_id', resolvedConfig.company_id);
-            localStorage.setItem('alanube_rnc_emisor', resolvedConfig.rnc_emisor);
-            localStorage.setItem('alanube_razon_social', resolvedConfig.razon_social);
+            if (resolvedConfig.company_id) {
+              localStorage.setItem('alanube_company_id', resolvedConfig.company_id);
+            } else {
+              localStorage.removeItem('alanube_company_id');
+            }
+            if (resolvedConfig.rnc_emisor) {
+              localStorage.setItem('alanube_rnc_emisor', resolvedConfig.rnc_emisor);
+            } else {
+              localStorage.removeItem('alanube_rnc_emisor');
+            }
+            if (resolvedConfig.razon_social) {
+              localStorage.setItem('alanube_razon_social', resolvedConfig.razon_social);
+            } else {
+              localStorage.removeItem('alanube_razon_social');
+            }
+            if (resolvedConfig.sequence_due_date) {
+              localStorage.setItem('alanube_sequence_due_date', resolvedConfig.sequence_due_date);
+            } else {
+              localStorage.removeItem('alanube_sequence_due_date');
+            }
             localStorage.setItem('alanube_environment', resolvedConfig.environment);
             localStorage.setItem('alanube_base_url', resolvedConfig.base_url);
-            localStorage.setItem('alanube_sequence_due_date', resolvedConfig.sequence_due_date);
           } catch (e) {
             console.warn('No se pudo guardar cache local de alanube:', e);
           }
@@ -96,19 +120,24 @@ export const useAlanubeConfig = () => {
         const cachedStr = localStorage.getItem(`alanube_cache_${storeId}`);
         if (cachedStr) {
           try {
-            return JSON.parse(cachedStr);
+            const parsed = JSON.parse(cachedStr);
+            if (!parsed.api_token && masterToken) {
+              parsed.api_token = masterToken;
+            }
+            return parsed;
           } catch (e) {}
         }
       }
 
+      // Por defecto todos los campos inician vacíos hasta que el usuario los llene
       return {
-        api_token: '',
+        api_token: masterToken || '',
         environment: 'PRODUCTION',
         base_url: 'https://api.alanube.co',
         rnc_emisor: '',
         razon_social: '',
-        company_id: '01M0TYPKJ0JGVM53K56D7X9P7Z',
-        sequence_due_date: '2027-12-31',
+        company_id: '',
+        sequence_due_date: '',
         is_active: false,
       };
     } catch (err) {
@@ -142,18 +171,10 @@ export const useAlanubeConfig = () => {
     setIsUpdating(true);
 
     try {
-      const rawRnc = (newConfig.rnc_emisor || '').replace(/[^0-9]/g, '');
-      let effectiveId = newConfig.company_id || (rawRnc === '133695189' ? '01M2RBT1TH2R6NFHSEJH2GB672' : '01M0TYPKJ0JGVM53K56D7X9P7Z');
-      if (rawRnc === '133695189' && (!effectiveId || effectiveId.startsWith('01M0TYPK'))) {
-        effectiveId = '01M2RBT1TH2R6NFHSEJH2GB672';
-      } else if (effectiveId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-        effectiveId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-      }
-
       // 1. Verificar si la fila ya existe en Supabase
       const { data: existingRow } = await supabase
         .from('alanube_config')
-        .select('id')
+        .select('id, api_token')
         .eq('store_id', storeId)
         .maybeSingle();
 
@@ -166,13 +187,27 @@ export const useAlanubeConfig = () => {
       if (newConfig.base_url !== undefined) payload.base_url = newConfig.base_url.trim();
       if (newConfig.rnc_emisor !== undefined) payload.rnc_emisor = newConfig.rnc_emisor.trim();
       if (newConfig.razon_social !== undefined) payload.razon_social = newConfig.razon_social.trim();
-      if (newConfig.company_id !== undefined || !existingRow) payload.company_id = effectiveId.trim();
-      if ((newConfig as any).sequence_due_date !== undefined || !existingRow) {
-        payload.sequence_due_date = ((newConfig as any).sequence_due_date || '2027-12-31').trim();
+      if (newConfig.company_id !== undefined) payload.company_id = (newConfig.company_id || '').trim();
+      if ((newConfig as any).sequence_due_date !== undefined) {
+        payload.sequence_due_date = ((newConfig as any).sequence_due_date || '').trim();
       }
       if (newConfig.certificado_digital !== undefined) payload.certificado_digital = newConfig.certificado_digital;
       if (newConfig.certificado_password !== undefined) payload.certificado_password = newConfig.certificado_password;
       if (newConfig.is_active !== undefined) payload.is_active = Boolean(newConfig.is_active);
+
+      // Si no hay api_token configurado en el payload ni en la fila existente, heredar el Token Maestro de admin_global_settings
+      if (!payload.api_token && (!existingRow || !existingRow.api_token)) {
+        try {
+          const { data: masterRow } = await supabase
+            .from('admin_global_settings')
+            .select('value')
+            .eq('id', 'alanube_master_token')
+            .maybeSingle();
+          if (masterRow?.value) {
+            payload.api_token = masterRow.value.trim();
+          }
+        } catch (_) {}
+      }
 
       if (existingRow) {
         const { error } = await supabase
@@ -194,8 +229,8 @@ export const useAlanubeConfig = () => {
             base_url: payload.base_url || 'https://api.alanube.co',
             rnc_emisor: payload.rnc_emisor || '',
             razon_social: payload.razon_social || '',
-            company_id: payload.company_id || effectiveId,
-            sequence_due_date: payload.sequence_due_date || '2027-12-31',
+            company_id: payload.company_id || '',
+            sequence_due_date: payload.sequence_due_date || '',
             certificado_digital: payload.certificado_digital || null,
             certificado_password: payload.certificado_password || null,
             is_active: payload.is_active !== undefined ? payload.is_active : true,
@@ -215,12 +250,24 @@ export const useAlanubeConfig = () => {
           if (payload.is_active !== undefined) {
             localStorage.setItem('alanube_billing_mode', payload.is_active ? 'e-ncf' : 'ncf');
           }
-          if (payload.company_id) localStorage.setItem('alanube_company_id', payload.company_id);
-          if (payload.rnc_emisor) localStorage.setItem('alanube_rnc_emisor', payload.rnc_emisor);
-          if (payload.razon_social) localStorage.setItem('alanube_razon_social', payload.razon_social);
+          if (payload.company_id !== undefined) {
+            if (payload.company_id) localStorage.setItem('alanube_company_id', payload.company_id);
+            else localStorage.removeItem('alanube_company_id');
+          }
+          if (payload.rnc_emisor !== undefined) {
+            if (payload.rnc_emisor) localStorage.setItem('alanube_rnc_emisor', payload.rnc_emisor);
+            else localStorage.removeItem('alanube_rnc_emisor');
+          }
+          if (payload.razon_social !== undefined) {
+            if (payload.razon_social) localStorage.setItem('alanube_razon_social', payload.razon_social);
+            else localStorage.removeItem('alanube_razon_social');
+          }
+          if (payload.sequence_due_date !== undefined) {
+            if (payload.sequence_due_date) localStorage.setItem('alanube_sequence_due_date', payload.sequence_due_date);
+            else localStorage.removeItem('alanube_sequence_due_date');
+          }
           if (payload.environment) localStorage.setItem('alanube_environment', payload.environment);
           if (payload.base_url) localStorage.setItem('alanube_base_url', payload.base_url);
-          if (payload.sequence_due_date) localStorage.setItem('alanube_sequence_due_date', payload.sequence_due_date);
         } catch (e) {
           console.warn('Error sincronizando cache local de alanube:', e);
         }
@@ -241,6 +288,6 @@ export const useAlanubeConfig = () => {
     isLoading: isLoading || isUserStoreLoading,
     isUpdating,
     updateConfig,
-    refetch
+    refetch,
   };
 };

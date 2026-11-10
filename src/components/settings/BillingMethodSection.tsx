@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Save, Server, Link, Key, Hash, FileText, Printer, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Globe, Save, Server, Link, Key, Hash, FileText, Printer, CheckCircle2, AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -44,8 +44,8 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
     base_url: 'https://api.alanube.co',
     rnc_emisor: '',
     razon_social: '',
-    company_id: '01M2RBT1TH2R6NFHSEJH2GB672',
-    sequence_due_date: '2027-12-31',
+    company_id: '',
+    sequence_due_date: '',
     certificado_digital: '',
     certificado_password: ''
   });
@@ -54,13 +54,6 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
     if (config) {
       const mode = config.is_active ? 'e-ncf' : 'ncf';
       setBillingMode(mode);
-      const rawRnc = (config.rnc_emisor || '').replace(/[^0-9]/g, '');
-      let effectiveCompanyId = config.company_id || (rawRnc === '133695189' ? '01M2RBT1TH2R6NFHSEJH2GB672' : '01M0TYPKJ0JGVM53K56D7X9P7Z');
-      if (rawRnc === '133695189' && (!effectiveCompanyId || effectiveCompanyId.startsWith('01M0TYPK'))) {
-        effectiveCompanyId = '01M2RBT1TH2R6NFHSEJH2GB672';
-      } else if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-        effectiveCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-      }
 
       setFormData({
         environment: config.environment || 'PRODUCTION',
@@ -68,8 +61,8 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         base_url: config.base_url || (config.environment === 'PRODUCTION' ? 'https://api.alanube.co' : 'https://sandbox.alanube.co'),
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
-        company_id: effectiveCompanyId,
-        sequence_due_date: config.sequence_due_date || '2027-12-31',
+        company_id: config.company_id || '',
+        sequence_due_date: config.sequence_due_date || '',
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
       });
@@ -83,10 +76,21 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   }, [billingMode, onModeChange, config]);
 
   const handleTestConnection = async () => {
-    if (!formData.api_token) {
+    const activeToken = (config?.api_token || formData.api_token || '').trim();
+
+    if (!activeToken) {
       toast({
-        title: 'Falta Token',
-        description: 'Ingresa tu Token de Alanube antes de probar la conexión.',
+        title: 'Falta Token Maestro',
+        description: 'El Token Maestro de Alanube no ha sido configurado en el Panel Maestro. Por favor configúralo en el Panel Maestro.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!formData.rnc_emisor && !formData.company_id) {
+      toast({
+        title: 'Faltan datos de la empresa',
+        description: 'Ingresa el RNC del Emisor o el ID de Compañía antes de probar la conexión.',
         variant: 'destructive'
       });
       return;
@@ -97,7 +101,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
 
     try {
       const client = new AlanubeClient({
-        api_token: formData.api_token,
+        api_token: activeToken,
         environment: formData.environment,
         base_url: formData.base_url,
         rnc_emisor: formData.rnc_emisor,
@@ -151,36 +155,43 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
   const handleSave = async () => {
     try {
       if (billingMode === 'e-ncf') {
-        if (!formData.api_token || !formData.rnc_emisor || !formData.razon_social) {
+        if (!formData.rnc_emisor.trim() || !formData.razon_social.trim()) {
           toast({
-            title: 'Faltan datos',
-            description: 'Por favor completa el Token, RNC y Razón Social.',
+            title: 'Faltan datos obligatorios',
+            description: 'Por favor completa el RNC del Emisor y la Razón Social.',
             variant: 'destructive'
           });
           return;
         }
       }
 
-      const cleanRnc = (formData.rnc_emisor || '').replace(/[^0-9]/g, '');
-      let cleanedCompanyId = (formData.company_id || '').trim();
-      if (cleanRnc === '133695189' && (!cleanedCompanyId || cleanedCompanyId.startsWith('01M0TYPK'))) {
-        cleanedCompanyId = '01M2RBT1TH2R6NFHSEJH2GB672';
-      } else if (cleanedCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
-        cleanedCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
-      }
+      const cleanedCompanyId = (formData.company_id || '').trim();
+      const cleanedDueDate = (formData.sequence_due_date || '').trim();
 
       await updateConfig({
-        ...formData,
+        environment: formData.environment,
+        base_url: formData.base_url.trim(),
+        rnc_emisor: formData.rnc_emisor.trim(),
+        razon_social: formData.razon_social.trim(),
         company_id: cleanedCompanyId,
+        sequence_due_date: cleanedDueDate,
         is_active: billingMode === 'e-ncf'
       });
 
       if (typeof window !== 'undefined') {
-        localStorage.setItem('alanube_company_id', cleanedCompanyId);
-        localStorage.setItem('alanube_rnc_emisor', formData.rnc_emisor.trim());
-        localStorage.setItem('alanube_razon_social', formData.razon_social.trim());
+        if (cleanedCompanyId) localStorage.setItem('alanube_company_id', cleanedCompanyId);
+        else localStorage.removeItem('alanube_company_id');
+
+        if (formData.rnc_emisor.trim()) localStorage.setItem('alanube_rnc_emisor', formData.rnc_emisor.trim());
+        else localStorage.removeItem('alanube_rnc_emisor');
+
+        if (formData.razon_social.trim()) localStorage.setItem('alanube_razon_social', formData.razon_social.trim());
+        else localStorage.removeItem('alanube_razon_social');
+
+        if (cleanedDueDate) localStorage.setItem('alanube_sequence_due_date', cleanedDueDate);
+        else localStorage.removeItem('alanube_sequence_due_date');
+
         localStorage.setItem('alanube_environment', formData.environment);
-        localStorage.setItem('alanube_sequence_due_date', (formData.sequence_due_date || '2027-12-31').trim());
       }
 
       toast({
@@ -255,6 +266,17 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Token Maestro Centralizado Info Banner */}
+              <div className="md:col-span-2 flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
+                <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-400 mt-0.5" />
+                <div>
+                  <p className="font-bold text-white text-xs">Token de Autenticación Maestro Centralizado</p>
+                  <p className="text-zinc-400 text-[11px] mt-0.5">
+                    El token de conexión con Alanube está administrado de forma global y segura desde el Panel Maestro para todos los negocios y sucursales. No necesitas ingresarlo aquí.
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="environment">Entorno</Label>
                 <Select
@@ -288,29 +310,14 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                 </div>
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="api_token">Token de Autenticación (Bearer)</Label>
-                <div className="relative">
-                  <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="api_token"
-                    type="password"
-                    className="pl-9"
-                    placeholder="eyJh..."
-                    value={formData.api_token}
-                    onChange={(e) => setFormData({ ...formData, api_token: e.target.value })}
-                  />
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="rnc_emisor">RNC del Emisor</Label>
                 <div className="relative">
                   <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="rnc_emisor"
-                    className="pl-9"
-                    placeholder="130000000"
+                    className="pl-9 font-mono"
+                    placeholder="Ej. 130000000 o 40200000000"
                     value={formData.rnc_emisor}
                     onChange={(e) => setFormData({ ...formData, rnc_emisor: e.target.value })}
                   />
@@ -324,7 +331,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                   <Input
                     id="razon_social"
                     className="pl-9"
-                    placeholder="Mi Empresa SRL o Harold Rosado Pacheco"
+                    placeholder="Ej. Mi Empresa SRL"
                     value={formData.razon_social}
                     onChange={(e) => setFormData({ ...formData, razon_social: e.target.value })}
                   />
@@ -337,13 +344,13 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                   <Server className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="company_id"
-                    className="pl-9"
-                    placeholder="01M0TYPKJ0JGVM53K56D7X9P7Z"
+                    className="pl-9 font-mono"
+                    placeholder="Ej. 01M..."
                     value={formData.company_id}
                     onChange={(e) => setFormData({ ...formData, company_id: e.target.value })}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID de 26 caracteres) de tu empresa en el portal de Alanube (ej: 01M0TYPKJ0JGVM53K56D7X9P7Z). Necesario para enrutar los e-CF de cuentas Reseller.</p>
+                <p className="text-xs text-muted-foreground mt-1">Identificador único (ULID de 26 caracteres) de la empresa en el portal de Alanube. Necesario para enrutar los e-CF de cuentas Reseller.</p>
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -353,12 +360,12 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
                   <Input
                     id="sequence_due_date"
                     className="pl-9 font-mono"
-                    placeholder="2026-12-31"
+                    placeholder="YYYY-MM-DD (ej: 2026-12-31)"
                     value={formData.sequence_due_date}
                     onChange={(e) => setFormData({ ...formData, sequence_due_date: e.target.value })}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Fecha límite autorizada por la DGII para tus secuencias e-CF (Crédito Fiscal E31, etc.) en formato YYYY-MM-DD (ej: 2026-12-31 o 2025-12-31). Debe coincidir con la autorización oficial para evitar el rechazo con Código 145.</p>
+                <p className="text-xs text-muted-foreground mt-1">Fecha límite autorizada por la DGII para tus secuencias e-CF (Crédito Fiscal E31, etc.) en formato YYYY-MM-DD. Debe coincidir con la autorización oficial para evitar el rechazo con Código 145.</p>
               </div>
 
               {connectionStatus && (
@@ -386,7 +393,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
               type="button" 
               variant="outline" 
               onClick={handleTestConnection} 
-              disabled={isTesting || !formData.api_token}
+              disabled={isTesting}
               className="w-full sm:w-auto"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isTesting ? 'animate-spin' : ''}`} />
