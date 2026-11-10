@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { DollarSign, CreditCard, Printer, Loader2, FileText, Plus, Check, ChevronsUpDown, Search, User, X, ChevronRight, Wallet, Banknote, ArrowRightLeft, AlertCircle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,9 @@ interface PaymentDialogProps {
   onCustomerChange?: (customerId: string) => void;
   webOrderNotes?: string;
   requiresCustomer?: boolean;
+  selectedInvoiceType?: string;
+  onInvoiceTypeChange?: (invoiceTypeId: string) => void;
+  invoiceTypes?: any[];
 }
 
 const PaymentDialog: React.FC<PaymentDialogProps> = ({
@@ -60,6 +63,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   onCustomerChange,
   webOrderNotes,
   requiresCustomer = false,
+  selectedInvoiceType,
+  onInvoiceTypeChange,
+  invoiceTypes = [],
 }) => {
   const amountInputRef = useRef<HTMLInputElement>(null);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
@@ -70,11 +76,28 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [customerSearch, setCustomerSearch] = useState('');
   const [localAmount, setLocalAmount] = useState(amountReceived);
 
+  const checkAndSwitchToE32 = useCallback(() => {
+    const isInternal = selectedInvoiceType === 'FAC' || (!selectedInvoiceType);
+    if (isInternal && onInvoiceTypeChange) {
+      const e32Type = invoiceTypes.find((t: any) => t.code === 'E32' || t.id === 'E32')
+        || invoiceTypes.find((t: any) => t.code === 'B02');
+      const targetId = e32Type ? e32Type.id : 'E32';
+      onInvoiceTypeChange(targetId);
+      toast({
+        title: "Comprobante cambiado a E32",
+        description: "Los cobros con tarjeta se facturan automáticamente como Consumidor Final Electrónico (E32).",
+      });
+    }
+  }, [selectedInvoiceType, onInvoiceTypeChange, invoiceTypes]);
+
   useEffect(() => {
     if (isOpen) {
       setLocalAmount(amountReceived);
+      if (paymentMethod === 'card' || (paymentMethod === 'split' && splitMethod === 'card')) {
+        checkAndSwitchToE32();
+      }
     }
-  }, [isOpen, amountReceived]);
+  }, [isOpen, amountReceived, paymentMethod, splitMethod, checkAndSwitchToE32]);
 
   const handleAmountChange = (val: string) => {
     setLocalAmount(val);
@@ -133,6 +156,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     onPaymentMethodChange(method);
     if (method === 'credit') {
       setOpenCustomerPopover(true);
+    }
+    if (method === 'card' || (method === 'split' && splitMethod === 'card')) {
+      checkAndSwitchToE32();
     }
   };
 
@@ -581,6 +607,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       <span className="text-xs sm:text-sm text-muted-foreground max-w-[340px]">
                         Procese el cobro en el Verifone o terminal punto de venta y presione Facturar Pago.
                       </span>
+                      <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/25 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                        <span>Comprobante automático: E32 (Consumidor Final Electrónico)</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -605,7 +634,13 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                           <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-0.5">Restante en</label>
                           <select
                             value={splitMethod}
-                            onChange={e => setSplitMethod(e.target.value)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setSplitMethod(val);
+                              if (val === 'card') {
+                                checkAndSwitchToE32();
+                              }
+                            }}
                             className="w-full h-9 sm:h-10 bg-background border border-border rounded-xl text-xs sm:text-sm font-semibold px-2.5 text-foreground outline-none focus:border-primary"
                           >
                             <option value="card">Tarjeta</option>

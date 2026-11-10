@@ -605,6 +605,29 @@ const POSContent: React.FC = () => {
     return true;
   }, [mappedInvoiceTypeCode]);
 
+  const getE32InvoiceTypeId = useCallback(() => {
+    const directE32 = invoiceTypes.find(t => t.code === 'E32' || t.id === 'E32');
+    if (directE32) return directE32.id;
+    const b02Type = invoiceTypes.find(t => t.code === 'B02' || t.id === 'B02');
+    if (b02Type) return b02Type.id;
+    return 'E32';
+  }, [invoiceTypes]);
+
+  const handlePaymentMethodChange = useCallback((method: string) => {
+    setPaymentMethod(method);
+    if (method === 'card') {
+      const isInternal = selectedInvoiceType === 'FAC' || mappedInvoiceTypeCode === 'FAC';
+      if (isInternal) {
+        const targetId = getE32InvoiceTypeId();
+        setSelectedInvoiceType(targetId);
+        toast({
+          title: "Comprobante cambiado a E32",
+          description: "Los cobros con tarjeta se facturan automáticamente como Consumidor Final Electrónico (E32).",
+        });
+      }
+    }
+  }, [selectedInvoiceType, mappedInvoiceTypeCode, getE32InvoiceTypeId, toast]);
+
 
 
   // Notificaciones manejadas globalmente en OfflineIndicator
@@ -1149,8 +1172,20 @@ const POSContent: React.FC = () => {
       setAmountReceived(totals.total.replace(/,/g, ''));
     }
 
+    // Si el cobro está en tarjeta y el comprobante es Interno (FAC), cambiar automáticamente a E32
+    if (paymentMethod === 'card' && (selectedInvoiceType === 'FAC' || mappedInvoiceTypeCode === 'FAC')) {
+      const targetId = getE32InvoiceTypeId();
+      setSelectedInvoiceType(targetId);
+      toast({
+        title: "Comprobante cambiado a E32",
+        description: "Los cobros con tarjeta se facturan automáticamente como Consumidor Final Electrónico (E32).",
+      });
+    }
+
     // Validar comprobante fiscal (electrónico o tradicional) y requerimiento de cliente con RNC
-    const activeInvoiceCode = selectedInvoiceType === 'FAC' ? 'FAC' : (selectedInvoiceTypeData?.code || '');
+    const activeInvoiceCode = (paymentMethod === 'card' && (selectedInvoiceType === 'FAC' || mappedInvoiceTypeCode === 'FAC'))
+      ? 'E32'
+      : (selectedInvoiceType === 'FAC' ? 'FAC' : (selectedInvoiceTypeData?.code || ''));
     const customerForValidation = customers.find(c => c.id === selectedCustomer);
     const currentTotalAmount = parseFloat(totals.total.replace(/,/g, '')) || 0;
 
@@ -1165,13 +1200,21 @@ const POSContent: React.FC = () => {
     }
 
     setShowPaymentDialog(true);
-  }, [cart.length, selectedInvoiceType, selectedCustomer, cartWithOffers, storeSettings?.currency, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, toast]);
+  }, [cart.length, selectedInvoiceType, selectedCustomer, cartWithOffers, storeSettings?.currency, activeSession, isInvoiceLimitReached, currentOrderSource, currentOrderInfo, totals.total, isWaiter, selectedTable, paymentMethod, mappedInvoiceTypeCode, getE32InvoiceTypeId, selectedInvoiceTypeData, customers, toast]);
 
   const processPayment = async (includePreviousDebt: boolean = false, splitMethodParam?: string) => {
     if (isProcessingRef.current || createSale.isPending) return;
 
-    // Validación defensiva de comprobante fiscal y cliente antes de procesar el cobro
-    const activeInvoiceCode = selectedInvoiceType === 'FAC' ? 'FAC' : (selectedInvoiceTypeData?.code || '');
+    // Si el cobro es con tarjeta o mixto con tarjeta y el comprobante está en Interno (FAC), forzar a E32
+    const isPayingWithCard = paymentMethod === 'card' || (paymentMethod === 'split' && splitMethodParam === 'card');
+    let effectiveInvoiceTypeId = selectedInvoiceType;
+    if (isPayingWithCard && (effectiveInvoiceTypeId === 'FAC' || mappedInvoiceTypeCode === 'FAC')) {
+      effectiveInvoiceTypeId = getE32InvoiceTypeId();
+      setSelectedInvoiceType(effectiveInvoiceTypeId);
+    }
+
+    const effectiveInvoiceTypeData = invoiceTypes.find(t => t.id === effectiveInvoiceTypeId) || selectedInvoiceTypeData;
+    const activeInvoiceCode = effectiveInvoiceTypeId === 'FAC' ? 'FAC' : (effectiveInvoiceTypeData?.code || 'E32');
     const customerPreValidation = customers.find(c => c.id === selectedCustomer);
     const currentTotalsPre = calculateTotals(cartWithOffers, globalDiscount);
     const totalAmountPre = parseFloat(currentTotalsPre.total) || 0;
@@ -1251,7 +1294,6 @@ const POSContent: React.FC = () => {
       }
 
       const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
-      const selectedInvoiceTypeData = invoiceTypes.find(t => t.id === selectedInvoiceType);
       // Create sale and wait for completion to get the real invoice number
       const saleResult = await createSale.mutateAsync({
         id: saleId, // Pasar el ID generado para asegurar idempotencia
@@ -1259,9 +1301,9 @@ const POSContent: React.FC = () => {
         customer: selectedCustomerData,
         customer_name: selectedCustomerData?.name,
         customer_rnc: selectedCustomerData?.rnc,
-        invoice_type_id: selectedInvoiceType,
-        invoice_type_code: selectedInvoiceType === 'FAC' ? 'FAC' : selectedInvoiceTypeData?.code,
-        is_electronic: isElectronicActive && selectedInvoiceType !== 'FAC',
+        invoice_type_id: effectiveInvoiceTypeId,
+        invoice_type_code: effectiveInvoiceTypeId === 'FAC' ? 'FAC' : (effectiveInvoiceTypeData?.code || 'E32'),
+        is_electronic: isElectronicActive && effectiveInvoiceTypeId !== 'FAC',
         store_id: store?.id || undefined,
         subtotal: parseFloat(currentTotals.subtotal) + surchargeAmount + (includePreviousDebt ? previousDebtAmount : 0),
         discount_total: parseFloat(currentTotals.discount),
@@ -1306,13 +1348,13 @@ const POSContent: React.FC = () => {
           total: calculateItemTotal(item)
         })),
         customer: selectedCustomerData,
-        invoiceType: selectedInvoiceType === 'FAC' ? 'FAC' : (selectedInvoiceTypeData?.code || selectedInvoiceTypeData?.name || 'B01'),
-        is_electronic: isElectronicActive && selectedInvoiceType !== 'FAC',
+        invoiceType: effectiveInvoiceTypeId === 'FAC' ? 'FAC' : (effectiveInvoiceTypeData?.code || effectiveInvoiceTypeData?.name || 'B01'),
+        is_electronic: isElectronicActive && effectiveInvoiceTypeId !== 'FAC',
         encf: saleResult.encf,
         codigo_seguridad: saleResult.codigo_seguridad,
         qrcode_url: saleResult.qrcode_url,
         fecha_firma: saleResult.fecha_firma,
-        estado_fiscal: saleResult.estado_fiscal || (isElectronicActive && selectedInvoiceType !== 'FAC' ? 'ACEPTADO' : null),
+        estado_fiscal: saleResult.estado_fiscal || (isElectronicActive && effectiveInvoiceTypeId !== 'FAC' ? 'ACEPTADO' : null),
         totals: {
           ...currentTotals,
           total: (finalTotal || 0).toFixed(2)
@@ -2291,8 +2333,15 @@ const POSContent: React.FC = () => {
       }
 
 
-      const targetInvoiceType = invoiceTypes.find(t => t.id === data.invoiceTypeId || t.code === data.invoiceTypeId);
-      const code = data.invoiceTypeId === 'FAC' ? 'FAC' : (data.invoiceTypeId.startsWith('E') ? data.invoiceTypeId : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02'));
+      let effectiveServiceInvoiceTypeId = data.invoiceTypeId;
+      const targetInvoiceType = invoiceTypes.find(t => t.id === effectiveServiceInvoiceTypeId || t.code === effectiveServiceInvoiceTypeId);
+      let code = effectiveServiceInvoiceTypeId === 'FAC' ? 'FAC' : (effectiveServiceInvoiceTypeId.startsWith('E') ? effectiveServiceInvoiceTypeId : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02'));
+
+      if (data.paymentMethod === 'card' && code === 'FAC') {
+        const e32 = invoiceTypes.find(t => t.code === 'E32' || t.id === 'E32') || invoiceTypes.find(t => t.code === 'B02');
+        code = 'E32';
+        effectiveServiceInvoiceTypeId = e32 ? e32.id : 'E32';
+      }
 
       let dueDate = null;
       const isPending = Boolean(data.isPendingPayment || data.paymentMethod === 'credit');
@@ -2317,7 +2366,7 @@ const POSContent: React.FC = () => {
         status: 'completed',
         payment_status: paymentStatus,
         due_date: dueDate,
-        invoice_type_id: code === 'FAC' ? 'FAC' : data.invoiceTypeId,
+        invoice_type_id: code === 'FAC' ? 'FAC' : effectiveServiceInvoiceTypeId,
         invoice_type_code: code,
         is_electronic: isElectronicActive && code !== 'FAC' && code !== 'COT',
         customer_name: selectedCustomerData?.name || 'Cliente Ocasional',
@@ -3098,7 +3147,7 @@ const POSContent: React.FC = () => {
           surchargeAmount={surchargeAmount}
           selectedCustomer={selectedCustomer}
           creditDays={creditDays}
-          onPaymentMethodChange={setPaymentMethod}
+          onPaymentMethodChange={handlePaymentMethodChange}
           onAmountReceivedChange={setAmountReceived}
           onCreditDaysChange={setCreditDays}
           onProcessPayment={processPayment}
@@ -3108,6 +3157,9 @@ const POSContent: React.FC = () => {
           customers={customers}
           onCustomerChange={setSelectedCustomer}
           requiresCustomer={requiresCustomer}
+          selectedInvoiceType={selectedInvoiceType}
+          onInvoiceTypeChange={setSelectedInvoiceType}
+          invoiceTypes={invoiceTypes}
         />
 
         {saleData && (
@@ -3698,7 +3750,7 @@ const POSContent: React.FC = () => {
           surchargeAmount={surchargeAmount}
           selectedCustomer={selectedCustomer}
           creditDays={creditDays}
-          onPaymentMethodChange={setPaymentMethod}
+          onPaymentMethodChange={handlePaymentMethodChange}
           onAmountReceivedChange={setAmountReceived}
           onCreditDaysChange={setCreditDays}
           onProcessPayment={processPayment}
@@ -3707,6 +3759,9 @@ const POSContent: React.FC = () => {
           customers={customers}
           onCustomerChange={setSelectedCustomer}
           requiresCustomer={requiresCustomer}
+          selectedInvoiceType={selectedInvoiceType}
+          onInvoiceTypeChange={setSelectedInvoiceType}
+          invoiceTypes={invoiceTypes}
         />
 
         {
