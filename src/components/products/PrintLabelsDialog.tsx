@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Printer, Loader2, Settings, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Printer, Loader2, Settings, Search, ChevronDown, ChevronUp, Sparkles, Tag } from 'lucide-react';
 import { Product } from '@/hooks/useProducts';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useUserStore } from '@/hooks/useUserStore';
@@ -42,6 +42,9 @@ const getCachedBarcodeSvg = (
       format: "CODE128",
       displayValue: showText,
       fontSize: fontSize,
+      font: "monospace",
+      fontOptions: "bold",
+      textMargin: 2,
       margin: 0,
       height: barHeight, // Height in px for the barcode lines (SVG internal scale)
       width: barWidth // Bar width
@@ -114,6 +117,9 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
   const [showPrice, setShowPrice] = useState<boolean>(savedSettings.showPrice ?? true);
   const [showBarcodeText, setShowBarcodeText] = useState<boolean>(savedSettings.showBarcodeText ?? true);
   const [rotation, setRotation] = useState<number>(savedSettings.rotation ?? 0);
+  const [labelDesignStyle, setLabelDesignStyle] = useState<'modern' | 'badge' | 'boutique' | 'compact'>(
+    () => savedSettings.labelDesignStyle ?? 'modern'
+  );
 
   // Tamaños de fuente
   const [bnameSize, setBnameSize] = useState<number>(savedSettings.bnameSize ?? 10);
@@ -138,11 +144,12 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         showBusinessName, showProductName, showPrice, showBarcodeText, rotation,
         bnameSize, pnameSize, priceSize, barcodeFontSize,
         barHeight, barWidth, selectedTemplateId,
-        offsetY, offsetX, contentPadding
+        offsetY, offsetX, contentPadding,
+        labelDesignStyle
       }));
     }, 500);
     return () => clearTimeout(timer);
-  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth, selectedTemplateId, offsetY, offsetX, contentPadding]);
+  }, [labelWidth, labelHeight, columns, gapX, gapY, showBusinessName, showProductName, showPrice, showBarcodeText, rotation, bnameSize, pnameSize, priceSize, barcodeFontSize, barHeight, barWidth, selectedTemplateId, offsetY, offsetX, contentPadding, labelDesignStyle]);
 
   // Si la etiqueta es pequeña (<= 22mm) y trae valores antiguos sobredimensionados, auto-adaptar
   useEffect(() => {
@@ -296,6 +303,9 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
         setOffsetY(template.offsetY ?? 0);
         setOffsetX(template.offsetX ?? 0);
         setContentPadding(template.contentPadding ?? 1.0);
+        if (template.labelDesignStyle) {
+          setLabelDesignStyle(template.labelDesignStyle);
+        }
       }
     }
   }, [customTemplates]);
@@ -365,7 +375,8 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
       barWidth,
       offsetY,
       offsetX,
-      contentPadding
+      contentPadding,
+      labelDesignStyle
     };
 
     const updated = [...customTemplates, newTemplate];
@@ -554,12 +565,35 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
             ? Math.max(6.0, effectivePnameSize - 1.0) 
             : effectivePnameSize;
 
+          const formattedPrice = (item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const businessTitle = settings?.company_name || userStore?.store_name || 'Mi Negocio';
+
+          let innerLabelBody = '';
+          if (labelDesignStyle === 'compact') {
+            innerLabelBody = `
+              <div class="compact-header">
+                ${showProductName ? `<div class="product-name compact-pname" style="font-size: ${dynamicPnameSize}px" title="${item.product.name}">${item.product.name}</div>` : ''}
+                ${showPrice ? `<div class="product-price compact-price" style="font-size: ${effectivePriceSize}px"><span class="price-currency">$</span>${formattedPrice}</div>` : ''}
+              </div>
+            `;
+          } else {
+            innerLabelBody = `
+              ${effectiveShowBusinessName ? `<div class="business-name" style="font-size: ${bnameSize}px">${businessTitle}</div>` : ''}
+              ${labelDesignStyle === 'boutique' && effectiveShowBusinessName ? `<div class="boutique-divider"></div>` : ''}
+              ${showProductName ? `<div class="product-name" style="font-size: ${dynamicPnameSize}px" title="${item.product.name}">${item.product.name}</div>` : ''}
+              ${showPrice ? `
+                <div class="product-price ${labelDesignStyle === 'badge' ? 'is-badge' : ''}" style="font-size: ${effectivePriceSize}px">
+                  ${labelDesignStyle === 'badge' ? `<span class="badge-label">PRECIO</span>` : ''}
+                  <span class="price-currency">$</span><span class="price-val">${formattedPrice}</span>
+                </div>
+              ` : ''}
+            `;
+          }
+
           const labelHtml = `
             <div class="label">
-              <div class="label-content">
-                ${effectiveShowBusinessName ? `<div class="business-name" style="font-size: ${bnameSize}px">${settings?.company_name || userStore?.store_name || 'Mi Negocio'}</div>` : ''}
-                <div class="product-name" style="font-size: ${dynamicPnameSize}px" title="${item.product.name}">${item.product.name}</div>
-                ${showPrice ? `<div class="product-price" style="font-size: ${effectivePriceSize}px">$${(item.product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
+              <div class="label-content style-${labelDesignStyle}">
+                ${innerLabelBody}
                 <div class="barcode-container">
                   ${barcodeSvg}
                 </div>
@@ -581,7 +615,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 padding: 0;
               }
               html, body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
                 background: #fff;
                 margin: 0 !important;
                 padding: 0 !important;
@@ -641,7 +675,7 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                 width: 100% !important;
                 height: 100% !important;
                 max-height: 100% !important;
-                gap: 0.5mm !important;
+                gap: 0.35mm !important;
                 padding-top: ${Math.max(0, 0.4 + offsetY)}mm !important;
                 padding-bottom: ${Math.max(0, 0.4 - offsetY)}mm !important;
                 padding-left: ${Math.max(0.4, 0.4 + offsetX)}mm !important;
@@ -661,40 +695,135 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               }
 
               .business-name {
-                font-weight: bold;
+                font-weight: 700;
                 text-transform: uppercase;
+                letter-spacing: 0.8px;
+                color: #4b5563;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 width: 100%;
                 text-align: center;
                 line-height: 1;
-                margin: 0;
+                margin: 0 0 0.5px 0;
                 padding: 0;
                 flex-shrink: 0;
               }
 
               .product-name {
-                line-height: 1.0;
+                font-weight: 600;
+                line-height: 1.15;
                 margin: 0;
                 padding: 0 0.5mm;
                 width: 100%;
                 max-width: 100%;
                 text-align: center;
                 flex-shrink: 0;
-                white-space: nowrap;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                word-break: break-word;
+                color: #111827;
+                letter-spacing: -0.15px;
                 box-sizing: border-box;
               }
 
               .product-price {
-                font-weight: 800;
-                margin: 0;
+                font-weight: 900;
+                margin: 0.5px 0;
                 padding: 0;
                 text-align: center;
                 line-height: 1.0;
                 width: 100%;
+                flex-shrink: 0;
+                letter-spacing: -0.5px;
+                color: #000;
+                display: inline-flex;
+                align-items: baseline;
+                justify-content: center;
+              }
+
+              .price-currency {
+                font-size: 0.72em;
+                font-weight: 700;
+                margin-right: 1px;
+                vertical-align: top;
+                opacity: 0.85;
+              }
+
+              .price-val {
+                font-weight: 900;
+              }
+
+              /* Badge Style */
+              .style-badge .product-price.is-badge {
+                display: inline-flex;
+                align-items: baseline;
+                justify-content: center;
+                border: 1.5px solid #111827;
+                border-radius: 4px;
+                padding: 0.5px 5px;
+                background: #fff;
+                margin: 0.5px auto;
+                width: auto;
+              }
+
+              .style-badge .badge-label {
+                font-size: 0.55em;
+                font-weight: 800;
+                letter-spacing: 0.8px;
+                margin-right: 3px;
+                color: #6b7280;
+                text-transform: uppercase;
+              }
+
+              /* Boutique Style */
+              .style-boutique .business-name {
+                letter-spacing: 1.5px;
+                color: #374151;
+              }
+
+              .style-boutique .boutique-divider {
+                width: 75%;
+                height: 1px;
+                background: #d1d5db;
+                margin: 0.5px auto 1px auto;
+              }
+
+              .style-boutique .product-name {
+                font-weight: 500;
+                letter-spacing: 0.2px;
+              }
+
+              /* Compact Style */
+              .style-compact .compact-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+                padding: 0 0.5mm;
+                margin-bottom: 0.5mm;
+              }
+
+              .style-compact .compact-pname {
+                text-align: left;
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-weight: 600;
+                color: #111827;
+                display: block;
+              }
+
+              .style-compact .compact-price {
+                text-align: right;
+                font-weight: 900;
+                color: #000;
+                margin-left: 1.5mm;
+                white-space: nowrap;
                 flex-shrink: 0;
               }
 
@@ -711,11 +840,18 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
               }
 
               .barcode-container svg {
-                max-width: 95%;
-                max-height: ${isSmallHeight ? 6.5 : Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, effectiveBarHeight * 0.45))}mm; 
+                max-width: 96%;
+                max-height: ${isSmallHeight ? 7 : Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, effectiveBarHeight * 0.45))}mm; 
                 width: auto;
                 height: auto;
                 display: block;
+                shape-rendering: crispEdges;
+              }
+
+              .barcode-container svg text {
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+                font-weight: 700 !important;
+                letter-spacing: 1.2px !important;
               }
 
               @media print {
@@ -847,10 +983,16 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
   // CSS compartido para la vista previa de barcodes (1 bloque, no 1 por producto)
   const previewBarcodeStyle = useMemo(() => `
     .preview-barcode-container svg {
-      max-width: 100%;
+      max-width: 98%;
       height: auto;
       max-height: ${Math.max(5, Math.min(labelHeight * barcodeMaxHeightMultiplier, barHeight * 0.45))}mm;
       display: block;
+      shape-rendering: crispEdges;
+    }
+    .preview-barcode-container svg text {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+      font-weight: 700 !important;
+      letter-spacing: 1.2px !important;
     }
   `, [labelHeight, barcodeMaxHeightMultiplier, barHeight]);
 
@@ -922,6 +1064,88 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                     )}
                   </SelectContent>
                 </Select>
+
+                {/* Selector de Estilo Visual */}
+                <div className="space-y-1.5 pt-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground/90">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      Estilo Visual de Etiqueta
+                    </Label>
+                    <span className="text-[10px] text-primary/80 font-semibold tracking-wide">
+                      {labelDesignStyle === 'modern' && 'Moderno Simple'}
+                      {labelDesignStyle === 'badge' && 'Marco Retail'}
+                      {labelDesignStyle === 'boutique' && 'Boutique'}
+                      {labelDesignStyle === 'compact' && 'Góndola Compacta'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLabelDesignStyle('modern')}
+                      className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                        labelDesignStyle === 'modern'
+                          ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                          : 'border-border/60 hover:border-border hover:bg-muted/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-semibold text-xs">
+                        <Sparkles className="w-3.5 h-3.5 text-primary" />
+                        <span>Moderno</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">Minimalista y limpio</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLabelDesignStyle('badge')}
+                      className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                        labelDesignStyle === 'badge'
+                          ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                          : 'border-border/60 hover:border-border hover:bg-muted/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-semibold text-xs">
+                        <Tag className="w-3.5 h-3.5 text-primary" />
+                        <span>Marco Retail</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">Badge de precio</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLabelDesignStyle('boutique')}
+                      className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                        labelDesignStyle === 'boutique'
+                          ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                          : 'border-border/60 hover:border-border hover:bg-muted/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-semibold text-xs">
+                        <span className="w-3.5 h-3.5 flex items-center justify-center font-serif text-[11px] font-bold text-primary">B</span>
+                        <span>Boutique</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">Divisor refinado</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLabelDesignStyle('compact')}
+                      className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                        labelDesignStyle === 'compact'
+                          ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                          : 'border-border/60 hover:border-border hover:bg-muted/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-semibold text-xs">
+                        <span className="w-3.5 h-3.5 flex items-center justify-center font-mono text-[10px] font-bold text-primary">▪▪</span>
+                        <span>Compacta</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">Nombre y precio en línea</span>
+                    </button>
+                  </div>
+                </div>
 
                 <div className="flex justify-end pt-2">
                   <Button
@@ -1329,67 +1553,146 @@ export function PrintLabelsDialog({ isOpen, onClose, products, filteredProductId
                       padding: columns > 1 ? '10mm' : '0' // Give some padding around the sheet if printing A4
                     }}
                   >
-                    {previewLabels.map((prod, index) => (
-                      <div
-                        key={`${prod.id}-${index}`}
-                        className="border-dashed border-gray-300 flex items-center justify-center overflow-hidden relative shadow-sm"
-                        style={{
-                          width: `${rotation === 90 || rotation === 270 ? labelHeight : labelWidth}mm`,
-                          height: `${rotation === 90 || rotation === 270 ? labelWidth : labelHeight}mm`,
-                          padding: '0',
-                          border: columns > 1 ? '1px dotted #ccc' : 'none',
-                          borderBottom: columns === 1 ? '1px dashed #ccc' : '1px dotted #ccc',
-                        }}
-                      >
+                    {previewLabels.map((prod, index) => {
+                      const is30x20 = labelHeight <= 22;
+                      const formattedPrice = (prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      const businessTitle = settings?.company_name || userStore?.store_name || 'Mi Negocio';
+                      const effectivePSize = is30x20 ? Math.min(priceSize, 10) : (labelHeight <= 30 ? Math.min(priceSize, 13) : priceSize);
+                      const effectiveNameSize = is30x20 ? Math.min(pnameSize, 7.5) : (labelHeight <= 30 ? Math.min(pnameSize, 10) : pnameSize);
+                      const dynamicNameSize = (labelHeight <= 25 && (prod.name || '').length > 18) 
+                        ? Math.max(6.0, effectiveNameSize - 1.0) 
+                        : effectiveNameSize;
+
+                      return (
                         <div
-                          className="relative flex flex-col items-center justify-evenly text-center overflow-hidden text-black"
+                          key={`${prod.id}-${index}`}
+                          className="flex items-center justify-center overflow-hidden relative"
                           style={{
-                            width: `${labelWidth}mm`,
-                            height: `${labelHeight}mm`,
-                            paddingTop: `${Math.max(0, (labelHeight <= 22 ? 3.5 : 1.5) + offsetY)}mm`,
-                            paddingBottom: `${Math.max(0, 0.5 - offsetY)}mm`,
-                            paddingLeft: `${Math.max(0.5, 0.5 + offsetX)}mm`,
-                            paddingRight: `${Math.max(0.5, 0.5 - offsetX)}mm`,
-                            boxSizing: 'border-box'
+                            width: `${rotation === 90 || rotation === 270 ? labelHeight : labelWidth}mm`,
+                            height: `${rotation === 90 || rotation === 270 ? labelWidth : labelHeight}mm`,
+                            padding: '0',
+                            border: columns > 1 ? '1px dotted #e2e8f0' : 'none',
+                            borderBottom: columns === 1 ? '1px dashed #cbd5e1' : '1px dotted #e2e8f0',
                           }}
                         >
-                          {(labelHeight <= 22 ? false : showBusinessName) && (
-                            <div className="font-bold uppercase w-full text-center truncate shrink-0" style={{ fontSize: `${bnameSize}px`, lineHeight: 1 }}>
-                              {settings?.company_name || userStore?.store_name || 'Mi Negocio'}
-                            </div>
-                          )}
-                          {showProductName && (
-                            <div
-                              className="w-full text-center leading-tight shrink-0 px-0.5 truncate"
-                              style={{
-                                fontSize: `${(labelHeight <= 25 && (prod.name || '').length > 18) ? Math.max(6.5, (labelHeight <= 22 ? Math.min(pnameSize, 8) : pnameSize) - 1.2) : (labelHeight <= 22 ? Math.min(pnameSize, 8) : pnameSize)}px`,
-                                lineHeight: 1.1
-                              }}
-                              title={prod.name}
-                            >
-                              {prod.name}
-                            </div>
-                          )}
-                          {showPrice && (
-                            <div className="font-extrabold w-full text-center shrink-0" style={{ fontSize: `${labelHeight <= 22 ? Math.min(priceSize, 11) : priceSize}px`, lineHeight: 1 }}>
-                              ${(prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
-                          )}
                           <div
-                            className="w-full flex justify-center items-center shrink preview-barcode-container overflow-hidden"
-                            dangerouslySetInnerHTML={{
-                              __html: getCachedBarcodeSvg(
-                                prod.barcode,
-                                showBarcodeText,
-                                labelHeight <= 22 ? Math.min(barcodeFontSize, 8) : barcodeFontSize,
-                                labelHeight <= 22 ? Math.min(barHeight, 16) : barHeight,
-                                labelWidth <= 35 ? Math.min(barWidth, 1.05) : barWidth
-                              )
+                            className={`relative flex flex-col items-center justify-center text-center overflow-hidden text-neutral-900 bg-white transition-all ${
+                              columns === 1 ? 'shadow-sm rounded-[3px] border border-neutral-300' : ''
+                            }`}
+                            style={{
+                              width: `${labelWidth}mm`,
+                              height: `${labelHeight}mm`,
+                              paddingTop: `${Math.max(0, (is30x20 ? 1.5 : 1.2) + offsetY)}mm`,
+                              paddingBottom: `${Math.max(0, (is30x20 ? 0.8 : 0.8) - offsetY)}mm`,
+                              paddingLeft: `${Math.max(0.6, 0.6 + offsetX)}mm`,
+                              paddingRight: `${Math.max(0.6, 0.6 - offsetX)}mm`,
+                              boxSizing: 'border-box',
+                              fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif",
+                              gap: '0.4mm'
                             }}
-                          />
+                          >
+                            {/* Estilo Compacto */}
+                            {labelDesignStyle === 'compact' ? (
+                              <div className="flex items-center justify-between w-full px-0.5 shrink-0" style={{ gap: '1mm' }}>
+                                {showProductName && (
+                                  <div
+                                    className="font-semibold text-neutral-900 text-left truncate flex-1 leading-tight"
+                                    style={{ fontSize: `${dynamicNameSize}px` }}
+                                    title={prod.name}
+                                  >
+                                    {prod.name}
+                                  </div>
+                                )}
+                                {showPrice && (
+                                  <div
+                                    className="font-black text-black shrink-0 text-right leading-none"
+                                    style={{ fontSize: `${effectivePSize}px` }}
+                                  >
+                                    <span className="text-[0.75em] font-bold opacity-80 mr-0.5">$</span>
+                                    <span>{formattedPrice}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <>
+                                {/* Nombre del Negocio */}
+                                {(is30x20 ? false : showBusinessName) && (
+                                  <div
+                                    className={`uppercase font-bold w-full text-center truncate shrink-0 ${
+                                      labelDesignStyle === 'boutique' ? 'tracking-wider text-neutral-600 font-medium' : 'text-neutral-700 tracking-tight'
+                                    }`}
+                                    style={{ fontSize: `${bnameSize}px`, lineHeight: 1 }}
+                                  >
+                                    {businessTitle}
+                                  </div>
+                                )}
+
+                                {/* Línea divisoria en estilo boutique */}
+                                {labelDesignStyle === 'boutique' && (is30x20 ? false : showBusinessName) && (
+                                  <div className="w-3/4 h-[0.5px] bg-neutral-300 mx-auto my-[0.3mm] shrink-0" />
+                                )}
+
+                                {/* Nombre del Producto con 2 líneas clamp */}
+                                {showProductName && (
+                                  <div
+                                    className="w-full text-center shrink-0 px-0.5 font-semibold text-neutral-900"
+                                    style={{
+                                      fontSize: `${dynamicNameSize}px`,
+                                      lineHeight: 1.15,
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: is30x20 ? 1 : 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden',
+                                      wordBreak: 'break-word',
+                                      letterSpacing: '-0.15px'
+                                    }}
+                                    title={prod.name}
+                                  >
+                                    {prod.name}
+                                  </div>
+                                )}
+
+                                {/* Precio */}
+                                {showPrice && (
+                                  labelDesignStyle === 'badge' ? (
+                                    <div
+                                      className="inline-flex items-baseline justify-center border border-neutral-900 rounded-[3px] bg-white px-1.5 py-[0.5px] shrink-0 my-[0.2mm]"
+                                      style={{ fontSize: `${effectivePSize}px`, lineHeight: 1 }}
+                                    >
+                                      <span className="text-[0.55em] font-extrabold tracking-wider text-neutral-500 mr-1 uppercase">PRECIO</span>
+                                      <span className="text-[0.72em] font-bold text-neutral-800 mr-0.5">$</span>
+                                      <span className="font-black text-black">{formattedPrice}</span>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className="font-black w-full text-center shrink-0 inline-flex items-baseline justify-center tracking-tight text-neutral-950"
+                                      style={{ fontSize: `${effectivePSize}px`, lineHeight: 1 }}
+                                    >
+                                      <span className="text-[0.72em] font-bold opacity-80 mr-0.5">$</span>
+                                      <span className="font-black">{formattedPrice}</span>
+                                    </div>
+                                  )
+                                )}
+                              </>
+                            )}
+
+                            {/* Barcode SVG */}
+                            <div
+                              className="w-full flex justify-center items-center shrink preview-barcode-container overflow-hidden pt-[0.2mm]"
+                              dangerouslySetInnerHTML={{
+                                __html: getCachedBarcodeSvg(
+                                  prod.barcode,
+                                  showBarcodeText,
+                                  is30x20 ? Math.min(barcodeFontSize, 7) : Math.min(barcodeFontSize, 12),
+                                  is30x20 ? Math.min(barHeight, 14) : (labelHeight <= 30 ? Math.min(barHeight, 26) : barHeight),
+                                  labelWidth <= 35 ? Math.min(barWidth, 1.0) : barWidth
+                                )
+                              }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
