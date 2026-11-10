@@ -55,22 +55,13 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
       const mode = config.is_active ? 'e-ncf' : 'ncf';
       setBillingMode(mode);
 
-      const oldKnownIds = [
-        '01M731VKCJH3NR7XZPAY8725TE',
-        '01M0TYPKJ0JGVM53K56D7X9P7Z',
-        '01M2RBT1TH2R6NFHSEJH2GB672',
-        '01M0TYPKJGJVM53K56D7X9P7Z'
-      ];
-      const rawCompId = (config.company_id || '').trim();
-      const safeCompId = oldKnownIds.includes(rawCompId) ? '' : rawCompId;
-
       setFormData({
         environment: config.environment || 'PRODUCTION',
         api_token: config.api_token || '',
         base_url: config.base_url || (config.environment === 'PRODUCTION' ? 'https://api.alanube.co' : 'https://sandbox.alanube.co'),
         rnc_emisor: config.rnc_emisor || '',
         razon_social: config.razon_social || '',
-        company_id: safeCompId,
+        company_id: config.company_id || '',
         sequence_due_date: config.sequence_due_date || '',
         certificado_digital: config.certificado_digital || '',
         certificado_password: config.certificado_password || ''
