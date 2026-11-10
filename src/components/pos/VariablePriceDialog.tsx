@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -62,6 +62,9 @@ const VariablePriceDialog: React.FC<VariablePriceDialogProps> = ({
                             <DialogTitle className="text-base sm:text-lg mobile-landscape:text-xs font-bold tracking-tight text-left">
                                 Precio Variado
                             </DialogTitle>
+                            <DialogDescription className="sr-only">
+                                Ingrese el precio para este producto
+                            </DialogDescription>
                         </DialogHeader>
                     </div>
 

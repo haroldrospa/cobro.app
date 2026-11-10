@@ -51,8 +51,11 @@ export const useAlanubeConfig = () => {
       }
 
       if (data) {
-        let effectiveCompanyId = (data as any)?.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
-        if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+        const rawRnc = ((data as any)?.rnc_emisor || '').replace(/[^0-9]/g, '');
+        let effectiveCompanyId = (data as any)?.company_id || (rawRnc === '133695189' ? '01M2RBT1TH2R6NFHSEJH2GB672' : '01M0TYPKJ0JGVM53K56D7X9P7Z');
+        if (rawRnc === '133695189' && (!effectiveCompanyId || effectiveCompanyId.startsWith('01M0TYPK'))) {
+          effectiveCompanyId = '01M2RBT1TH2R6NFHSEJH2GB672';
+        } else if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
           effectiveCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
         }
 
@@ -139,8 +142,11 @@ export const useAlanubeConfig = () => {
     setIsUpdating(true);
 
     try {
-      let effectiveId = newConfig.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
-      if (effectiveId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+      const rawRnc = (newConfig.rnc_emisor || '').replace(/[^0-9]/g, '');
+      let effectiveId = newConfig.company_id || (rawRnc === '133695189' ? '01M2RBT1TH2R6NFHSEJH2GB672' : '01M0TYPKJ0JGVM53K56D7X9P7Z');
+      if (rawRnc === '133695189' && (!effectiveId || effectiveId.startsWith('01M0TYPK'))) {
+        effectiveId = '01M2RBT1TH2R6NFHSEJH2GB672';
+      } else if (effectiveId === '01M0TYPKJGJVM53K56D7X9P7Z') {
         effectiveId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
       }
 

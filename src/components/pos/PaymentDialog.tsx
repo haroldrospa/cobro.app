@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { DollarSign, CreditCard, Printer, Loader2, FileText, Plus, Check, ChevronsUpDown, Search, User, X, ChevronRight, Wallet, Banknote, ArrowRightLeft, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -270,6 +270,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           {/* Header: Hero Total Centrado y Destacado */}
           <div className="p-3 sm:p-4 pb-0 flex-shrink-0">
             <DialogTitle className="sr-only">Cobrar Venta</DialogTitle>
+            <DialogDescription className="sr-only">Seleccione el método de pago y confirme la venta</DialogDescription>
             
             <div className="flex flex-col items-center justify-center bg-gradient-to-b from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-500/15 dark:via-emerald-950/20 border border-emerald-500/25 px-4 py-2.5 sm:py-3.5 rounded-2xl text-center relative overflow-hidden shadow-xs">
               <span className="text-muted-foreground text-[10px] sm:text-xs uppercase font-bold tracking-widest block leading-tight">

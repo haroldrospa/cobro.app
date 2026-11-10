@@ -82,11 +82,19 @@ export const broadcastCustomerDisplay = async (payload: CustomerDisplayPayload) 
         activeChannels.set(channelKey, channel);
       }
 
-      await channel.send({
-        type: 'broadcast',
+      const broadcastData = {
+        type: 'broadcast' as const,
         event: 'display_update',
         payload,
-      });
+      };
+
+      if ((channel as any).state === 'joined') {
+        await channel.send(broadcastData);
+      } else if (typeof (channel as any).httpSend === 'function') {
+        await (channel as any).httpSend(broadcastData);
+      } else {
+        await channel.send(broadcastData);
+      }
     } catch (err) {
       console.warn('[CustomerDisplay] Error broadcasting update:', err);
     }

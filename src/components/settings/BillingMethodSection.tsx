@@ -44,7 +44,7 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
     base_url: 'https://api.alanube.co',
     rnc_emisor: '',
     razon_social: '',
-    company_id: '01M0TYPKJ0JGVM53K56D7X9P7Z',
+    company_id: '01M2RBT1TH2R6NFHSEJH2GB672',
     sequence_due_date: '2027-12-31',
     certificado_digital: '',
     certificado_password: ''
@@ -54,8 +54,11 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
     if (config) {
       const mode = config.is_active ? 'e-ncf' : 'ncf';
       setBillingMode(mode);
-      let effectiveCompanyId = config.company_id || '01M0TYPKJ0JGVM53K56D7X9P7Z';
-      if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
+      const rawRnc = (config.rnc_emisor || '').replace(/[^0-9]/g, '');
+      let effectiveCompanyId = config.company_id || (rawRnc === '133695189' ? '01M2RBT1TH2R6NFHSEJH2GB672' : '01M0TYPKJ0JGVM53K56D7X9P7Z');
+      if (rawRnc === '133695189' && (!effectiveCompanyId || effectiveCompanyId.startsWith('01M0TYPK'))) {
+        effectiveCompanyId = '01M2RBT1TH2R6NFHSEJH2GB672';
+      } else if (effectiveCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
         effectiveCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
       }
 
@@ -158,8 +161,11 @@ export default function BillingMethodSection({ onModeChange }: { onModeChange?: 
         }
       }
 
+      const cleanRnc = (formData.rnc_emisor || '').replace(/[^0-9]/g, '');
       let cleanedCompanyId = (formData.company_id || '').trim();
-      if (cleanedCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z' || !cleanedCompanyId) {
+      if (cleanRnc === '133695189' && (!cleanedCompanyId || cleanedCompanyId.startsWith('01M0TYPK'))) {
+        cleanedCompanyId = '01M2RBT1TH2R6NFHSEJH2GB672';
+      } else if (cleanedCompanyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
         cleanedCompanyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
       }
 

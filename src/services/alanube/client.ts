@@ -32,8 +32,13 @@ export class AlanubeClient {
     else if (tipoDocumento === '45') path = 'gubernamentals';
     else if (tipoDocumento === '46') path = 'export-supports';
 
-    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    // Auto-corregir ID de 25 caracteres faltante del 0 central si viene de versión anterior
+    const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '');
+    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '';
+    if (cleanRnc === '133695189' && (!companyId || companyId.startsWith('01M0TYPK'))) {
+      companyId = '01M2RBT1TH2R6NFHSEJH2GB672';
+    } else if (cleanRnc === '40218246656' && !companyId) {
+      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    }
     if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
       companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
     }
@@ -257,12 +262,16 @@ export class AlanubeClient {
     const isWebDeployment = isBrowser && !window.location.protocol.startsWith('file:') && !window.location.protocol.startsWith('app:');
     const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
     
-    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJ0JGVM53K56D7X9P7Z';
-    // Auto-corregir ID de 25 caracteres faltante del 0 central si viene de versión anterior
+    const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '');
+    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '';
+    if (cleanRnc === '133695189' && (!companyId || companyId.startsWith('01M0TYPK'))) {
+      companyId = '01M2RBT1TH2R6NFHSEJH2GB672';
+    } else if (cleanRnc === '40218246656' && !companyId) {
+      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    }
     if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
       companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
     }
-    const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '') || '40218246656';
     
     const baseApi = isBrowser && isWebDeployment 
       ? `${window.location.origin}${proxyPrefix}/dom/v1`
@@ -349,7 +358,13 @@ export class AlanubeClient {
     const isWebDeployment = isBrowser && !window.location.protocol.startsWith('file:') && !window.location.protocol.startsWith('app:');
     const proxyPrefix = this.config.environment === 'PRODUCTION' ? '/api-alanube-prod' : '/api-alanube-sandbox';
 
-    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    const cleanRnc = (this.config.rnc_emisor || '').replace(/[^0-9]/g, '');
+    let companyId = this.config.company_id || (typeof window !== 'undefined' ? localStorage.getItem('alanube_company_id') : null) || '';
+    if (cleanRnc === '133695189' && (!companyId || companyId.startsWith('01M0TYPK'))) {
+      companyId = '01M2RBT1TH2R6NFHSEJH2GB672';
+    } else if (cleanRnc === '40218246656' && !companyId) {
+      companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
+    }
     if (companyId === '01M0TYPKJGJVM53K56D7X9P7Z') {
       companyId = '01M0TYPKJ0JGVM53K56D7X9P7Z';
     }
