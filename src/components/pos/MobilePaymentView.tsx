@@ -155,12 +155,21 @@ const MobilePaymentView: React.FC<MobilePaymentViewProps> = ({
   const activeRemaining = activeEndNumber !== null && activeEndNumber > 0
     ? Math.max(0, activeEndNumber - (activeSequence?.current_number || 0))
     : null;
+  const numericTotal = React.useMemo(() => {
+    const raw = typeof totals.total === 'string' ? totals.total.replace(/[^0-9.-]+/g, '') : totals.total;
+    return parseFloat(String(raw)) || 0;
+  }, [totals.total]);
+
   const requiresCustomer = React.useMemo(() => {
     if (!selectedType?.code) return false;
-    const code = selectedType.code;
-    if (['FAC', 'COT', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    const code = selectedType.code.toUpperCase().trim();
+    if (code === 'FAC' || code === 'COT') return false;
+    if (code === 'B02' || code === 'E32') {
+      return numericTotal >= 250000;
+    }
+    if (['B12', 'E43', 'B13'].includes(code)) return false;
     return true;
-  }, [selectedType]);
+  }, [selectedType, numericTotal]);
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
   const canCheckout = cartLength > 0 && (!requiresCustomer || selectedCustomer);
 

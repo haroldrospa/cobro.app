@@ -600,10 +600,15 @@ const POSContent: React.FC = () => {
 
   const requiresCustomer = React.useMemo(() => {
     if (!mappedInvoiceTypeCode) return false;
-    const code = mappedInvoiceTypeCode;
-    if (['FAC', 'COT', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    const code = mappedInvoiceTypeCode.toUpperCase().trim();
+    if (code === 'FAC' || code === 'COT') return false;
+    if (code === 'B02' || code === 'E32') {
+      const numTotal = typeof totals.total === 'string' ? parseFloat(totals.total.replace(/[^0-9.-]+/g, '')) || 0 : totals.total;
+      return numTotal >= 250000;
+    }
+    if (['B12', 'E43', 'B13'].includes(code)) return false;
     return true;
-  }, [mappedInvoiceTypeCode]);
+  }, [mappedInvoiceTypeCode, totals.total]);
 
   const getE32InvoiceTypeId = useCallback(() => {
     const directE32 = invoiceTypes.find(t => t.code === 'E32' || t.id === 'E32');

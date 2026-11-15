@@ -281,12 +281,21 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
   const activeRemaining = activeEndNumber !== null && activeEndNumber > 0
     ? Math.max(0, activeEndNumber - (activeSequence?.current_number || 0))
     : null;
+  const numericTotal = React.useMemo(() => {
+    const raw = typeof totals.total === 'string' ? totals.total.replace(/[^0-9.-]+/g, '') : totals.total;
+    return parseFloat(String(raw)) || 0;
+  }, [totals.total]);
+
   const requiresCustomer = React.useMemo(() => {
     if (!selectedType?.code) return false;
-    const code = selectedType.code;
-    if (['FAC', 'COT', 'B02', 'E32', 'B12', 'E43', 'B13', 'E44'].includes(code)) return false;
+    const code = selectedType.code.toUpperCase().trim();
+    if (code === 'FAC' || code === 'COT') return false;
+    if (code === 'B02' || code === 'E32') {
+      return numericTotal >= 250000;
+    }
+    if (['B12', 'E43', 'B13'].includes(code)) return false;
     return true;
-  }, [selectedType]);
+  }, [selectedType, numericTotal]);
 
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
   const isCheckoutDisabled = cartLength === 0 || (requiresCustomer && !selectedCustomer);
@@ -391,22 +400,42 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                 ) : null
               )}
 
-              {(requiresCustomer || selectedType?.code === 'COT') && (
-                <div className="mt-2 space-y-1.5 border border-primary/20 bg-primary/5 rounded-lg p-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] uppercase font-bold tracking-wider text-primary">
-                      {selectedType?.code === 'COT' ? 'Cliente (Opcional para Cotización)' : 'Cliente Requerido (Crédito Fiscal)'}
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 text-primary hover:text-primary hover:bg-primary/10 rounded-full"
-                      onClick={() => setShowAddCustomer(true)}
-                      title="Agregar nuevo cliente"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
+              <div className={cn(
+                "mt-2 space-y-1.5 rounded-lg p-2 transition-all",
+                requiresCustomer 
+                  ? (!selectedCustomer 
+                      ? "border border-amber-500/60 bg-amber-500/10 dark:bg-amber-500/15 ring-1 ring-amber-500/30" 
+                      : "border border-primary/40 bg-primary/5")
+                  : "border border-border/70 bg-muted/20"
+              )}>
+                <div className="flex items-center justify-between">
+                  <label className={cn(
+                    "text-[10px] uppercase font-bold tracking-wider flex items-center gap-1",
+                    requiresCustomer 
+                      ? (!selectedCustomer ? "text-amber-500 font-extrabold" : "text-primary") 
+                      : "text-foreground/80"
+                  )}>
+                    <User className="h-3 w-3" />
+                    {requiresCustomer 
+                      ? (selectedType?.code === 'E44' 
+                          ? 'Cliente Requerido (Régimen Especial)' 
+                          : selectedType?.code === 'E31' || selectedType?.code === 'B01'
+                            ? 'Cliente Requerido (Crédito Fiscal)'
+                            : 'Cliente Requerido (*)')
+                      : selectedType?.code === 'COT' 
+                        ? 'Cliente (Opcional para Cotización)' 
+                        : 'Cliente (Opcional)'}
+                  </label>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-primary hover:text-primary hover:bg-primary/10 rounded-full"
+                    onClick={() => setShowAddCustomer(true)}
+                    title="Agregar nuevo cliente"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
                   <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -604,7 +633,6 @@ const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                     </div>
                   )}
                 </div>
-              )}
             </CollapsibleContent>
           </Collapsible>
         );
