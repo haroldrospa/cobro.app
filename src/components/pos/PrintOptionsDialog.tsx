@@ -67,10 +67,23 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
   const [liveSaleData, setLiveSaleData] = useState<any>(propSaleData);
 
   useEffect(() => {
-    if (propSaleData?.id && propSaleData.id !== liveSaleData?.id) {
-      setLiveSaleData(propSaleData);
+    if (propSaleData) {
+      setLiveSaleData((prev: any) => {
+        if (!prev || prev.id !== propSaleData.id) {
+          return propSaleData;
+        }
+        return {
+          ...prev,
+          ...propSaleData,
+          items: (propSaleData.items && propSaleData.items.length > 0)
+            ? propSaleData.items
+            : (propSaleData.sale_items && propSaleData.sale_items.length > 0)
+              ? propSaleData.sale_items
+              : prev.items,
+        };
+      });
     }
-  }, [propSaleData?.id]);
+  }, [propSaleData]);
 
   useEffect(() => {
     if (!isOpen || !propSaleData?.id) return;
@@ -414,6 +427,12 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
       document.title = invoiceNumber;
     }
   }, [isOpen, invoiceNumber]);
+
+  useEffect(() => {
+    if (saleData?.customer?.email && !emailAddress) {
+      setEmailAddress(saleData.customer.email);
+    }
+  }, [saleData?.customer?.email]);
   const isServicesMode = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
   const effectivePaperSize = isServicesMode
     ? (printSettings.paperSize === 'A4' ? 'A4' : 'carta')
@@ -1581,66 +1600,73 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     try {
       const companyInfo = dbCompanyInfo;
 
-      // 1. Generar el PDF idéntico al formato de impresión
+      // 1. Generar el PDF y el HTML idénticos al formato de impresión y descarga
       const htmlContent = generateCleanInvoiceHTMLWrapper();
       const doc = await generateCleanInvoicePDF(htmlContent, effectivePaperSize);
       const pdfBlob = doc.output('blob');
 
-      // 2. Convert Blob to base64 using FileReader
-      const reader = new FileReader();
-      reader.readAsDataURL(pdfBlob);
-      reader.onloadend = async () => {
-        const base64data = reader.result?.toString().split(',')[1];
+      // 2. Convert Blob to base64 using Promise
+      const base64data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(pdfBlob);
+        reader.onloadend = () => {
+          const base64 = reader.result?.toString().split(',')[1];
+          if (base64) resolve(base64);
+          else reject(new Error("No se pudo generar el contenido del PDF."));
+        };
+        reader.onerror = () => reject(new Error("Error leyendo el archivo PDF."));
+      });
 
-        if (!base64data) {
-          throw new Error("No se pudo generar el contenido del PDF.");
-        }
+      // 3. Generate barcode for reference
+      const barcodeDataUrl = generateBarcode(invoiceNumber);
 
-        // 3. Generate barcode for reference
-        const barcodeDataUrl = generateBarcode(invoiceNumber);
+      const companyInfoMerged = {
+        ...companyInfo,
+        name: companyInfo?.name || (storeSettings as any)?.store_name || 'Mi Empresa',
+        logo: companyInfo?.logo || (storeSettings as any)?.logo_url || (storeSettings as any)?.logo || '',
+        rnc: companyInfo?.rnc || (storeSettings as any)?.rnc || '',
+        phone: companyInfo?.phone || (storeSettings as any)?.phone || '',
+        address: companyInfo?.address || (storeSettings as any)?.address || '',
+        email: companyInfo?.email || (storeSettings as any)?.email || '',
+      };
 
-        // 4. Send to Edge Function
-        const response = await fetch('https://hkzgxdmnvyoviwketxva.supabase.co/functions/v1/send-invoice-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      // 4. Send to Edge Function with invoiceHtml and pdfBase64 so email body and attachment match 100%
+      const response = await fetch('https://hkzgxdmnvyoviwketxva.supabase.co/functions/v1/send-invoice-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: emailAddress,
+          saleData: {
+            ...saleData,
+            invoiceNumber,
+            companyInfo: companyInfoMerged
           },
-          body: JSON.stringify({
-            email: emailAddress,
-            saleData: {
-              ...saleData,
-              invoiceNumber,
-              companyInfo
-            },
-            barcodeDataUrl,
-            pdfBase64: base64data,
-            emailGreeting: storeSettings?.email_greeting || '¡Hola!',
-            emailMessage: storeSettings?.email_message || 'Le agradecemos sinceramente por elegirnos y por la confianza depositada en nosotros. Valoramos enormemente su preferencia y estamos comprometidos con brindarle siempre la mejor calidad y servicio.'
-          }),
+          barcodeDataUrl,
+          pdfBase64: base64data,
+          invoiceHtml: htmlContent,
+          emailGreeting: storeSettings?.email_greeting || '¡Hola!',
+          emailMessage: storeSettings?.email_message || 'Le agradecemos sinceramente por elegirnos y por la confianza depositada en nosotros. Valoramos enormemente su preferencia y estamos comprometidos con brindarle siempre la mejor calidad y servicio.'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Email enviado",
+          description: `La factura profesional ${invoiceNumber} se ha enviado a ${emailAddress} con el PDF adjunto.`,
         });
-
-        const result = await response.json();
-
-        if (result.success) {
-          toast({
-            title: "Email enviado",
-            description: `La factura profesional ${invoiceNumber} se ha enviado a ${emailAddress} con el PDF adjunto.`,
-          });
-          setEmailAddress('');
-          setShowEmailInput(false);
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: result.error || 'Error enviando email',
-          });
-        }
-        setIsEmailLoading(false);
-      };
-
-      reader.onerror = () => {
-        throw new Error("Error leyendo el archivo PDF.");
-      };
+        setEmailAddress('');
+        setShowEmailInput(false);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error || 'Error enviando email',
+        });
+      }
     } catch (error: any) {
       console.error('Error sending email:', error);
       toast({
@@ -1648,6 +1674,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         title: "Error",
         description: error.message || "No se pudo enviar el email. Inténtelo de nuevo.",
       });
+    } finally {
       setIsEmailLoading(false);
     }
   };
