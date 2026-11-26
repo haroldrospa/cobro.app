@@ -97,6 +97,7 @@ interface SettingsStoreSectionProps {
   setShopType: (type: string) => void;
   handleSaveSettings: (section: string) => void;
   onSaveBusinessType?: (type: string) => void;
+  onPaperSizeChange?: (paperSize: string) => void;
 }
 
 const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
@@ -114,6 +115,7 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
   setShopType,
   handleSaveSettings,
   onSaveBusinessType,
+  onPaperSizeChange,
 }) => {
   const { toast } = useToast();
   const qrRef = useRef<HTMLDivElement>(null);
@@ -319,20 +321,14 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
                 return (
                   <button
                     key={bt.id}
-                    onClick={async () => {
+                    onClick={() => {
                       setShopType(bt.id);
-                      if (bt.id === 'services') {
-                        setPaperSize('carta');
+                      if (bt.id === 'services' && onPaperSizeChange) {
+                        onPaperSizeChange('carta');
                       }
                       if (onSaveBusinessType) {
-                        await onSaveBusinessType(bt.id);
-                      } else {
-                        handleSaveSettings('tienda');
+                        onSaveBusinessType(bt.id);
                       }
-                      toast({
-                        title: `Tipo de negocio actualizado`,
-                        description: `${bt.label}${bt.id === 'services' ? ' (Facturación en formato Carta configurada)' : ''}`,
-                      });
                     }}
                     className={cn(
                       "flex items-center justify-between p-4 rounded-xl border transition-all text-left",
@@ -374,8 +370,9 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
                     key={theme.id}
                     onClick={() => {
                       setShopType(theme.id);
-                      if (onSaveBusinessType) onSaveBusinessType(theme.id);
-                      handleSaveSettings('tienda');
+                      if (onSaveBusinessType) {
+                        onSaveBusinessType(theme.id);
+                      }
                     }}
                     className={cn(
                       "flex items-center justify-between p-3.5 rounded-xl border transition-all text-left",

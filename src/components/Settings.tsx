@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTheme } from '@/components/ThemeProvider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -73,7 +73,9 @@ import {
   QrCode,
   Search,
   Loader2,
-  Smartphone
+  Smartphone,
+  RotateCcw,
+  AlertCircle
 } from 'lucide-react';
 import { injectPrintStyles } from '@/utils/printHandler';
 import BillingMethodSection from '@/components/settings/BillingMethodSection';
@@ -177,6 +179,8 @@ const Settings = () => {
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [shopType, setShopType] = useState('default');
+  const [useDelivery, setUseDelivery] = useState<boolean>(true);
+  const [useKitchen, setUseKitchen] = useState<boolean>(false);
   const [isLookingUpCompanyRnc, setIsLookingUpCompanyRnc] = useState(false);
 
   const handleLookupCompanyRnc = async () => {
@@ -280,6 +284,8 @@ const Settings = () => {
         showBarcode: storeSettings.show_barcode || localSettings.showBarcode || false // Load from DB or Local
       });
       setShopType(storeSettings.shop_type || 'default');
+      setUseDelivery(storeSettings.use_delivery !== false);
+      setUseKitchen(storeSettings.use_kitchen === true);
     }
   }, [
     storeSettings?.invoice_prefix,
@@ -292,6 +298,8 @@ const Settings = () => {
     storeSettings?.email_greeting,
     storeSettings?.email_message,
     storeSettings?.shop_type,
+    storeSettings?.use_delivery,
+    storeSettings?.use_kitchen,
     storeSettings?.show_barcode // NEW: Watch for changes
   ]);
 
@@ -485,6 +493,302 @@ const Settings = () => {
     }
   };
 
+  // Snapshot for tracking unsaved changes (dirty state)
+  interface SettingsSnapshot {
+    companyInfo: typeof companyInfo;
+    invoiceSettings: typeof invoiceSettings;
+    systemSettings: typeof systemSettings;
+    paymentMethods: PaymentMethod[];
+    printSettings: typeof printSettings;
+    kitchenSettings: typeof kitchenSettings;
+    shopType: string;
+    useDelivery: boolean;
+    useKitchen: boolean;
+  }
+
+  const [savedSnapshot, setSavedSnapshot] = useState<SettingsSnapshot | null>(null);
+  const [isSnapshotReady, setIsSnapshotReady] = useState(false);
+
+  useEffect(() => {
+    if (!companySettingsLoading && !loadingSettings && !isSnapshotReady) {
+      setSavedSnapshot({
+        companyInfo: { ...companyInfo },
+        invoiceSettings: { ...invoiceSettings },
+        systemSettings: { ...systemSettings },
+        paymentMethods: [...paymentMethods],
+        printSettings: { ...printSettings },
+        kitchenSettings: { ...kitchenSettings },
+        shopType,
+        useDelivery: storeSettings ? storeSettings.use_delivery !== false : true,
+        useKitchen: storeSettings ? storeSettings.use_kitchen === true : false,
+      });
+      setIsSnapshotReady(true);
+    }
+  }, [
+    companySettingsLoading,
+    loadingSettings,
+    isSnapshotReady,
+    companySettingsDB,
+    storeSettings,
+    companyInfo,
+    invoiceSettings,
+    systemSettings,
+    paymentMethods,
+    printSettings,
+    kitchenSettings,
+    shopType,
+  ]);
+
+  const isCompanyDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return JSON.stringify(companyInfo) !== JSON.stringify(savedSnapshot.companyInfo);
+  }, [companyInfo, savedSnapshot]);
+
+  const isInvoiceDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return JSON.stringify(invoiceSettings) !== JSON.stringify(savedSnapshot.invoiceSettings);
+  }, [invoiceSettings, savedSnapshot]);
+
+  const isSystemDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return JSON.stringify(systemSettings) !== JSON.stringify(savedSnapshot.systemSettings);
+  }, [systemSettings, savedSnapshot]);
+
+  const isPaymentsDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return JSON.stringify(paymentMethods) !== JSON.stringify(savedSnapshot.paymentMethods);
+  }, [paymentMethods, savedSnapshot]);
+
+  const isPrintDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return JSON.stringify(printSettings) !== JSON.stringify(savedSnapshot.printSettings);
+  }, [printSettings, savedSnapshot]);
+
+  const isKitchenDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return JSON.stringify(kitchenSettings) !== JSON.stringify(savedSnapshot.kitchenSettings);
+  }, [kitchenSettings, savedSnapshot]);
+
+  const isStoreDirty = useMemo(() => {
+    if (!savedSnapshot) return false;
+    return (
+      shopType !== savedSnapshot.shopType ||
+      useDelivery !== savedSnapshot.useDelivery ||
+      useKitchen !== savedSnapshot.useKitchen
+    );
+  }, [shopType, useDelivery, useKitchen, savedSnapshot]);
+
+  const isDirty = Boolean(
+    isCompanyDirty ||
+    isInvoiceDirty ||
+    isSystemDirty ||
+    isPaymentsDirty ||
+    isPrintDirty ||
+    isKitchenDirty ||
+    isStoreDirty
+  );
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const handleDiscardChanges = () => {
+    if (!savedSnapshot) return;
+    setCompanyInfo({ ...savedSnapshot.companyInfo });
+    setInvoiceSettings({ ...savedSnapshot.invoiceSettings });
+    setSystemSettings({ ...savedSnapshot.systemSettings });
+    setPaymentMethods([...savedSnapshot.paymentMethods]);
+    setPrintSettings({ ...savedSnapshot.printSettings });
+    setKitchenSettings({ ...savedSnapshot.kitchenSettings });
+    setShopType(savedSnapshot.shopType);
+    setUseDelivery(savedSnapshot.useDelivery);
+    setUseKitchen(savedSnapshot.useKitchen);
+    if (savedSnapshot.companyInfo.logo) {
+      setLogoPreview(savedSnapshot.companyInfo.logo);
+    } else {
+      setLogoPreview(null);
+    }
+    toast({
+      title: "Cambios descartados",
+      description: "Se restauró la configuración original.",
+    });
+  };
+
+  const handleSaveAllChanges = async () => {
+    if (!isDirty) return;
+    setLoading(true);
+    try {
+      const promises: Promise<any>[] = [];
+
+      if (isCompanyDirty) {
+        promises.push(
+          updateSettings({
+            company_name: companyInfo.name,
+            rnc: companyInfo.rnc || null,
+            phone: companyInfo.phone || null,
+            email: companyInfo.email || null,
+            address: companyInfo.address || null,
+            website: companyInfo.website || null,
+            slogan: companyInfo.slogan || null,
+            meta_description: companyInfo.metaDescription || null,
+            social_facebook: companyInfo.socialFacebook || null,
+            social_instagram: companyInfo.socialInstagram || null,
+            social_twitter: companyInfo.socialTwitter || null,
+            logo_invoice_size: companyInfo.logoSize,
+            logo_cart_size: companyInfo.logoCartSize,
+            logo_summary_size: companyInfo.logoSummarySize,
+          }).then(() => {
+            localStorage.setItem('company-info', JSON.stringify(companyInfo));
+          })
+        );
+      }
+
+      if (isInvoiceDirty) {
+        let localSettings: any = {};
+        try {
+          localSettings = JSON.parse(localStorage.getItem('invoice_settings_local') || '{}');
+        } catch (e) {
+          console.error('Error parsing invoice_settings_local', e);
+        }
+        localStorage.setItem('invoice_settings_local', JSON.stringify({
+          ...localSettings,
+          showBarcode: invoiceSettings.showBarcode
+        }));
+
+        localStorage.setItem('print_margins_settings', JSON.stringify({
+          pageMargin: printSettings.pageMargin,
+          containerPadding: printSettings.containerPadding,
+          logoMarginTop: printSettings.logoMarginTop,
+          logoMarginBottom: printSettings.logoMarginBottom,
+          logoWidth: printSettings.logoWidth,
+          fontSize: printSettings.fontSize
+        }));
+
+        injectPrintStyles();
+
+        promises.push(
+          updateStoreSettings({
+            invoice_prefix: invoiceSettings.invoicePrefix,
+            auto_increment: invoiceSettings.autoIncrement,
+            show_tax: invoiceSettings.showTax,
+            default_tax_rate: parseFloat(invoiceSettings.defaultTaxRate) || 18,
+            currency: invoiceSettings.currency,
+            payment_terms: parseInt(invoiceSettings.paymentTerms) || 15,
+            email_message: invoiceSettings.emailMessage,
+            show_barcode: invoiceSettings.showBarcode,
+          }).catch(err => {
+            console.warn('DB update warning for invoice settings', err);
+          })
+        );
+      }
+
+      if (isPaymentsDirty) {
+        promises.push(
+          updateStoreSettings({
+            payment_methods: paymentMethods,
+          })
+        );
+      }
+
+      if (isPrintDirty && !isInvoiceDirty) {
+        localStorage.setItem('print_margins_settings', JSON.stringify({
+          pageMargin: printSettings.pageMargin,
+          containerPadding: printSettings.containerPadding,
+          logoMarginTop: printSettings.logoMarginTop,
+          logoMarginBottom: printSettings.logoMarginBottom,
+          logoWidth: printSettings.logoWidth,
+          fontSize: printSettings.fontSize
+        }));
+
+        injectPrintStyles();
+
+        promises.push(
+          updateStoreSettings({
+            paper_size: printSettings.paperSize,
+            use_thermal_printer: printSettings.useThermalPrinter,
+            thermal_printer_name: printSettings.thermalPrinterName || null,
+            invoice_font_size: printSettings.fontSize,
+          }).catch(err => {
+            console.warn('DB update warning for print settings', err);
+          })
+        );
+      }
+
+      if (isSystemDirty) {
+        promises.push(
+          updateStoreSettings({
+            notifications_enabled: systemSettings.notifications,
+            auto_backup: systemSettings.autoBackup,
+            theme: systemSettings.theme,
+            language: systemSettings.language,
+            timezone: systemSettings.timezone,
+            backup_frequency: systemSettings.backupFrequency,
+            log_retention_days: parseInt(systemSettings.retentionDays) || 30,
+            pos_layout_grid_cols: parseInt(systemSettings.posLayoutGridCols) || 2,
+            ai_api_key: systemSettings.aiApiKey,
+          })
+        );
+      }
+
+      if (isStoreDirty) {
+        promises.push(
+          updateStoreSettings({
+            shop_type: shopType,
+            use_delivery: useDelivery,
+            use_kitchen: useKitchen,
+          } as any)
+        );
+      }
+
+      if (isKitchenDirty) {
+        promises.push(
+          updateStoreSettings({
+            kitchen_yellow_threshold: kitchenSettings.yellowThreshold,
+            kitchen_red_threshold: kitchenSettings.redThreshold,
+            kitchen_alert_threshold: kitchenSettings.alertThreshold,
+            kitchen_sound_type: kitchenSettings.soundType,
+            kitchen_sound_volume: kitchenSettings.soundVolume,
+          } as any)
+        );
+      }
+
+      await Promise.all(promises);
+
+      setSavedSnapshot({
+        companyInfo: { ...companyInfo },
+        invoiceSettings: { ...invoiceSettings },
+        systemSettings: { ...systemSettings },
+        paymentMethods: [...paymentMethods],
+        printSettings: { ...printSettings },
+        kitchenSettings: { ...kitchenSettings },
+        shopType,
+        useDelivery,
+        useKitchen,
+      });
+
+      toast({
+        title: "Configuración guardada",
+        description: "Todos los cambios se han guardado exitosamente.",
+      });
+    } catch (error) {
+      console.error('Error al guardar configuración:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la configuración completa.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveSettings = async (section: string) => {
     setLoading(true);
     try {
@@ -606,7 +910,9 @@ const Settings = () => {
         injectPrintStyles();
       } else if (section === 'tienda') {
         await updateStoreSettings({
-          shop_type: shopType
+          shop_type: shopType,
+          use_delivery: useDelivery,
+          use_kitchen: useKitchen,
         } as any);
       } else if (section === 'cocina') {
         await updateStoreSettings({
@@ -617,6 +923,19 @@ const Settings = () => {
           kitchen_sound_volume: kitchenSettings.soundVolume,
         } as any);
       }
+
+      // Update snapshot for the saved section
+      setSavedSnapshot(prev => {
+        if (!prev) return null;
+        if (section === 'empresa') return { ...prev, companyInfo: { ...companyInfo } };
+        if (section === 'facturas') return { ...prev, invoiceSettings: { ...invoiceSettings }, printSettings: { ...printSettings } };
+        if (section === 'pagos') return { ...prev, paymentMethods: [...paymentMethods] };
+        if (section === 'impresion') return { ...prev, printSettings: { ...printSettings } };
+        if (section === 'sistema') return { ...prev, systemSettings: { ...systemSettings } };
+        if (section === 'tienda') return { ...prev, shopType, useDelivery, useKitchen };
+        if (section === 'cocina') return { ...prev, kitchenSettings: { ...kitchenSettings }, useKitchen };
+        return prev;
+      });
 
       const sectionNames: Record<string, string> = {
         'empresa': 'Empresa',
@@ -1472,6 +1791,36 @@ const Settings = () => {
   // Mobile-optimized sections content
   const mobileStoreSectionContent = (
     <div className="space-y-8">
+      {/* ── Módulos activos (Mobile) ── */}
+      <div className="p-4 rounded-2xl border bg-zinc-900/40 backdrop-blur-md border-zinc-800/40 space-y-3">
+        <div className="flex items-center justify-between p-3 rounded-xl border bg-zinc-950/40">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Bike className="h-4 w-4 text-blue-400" />
+            </div>
+            <p className="font-medium text-xs">Delivery</p>
+          </div>
+          <Switch
+            checked={useDelivery}
+            onCheckedChange={(checked) => setUseDelivery(checked)}
+          />
+        </div>
+        {shopType === 'restaurant' && (
+          <div className="flex items-center justify-between p-3 rounded-xl border bg-zinc-950/40">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                <ChefHat className="h-4 w-4 text-orange-400" />
+              </div>
+              <p className="font-medium text-xs">Pantalla de Cocina (KDS)</p>
+            </div>
+            <Switch
+              checked={useKitchen}
+              onCheckedChange={(checked) => setUseKitchen(checked)}
+            />
+          </div>
+        )}
+      </div>
+
       <SettingsStoreSection
         storeLoading={storeLoading}
         userStore={userStore}
@@ -1486,10 +1835,8 @@ const Settings = () => {
         shopType={shopType}
         setShopType={setShopType}
         handleSaveSettings={handleSaveSettings}
-        onSaveBusinessType={async (type) => {
-          setShopType(type);
-          await updateStoreSettings({ shop_type: type } as any);
-        }}
+        onSaveBusinessType={(type) => setShopType(type)}
+        onPaperSizeChange={(size) => setPrintSettings(prev => ({ ...prev, paperSize: size }))}
       />
       <Separator />
       <BannerSettingsSection />
@@ -2109,23 +2456,20 @@ const Settings = () => {
         <div className="flex items-center justify-between p-4 rounded-2xl border bg-muted/40">
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-              storeSettings?.use_kitchen === true ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/10 text-orange-400'
+              useKitchen ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/10 text-orange-400'
             }`}>
               <ChefHat className="h-5 w-5" />
             </div>
             <div>
               <p className="font-semibold text-sm">Pantalla de Cocina (KDS)</p>
               <p className="text-xs text-muted-foreground">
-                {storeSettings?.use_kitchen === true ? 'Habilitada en el menú' : 'Desactivada por defecto'}
+                {useKitchen ? 'Habilitada en el menú' : 'Desactivada por defecto'}
               </p>
             </div>
           </div>
           <Switch
-            checked={storeSettings?.use_kitchen === true}
-            onCheckedChange={async (checked) => {
-              await updateStoreSettings({ use_kitchen: checked } as any);
-              toast({ title: checked ? '✅ Pantalla de Cocina activada' : '🚫 Pantalla de Cocina desactivada' });
-            }}
+            checked={useKitchen}
+            onCheckedChange={(checked) => setUseKitchen(checked)}
           />
         </div>
         <div className="space-y-4">
@@ -2250,6 +2594,48 @@ const Settings = () => {
             advanced: mobileAdvancedSectionContent,
           }}
         </MobileSettingsLayout>
+
+        {/* Floating Save/Discard Bar for Mobile */}
+        {isDirty && (
+          <div className="fixed bottom-4 inset-x-0 mx-auto z-50 max-w-sm px-4 pointer-events-none animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <div className="pointer-events-auto bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-2xl p-3 flex items-center justify-between gap-2 text-white ring-1 ring-emerald-500/20">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                <span className="text-xs font-bold text-zinc-200 truncate">Cambios pendientes</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDiscardChanges}
+                  disabled={loading}
+                  className="h-8 px-2.5 text-xs text-zinc-400 hover:text-white rounded-lg"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                  Descartar
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveAllChanges}
+                  disabled={loading}
+                  className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg"
+                >
+                  {loading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                      Guardar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <ThermalPrinterDialog
           open={showPrinterDialog}
           onOpenChange={setShowPrinterDialog}
@@ -2264,7 +2650,7 @@ const Settings = () => {
     <div className="min-h-screen animate-fade-in pb-20 bg-background/50">
       {/* Header Compacto y Adaptable */}
       <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pt-4 pb-2">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-foreground">
@@ -2273,11 +2659,51 @@ const Settings = () => {
               <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                 Centro de Control
               </span>
+              {isDirty && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  Cambios pendientes
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
               Personaliza el sistema, diseño de facturas, módulos e impresoras de tu negocio
             </p>
           </div>
+
+          {/* Quick Header Actions when dirty */}
+          {isDirty && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDiscardChanges}
+                disabled={loading}
+                className="h-9 px-3.5 text-xs font-semibold rounded-xl border-border/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                Descartar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveAllChanges}
+                disabled={loading}
+                className="h-9 px-4 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/20 transition-all"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5 mr-1.5" />
+                    Guardar cambios
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2294,7 +2720,7 @@ const Settings = () => {
                 <TabsTrigger value="payments" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Métodos de Pago</TabsTrigger>
                 <TabsTrigger value="print" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Impresión</TabsTrigger>
                 <TabsTrigger value="notifications" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Comunicaciones</TabsTrigger>
-                {(shopType === 'restaurant' || storeSettings?.use_kitchen === true) && (
+                {(shopType === 'restaurant' || useKitchen) && (
                   <TabsTrigger value="cocina" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Cocina KDS</TabsTrigger>
                 )}
                 <TabsTrigger value="ai" className="shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all text-muted-foreground hover:bg-zinc-800/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center gap-1.5">
@@ -2333,17 +2759,14 @@ const Settings = () => {
                   <p className="font-medium text-sm">Delivery</p>
                 </div>
                 <Switch
-                  checked={storeSettings?.use_delivery !== false}
-                  onCheckedChange={async (checked) => {
-                    await updateStoreSettings({ use_delivery: checked } as any);
-                    toast({ title: checked ? '✅ Delivery activado' : '🚫 Delivery desactivado' });
-                  }}
+                  checked={useDelivery}
+                  onCheckedChange={(checked) => setUseDelivery(checked)}
                 />
               </div>
 
               {/* Kitchen toggle — functional, only shown for restaurant type */}
               {shopType === 'restaurant' && (
-                <div className={`flex items-center justify-between p-3.5 rounded-xl border bg-card transition-opacity ${storeSettings?.use_kitchen !== true ? 'opacity-70' : ''}`}>
+                <div className={`flex items-center justify-between p-3.5 rounded-xl border bg-card transition-opacity ${!useKitchen ? 'opacity-70' : ''}`}>
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-lg bg-orange-500/10 flex items-center justify-center">
                       <ChefHat className="h-4 w-4 text-orange-400" />
@@ -2351,16 +2774,13 @@ const Settings = () => {
                     <div>
                       <p className="font-medium text-sm">Pantalla de Cocina (KDS)</p>
                       <p className="text-xs text-muted-foreground">
-                        {storeSettings?.use_kitchen === true ? 'Activada' : 'Desactivada por defecto'}
+                        {useKitchen ? 'Activada' : 'Desactivada por defecto'}
                       </p>
                     </div>
                   </div>
                   <Switch
-                    checked={storeSettings?.use_kitchen === true}
-                    onCheckedChange={async (checked) => {
-                      await updateStoreSettings({ use_kitchen: checked } as any);
-                      toast({ title: checked ? '✅ Cocina activada' : '🚫 Cocina desactivada' });
-                    }}
+                    checked={useKitchen}
+                    onCheckedChange={(checked) => setUseKitchen(checked)}
                   />
                 </div>
               )}
@@ -2380,10 +2800,8 @@ const Settings = () => {
             shopType={shopType}
             setShopType={setShopType}
             handleSaveSettings={handleSaveSettings}
-            onSaveBusinessType={async (type) => {
-              setShopType(type);
-              await updateStoreSettings({ shop_type: type } as any);
-            }}
+            onSaveBusinessType={(type) => setShopType(type)}
+            onPaperSizeChange={(size) => setPrintSettings(prev => ({ ...prev, paperSize: size }))}
           />
           <Separator />
           <Card>
@@ -3648,7 +4066,7 @@ const Settings = () => {
         {(() => {
           const raw = shopType;
           const normalizedType = raw === 'store' ? 'store' : raw === 'supermarket' ? 'supermarket' : 'restaurant';
-          if (normalizedType !== 'restaurant' && storeSettings?.use_kitchen !== true) return null;
+          if (normalizedType !== 'restaurant' && !useKitchen) return null;
 
           return (
             <TabsContent value="cocina" className="space-y-6 mt-0">
@@ -3667,23 +4085,15 @@ const Settings = () => {
                     <div className="flex items-center gap-3 self-start sm:self-center p-3 px-4 rounded-2xl border bg-muted/40">
                       <div className="text-right">
                         <p className="text-xs font-semibold leading-tight">
-                          {storeSettings?.use_kitchen === true ? 'Módulo Activo' : 'Módulo Inactivo'}
+                          {useKitchen ? 'Módulo Activo' : 'Módulo Inactivo'}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
-                          {storeSettings?.use_kitchen === true ? 'Visible en menú' : 'Desactivado por defecto'}
+                          {useKitchen ? 'Visible en menú' : 'Desactivado por defecto'}
                         </p>
                       </div>
                       <Switch
-                        checked={storeSettings?.use_kitchen === true}
-                        onCheckedChange={async (checked) => {
-                          await updateStoreSettings({ use_kitchen: checked } as any);
-                          toast({
-                            title: checked ? '✅ Pantalla de Cocina activada' : '🚫 Pantalla de Cocina desactivada',
-                            description: checked
-                              ? 'La opción ahora es visible en el menú principal.'
-                              : 'La opción se ha ocultado del menú principal.'
-                          });
-                        }}
+                        checked={useKitchen}
+                        onCheckedChange={(checked) => setUseKitchen(checked)}
                       />
                     </div>
                   </div>
@@ -4083,6 +4493,60 @@ const Settings = () => {
         onOpenChange={setShowPrinterDialog}
         onConnect={handlePrinterConnected}
       />
+
+      {/* Floating Save/Discard Bar (Desktop) */}
+      {isDirty && (
+        <div className="fixed bottom-6 inset-x-0 mx-auto z-50 max-w-xl px-4 pointer-events-none animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="pointer-events-auto bg-zinc-950/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-white/10 dark:border-zinc-700/60 shadow-[0_12px_40px_rgba(0,0,0,0.5)] rounded-2xl p-3 sm:px-5 sm:py-3.5 flex items-center justify-between gap-3 text-white ring-1 ring-primary/20">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-zinc-100 truncate">
+                  Tienes cambios sin guardar
+                </p>
+                <p className="text-[11px] text-zinc-400 hidden sm:block truncate">
+                  Aplica o descarta las modificaciones en la configuración.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleDiscardChanges}
+                disabled={loading}
+                className="h-9 px-3 text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5 sm:mr-1.5" />
+                <span className="hidden sm:inline">Descartar</span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveAllChanges}
+                disabled={loading}
+                className="h-9 px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-900/30 transition-all"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5 mr-1.5" />
+                    <span>Guardar cambios</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
