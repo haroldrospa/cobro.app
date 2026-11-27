@@ -542,7 +542,15 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         ? (storeSettings as any)?.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')?.bank_accounts
         : []) || [];
 
-    const bankDetailsWhatsApp = (resolvedBankAccounts && resolvedBankAccounts.length > 0)
+    const pmText = (saleData?.paymentMethod || (saleData as any)?.payment_method || '').toLowerCase();
+    const isTransferPayment = pmText.includes('transfer') || pmText.includes('banco');
+    const shouldIncludeBankAccountsWhatsApp = Boolean(
+      resolvedBankAccounts &&
+      resolvedBankAccounts.length > 0 &&
+      (isQuote || isTransferPayment)
+    );
+
+    const bankDetailsWhatsApp = shouldIncludeBankAccountsWhatsApp
       ? `*Cuentas para Transferencias / Depósitos:*\n` +
         resolvedBankAccounts.map((b: any) => `🏦 *${b.bank_name}*${b.account_type ? ` (${b.account_type})` : ''}\n   No: \`${b.account_number}\`${b.holder_name ? `\n   Titular: ${b.holder_name}` : ''}${b.rnc_cedula ? `\n   RNC/Céd: ${b.rnc_cedula}` : ''}`).join('\n\n') +
         `\n\n`
@@ -1414,7 +1422,15 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
         ? (storeSettings as any)?.payment_methods.find((m: any) => m.id === 'transfer' || m.id === 'bank')?.bank_accounts
         : []) || [];
 
-    if (pdfBankAccounts && pdfBankAccounts.length > 0) {
+    const pmPdfText = (saleData.paymentMethod || (saleData as any).payment_method || '').toLowerCase();
+    const isTransferPdf = pmPdfText.includes('transfer') || pmPdfText.includes('banco') || translatePaymentMethod(saleData.paymentMethod) === 'Transferencia';
+    const shouldShowPdfBankAccounts = Boolean(
+      pdfBankAccounts && 
+      pdfBankAccounts.length > 0 && 
+      (isQuote || isTransferPdf)
+    );
+
+    if (shouldShowPdfBankAccounts) {
       let bankY = finalY;
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);

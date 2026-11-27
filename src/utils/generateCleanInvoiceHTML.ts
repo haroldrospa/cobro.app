@@ -136,6 +136,12 @@ export const generateCleanInvoiceHTML = (
   const hasElectronicStyle = isElectronic;
   const hasTax = Boolean(invoiceData.taxRate > 0 && (invoiceData.tax || 0) > 0.005);
   const isPendingPayment = invoiceData.isPendingPayment ?? (invoiceData.paymentStatus === 'pending' || isCreditSale);
+  const isTransfer = pmLower.includes('transfer') || pmLower.includes('banco') || pMethod === 'Transferencia';
+  const shouldShowBankAccounts = Boolean(
+    invoiceData.bankAccounts &&
+    invoiceData.bankAccounts.length > 0 &&
+    (isTransfer || isQuotation)
+  );
 
   const displayNCF = isQuotation
     ? rawInvoiceNum
@@ -498,7 +504,7 @@ export const generateCleanInvoiceHTML = (
         <div style="display: flex; flex-direction: column; gap: 9px;">
           
           <!-- Cuentas Bancarias para Transferencias (Diseño Moderno y Minimalista) -->
-          ${invoiceData.bankAccounts && invoiceData.bankAccounts.length > 0 ? `
+          ${shouldShowBankAccounts ? `
             <div style="background: #fbfbfc; border: 1px solid #ebecee; border-radius: 8px; overflow: hidden; width: 100%; box-sizing: border-box;">
               <div style="background: #18181b; color: #ffffff; padding: 7px 13px; display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;">
@@ -854,7 +860,7 @@ export const generateCleanInvoiceHTML = (
     </div>
 
     <!-- Card Bancaria: Cuentas para Transferencias -->
-    ${invoiceData.bankAccounts && invoiceData.bankAccounts.length > 0 ? `
+    ${shouldShowBankAccounts ? `
       <div style="background-color: #ffffff; border: 2px solid #000000; border-radius: 6px; padding: 5px 6px; margin-bottom: 6px;">
         <div style="font-weight: 900; font-size: ${sizeXSmall}px; text-transform: uppercase; margin-bottom: 3px; border-bottom: 1px dashed #000000; padding-bottom: 2px;">
           CUENTAS PARA TRANSFERENCIAS:
