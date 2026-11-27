@@ -280,18 +280,6 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
       return false;
     }
 
-    // Validación fiscal: Facturas electrónicas (excepto E32) y fiscales tradicionales requieren cliente con RNC
-    const code = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
-    const fiscalVal = validateFiscalCustomer(code, selectedCustomer, totals.grandTotal);
-    if (!fiscalVal.isValid) {
-      toast({
-        title: "Cliente con RNC Requerido",
-        description: fiscalVal.errorMessage || "Debe seleccionar un cliente con RNC o Cédula válido.",
-        variant: "destructive"
-      });
-      return false;
-    }
-
     return true;
   };
 
@@ -377,7 +365,7 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
                 onValueChange={(val) => setSelectedCustomerId(val === 'none' ? '' : val)}
               >
                 <SelectTrigger className="h-11 rounded-xl bg-background border-border text-sm">
-                  <SelectValue placeholder="Seleccione un cliente (opcional para B02)" />
+                  <SelectValue placeholder="Seleccione un cliente (opcional)" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60 rounded-xl">
                   <SelectItem value="none">

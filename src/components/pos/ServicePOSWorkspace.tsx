@@ -456,17 +456,6 @@ export const ServicePOSWorkspace: React.FC<ServicePOSWorkspaceProps> = ({
       return null;
     }
 
-    const activeCode = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
-    const validation = validateFiscalCustomer(activeCode, selectedCustomer, totals.total);
-    if (!validation.isValid) {
-      toast({
-        title: "Cliente con RNC Requerido",
-        description: validation.errorMessage || "Debe seleccionar un cliente con RNC o Cédula válido para este comprobante.",
-        variant: "destructive"
-      });
-      return null;
-    }
-
     return validItems;
   };
 
