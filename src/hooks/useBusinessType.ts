@@ -82,11 +82,7 @@ export const useBusinessType = () => {
     };
 
     const setBusinessType = (type: BusinessType) => {
-        if (type === 'services') {
-            updateSettings({ shop_type: type, paper_size: 'carta' });
-        } else {
-            updateSettings({ shop_type: type });
-        }
+        updateSettings({ shop_type: type });
     };
 
     return {

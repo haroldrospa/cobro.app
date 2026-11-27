@@ -323,9 +323,6 @@ const SettingsStoreSection: React.FC<SettingsStoreSectionProps> = ({
                     key={bt.id}
                     onClick={() => {
                       setShopType(bt.id);
-                      if (bt.id === 'services' && onPaperSizeChange) {
-                        onPaperSizeChange('carta');
-                      }
                       if (onSaveBusinessType) {
                         onSaveBusinessType(bt.id);
                       }

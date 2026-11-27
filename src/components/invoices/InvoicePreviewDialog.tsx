@@ -85,9 +85,8 @@ const InvoicePreviewDialog: React.FC<InvoicePreviewDialogProps> = ({
     const invoiceNum = (saleData as any).encf || saleData.invoice_number || '';
     const isElec = invoiceNum.startsWith('E') || (saleData as any).is_electronic || !!(saleData as any).encf;
 
-    const isServices = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
     const rawPaper = storeSettings?.paper_size || printSettings?.paperSize;
-    const activePaper = isServices ? (rawPaper === 'A4' ? 'A4' : 'carta') : (rawPaper || 'carta');
+    const activePaper = rawPaper || 'carta';
 
     return generateCleanInvoiceHTML(
       {

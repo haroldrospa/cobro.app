@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { usePrintSettings } from '@/hooks/usePrintSettings';
+import { usePrintSettings, PaperSize } from '@/hooks/usePrintSettings';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 import JsBarcode from 'jsbarcode';
@@ -434,9 +435,39 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     }
   }, [saleData?.customer?.email]);
   const isServicesMode = storeSettings?.shop_type === 'services' || (saleData as any)?.is_service;
-  const effectivePaperSize = isServicesMode
-    ? (printSettings.paperSize === 'A4' ? 'A4' : 'carta')
-    : (printSettings.paperSize || 'carta');
+
+  const [selectedPaperSize, setSelectedPaperSize] = useState<PaperSize>(() => {
+    // 1. Preferencia guardada en localStorage
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('cobro_preferred_paper_size') as PaperSize | null : null;
+    if (saved && ['58mm', '80mm', 'carta', 'A4'].includes(saved)) {
+      return saved;
+    }
+    // 2. Usar configuración de la tienda si está disponible
+    if (printSettings.paperSize) {
+      return printSettings.paperSize;
+    }
+    return 'carta';
+  });
+
+  // Sincronizar si printSettings carga después y el usuario no tiene preferencia local manual
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('cobro_preferred_paper_size') as PaperSize | null : null;
+    if (!saved && printSettings.paperSize) {
+      setSelectedPaperSize(printSettings.paperSize);
+    }
+  }, [printSettings.paperSize]);
+
+  const effectivePaperSize: PaperSize = selectedPaperSize;
+
+  const handlePaperSizeChange = (size: PaperSize) => {
+    setSelectedPaperSize(size);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cobro_preferred_paper_size', size);
+    }
+    if (updateStoreSettings) {
+      updateStoreSettings({ paper_size: size }).catch(() => {});
+    }
+  };
 
   const customerPhoneToSend = useMemo(() => {
     return (
@@ -719,8 +750,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
     const invoiceNum = invoiceNumber;
     const logoSize = companyInfo.logoInvoiceSize || companyInfo.logoSize || 120;
 
-    // Get print settings from database hook
-    const paperSize = printSettings.paperSize || 'carta';
+    // Get print settings from state or database hook
+    const paperSize = effectivePaperSize || printSettings.paperSize || 'carta';
 
     // Define styles based on paper size
     const paperStyles = {
@@ -1855,6 +1886,73 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
               </Card>
             )}
 
+            {/* Selector de formato de impresión */}
+            <div className="space-y-1.5 p-2.5 rounded-xl border border-border/60 bg-muted/20">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Printer className="h-3.5 w-3.5 text-primary" />
+                  Formato de impresión:
+                </span>
+                <span className="font-bold text-xs text-primary">
+                  {effectivePaperSize === '80mm' ? 'Recibo 80mm' :
+                   effectivePaperSize === '58mm' ? 'Recibo 58mm' :
+                   effectivePaperSize === 'A4' ? 'Hoja A4' : 'Hoja Carta'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => handlePaperSizeChange('80mm')}
+                  className={cn(
+                    "py-1.5 px-1.5 rounded-lg text-xs font-semibold transition-all flex flex-col items-center justify-center gap-0.5 border cursor-pointer",
+                    effectivePaperSize === '80mm'
+                      ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
+                      : "bg-background/80 text-muted-foreground border-border/60 hover:text-foreground hover:bg-accent/40"
+                  )}
+                >
+                  <span className="leading-tight">Recibo 80mm</span>
+                  <span className={cn(
+                    "text-[9px] leading-tight font-normal",
+                    effectivePaperSize === '80mm' ? "text-primary-foreground/85" : "text-muted-foreground/70"
+                  )}>Térmico grande</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePaperSizeChange('58mm')}
+                  className={cn(
+                    "py-1.5 px-1.5 rounded-lg text-xs font-semibold transition-all flex flex-col items-center justify-center gap-0.5 border cursor-pointer",
+                    effectivePaperSize === '58mm'
+                      ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
+                      : "bg-background/80 text-muted-foreground border-border/60 hover:text-foreground hover:bg-accent/40"
+                  )}
+                >
+                  <span className="leading-tight">Recibo 58mm</span>
+                  <span className={cn(
+                    "text-[9px] leading-tight font-normal",
+                    effectivePaperSize === '58mm' ? "text-primary-foreground/85" : "text-muted-foreground/70"
+                  )}>Térmico chico</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePaperSizeChange('carta')}
+                  className={cn(
+                    "py-1.5 px-1.5 rounded-lg text-xs font-semibold transition-all flex flex-col items-center justify-center gap-0.5 border cursor-pointer",
+                    effectivePaperSize === 'carta' || effectivePaperSize === 'A4'
+                      ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
+                      : "bg-background/80 text-muted-foreground border-border/60 hover:text-foreground hover:bg-accent/40"
+                  )}
+                >
+                  <span className="leading-tight">Hoja Carta</span>
+                  <span className={cn(
+                    "text-[9px] leading-tight font-normal",
+                    effectivePaperSize === 'carta' || effectivePaperSize === 'A4' ? "text-primary-foreground/85" : "text-muted-foreground/70"
+                  )}>Completa / A4</span>
+                </button>
+              </div>
+            </div>
+
             {/* Print Options */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
@@ -1880,7 +1978,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       ? 'Imprimiendo...'
                       : (effectivePaperSize === 'carta' || effectivePaperSize === 'A4')
                         ? 'Imprimir Factura (Formato Carta)'
-                        : isAndroidNative() ? 'Imprimir en impresora térmica' : 'Imprimir directamente (Navegador)'}
+                        : effectivePaperSize === '58mm'
+                          ? (isAndroidNative() ? 'Imprimir en térmica (58mm)' : 'Imprimir Recibo (58mm)')
+                          : (isAndroidNative() ? 'Imprimir en térmica (80mm)' : 'Imprimir Recibo (80mm)')}
                   </span>
                 </Button>
               </Card>
@@ -1904,7 +2004,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({
                       ? 'Generando PDF...'
                       : (effectivePaperSize === 'carta' || effectivePaperSize === 'A4')
                         ? 'Descargar PDF (Formato Carta)'
-                        : 'Descargar PDF'}
+                        : `Descargar PDF (Recibo ${effectivePaperSize})`}
                   </span>
                 </Button>
               </Card>
