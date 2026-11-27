@@ -18,7 +18,8 @@ import {
   Trophy,
   Crown,
   Sparkles,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { triggerQuickGuide } from '@/components/guide/QuickGuideDialog';
 import { LoadingLogo } from '@/components/ui/loading-logo';
@@ -86,6 +87,10 @@ const Dashboard: React.FC = () => {
       to: today
     };
   });
+
+  // Control de tabs para gráficos (evita que Recharts colapse a dimensiones 0x0 en pestañas inactivas)
+  const [salesPeriodTab, setSalesPeriodTab] = useState<'weekly' | 'monthly' | 'calendar'>('weekly');
+  const [bottomTab, setBottomTab] = useState<'products' | 'hourly' | 'clients' | 'alerts'>('products');
 
   const queryClient = useQueryClient();
 
@@ -424,37 +429,29 @@ const Dashboard: React.FC = () => {
   }, [validSales]);
 
   // 4. Calcular Ventas Mensuales (Client-Side)
-  // Eliminamos el RPC que no filtraba ventas canceladas y calculamos en frontend
-  const { data: monthlySalesData = [] } = useQuery({
-    queryKey: ['monthly-sales', new Date().getFullYear(), profile?.store_id],
+  const currentDashboardYear = new Date().getFullYear();
+  const { data: monthlySalesData = [], isLoading: isLoadingMonthlySales } = useQuery({
+    queryKey: ['monthly-sales', currentDashboardYear, profile?.store_id],
     enabled: !!profile?.store_id,
     staleTime: 1000 * 60 * 15, // 15 min — annual chart doesn't need real-time
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      const storeId = profile?.store_id;
+      if (!storeId) return [];
 
-      const { data: profileResult } = await supabase
-        .from('profiles')
-        .select('store_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const actualStoreId = profileResult?.store_id;
-      if (!actualStoreId) return [];
-
-      const year = new Date().getFullYear();
-      const startOfYear = new Date(year, 0, 1).toISOString();
-      const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999).toISOString();
+      const startOfYear = new Date(currentDashboardYear, 0, 1, 0, 0, 0, 0).toISOString();
+      const endOfYear = new Date(currentDashboardYear, 11, 31, 23, 59, 59, 999).toISOString();
 
       const allData: any[] = [];
       let from = 0;
       const pageSize = 1000;
+      let iterations = 0;
 
-      while (true) {
+      while (iterations < 10) {
+        iterations++;
         const { data, error } = await supabase
           .from('sales')
           .select('total, created_at, status')
-          .eq('store_id', actualStoreId)
+          .eq('store_id', storeId)
           .neq('status', 'cancelled')
           .gte('created_at', startOfYear)
           .lte('created_at', endOfYear)
@@ -477,7 +474,12 @@ const Dashboard: React.FC = () => {
       const monthTotals = new Array(12).fill(0);
       allData.forEach(s => {
         const d = getBusinessDate(s.created_at) || safeParseDate(s.created_at);
-        if (d) monthTotals[d.getMonth()] += Number(s.total) || 0;
+        if (d) {
+          const m = d.getMonth();
+          if (m >= 0 && m < 12) {
+            monthTotals[m] += Number(s.total) || 0;
+          }
+        }
       });
 
       return monthNames.map((month, index) => ({
@@ -489,24 +491,13 @@ const Dashboard: React.FC = () => {
   });
 
   // 4.5 Calcular Ventas Semanales (Últimos 7 días)
-  const { data: weeklySalesData = [] } = useQuery({
+  const { data: weeklySalesData = [], isLoading: isLoadingWeeklySales } = useQuery({
     queryKey: ['weekly-sales', profile?.store_id],
     enabled: !!profile?.store_id,
     staleTime: 1000 * 60 * 5, // 5 min — weekly chart doesn't need instant updates
     queryFn: async () => {
-      if (!profile?.store_id) return [];
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('store_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const actualStoreId = profileData?.store_id;
-      if (!actualStoreId) return [];
+      const storeId = profile?.store_id;
+      if (!storeId) return [];
 
       const today = new Date();
       const sevenDaysAgo = new Date(today);
@@ -516,12 +507,14 @@ const Dashboard: React.FC = () => {
       const allData: any[] = [];
       let from = 0;
       const pageSize = 1000;
+      let iterations = 0;
 
-      while (true) {
+      while (iterations < 5) {
+        iterations++;
         const { data, error } = await supabase
           .from('sales')
           .select('total, created_at, status')
-          .eq('store_id', actualStoreId)
+          .eq('store_id', storeId)
           .gte('created_at', sevenDaysAgo.toISOString())
           .neq('status', 'cancelled')
           .order('created_at', { ascending: false })
@@ -1080,7 +1073,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Ventas Mensuales y Semanales */}
         <Card className="xl:col-span-2 shadow-lg border-0">
-          <Tabs defaultValue="weekly" className="w-full flex flex-col h-full">
+          <Tabs value={salesPeriodTab} onValueChange={(val) => setSalesPeriodTab(val as any)} className="w-full flex flex-col h-full">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <CardTitle className="flex items-center justify-center sm:justify-start gap-2 whitespace-nowrap">
                 <BarChart3 className="h-5 w-5 text-accent" />
@@ -1096,69 +1089,87 @@ const Dashboard: React.FC = () => {
               <div className="flex flex-col lg:flex-row gap-5">
                 {/* Chart Area */}
                 <div className="flex-1 min-w-0">
-                  <TabsContent value="weekly" className="h-full m-0">
-                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                      <BarChart
-                        data={weeklySalesData}
-                        margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                        <XAxis
-                          dataKey="day"
-                          tick={{ fontSize: 11 }}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 11 }}
-                          tickLine={false}
-                          axisLine={false}
-                          width={50}
-                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                        />
-                        <ChartTooltip
-                          content={<ChartTooltipContent />}
-                          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ventas']}
-                        />
-                        <Bar dataKey="sales" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                          {weeklySalesData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ChartContainer>
+                  <TabsContent value="weekly" className="h-full m-0 min-h-[300px]">
+                    {salesPeriodTab === 'weekly' && (
+                      isLoadingWeeklySales ? (
+                        <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                          <Loader2 className="h-6 w-6 animate-spin text-accent" />
+                          <span className="text-xs">Cargando ventas de la semana...</span>
+                        </div>
+                      ) : (
+                        <ChartContainer key="weekly-chart" config={chartConfig} className="aspect-auto h-[300px] min-h-[300px] w-full">
+                          <BarChart
+                            data={weeklySalesData}
+                            margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                            <XAxis
+                              dataKey="day"
+                              tick={{ fontSize: 11 }}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 11 }}
+                              tickLine={false}
+                              axisLine={false}
+                              width={50}
+                              tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                            />
+                            <ChartTooltip
+                              content={<ChartTooltipContent />}
+                              formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ventas']}
+                            />
+                            <Bar dataKey="sales" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                              {weeklySalesData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ChartContainer>
+                      )
+                    )}
                   </TabsContent>
-                  <TabsContent value="monthly" className="h-full m-0">
-                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                      <BarChart
-                        data={monthlySalesData}
-                        margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                        <XAxis
-                          dataKey="month"
-                          tick={{ fontSize: 11 }}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 11 }}
-                          tickLine={false}
-                          axisLine={false}
-                          width={50}
-                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                        />
-                        <ChartTooltip
-                          content={<ChartTooltipContent />}
-                          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ventas']}
-                        />
-                        <Bar dataKey="sales" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                          {monthlySalesData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ChartContainer>
+                  <TabsContent value="monthly" className="h-full m-0 min-h-[300px]">
+                    {salesPeriodTab === 'monthly' && (
+                      isLoadingMonthlySales ? (
+                        <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                          <Loader2 className="h-6 w-6 animate-spin text-accent" />
+                          <span className="text-xs">Cargando ventas mensuales...</span>
+                        </div>
+                      ) : (
+                        <ChartContainer key="monthly-chart" config={chartConfig} className="aspect-auto h-[300px] min-h-[300px] w-full">
+                          <BarChart
+                            data={monthlySalesData}
+                            margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                            <XAxis
+                              dataKey="month"
+                              tick={{ fontSize: 11 }}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 11 }}
+                              tickLine={false}
+                              axisLine={false}
+                              width={50}
+                              tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                            />
+                            <ChartTooltip
+                              content={<ChartTooltipContent />}
+                              formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ventas']}
+                            />
+                            <Bar dataKey="sales" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                              {monthlySalesData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ChartContainer>
+                      )
+                    )}
                   </TabsContent>
 
                   {/* ── CALENDARIO ── */}
@@ -1392,7 +1403,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Tabs para diferentes vistas */}
-      <Tabs defaultValue="products" className="space-y-4">
+      <Tabs value={bottomTab} onValueChange={(val) => setBottomTab(val as any)} className="space-y-4">
         <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-4">
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="hourly">Ventas por Hora</TabsTrigger>
@@ -1449,48 +1460,50 @@ const Dashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="h-[400px] w-full">
-                <AreaChart
-                  data={hourlySalesData}
-                  margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis
-                    dataKey="hora"
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={50}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                  />
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    formatter={(value, name) => [
-                      name === 'ventas' ? `$${Number(value).toLocaleString()}` : value,
-                      name === 'ventas' ? 'Ventas' : 'Cantidad'
-                    ]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="ventas"
-                    stroke="#22c55e"
-                    fill="#22c55e"
-                    fillOpacity={0.3}
-                    strokeWidth={2}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cantidad"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ChartContainer>
+              {bottomTab === 'hourly' && (
+                <ChartContainer key="hourly-chart" config={chartConfig} className="aspect-auto min-h-[400px] h-[400px] w-full">
+                  <AreaChart
+                    data={hourlySalesData}
+                    margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis
+                      dataKey="hora"
+                      tick={{ fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={50}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    />
+                    <ChartTooltip
+                      content={<ChartTooltipContent />}
+                      formatter={(value, name) => [
+                        name === 'ventas' ? `$${Number(value).toLocaleString()}` : value,
+                        name === 'ventas' ? 'Ventas' : 'Cantidad'
+                      ]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="ventas"
+                      stroke="#22c55e"
+                      fill="#22c55e"
+                      fillOpacity={0.3}
+                      strokeWidth={2}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="cantidad"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
