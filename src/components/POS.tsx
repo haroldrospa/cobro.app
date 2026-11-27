@@ -2340,12 +2340,14 @@ const POSContent: React.FC = () => {
 
       let effectiveServiceInvoiceTypeId = data.invoiceTypeId;
       const targetInvoiceType = invoiceTypes.find(t => t.id === effectiveServiceInvoiceTypeId || t.code === effectiveServiceInvoiceTypeId);
-      let code = effectiveServiceInvoiceTypeId === 'FAC' ? 'FAC' : (effectiveServiceInvoiceTypeId.startsWith('E') ? effectiveServiceInvoiceTypeId : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02'));
+      let code = effectiveServiceInvoiceTypeId === 'FAC' ? 'FAC' : (effectiveServiceInvoiceTypeId?.startsWith('E') ? effectiveServiceInvoiceTypeId : (targetInvoiceType?.code || selectedInvoiceTypeData?.code || 'B02'));
 
       if (data.paymentMethod === 'card' && code === 'FAC') {
         const e32 = invoiceTypes.find(t => t.code === 'E32' || t.id === 'E32') || invoiceTypes.find(t => t.code === 'B02');
         code = 'E32';
         effectiveServiceInvoiceTypeId = e32 ? e32.id : 'E32';
+      } else if (code !== 'FAC' && targetInvoiceType?.id) {
+        effectiveServiceInvoiceTypeId = targetInvoiceType.id;
       }
 
       let dueDate = null;

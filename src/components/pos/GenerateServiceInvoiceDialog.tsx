@@ -39,6 +39,7 @@ import { Customer } from '@/hooks/useCustomers';
 import { useToast } from '@/hooks/use-toast';
 import { useAlanubeConfig } from '@/hooks/useAlanubeConfig';
 import { cn } from '@/lib/utils';
+import { validateFiscalCustomer } from '@/utils/fiscalValidation';
 
 export interface ServiceLineItem {
   id: string;
@@ -134,7 +135,7 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
     if (effectiveIsElectronic) return 'FAC';
     const b01 = invoiceTypes.find(t => t.code === 'B01');
     const b02 = invoiceTypes.find(t => t.code === 'B02');
-    return b01?.id || b02?.id || invoiceTypes[0]?.id || '';
+    return b01?.id || b02?.id || invoiceTypes[0]?.id || 'FAC';
   });
 
   const [paymentCondition, setPaymentCondition] = useState<'contado' | 'credito'>('contado');
@@ -142,13 +143,13 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
   useEffect(() => {
     if (effectiveIsElectronic) {
       setSelectedInvoiceTypeId(prev => {
-        if (prev === 'FAC' || prev === 'COT' || prev.startsWith('E')) return prev;
+        if (prev === 'FAC' || prev === 'COT' || prev?.startsWith('E')) return prev;
         return 'FAC';
       });
     } else {
       setSelectedInvoiceTypeId(prev => {
         if (prev === 'FAC' || prev === 'COT') return prev;
-        if (prev.startsWith('E')) {
+        if (!prev || prev?.startsWith('E')) {
           const b01 = invoiceTypes.find(t => t.code === 'B01');
           const b02 = invoiceTypes.find(t => t.code === 'B02');
           return b01?.id || b02?.id || invoiceTypes[0]?.id || 'FAC';
@@ -183,7 +184,7 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
       return { id: 'FAC', code: 'FAC', name: 'Factura Interna' };
     }
     return mappedInvoiceTypes.find(t => t.id === selectedInvoiceTypeId) || invoiceTypes.find(t => t.id === selectedInvoiceTypeId);
-  }, [invoiceTypes, selectedInvoiceTypeId]);
+  }, [invoiceTypes, mappedInvoiceTypes, selectedInvoiceTypeId]);
 
   // Manejo de líneas
   const handleAddLine = () => {
@@ -281,7 +282,7 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
 
     // Validación fiscal: Facturas electrónicas (excepto E32) y fiscales tradicionales requieren cliente con RNC
     const code = selectedInvoiceType?.code || selectedInvoiceTypeId || '';
-    const fiscalVal = validateFiscalCustomer(code, selectedCustomer, total);
+    const fiscalVal = validateFiscalCustomer(code, selectedCustomer, totals.grandTotal);
     if (!fiscalVal.isValid) {
       toast({
         title: "Cliente con RNC Requerido",
@@ -295,29 +296,47 @@ export const GenerateServiceInvoiceDialog: React.FC<GenerateServiceInvoiceDialog
   };
 
   const handleLoadToCartClick = () => {
-    if (!validateInvoice()) return;
-    const items = buildCartItems();
-    onLoadToCart(items, selectedCustomerId, selectedInvoiceTypeId);
-    toast({
-      title: "Servicios cargados",
-      description: "Los conceptos de servicios han sido añadidos al carrito del POS."
-    });
-    onClose();
+    try {
+      if (!validateInvoice()) return;
+      const items = buildCartItems();
+      onLoadToCart(items, selectedCustomerId, selectedInvoiceTypeId);
+      toast({
+        title: "Servicios cargados",
+        description: "Los conceptos de servicios han sido añadidos al carrito del POS."
+      });
+      onClose();
+    } catch (err: any) {
+      console.error("Error al cargar servicios al carrito:", err);
+      toast({
+        title: "Error al cargar al carrito",
+        description: err?.message || "Ocurrió un error al cargar los servicios.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDirectEmitClick = async () => {
-    if (!validateInvoice()) return;
-    const items = buildCartItems();
-    const finalMethod = paymentCondition === 'credito' ? 'credit' : paymentMethod;
+    try {
+      if (!validateInvoice()) return;
+      const items = buildCartItems();
+      const finalMethod = paymentCondition === 'credito' ? 'credit' : paymentMethod;
 
-    await onDirectEmit({
-      customerId: selectedCustomerId,
-      invoiceTypeId: selectedInvoiceTypeId,
-      items,
-      paymentMethod: finalMethod,
-      creditDays: paymentCondition === 'credito' ? creditDays : undefined,
-      notes: notes.trim() || undefined
-    });
+      await onDirectEmit({
+        customerId: selectedCustomerId,
+        invoiceTypeId: selectedInvoiceTypeId,
+        items,
+        paymentMethod: finalMethod,
+        creditDays: paymentCondition === 'credito' ? creditDays : undefined,
+        notes: notes.trim() || undefined
+      });
+    } catch (err: any) {
+      console.error("Error al emitir factura desde el diálogo:", err);
+      toast({
+        title: "Error al emitir factura",
+        description: err?.message || "Ocurrió un error inesperado al procesar la factura.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
